@@ -1,0 +1,97 @@
+# ---------------------------------------------------------------------------
+# General .gitignore for the skills repository
+# Covers common editors, OS cruft, and local tooling artifacts.
+# ---------------------------------------------------------------------------
+
+# --- macOS ---
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.Spotlight-V100
+.Trashes
+
+# --- Windows ---
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# --- Linux ---
+*~
+.directory
+.Trash-*
+.fuse_hidden*
+.nfs*
+
+# --- VS Code ---
+.vscode/
+*.code-workspace
+.history/
+
+# --- JetBrains (IntelliJ, WebStorm, PyCharm, RubyMine, GoLand, etc.) ---
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# --- Vim / Neovim ---
+*.swp
+*.swo
+*.swn
+Session.vim
+.netrwhist
+tags
+
+# --- Emacs ---
+*~
+\#*\#
+.\#*
+.emacs.desktop
+.emacs.desktop.lock
+*.elc
+
+# --- Sublime Text ---
+*.sublime-project
+*.sublime-workspace
+
+# --- Zed ---
+.zed/
+
+# --- Xcode ---
+*.xcworkspace
+xcuserdata/
+
+# --- Editor / temp files ---
+*.bak
+*.tmp
+*.temp
+*.orig
+*.rej
+
+# --- Logs & env ---
+*.log
+.env
+.env.local
+.env.*.local
+
+# --- Node tooling (in case skills grow scripts/tests) ---
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# --- Python tooling ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# --- Claude Code / agent local state ---
+.claude/settings.local.json
