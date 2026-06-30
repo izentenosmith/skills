@@ -1,5 +1,5 @@
 ---
-name: code-review
+name: refactor-review
 description: Review the current diff for code smells and prescribe structural refactorings. Use after a TDD cycle or before merging to catch smells the green-bar didn't. Reviews new changes only; structural fixes are behavior-preserving.
 ---
 

@@ -1,13 +1,8 @@
----
-name: code-smells
-description: Reference catalog of code smells (Refactoring Guru / Fowler) grouped into Bloaters, OO Abusers, Change Preventers, Dispensables, and Couplers. Use to name the symptom during a code review before choosing a refactoring.
----
-
 # 🧩 Code Smells Catalog
 
 A **code smell** is a surface symptom that usually points to a deeper problem. Smells aren't bugs — the code works — but they make it harder to change. This catalog follows the five families from Refactoring Guru (Martin Fowler's *Refactoring*, 2nd ed.). Each entry: **what it looks like → why it hurts → treatment** (techniques live in [refactoring-techniques.md](refactoring-techniques.md)).
 
-> Use this to *name* the symptom in Step 1 of the [code review](code-review.md). Naming precisely is half the fix — it tells you which treatment to reach for.
+> Use this to *name* the symptom in Step 1 of the [code review](SKILL.md). Naming precisely is half the fix — it tells you which treatment to reach for.
 
 ---
 

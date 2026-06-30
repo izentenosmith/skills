@@ -1,9 +1,17 @@
----
-name: tests
-description: Examples of good (behavior-driven, integration-style) vs bad (implementation-coupled) tests. Reference companion to the TDD skill for judging whether a test verifies behavior or structure.
----
+# Writing Good Tests
 
-# Good and Bad Tests
+Companion reference for the [tdd](SKILL.md) skill: how to tell whether a test verifies **behavior** (good) or **structure** (bad). Read this during the Planning step before writing any test.
+
+## The 4 Pillars of Test Quality
+
+When writing or reviewing tests, evaluate them against the four foundational pillars of testing software engineering:
+
+1. **Protection against regressions:** The test accurately catches bugs when behavior breaks.
+2. **Resistance to refactoring:** The test continues to pass if the internal implementation changes but the observable behavior remains identical.
+3. **Fast feedback:** The test runs quickly, allowing tight development loops.
+4. **Maintainability:** The test is easy to read, understand, and update.
+
+A test that sacrifices pillar 2 (resistance to refactoring) to gain pillar 1 is the classic trap: it couples to implementation and breaks on every refactor. Behavior-driven tests maximize all four at once.
 
 ## Good Tests
 

@@ -5,9 +5,18 @@ description: Turn the current conversation context into a PRD and publish it to 
 
 This skill takes the current conversation context and codebase understanding and produces a PRD. Do NOT interview the user — just synthesize what you already know.
 
+This skill is **stage 2 of a four-stage workflow**:
+
+1. [architect-deep-dive](../architect-deep-dive/SKILL.md) — resolves the design tree, scope, and edge cases
+2. **product-requirement-document** (this skill) — synthesizes those decisions into a PRD
+3. [agent-brief](../agent-brief/SKILL.md) — writes the authoritative behavioral spec on the issue
+4. [tdd](../tdd/SKILL.md) — builds it red-green-refactor
+
 ## When to run
 
-This works best **immediately after [architect-deep-dive](architect-deep-dive.md)**: that skill resolves the design tree one decision at a time, so by the time you reach this skill the trade-offs, interfaces, and seams are already settled and this becomes pure synthesis. It does NOT require the deep dive first — you can run it any time there's enough context — but if the conversation lacks resolved design decisions, prefer running the deep dive first for stronger results.
+This works best **immediately after [architect-deep-dive](../architect-deep-dive/SKILL.md)**: that skill resolves the design tree one decision at a time — including scope boundaries and edge cases — so by the time you reach this skill the trade-offs, interfaces, seams, in/out-of-scope lines, and unhappy-path behaviors are already settled and this becomes pure synthesis. It does NOT require the deep dive first — you can run it any time there's enough context — but if the conversation lacks resolved design decisions, prefer running the deep dive first for stronger results.
+
+When you draw on the deep dive's output, map it straight into this template: its scope boundaries become **Out of Scope**, its resolved edge cases become user stories and testing decisions, and its architectural decisions become **Implementation Decisions**.
 
 The issue tracker and triage label vocabulary should have been provided to you. If they haven't, ask the user which tracker to publish to (e.g. GitHub Issues, Linear, Jira) and what label marks an issue as ready to pick up.
 
@@ -21,7 +30,9 @@ The issue tracker and triage label vocabulary should have been provided to you. 
 
 3. Write the PRD using the template below, then publish it to the project issue tracker. Apply the `ready-for-agent` triage label — no need for additional triage.
 
-   When the issue moves to `ready-for-agent`, the authoritative spec an AFK agent works from is the **agent brief** posted as a comment — not the PRD body. After publishing, write that brief following [agent-brief](agent-brief.md).
+   When the issue moves to `ready-for-agent`, the authoritative spec an AFK agent works from is the **agent brief** posted as a comment — not the PRD body. After publishing, prompt the user:
+
+   > The PRD is published. Run **[agent-brief](../agent-brief/SKILL.md)** next to write the authoritative behavioral spec as a comment on the issue.
 
 <prd-template>
 
@@ -63,11 +74,12 @@ Exception: if a prototype produced a snippet that encodes a decision more precis
 
 ## Testing Decisions
 
-A list of testing decisions that were made. Include:
+This section **records** the testing decisions; the [agent-brief](../agent-brief/SKILL.md) will turn them into the executable contract (acceptance criteria + seams) and [tdd](../tdd/SKILL.md) will execute them. Include:
 
-- A description of what makes a good test (only test external behavior, not implementation details)
-- Which modules will be tested
+- Which modules/behaviors will be tested, at which seams (prefer existing seams, highest possible)
 - Prior art for the tests (i.e. similar types of tests in the codebase)
+
+What counts as a good test (external behavior, not implementation details) is owned by the [tdd](../tdd/SKILL.md) skill — reference it, don't restate it here.
 
 ## Out of Scope
 
