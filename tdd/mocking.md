@@ -35,13 +35,13 @@ A test against a **real database** catches schema, query, and mapping bugs a moc
 
 The deepest mocking trap: verifying *that a collaborator was called* (call counts, argument order, "was `process()` invoked?"). That couples the test to implementation — rename or reorder internals and it breaks though behavior is identical.
 
-```typescript
-// BAD: tests HOW it works — breaks on refactor
-expect(paymentService.process).toHaveBeenCalledWith(cart.total);
+```
+# BAD: tests HOW it works — breaks on refactor
+assert paymentService.process was called with cart.total
 
-// GOOD: tests WHAT happened — survives refactor
-const result = await checkout(cart, fakePayment);
-expect(result.status).toBe("confirmed");
+# GOOD: tests WHAT happened — survives refactor
+result = checkout(cart, fakePayment)
+assert result.status == "confirmed"
 ```
 
 Verify **state and observable output** (what the caller can see), not the conversation between internals. See the red flags in [good-tests.md](good-tests.md).
@@ -52,36 +52,34 @@ When you *do* substitute a boundary, design it to be substituted cleanly.
 
 **1. Use dependency injection.** Pass the boundary in rather than constructing it inside.
 
-```typescript
-// Easy to substitute
-function processPayment(order, paymentClient) {
-  return paymentClient.charge(order.total);
+```
+# Easy to substitute
+function processPayment(order, paymentClient):
+    return paymentClient.charge(order.total)
+
+# Hard — the client and its config are welded in
+function processPayment(order):
+    client = new PaymentClient(config.PAYMENT_KEY)   # constructed internally
+    return client.charge(order.total)
+```
+
+**2. Prefer purpose-named interfaces over a generic fetcher.** One named function per operation, not one do-everything method with conditional logic.
+
+```
+# GOOD: each operation is independently substitutable
+api = {
+    getUser:     (id)     -> request("GET",  "/users/{id}"),
+    getOrders:   (userId) -> request("GET",  "/users/{userId}/orders"),
+    createOrder: (data)   -> request("POST", "/orders", data),
 }
 
-// Hard — the client and its config are welded in
-function processPayment(order) {
-  const client = new StripeClient(process.env.STRIPE_KEY);
-  return client.charge(order.total);
+# BAD: substituting requires conditional logic inside the fake
+api = {
+    request: (endpoint, options) -> request(endpoint, options),
 }
 ```
 
-**2. Prefer SDK-style interfaces over a generic fetcher.** One named function per operation, not one do-everything method with conditional logic.
-
-```typescript
-// GOOD: each operation is independently substitutable
-const api = {
-  getUser: (id) => fetch(`/users/${id}`),
-  getOrders: (userId) => fetch(`/users/${userId}/orders`),
-  createOrder: (data) => fetch('/orders', { method: 'POST', body: data }),
-};
-
-// BAD: substituting requires conditional logic inside the fake
-const api = {
-  fetch: (endpoint, options) => fetch(endpoint, options),
-};
-```
-
-The SDK approach means each fake returns one specific shape, no branching in test setup, clear visibility of which endpoints a test exercises, and type safety per operation.
+The purpose-named approach means each fake returns one specific shape, no branching in test setup, clear visibility of which operations a test exercises, and a precise contract per operation.
 
 ## Decision checklist
 

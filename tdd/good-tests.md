@@ -17,14 +17,13 @@ A test that sacrifices pillar 2 (resistance to refactoring) to gain pillar 1 is 
 
 **Integration-style**: Test through real interfaces, not mocks of internal parts.
 
-```typescript
-// GOOD: Tests observable behavior
-test("user can checkout with valid cart", async () => {
-  const cart = createCart();
-  cart.add(product);
-  const result = await checkout(cart, paymentMethod);
-  expect(result.status).toBe("confirmed");
-});
+```
+# GOOD: Tests observable behavior
+TEST "user can checkout with valid cart":
+    cart = createCart()
+    cart.add(product)
+    result = checkout(cart, paymentMethod)
+    assert result.status == "confirmed"
 ```
 
 Characteristics:
@@ -39,13 +38,12 @@ Characteristics:
 
 **Implementation-detail tests**: Coupled to internal structure.
 
-```typescript
-// BAD: Tests implementation details
-test("checkout calls paymentService.process", async () => {
-  const mockPayment = jest.mock(paymentService);
-  await checkout(cart, payment);
-  expect(mockPayment.process).toHaveBeenCalledWith(cart.total);
-});
+```
+# BAD: Tests implementation details
+TEST "checkout calls paymentService.process":
+    mockPayment = substitute(paymentService)
+    checkout(cart, payment)
+    assert mockPayment.process was called with cart.total
 ```
 
 Red flags:
@@ -57,18 +55,16 @@ Red flags:
 - Test name describes HOW not WHAT
 - Verifying through external means instead of interface
 
-```typescript
-// BAD: Bypasses interface to verify
-test("createUser saves to database", async () => {
-  await createUser({ name: "Alice" });
-  const row = await db.query("SELECT * FROM users WHERE name = ?", ["Alice"]);
-  expect(row).toBeDefined();
-});
+```
+# BAD: Bypasses interface to verify
+TEST "createUser saves to database":
+    createUser({ name: "Alice" })
+    row = <direct datastore lookup for name "Alice">
+    assert row exists
 
-// GOOD: Verifies through interface
-test("createUser makes user retrievable", async () => {
-  const user = await createUser({ name: "Alice" });
-  const retrieved = await getUser(user.id);
-  expect(retrieved.name).toBe("Alice");
-});
+# GOOD: Verifies through interface
+TEST "createUser makes user retrievable":
+    user = createUser({ name: "Alice" })
+    retrieved = getUser(user.id)
+    assert retrieved.name == "Alice"
 ```

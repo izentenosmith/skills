@@ -8,28 +8,26 @@ A testable interface and a *good* interface are usually the same thing. If somet
 
 Pass collaborators in. Code that `new`s up its own dependencies (or reads globals/env directly) can only be exercised with the real thing.
 
-```typescript
-// Testable — swap in a fake gateway from the test
-function processOrder(order, paymentGateway) {}
+```
+# Testable — swap in a fake gateway from the test
+function processOrder(order, paymentGateway): ...
 
-// Hard to test — the gateway is welded in
-function processOrder(order) {
-  const gateway = new StripeGateway();
-}
+# Hard to test — the gateway is welded in
+function processOrder(order):
+    gateway = new PaymentGateway()   # constructed internally
 ```
 
 ## 2. Return results, don't (only) produce side effects
 
 A function that returns a value is verified by reading its output. A function that mutates hidden state forces the test to go *find* the effect.
 
-```typescript
-// Testable — assert on the return value
-function calculateDiscount(cart): Discount {}
+```
+# Testable — assert on the return value
+function calculateDiscount(cart) -> Discount: ...
 
-// Hard to test — must inspect cart afterward to see what happened
-function applyDiscount(cart): void {
-  cart.total -= discount;
-}
+# Hard to test — must inspect cart afterward to see what happened
+function applyDiscount(cart):          # returns nothing
+    cart.total = cart.total - discount
 ```
 
 Keep **commands** (do something, return nothing) and **queries** (return something, change nothing) separate. Mixed methods are the hardest to test.
@@ -38,21 +36,22 @@ Keep **commands** (do something, return nothing) and **queries** (return somethi
 
 The narrower the types, the fewer the edge cases a test has to cover. Push validation to the boundary so the core works with already-valid data ("parse, don't validate").
 
-```typescript
-// Loose — every consumer must re-check; tests must cover the bad states
-function ship(order: { status?: string }) {}
+```
+# Loose — every consumer must re-check; tests must cover the bad states
+function ship(order)          # order.status might be anything, or absent
 
-// Precise — illegal states are unrepresentable; no test needed for them
-function ship(order: PaidOrder) {}
+# Precise — illegal states are unrepresentable; no test needed for them
+function ship(order: PaidOrder)   # only an already-paid order can be passed
 ```
 
 ## 4. Inject nondeterminism
 
-Time, randomness, and generated IDs make tests flaky unless they're inputs. Pass them in (a `clock`, a `now`, an `idGenerator`) rather than calling `Date.now()` / `Math.random()` inside.
+Time, randomness, and generated IDs make tests flaky unless they're inputs. Pass them in (a `clock`, a `now`, an `idGenerator`) rather than reading the system clock or a global random source inside.
 
-```typescript
-// Deterministic — the test controls "now"
-function isExpired(token, now) { return token.expiresAt < now; }
+```
+# Deterministic — the test controls "now"
+function isExpired(token, now):
+    return token.expiresAt < now
 ```
 
 ## 5. Small surface area

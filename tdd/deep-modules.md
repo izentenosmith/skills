@@ -46,15 +46,15 @@ A deep module is the easiest thing in the world to test well:
 
 ## Before / after
 
-```typescript
-// SHALLOW: caller must orchestrate every step and know the internals
-const raw = reader.read(path);
-const parsed = parser.parse(raw);
-const validated = validator.validate(parsed);
-const config = builder.build(validated);
+```
+# SHALLOW: caller must orchestrate every step and know the internals
+raw       = reader.read(path)
+parsed    = parser.parse(raw)
+validated = validator.validate(parsed)
+config    = builder.build(validated)
 
-// DEEP: one method hides reading, parsing, validation, defaults
-const config = loadConfig(path);   // everything above is hidden inside
+# DEEP: one call hides reading, parsing, validation, defaults
+config = loadConfig(path)   # everything above is hidden inside
 ```
 
 ## Questions to ask when designing an interface
