@@ -8,22 +8,25 @@ Inspired by [mattpocock/skills](https://github.com/mattpocock/skills).
 
 ## What's in here
 
-The skills form one connected pipeline — design, specify, build, review — plus the reference docs they lean on.
+The skills form one connected pipeline — design, specify, build, clean, then an adversarial close — plus the reference docs they lean on.
 
 ```
-architect-deep-dive  →  product-requirement-document  →  agent-brief  →  tdd  →  refactor-review
-   (resolve design)        (write & publish the PRD)        (the spec)    (build)   (clean up)
+architect-deep-dive → agent-brief → tdd → refactor-review → devils-advocate → tyr-verdict
+   (resolve design)    (the plan)   (build)  (clean up)      (assume broken)   (judge + fix loop)
 ```
+
+The last three stages form a **loop**: if `tyr-verdict` returns NO-GO, its remediation slices feed back into `tdd → refactor-review → devils-advocate → tyr-verdict`, converging when the teardown finds nothing new and the verdict confirms nothing.
 
 ### Workflow skills
 
 | Skill | What it does |
 |-------|--------------|
 | [architect-deep-dive](architect-deep-dive/SKILL.md) | Staff-architect design review that resolves the plan one question at a time, inferring answers from the codebase where it can. Run this first. |
-| [product-requirement-document](product-requirement-document/SKILL.md) | Synthesizes the conversation into a PRD and publishes it to the issue tracker with a `ready-for-agent` label. Best run right after the deep dive. |
-| [agent-brief](agent-brief/SKILL.md) | Writes the durable, behavioral spec an AFK agent works from — posted as a comment when an issue hits `ready-for-agent`. |
+| [agent-brief](agent-brief/SKILL.md) | Turns the resolved design decisions into the pure-text build plan TDD executes — ordered acceptance criteria, test seams, prior art, and scope. |
 | [tdd](tdd/SKILL.md) | Test-driven development via the red-green-refactor loop (vertical slices, not horizontal). Ends by handing off to refactor-review. |
 | [refactor-review](refactor-review/SKILL.md) | Reviews the current diff: names the smell, then prescribes a behavior-preserving refactoring. |
+| [devils-advocate](devils-advocate/SKILL.md) | Assumes everything just built is wrong and hunts concrete evidence for each defect. Over-reports on purpose; does not fix or judge. |
+| [tyr-verdict](tyr-verdict/SKILL.md) | Adjudicates the devils-advocate findings, cuts false claims, turns confirmed defects into red→green remediation slices, and issues a go/no-go verdict. |
 
 ### Reference docs
 
@@ -55,12 +58,14 @@ Each skill is a folder containing a `SKILL.md` entry point and any reference doc
 3. **Invoke a skill** — either let the agent trigger it automatically when your request matches the description, or call it explicitly:
 
    ```
+   /agent-brief
    /tdd
    /refactor-review
-   /product-requirement-document
+   /devils-advocate
+   /tyr-verdict
    ```
 
-You don't have to run the whole pipeline. Any skill works on its own — but the descriptions note where running an earlier skill first gives better results (e.g. `product-requirement-document` after `architect-deep-dive`).
+You don't have to run the whole pipeline. Any skill works on its own — but the descriptions note where running an earlier skill first gives better results (e.g. `agent-brief` after `architect-deep-dive`, or `tyr-verdict` after `devils-advocate`).
 
 ## Conventions
 
