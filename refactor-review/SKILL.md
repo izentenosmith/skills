@@ -5,6 +5,19 @@ description: Review the current diff for code smells and prescribe structural re
 
 # 🔎 Code Review Checklist (New Changes Only)
 
+## Where this fits
+
+This is **stage 4 of a six-stage workflow**:
+
+1. [architect-deep-dive](../architect-deep-dive/SKILL.md) — resolves the design tree, scope, and edge cases
+2. [agent-brief](../agent-brief/SKILL.md) — turns those decisions into the pure-text plan TDD builds from
+3. [tdd](../tdd/SKILL.md) — executes that plan red-green
+4. **refactor-review** (this skill) — cleans the structure once behavior is verified
+5. [devils-advocate](../devils-advocate/SKILL.md) — assumes the result is wrong and hunts evidence for every defect
+6. [tyr-verdict](../tyr-verdict/SKILL.md) — adjudicates the findings, cuts false claims, and enforces the fixes
+
+TDD gets you to verified behavior; this stage gets you to clean structure. It runs on a GREEN suite and keeps it GREEN.
+
 This is the **guideline** that drives a review. It leans on two reference catalogs:
 
 - [code-smells.md](code-smells.md) — how to *name* what's wrong (the symptom)
@@ -28,7 +41,7 @@ Reviews target **new changes only**. Refactorings are **behavior-preserving** �
 **Location & Observations:**
 > **Type:** [e.g., Dispensables]
 > **Subtype:** [e.g., Comments]
-> **Line / File:** `newFeatureService.ts` lines 12-25
+> **Location:** the new-feature service module, in the field-calculation block
 > **Context:** *The calculation logic uses inline comments to explain how fields are updated instead of pulling it into an explicitly named helper function.*
 
 ---
@@ -63,3 +76,9 @@ Reviews target **new changes only**. Refactorings are **behavior-preserving** �
 3. **Small steps.** Apply one technique, run tests, commit. Don't batch unrelated refactors.
 4. **Name the smell first.** Don't refactor on vibes; map symptom → treatment via the two catalogs.
 5. **New code only.** Pre-existing smells outside the diff are out of scope unless they block the change.
+
+## Handoff
+
+Clean structure on a GREEN suite is not the same as correct behavior. Once the diff is structurally clean, prompt the user:
+
+> The structure is clean and the suite is GREEN. Run **[devils-advocate](../devils-advocate/SKILL.md)** next — it assumes everything we built is wrong and hunts evidence for each defect before we call this done.

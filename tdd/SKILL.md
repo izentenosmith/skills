@@ -7,16 +7,20 @@ description: Test-driven development with red-green-refactor loop. Use when user
 
 ## Where this fits
 
-This is **stage 4 (the final stage) of a four-stage workflow**:
+This is **stage 3 of a six-stage workflow**:
 
 1. [architect-deep-dive](../architect-deep-dive/SKILL.md) — resolves the design tree, scope, and edge cases
-2. [product-requirement-document](../product-requirement-document/SKILL.md) — synthesizes those decisions into a PRD
-3. [agent-brief](../agent-brief/SKILL.md) — writes the authoritative behavioral spec on the issue
-4. **tdd** (this skill) — executes that spec red-green-refactor
+2. [agent-brief](../agent-brief/SKILL.md) — turns those decisions into the pure-text plan TDD builds from
+3. **tdd** (this skill) — executes that plan red-green
+4. [refactor-review](../refactor-review/SKILL.md) — cleans the structure once behavior is verified
+5. [devils-advocate](../devils-advocate/SKILL.md) — assumes the result is wrong and hunts evidence for every defect
+6. [tyr-verdict](../tyr-verdict/SKILL.md) — adjudicates the findings, cuts false claims, and enforces the fixes
 
 **You execute the agent brief's contract.** Its **Acceptance criteria** are already ordered as a build order (first = tracer bullet, then incremental slices, edge cases marked); its **Key interfaces (test seams)** and **Test seams & prior art** tell you where to test and what to mirror. Do not re-derive the plan — read it from the brief.
 
-> **Feedback edge — the brief is a living contract.** If, while implementing, you find that the brief (or the PRD behind it) is wrong, incomplete, or contradicted by reality — a seam that doesn't exist, an edge case that can't behave as specified, an acceptance criterion that conflicts with another — **STOP. Do not silently code around it.** Surface the contradiction, revise the agent brief (and the PRD if the decision changed) to match the new understanding, then resume the loop against the corrected contract.
+> **Feedback edge — the brief is a living contract.** If, while implementing, you find that the brief is wrong, incomplete, or contradicted by reality — a seam that doesn't exist, an edge case that can't behave as specified, an acceptance criterion that conflicts with another — **STOP. Do not silently code around it.** Surface the contradiction, revise the agent brief to match the new understanding, then resume the loop against the corrected contract.
+
+> **Loop-back edge.** This stage also runs as the fix step of the closing loop: when [tyr-verdict](../tyr-verdict/SKILL.md) returns NO-GO, its confirmed defects arrive as remediation slices already shaped like acceptance criteria. Execute them here red-green exactly as you would a fresh brief, then send the result back through refactor-review → devils-advocate → tyr-verdict.
 
 ## Philosophy
 
@@ -130,6 +134,16 @@ Once the cycle is complete and all tests are GREEN, run the structural review pa
 - [ ] The full suite is GREEN
 
 The handoff is strict: **TDD gets you to verified behavior, `/refactor-review` gets you to clean structure.** Do not skip it.
+
+## Handoff — into the adversarial close
+
+Green tests and a clean diff are a *claim* of correctness, not proof of it. Once the structural review is done and the suite is GREEN, the change goes through the closing loop:
+
+1. Run **[refactor-review](../refactor-review/SKILL.md)** (stage 4) — already invoked above as the structural pass.
+2. Run **[devils-advocate](../devils-advocate/SKILL.md)** (stage 5) — assume everything you built is wrong and hunt evidence for each defect.
+3. Run **[tyr-verdict](../tyr-verdict/SKILL.md)** (stage 6) — adjudicate those findings and issue a go/no-go verdict.
+
+If tyr-verdict returns **NO-GO**, its remediation slices come back to this skill as a new red→green build order (see the loop-back edge above). The loop converges when devils-advocate turns up nothing new and tyr-verdict confirms nothing.
 
 ## Checklist Per Cycle
 
