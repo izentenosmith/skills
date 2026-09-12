@@ -95,3 +95,7 @@ venv/
 
 # --- Claude Code / agent local state ---
 .claude/settings.local.json
+
+# eval fixtures: build output, not fixture content
+evals/fixtures/*/.venv/
+evals/fixtures/*/.pytest_cache/

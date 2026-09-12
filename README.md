@@ -86,6 +86,12 @@ These carry no workflow of their own — the skill in the same folder links into
 
 Each doc lives in the folder of the skill that uses it, and nothing reaches across folders.
 
+## Do they work?
+
+[`evals/`](evals/README.md) holds the harness that measures it — seeded fixtures with planted defects (a rule that ignores its config, and a vacuous test that hides it), scored assertions, and the recorded result in [evals/benchmark.md](evals/benchmark.md).
+
+Assertions are split: **capability** (does the stage do its job at all) from **delta** (does it do what a change to the skill added). Only the delta column is evidence an edit helped. Against the pre-session baseline over 36 runs: **0.98 vs 0.22** on delta, **0.96 vs 0.92** on capability.
+
 ## How to use
 
 Each skill is a folder containing a `SKILL.md` entry point and any reference docs it needs. They work with both Cursor and Claude Code.
