@@ -92,6 +92,7 @@ Something whose absence would make the code cleaner. Pointless and removable.
 Comments that explain *what* convoluted code does (as opposed to *why* a non-obvious decision was made).
 - **Why it hurts:** A comment is often deodorant for bad code; it rots out of sync with the code.
 - **Treatment:** Extract Method (and name it well); Rename Method; Introduce Assertion. Keep comments that capture intent/rationale, not narration.
+- **Judging which is which:** [comments.md](comments.md) — the ladder (name → structure → type → comment) and the whitelist of comments worth keeping.
 
 ### Duplicate Code
 The same (or nearly the same) code in more than one place.

@@ -7,6 +7,26 @@ description: Turn resolved design decisions into the pure-text build plan TDD ex
 
 An agent brief is the authoritative **build plan** for a feature or fix. Its output is **pure text** — a structured plan, not code and not a code change. It is the contract the TDD stage executes against: read top-to-bottom, its acceptance criteria are already a red→green build order.
 
+**Write it to `.workflow/brief.md`** in the repo being worked on, not just into the conversation. Three stages downstream read it — TDD checks criteria off against it and revises it when reality contradicts it, the teardown needs its edge cases and deferrals, and a subagent can only be pointed at a path. In a loop that runs a stage more than once, a plan that exists only in scrollback stops being authoritative around the second iteration. (Writing a plan file is not a code change — the rule against emitting code stands.)
+
+### The working files
+
+The pipeline keeps two files in the repo under review. You create the first; the closing stages create the second.
+
+```
+.workflow/
+  brief.md    — this plan (you write it; TDD executes and revises it)
+  ledger.md   — findings, verdicts and carried smells across loop iterations
+```
+
+Three rules make them trustworthy:
+
+- **The brief is revised in place, never forked.** When TDD's feedback edge finds it wrong, the fix edits this file and appends a line to its **Revisions** section. A second copy means neither is authoritative.
+- **Delegates read these files; only the running stage writes them.** Two subagents appending to one file interleave into nonsense.
+- **A stage running standalone needs neither file** and should say so rather than stopping.
+
+They are working artifacts, not deliverables — gitignore them, or commit them as the change's design record.
+
 This skill is **stage 2 of a six-stage workflow**:
 
 1. [architect-deep-dive](../architect-deep-dive/SKILL.md) — resolves the design tree, scope, and edge cases
@@ -16,7 +36,9 @@ This skill is **stage 2 of a six-stage workflow**:
 5. [devils-advocate](../devils-advocate/SKILL.md) — assumes the result is wrong and hunts evidence for every defect
 6. [tyr-verdict](../tyr-verdict/SKILL.md) — adjudicates the findings, cuts false claims, and enforces the fixes
 
-**Upstream (from architect-deep-dive):** every dimension the architect resolved is your raw material — pull directly from it. Its interface decisions become your **Key interfaces**; its resolved failure modes and edge cases become your **edge-case criteria**; its user-facing behaviors become your **happy-path criteria**; its scope boundaries become your **Out of scope**. If a dimension was left implicit, you are missing input — go back to architect-deep-dive rather than guessing.
+**Upstream (from architect-deep-dive):** every dimension the architect resolved is your raw material — pull directly from it. Its **charter** (what we're solving, why now, what done looks like) becomes your **Summary** and **Desired behavior**; carry the *why now* rather than dropping it, because it is what tells TDD which criterion matters when two conflict. Its interface decisions become your **Key interfaces**; its resolved failure modes and edge cases become your **edge-case criteria**; its user-facing behaviors become your **happy-path criteria**; its scope boundaries become your **Out of scope**. If a dimension was left implicit, you are missing input — go back to architect-deep-dive rather than guessing.
+
+Two of its outputs are **constraints on the plan rather than work in it**. Its resolved boundaries and dependency directions bound where the behavior may live — carry them into **Key interfaces** so TDD builds inward-pointing seams instead of rediscovering them. Its **deliberately deferred** decisions (database engine, framework, delivery mechanism) stay deferred: record each one with the boundary that protects it, and do not let an acceptance criterion commit to it. A criterion that names a deferred detail has quietly resolved a decision the architect chose to leave open.
 
 **Downstream (into TDD):** the TDD stage's planning step needs four things before it can write a single test — the public interface/seams, a *prioritized* list of behaviors to test, what is explicitly *not* tested, and prior art for similar tests. Shape this brief so all four fall out of it directly. See **Tangling to TDD** below.
 
@@ -52,6 +74,14 @@ The TDD stage's planning step asks: *"What should the public interface look like
 - **Separate edge-case criteria from happy-path.** Carry the unhappy paths resolved during architect-deep-dive (empty/missing input, boundaries, permission failures, partial failures, isolation/tenancy quirks) into their own clearly-marked criteria so TDD writes the edge-case slices it would otherwise skip.
 - **Supply prior art.** TDD's planning step looks for similar tests already in the codebase. Point at the closest existing test suites/patterns (e.g. table-driven constraint tests, public-entry-point handler tests, component-contract tests, boundary/gateway tests) so TDD matches conventions instead of inventing them.
 
+## Subagents — optional
+
+Writing the plan is yours: the ordering of the acceptance criteria *is* the build order, and it takes the whole design in view to get right.
+
+The **prior-art hunt** is not. "Point at the closest existing test suites and patterns" is a read-only search across a codebase you may not know, and it is the one part of this brief that can flood your context with file excerpts while you are trying to write prose. Dispatch it: hand a subagent the seams you're testing through and ask which existing suites test comparable behavior, what conventions they follow, and what harness they use. Take back the names and the conventions, and write them into **Test seams & prior art** yourself.
+
+**Dispatch contract.** A subagent starts with no history. Give it five things: the **prior** (the stance to adopt), the **target** (described behaviorally, not as file paths), the **context it cannot infer** (the seams you're testing through), the **return shape** you want back, and an explicit *"report conclusions, not file excerpts."* Keep delegates read-only, and cap the fan-out.
+
 ## Template (output this as pure text)
 
 ```markdown
@@ -85,16 +115,22 @@ Be specific about edge cases and error conditions.
 - Highest existing seam to test through (prefer existing seams to new ones)
 - Closest existing test suite/pattern in the codebase to mirror for conventions
 
+**Deferred by design** (constraints, not work — carried from architect-deep-dive):
+- <decision left open> — deferred behind <the boundary that protects it>; forced by <signal>
+
 **Out of scope:**
 - Thing that should NOT be changed or addressed here
 - Adjacent feature that might seem related but is separate
+
+## Revisions
+- (empty at creation; TDD's feedback edge appends here)
 ```
 
 ## Handoff
 
-After writing the plan, prompt the user:
+After writing the plan to `.workflow/brief.md`, prompt the user:
 
-> The build plan is ready. Run the **[tdd](../tdd/SKILL.md)** skill next — its acceptance criteria are ordered as a red→green build order, with the first as the tracer bullet.
+> The build plan is written to `.workflow/brief.md`. Run the **[tdd](../tdd/SKILL.md)** skill next — its acceptance criteria are ordered as a red→green build order, with the first as the tracer bullet.
 
 ## Examples
 
