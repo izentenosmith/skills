@@ -1,24 +1,70 @@
 {
-  "skill_name": "six-stage-pipeline",
-  "note": "One eval per workflow skill. Each with-skill run is repeated 3x for variance analysis; baseline is a single no-skill run on the same prompt.",
-  "evals": [
-    {"id": 0, "name": "architect-charter-and-options", "skill": "architect-deep-dive", "fixture": "fixture",
-     "prompt": "We need to add a cancellation cutoff to the reservations service: bookings too close to the slot start should be refused. Work the design with me.",
-     "expected_output": "A charter block (title, Solving, Why now, Done looks like, Calibration, Questions ~n), a progress line, and exactly ONE question in the four-section format with an options table carrying buys/costs/reversal cost, a recommendation naming its own cost and what would change its mind."},
-    {"id": 1, "name": "brief-ordered-criteria", "skill": "agent-brief", "fixture": "fixture",
-     "prompt": "Turn these resolved design decisions into the build plan. Resolved: cutoff rule joins ACTIVE_RULES returning CUTOFF_WINDOW; window length from account config cutoff_minutes default 120; boundary exclusive so a slot exactly at the edge is accepted; multiple violations all surface; persistence engine deferred behind store.save; venue notification out of scope; admin override out of scope.",
-     "expected_output": "A build plan written to .workflow/brief.md with ordered acceptance criteria (tracer bullet first), key interfaces naming BookingService.submit, edge cases marked, prior art pointing at tests/test_booking.py, deferred section, out of scope."},
-    {"id": 2, "name": "tdd-reads-brief-vertical", "skill": "tdd", "fixture": "fixture-tdd",
-     "prompt": "Build the cutoff feature.",
-     "expected_output": "Reads .workflow/brief.md rather than re-asking planning questions; builds in vertical slices (one test then its implementation, repeated); tracer bullet first; criteria checked off in the brief; suite green."},
-    {"id": 3, "name": "refactor-promotes-noted-smell", "skill": "refactor-review", "fixture": "fixture-refactor",
-     "prompt": "Review the cutoff changes in reservations/rules.py.",
-     "expected_output": "Names smells with Type/Subtype/Severity; re-reads the Noted smells section; PROMOTES N1 (a third rule now repeats the config-default-and-coerce pattern, firing its promote condition); LEAVES N2 (condition not fired); applies behavior-preserving fixes; suite stays green."},
-    {"id": 4, "name": "teardown-finds-vacuous-test", "skill": "devils-advocate", "fixture": "fixture-teardown",
-     "prompt": "The cutoff feature is built and the suite is green. Tear it down.",
-     "expected_output": "Finds that check_cutoff ignores account config (criterion 3 does not hold) AND that test_cutoff_window_reads_from_account_config passes vacuously; does NOT re-report F1 (refuted, condition not met); records negative results; every finding carries evidence and confidence."},
-    {"id": 5, "name": "verdict-cuts-and-slices", "skill": "tyr-verdict", "fixture": "fixture-verdict",
-     "prompt": "Adjudicate the teardown findings in the ledger.",
-     "expected_output": "One verdict per finding: F2 and F3 CONFIRMED, F4 REFUTED citing the passing boundary test (and/or struck as already refuted as F1), F5 INCONCLUSIVE with settling evidence named; remediation slices in severity order tagged with finding IDs; noted smells N1/N2 enumerated in the verdict; verdict NO-GO."}
-  ]
+ "skill_name": "skills",
+ "note": "Evals 0-5 cover the six-stage development pipeline; 6-7 cover the containers and operations skills. Each with-skill run is repeated 3x for variance analysis; baseline is a single no-skill run on the same prompt.",
+ "evals": [
+  {
+   "id": 0,
+   "name": "architect-charter-and-options",
+   "skill": "architect-deep-dive",
+   "fixture": "fixture",
+   "prompt": "We need to add a cancellation cutoff to the reservations service: bookings too close to the slot start should be refused. Work the design with me.",
+   "expected_output": "A charter block (title, Solving, Why now, Done looks like, Calibration, Questions ~n), a progress line, and exactly ONE question in the four-section format with an options table carrying buys/costs/reversal cost, a recommendation naming its own cost and what would change its mind."
+  },
+  {
+   "id": 1,
+   "name": "brief-ordered-criteria",
+   "skill": "agent-brief",
+   "fixture": "fixture",
+   "prompt": "Turn these resolved design decisions into the build plan. Resolved: cutoff rule joins ACTIVE_RULES returning CUTOFF_WINDOW; window length from account config cutoff_minutes default 120; boundary exclusive so a slot exactly at the edge is accepted; multiple violations all surface; persistence engine deferred behind store.save; venue notification out of scope; admin override out of scope.",
+   "expected_output": "A build plan written to .workflow/brief.md with ordered acceptance criteria (tracer bullet first), key interfaces naming BookingService.submit, edge cases marked, prior art pointing at tests/test_booking.py, deferred section, out of scope."
+  },
+  {
+   "id": 2,
+   "name": "tdd-reads-brief-vertical",
+   "skill": "tdd",
+   "fixture": "fixture-tdd",
+   "prompt": "Build the cutoff feature.",
+   "expected_output": "Reads .workflow/brief.md rather than re-asking planning questions; builds in vertical slices (one test then its implementation, repeated); tracer bullet first; criteria checked off in the brief; suite green."
+  },
+  {
+   "id": 3,
+   "name": "refactor-promotes-noted-smell",
+   "skill": "refactor-review",
+   "fixture": "fixture-refactor",
+   "prompt": "Review the cutoff changes in reservations/rules.py.",
+   "expected_output": "Names smells with Type/Subtype/Severity; re-reads the Noted smells section; PROMOTES N1 (a third rule now repeats the config-default-and-coerce pattern, firing its promote condition); LEAVES N2 (condition not fired); applies behavior-preserving fixes; suite stays green."
+  },
+  {
+   "id": 4,
+   "name": "teardown-finds-vacuous-test",
+   "skill": "devils-advocate",
+   "fixture": "fixture-teardown",
+   "prompt": "The cutoff feature is built and the suite is green. Tear it down.",
+   "expected_output": "Finds that check_cutoff ignores account config (criterion 3 does not hold) AND that test_cutoff_window_reads_from_account_config passes vacuously; does NOT re-report F1 (refuted, condition not met); records negative results; every finding carries evidence and confidence."
+  },
+  {
+   "id": 5,
+   "name": "verdict-cuts-and-slices",
+   "skill": "tyr-verdict",
+   "fixture": "fixture-verdict",
+   "prompt": "Adjudicate the teardown findings in the ledger.",
+   "expected_output": "One verdict per finding: F2 and F3 CONFIRMED, F4 REFUTED citing the passing boundary test (and/or struck as already refuted as F1), F5 INCONCLUSIVE with settling evidence named; remediation slices in severity order tagged with finding IDs; noted smells N1/N2 enumerated in the verdict; verdict NO-GO."
+  },
+  {
+   "id": 6,
+   "name": "compose-detects-real-services",
+   "skill": "docker-compose",
+   "fixture": "compose",
+   "prompt": "Set this project up to run locally with Docker Compose.",
+   "expected_output": "A docker-compose.yml composing postgres, redis and meilisearch (detected from the source, not from the framework) and NOT elasticsearch (the env var is stale and no client exists); redis configured with a non-evicting maxmemory policy because it backs RQ job queues; named volumes on every stateful service; pg_isready given -U and -d; depends_on with condition: service_healthy; the migration step gated with service_completed_successfully; a documented .env.example; service names not localhost in connection strings."
+  },
+  {
+   "id": 7,
+   "name": "postmortem-widens-range-and-describes",
+   "skill": "post-mortem",
+   "fixture": "incident",
+   "prompt": "Write the postmortem for INC-2026-0814. The incident is resolved. The repository is in repo/ and the incident documents are in docs/. The outage was on 2026-08-04.",
+   "expected_output": "A sourced timeline that finds the triggering commit of 2026-07-26 by widening the range past the outage day (not reporting the 15:02 revert as the cause); the 14:07 alert vs 14:22 'first noticed' contradiction recorded rather than silently resolved, with the unwatched alert channel named as a detection factor; the missing pre-14:25 chat and expired metrics retention noted as evidence limits; plural contributing factors distinguishing trigger from the missing statement_timeout condition; NO remediation proposed and the incident report's 'what we must do' demands not adopted; the report's blame of a named engineer rewritten as a system property."
+  }
+ ]
 }

@@ -1,0 +1,24 @@
+# Export of #inc-2026-0814
+# NOTE: this channel was created at 14:25 on 2026-08-04. Discussion before that
+# time took place in #ledger-eng and was not retained — that channel's history
+# is capped at 7 days.
+
+[2026-08-04 14:25] ana.beltran: opening this for the statement API thing
+[2026-08-04 14:25] ana.beltran: support pinged us at 14:22, customers getting timeouts on /statements
+[2026-08-04 14:27] tomas.lind: I see 5xx across the board, not one account
+[2026-08-04 14:28] ana.beltran: db-primary pool is at 20/20 and has been for a while by the look of it
+[2026-08-04 14:29] tomas.lind: was there a deploy? I don't see one today
+[2026-08-04 14:31] ana.beltran: no deploy today. pool exhaustion confirmed though
+[2026-08-04 14:33] tomas.lind: could be the reporting batch? it runs Tuesdays
+[2026-08-04 14:38] tomas.lind: no, batch finished at 13:10, ruling that out
+[2026-08-04 14:44] ana.beltran: pg_stat_activity shows ~14 connections all on the same statement query, no LIMIT on it
+[2026-08-04 14:46] ana.beltran: that query should have a LIMIT. when did that change
+[2026-08-04 14:51] ana.beltran: found it, the limit went optional on the 26th. that's been live for over a week
+[2026-08-04 14:53] tomas.lind: so why today
+[2026-08-04 14:55] ana.beltran: audit export. finance started their annual run this morning, hitting the big reconciliation accounts
+[2026-08-04 15:02] ana.beltran: revert is out
+[2026-08-04 15:09] ana.beltran: pool draining, 14/20
+[2026-08-04 15:18] tomas.lind: 5xx back to baseline. calling it mitigated
+[2026-08-04 15:20] ana.beltran: the alert fired at 14:07 by the way. it went to #ledger-alerts and nobody was watching it
+[2026-08-04 15:21] tomas.lind: that's 15 minutes we didn't need to lose
+[2026-08-04 18:47] ana.beltran: statement_timeout is on now. that whole class of query can't hold a connection forever

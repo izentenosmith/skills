@@ -99,3 +99,7 @@ venv/
 # eval fixtures: build output, not fixture content
 evals/fixtures/*/.venv/
 evals/fixtures/*/.pytest_cache/
+
+# --- eval fixtures: build output, not fixture content ---
+evals/fixtures/*/.venv/
+evals/fixtures/incident/repo/

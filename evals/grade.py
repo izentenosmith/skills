@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministic grading for the six-stage pipeline evals.
+"""Deterministic grading for the skills evals.
 
 Usage: python3 grade.py <iteration-dir>
 
@@ -256,6 +256,109 @@ def eval5(run):
     ]
 
 
+
+def eval6(run):
+    """docker-compose: composes what the code connects to, and nothing else."""
+    repo = run / "repo"
+    comp = "\n".join(read(p) for p in list(repo.glob("*compose*.y*ml"))
+                     + list(repo.glob("**/*compose*.y*ml")))
+    envex = read(repo / ".env.example")
+    r = resp(run)
+    t = comp + "\n" + envex + "\n" + r
+    n_vol = len(re.findall(r"^volumes:", comp, re.M))
+    return [
+        # capability — any competent attempt should manage these
+        ("a compose file was produced", bool(comp.strip()), f"{len(comp)} chars", C),
+        ("postgres composed", any_of(comp, r"image:\s*[\"']?(postgres|postgis)"), "", C),
+        ("redis composed", any_of(comp, r"image:\s*[\"']?(redis|valkey)"), "", C),
+        ("the app service builds from the repo", any_of(comp, r"build:"), "", C),
+        ("healthchecks defined", len(re.findall(r"healthcheck:", comp)) >= 2,
+         f"{len(re.findall(r'healthcheck:', comp))} healthchecks", C),
+        ("named volumes declared for state", n_vol >= 1 and any_of(comp, r"/var/lib/postgresql/data"),
+         "top-level volumes: block + pg data path", C),
+        # delta — these are what the skill instructs
+        ("meilisearch detected from the source", any_of(comp, r"meili"),
+         "a client exists in shopdesk/search.py", D),
+        ("elasticsearch NOT composed (stale env var, no client)",
+         not any_of(comp, r"elasticsearch|opensearch"),
+         "composing it means inferring from .env.example rather than the code", D),
+        ("redis eviction policy set for queue use",
+         any_of(comp, r"maxmemory-policy[\s=\"']+noeviction") or
+         (any_of(t, r"noeviction") and not any_of(comp, r"allkeys-lru")),
+         "RQ queues in shopdesk/queue.py must not be evicted", D),
+        ("pg_isready probe names user and database",
+         any_of(comp, r"pg_isready[^\n]*-U") and any_of(comp, r"pg_isready[^\n]*-d"),
+         "a bare pg_isready passes against the init server", D),
+        ("dependencies gated on health, not just start",
+         any_of(comp, r"condition:\s*service_healthy"), "", D),
+        ("migrations gated as a one-shot dependency",
+         any_of(comp, r"service_completed_successfully"),
+         "shopdesk/migrate.py must finish before the api starts", D),
+        (".env.example produced and documented",
+         bool(envex.strip()) and len(re.findall(r"^\s*#", envex, re.M)) >= 3,
+         f"{len(envex)} chars, {len(re.findall(r'^\s*#', envex, re.M))} comments", D),
+        ("connection strings use service names, not localhost",
+         any_of(t, r"@postgres:5432|postgres:5432") and
+         not any_of(comp, r"localhost:(5432|6379|7700)"), "", D),
+        ("verification from a cold start stated",
+         any_of(r, r"down\s+-v", r"cold start", r"from cold"), "", D),
+    ]
+
+
+def eval7(run):
+    """post-mortem: reconstructs from artifacts, widens the range, prescribes nothing."""
+    r = resp(run)
+    t = blob(run)
+    return [
+        # capability
+        ("a timeline was produced", any_of(t, r"[Tt]imeline"), "", C),
+        ("the five moments are covered",
+         sum(bool(re.search(p, t, re.I)) for p in
+             (r"14:07|13:58", r"14:2[25]", r"15:0[24]", r"15:18|15:25", r"18:47")) >= 4,
+         "detection / escalation / revert / recovery / follow-up", C),
+        ("impact quantified or its absence explained",
+         any_of(t, r"\b(1|one)\s*h(our)?\s*1[0-9]", r"~?\s*7[0-9]\s*min", r"78\s*min",
+                r"14:00[^\n]{0,30}15:18", r"no precise figure|retention"), "", C),
+        ("contributing factors are plural",
+         len(re.findall(r"(?:CF-?\d|\*\*(?:Trigger|Latent|Detection|Response|Process|Organi))", t)) >= 3,
+         "3+ distinct factors", C),
+        ("the unbounded query is identified as the mechanism",
+         any_of(t, r"unbounded|no LIMIT|without a LIMIT|LIMIT was removed"), "", C),
+        # delta — the range, the sourcing, the boundary
+        ("the 2026-07-26 trigger is found, nine days before the outage",
+         any_of(t, r"2026-07-26|July 26|26 July|854b6e9|3f5e930"),
+         "requires widening the git range past the outage day", D),
+        ("the revert is not presented as the cause",
+         not near(t, r"47b71b3|[Rr]evert", r"root cause|the cause was|caused by"), "", D),
+        ("timeline entries carry source tags",
+         len(re.findall(r"\[(git|alert|chat|#inc|incident report|status page|metrics|recollection)",
+                        t, re.I)) >= 4,
+         f"{len(re.findall(r'\[(git|alert|chat|#inc|incident report|status page|metrics|recollection)', t, re.I))} tagged entries", D),
+        ("the 14:07 vs 14:22 contradiction is recorded, not silently resolved",
+         near(t, r"14:07", r"14:22|contradict|disagree|discrepan|15 minutes|fifteen minutes"), "", D),
+        ("the unwatched alert channel is named as a detection factor",
+         near(t, r"ledger-alerts|nobody was watching|no pager|ack=none|not acknowledged",
+              r"detect|alert|rout"), "", D),
+        ("evidence limits recorded (missing chat / expired retention)",
+         any_of(r, r"14:25[^\n]{0,80}(created|no |not )", r"retention",
+                r"[Nn]ot available", r"could not (be )?(determin|establish|settl)"), "", D),
+        ("the latent condition is distinguished from the trigger",
+         near(t, r"statement_timeout", r"latent|condition|had been|pre-?exist|unset|absent"), "", D),
+        ("no remediation is proposed",
+         not any_of(r, r"##[^\n]*(Action items?|Recommendations?|Next steps|What we (must|should) do)",
+                    r"\bwe (must|should) (add|implement|introduce)\b",
+                    r"\brecommend(ed|ation)?\b[^\n]{0,40}(add|implement|introduce)"),
+         "the skill documents; it does not prescribe", D),
+        ("the report's demands are not adopted as output",
+         not any_of(r, r"rate limit[^\n]{0,60}(this sprint|must|should)",
+                    r"[Bb]an unbounded queries"),
+         "incident-report.md's 'What we must do' is a source, not the document's voice", D),
+        ("the named-engineer blame is not carried through",
+         not any_of(r, r"should have caught", r"Priya[^\n]{0,60}(should|failed|blame|fault)"),
+         "rewritten as a system property, or the name kept off the error", D),
+    ]
+
+
 CHECKS = {
     "eval-0-architect-charter-and-options": eval0,
     "eval-1-brief-ordered-criteria": eval1,
@@ -263,6 +366,8 @@ CHECKS = {
     "eval-3-refactor-promotes-noted-smell": eval3,
     "eval-4-teardown-finds-vacuous-test": eval4,
     "eval-5-verdict-cuts-and-slices": eval5,
+    "eval-6-compose-detects-real-services": eval6,
+    "eval-7-postmortem-widens-range-and-describes": eval7,
 }
 
 

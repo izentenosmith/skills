@@ -1,0 +1,5 @@
+flask==3.0.3
+psycopg[binary]==3.1.19
+redis==5.0.4
+rq==1.16.2
+meilisearch==0.31.0

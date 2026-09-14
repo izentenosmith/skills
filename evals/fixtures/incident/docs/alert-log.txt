@@ -1,0 +1,14 @@
+# Export from the alerting platform, 2026-08-04, all times UTC
+# Route "db-primary-pool" targets #ledger-alerts (no pager escalation configured)
+
+2026-08-04T13:58:41Z  WARN   db.pool.in_use               18/20   route=db-primary-pool  delivered=#ledger-alerts
+2026-08-04T14:07:12Z  CRIT   db.pool.exhausted            20/20   route=db-primary-pool  delivered=#ledger-alerts
+2026-08-04T14:07:12Z  CRIT   db.pool.exhausted                    ack=none
+2026-08-04T14:09:30Z  CRIT   http.5xx_rate  statement-api  0.94   route=api-oncall       delivered=#ledger-alerts
+2026-08-04T14:09:30Z  CRIT   http.5xx_rate                        ack=none
+2026-08-04T14:12:00Z  CRIT   db.pool.exhausted            20/20   (repeat)               ack=none
+2026-08-04T14:17:00Z  CRIT   db.pool.exhausted            20/20   (repeat)               ack=none
+2026-08-04T14:22:00Z  CRIT   db.pool.exhausted            20/20   (repeat)               ack=none
+2026-08-04T14:26:38Z  CRIT   db.pool.exhausted            20/20   (repeat)  ack=ana.beltran
+2026-08-04T15:04:55Z  INFO   db.pool.in_use               11/20   route=db-primary-pool
+2026-08-04T15:17:20Z  INFO   http.5xx_rate  statement-api  0.01   recovered
