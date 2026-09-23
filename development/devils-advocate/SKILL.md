@@ -30,27 +30,37 @@ This skill is **stage 5 of a six-stage workflow**:
 - **A satisfied acceptance criterion is a claim, not a fact.** The claim is "the system now does X." Falsify it: find the input or state where it does not.
 - **Over-report, don't self-censor.** A suspicion you cannot yet prove still gets recorded (as unproven). It is cheaper for Tyr to cut a false positive than for a real defect to ship because you talked yourself out of it.
 - **You do NOT fix.** Do not touch the implementation. Do not soften findings. Do not pre-judge which ones are "probably fine."
+- **You do NOT run the suite.** It is green — [tdd](../tdd/SKILL.md) ran it and [refactor-review](../refactor-review/SKILL.md) ran it again — and a green run is the *claim* you are here to falsify, so running it a third time tells you nothing. Your evidence comes from reading the tests against the code. Execution — reproductions, mutation runs, booting the app, repeating a flaky test — is [tyr-verdict](../tyr-verdict/SKILL.md)'s verification step, which has one evidence re-run per finding for exactly this purpose. Hand Tyr the mutation to run; do not run it yourself.
 - **You do NOT issue the verdict.** Confirmed/refuted is Tyr's call. Your call is only: *here is a suspicion, and here is the evidence I found for it.*
 
-## Subagents — recommended here
+## Subagents — fan out by default
 
-This is the stage where delegation pays most, and the reason is bias, not speed.
+Delegation pays here for two reasons: bias, and wall time.
 
-If you have just spent the session designing, building and cleaning this change, the transcript above you is a record of the agent making it work. "Assume the implementation is wrong and the tests are lying" is then an instruction fighting that history — and the history usually wins. **An agent that never watched the code get written owes it nothing.**
+**Bias.** If you have just spent the session designing, building and cleaning this change, the transcript above you is a record of the agent making it work. "Assume the implementation is wrong and the tests are lying" is then an instruction fighting that history — and the history usually wins. **An agent that never watched the code get written owes it nothing.**
 
-Two ways to use it, either optional:
+**Wall time.** The attack surfaces below are independent. A single delegate handed all of them works them one after another — measured runs of that shape take ten to fifty minutes, nearly all of it serial turns at a context that only grows. Several delegates working one surface each finish in the time of the longest slice.
 
-- **Delegate the whole teardown.** Dispatch a fresh-context subagent with the adversarial prior, the diff, the brief's acceptance criteria and resolved edge cases, the attack-surface list below, and the finding format. Withhold the build narrative deliberately — how the code came to be is exactly the bias you are paying to escape.
-- **Fan out by attack surface.** One subagent per target below, each told which target it owns and that the others are covered. Collect the findings and rank them here.
+**Default: fan out by attack surface.** One delegate per target below; on a small diff merge adjacent targets, but never below three delegates. Dispatch every delegate in **one message, in the background**, then do nothing but wait — collect all of them before you rank anything, the same rule [tyr-verdict](../tyr-verdict/SKILL.md) applies to its verifiers. A delegate that never returns is written into the ledger as an **unattacked surface**, not silently dropped.
 
-Two rules if you delegate:
+**Exception — one whole-teardown delegate** only when the diff is a single module and its tests, small enough to read in a handful of calls. Anything larger fans out.
+
+Three rules for every delegate:
 
 - **Read-only.** The mandate stands for delegates: they gather evidence and do not touch the implementation.
+- **No execution.** Delegates read tests against code; they do not run the suite, a single test, the app, or a database, and they do not mutate files to see what happens. A delegate that believes only execution can settle a claim records it **unproven** and names the exact run — that run is Tyr's to make. Say this in the dispatch verbatim; a delegate briefed on "find the failure" will otherwise reach for the test runner within its first few calls and spend most of its budget there.
 - **Negative results are required.** Every delegate reports "attacked, found nothing" for its target when it found nothing. Silence reads identically to a delegate that ran out of budget, and an unattacked surface must never reach Tyr looking clean.
 
-**Dispatch contract.** A delegate starts with no history, so every dispatch carries five things: the **prior** — state the adversarial stance verbatim, because a subagent briefed neutrally reviews neutrally; the **target** (which surface it owns, and that the others are covered); the **context it cannot infer** — the acceptance criteria, resolved edge cases and **deferrals**, since a delegate that doesn't know a decision was deliberately deferred will report it as a gap; the **return shape**, which is the finding format below, verbatim; and an explicit *"report findings and evidence, not file excerpts."*
+**Dispatch contract.** A delegate starts with no history, so every dispatch carries six things:
 
-A delegate's report is evidence, not truth — weigh it the way Tyr will weigh yours, and pass on what survives.
+1. The **prior** — the adversarial stance stated verbatim, because a subagent briefed neutrally reviews neutrally.
+2. The **target** — which surface it owns, and that the others are covered.
+3. The **context it cannot infer, pasted inline** — the acceptance criteria, the resolved edge cases, the **deferrals** (a delegate that doesn't know a decision was deliberately deferred reports it as a gap), and the ids and *Reopens only if* conditions of every refuted finding. Do **not** point it at `.workflow/brief.md`, `.workflow/ledger.md`, or the session transcript: the ledger is the history you are paying to escape and grows with every iteration, and the transcript is the build narrative itself. The diff is the only thing it should open, and it should open it once.
+4. The **no-execution rule** above, verbatim.
+5. A **budget** — around twenty-five tool calls. A delegate that runs out reports what it covered and what it did not, rather than reading on.
+6. The **return shape** — the finding format below, verbatim, plus one line per surface swept clean — and an explicit *"report findings and evidence, not file excerpts."*
+
+A delegate's report is evidence, not truth — weigh it the way Tyr will weigh yours. De-duplicate across delegates, rank, and append the findings to the ledger **as returned**; rewriting them costs a second generation of the same text and buys nothing.
 
 ## Attack surface — work one target at a time
 
@@ -68,12 +78,14 @@ Walk each of these deliberately. For each, state what you attacked and what you 
 
 ## Evidence rule
 
-Every finding must carry **concrete evidence**, not an assertion of doubt. Acceptable evidence, strongest first:
+Every finding must carry **concrete evidence**, not an assertion of doubt — and every kind of evidence here is produced by **reading**, never by running. Acceptable evidence, strongest first:
 
-1. **A reproduction** — specific inputs/state → the observed wrong output vs. the expected output. Construct the breaking case; don't just describe it.
-2. **A test that passes when it shouldn't** — name the test and the mutation it survives.
-3. **A code path that contradicts the claim** — the branch, guard, or missing case, described behaviorally (what it does / fails to do), not by line number.
+1. **A code path that contradicts the claim** — the branch, guard, or missing case, described behaviorally (what it does / fails to do), not by line number.
+2. **A test that survives a mutation** — name the test, name the mutation (invert the condition, drop the branch, return a constant, delete the feature), and show from the test body why its assertions would still hold. Reasoned, not executed.
+3. **A constructed breaking case** — specific inputs/state, traced through the code path, → what the code yields vs. what the claim says it should. Construct it; don't just describe it. Trace it; don't run it.
 4. **A missing branch** — the input class that has no handling at all.
+
+Where a claim genuinely cannot be settled by reading — timing, concurrency, behavior against a real database, a test that fails intermittently — do **not** start running things. Record the finding with confidence **unproven**, name the exact run that would settle it, and leave the run to Tyr. That is what the evidence re-run is for, and it is the single largest place a teardown loses time.
 
 If you have a real suspicion but cannot yet produce any of the above, record it anyway with confidence **unproven** — do not drop it, and do not inflate it into a confirmed defect. But an unproven finding must name **what evidence would settle it**: the specific reproduction to attempt, the mutation to try, the caller to check. Tyr grants one evidence re-run per unsettled finding and then escalates it to the user, so a suspicion that arrives with no route to proof spends that re-run on nothing.
 
@@ -85,10 +97,10 @@ Append to `.workflow/ledger.md` under the current iteration, labelled clearly as
 ### F<id>
 - **Target:** which acceptance criterion / behavior / seam / test this challenges
 - **Claim challenged:** the "fact" you are trying to falsify (e.g. "the cutoff check rejects same-day requests")
-- **Evidence:** the reproduction, vacuous test, contradicting path, or missing branch (per the evidence rule)
-- **Reproduction:** inputs/state → observed vs expected (omit only if the finding is a pure missing-branch gap)
+- **Evidence:** the contradicting path, mutation-surviving test, constructed breaking case, or missing branch (per the evidence rule)
+- **Breaking case:** inputs/state → what the code yields vs expected, traced not executed (omit only if the finding is a pure missing-branch gap)
 - **Confidence:** proven | unproven
-- **Would be settled by:** (unproven only) the specific evidence that would confirm or refute it
+- **Would be settled by:** (unproven only) the specific run or check that would confirm or refute it — this is what Tyr executes
 - **Severity hint:** blocker | major | minor (a hint for Tyr, not a verdict)
 ```
 

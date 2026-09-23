@@ -24,7 +24,7 @@ This skill is **stage 6 (the final stage) of a six-stage workflow**:
 
 ## Mandate — the decisive hand
 
-- **Judge the evidence, not the fear.** A finding is only as strong as the reproduction, failing-that-shouldn't test, or missing branch attached to it. A confidently-worded suspicion with no evidence is not a defect.
+- **Judge the evidence, not the fear.** A finding is only as strong as the breaking case, mutation-surviving test, or missing branch attached to it. A confidently-worded suspicion with no evidence is not a defect. The teardown **reads**; it never runs the suite, mutates a file, or boots the app — so when a finding's evidence is a traced breaking case or a named mutation, running it is *your* job, here or in a verification delegate. Its **Would be settled by** line is the run to make.
 - **Cut without mercy.** A false or unproven claim that survives adjudication poisons the remediation plan and wastes the loop. If it doesn't hold, strike it and say why.
 - **Enforce what holds.** A confirmed defect is not a note for later — it becomes a mandatory red→green slice, and the change does not ship until it is closed or explicitly waived by the user.
 
