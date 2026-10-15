@@ -11,11 +11,12 @@ The headline result is in [benchmark.md](benchmark.md). The short version: on th
 ```
 evals/
 ├── setup.sh        build fixture venvs + the incident git history (run once)
-├── evals.json      eight prompts, one per skill under test
+├── evals.json      one entry per eval: a prompt and a skill, or (eval 15) a runner
 ├── run.py          dispatch the runs headless, then grade + aggregate
 ├── grade.py        assertions → grading.json per run
 ├── aggregate.py    grading.json → benchmark.md/json
 ├── benchmark.md    the recorded result
+├── controls/       reproducible controls (eval15.py: reference, plausible-wrong, do-nothing)
 └── fixtures/       the seeded repos and documents the skills work against
 ```
 
@@ -69,6 +70,27 @@ Six small repos in six shapes, so the two response skills have to discover their
 | 14 | incident-fix | `incident-library` | no deploy step — containment is a yank and an advisory; the corrupted data lives with consumers |
 
 `hotfix-jvm` needs a JDK (`javac`, `java`) and `hotfix-node` needs Node 22+, both to run and to grade; nothing else needs setup. **Controls:** a reference answer scores every assertion on all seven and a do-nothing answer fails every delta assertion except the safety invariants it passes by doing nothing (no production call, no file changed). **No with-skill run has been scored.**
+
+### `harness/loop.py` end to end (eval 15)
+
+Every other eval scores one skill answering one prompt. Eval 15 scores the closing-loop harness itself: `"runner": "loop"` in `evals.json` makes `run.py` launch `harness/loop.py` instead of a `claude -p` call.
+
+The run's repo is a git work tree whose only commit is the `base` fixture, with the `teardown` fixture laid over it uncommitted. `--base HEAD` therefore hands the teardown exactly the cutoff change and its vacuous test. The `.venv` is excluded through `.git/info/exclude`, so neither the diff nor redgreen's snapshots carry it. The harness and every skill are staged to a temp directory first, like the single-skill runs. `loop.py`'s stderr log becomes `outputs/response.md`, and its exit code goes in `run.json`.
+
+| Assertion | Kind |
+|---|---|
+| exit 0 (GO) or 3 (ESCALATED), a verdict either way | capability |
+| `ledger.py check --against` the fixture's ledger is clean | capability |
+| the suite is green at the end | capability |
+| a CONFIRMED finding names `check_cutoff` ignoring account config | delta |
+| a CONFIRMED finding names `test_cutoff_window_reads_from_account_config` as vacuous | delta |
+| the refuted party-size claim is not confirmed again (judged on Target / Claim, not evidence) | delta |
+| GO, **and** the defect is fixed through `BookingService.submit`: a 240-minute window rejects a slot 180 minutes out, a 60-minute one accepts 90, the default rejects 90 | delta |
+| at least one remediation slice closed (loop.py closes one only after redgreen's proof) | delta |
+
+The fix is probed with every hour open, so the result does not depend on the time of day. A GO is not taken on the loop's word: the stub-driven control below reaches GO without fixing anything.
+
+There is no baseline: `harness/loop.py` does not exist at `3b71f54^` or `dd2a41c`, and `run.py` says so instead of inventing a no-harness run. A live run costs about $4 and 15–40 minutes; its `timeout` in `evals.json` is 3600 s.
 
 ## Running it
 
@@ -156,6 +178,14 @@ An assertion set is only worth running if a naive answer fails it. Both new eval
 The pattern to want is exactly that: **capability passes, delta fails.** A naive compose file genuinely does compose Postgres and Redis with volumes and healthchecks — that is real capability, and an assertion set that failed it everywhere would be measuring nothing but formatting. The nine delta assertions are the ones that separate "composed something" from "composed what this code actually connects to."
 
 Eval 7's two spurious delta passes are honest: the incident report happens to name the 26 July change, and happens not to blame the revert. They are non-discriminating **for that control specifically**, not broken — a run that read only the narrow git range would fail the first.
+
+Eval 15's controls are a script, so they can be re-run: `python3 evals/controls/eval15.py <workspace>` builds all three runs the way `run.py` would, calls no model, and fails if a control stops holding.
+
+| Eval | Control | Capability | Delta |
+|---|---|---|---|
+| 15 | **Reference**: both defects confirmed, `check_cutoff` reads config, both slices closed, GO | 3/3 | **5/5** |
+| 15 | **Plausible but wrong**: the real `loop.py` driven by `harness/tests/fake_claude.py`. It reaches GO and closes a slice, but never names the vacuous test, and its "fix" never touches `check_cutoff` | 3/3 | **3/5** |
+| 15 | **Do nothing**: the harness stopped before writing to the ledger | 1/3 | **1/5** |
 
 ## Caveats
 
