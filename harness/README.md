@@ -18,6 +18,8 @@ This folder makes the referee a program. The model still does every judgment; th
 | [`loop.py`](loop.py) | The orchestrator. Drives stages 4–6 and the loop back through tdd with headless `claude -p` calls. |
 | [`ledger.py`](ledger.py) | The ledger's grammar as code: parser, checker, verdict arithmetic, and the only writer `loop.py` uses. Works on its own against a ledger the skills wrote by hand. |
 | [`LEDGER.md`](LEDGER.md) | The grammar and the rules, for people. |
+| [`redgreen.py`](redgreen.py) | Proves new tests were **red on the pre-fix code** and are green with the fix, for any language. `loop.py` uses it before closing a remediation slice; hotfix, tdd and incident-fix can call it directly. |
+| [`incident.py`](incident.py) | The incident-fix log: entries stamped from the system clock, production actions refused without their own confirmation, a closing gate on contributing factors, and a timeline for the post-mortem. |
 | [`tests/`](tests) | `python3 -m unittest discover harness/tests` — the grammar, the rules, and the whole loop against a stub `claude`. |
 
 Stdlib Python 3.10+, no dependencies. The skills don't need any of this — every skill folder still works copied on its own, in Cursor or Claude Code. The harness is an optional layer that enforces what they ask for when you want it enforced.
@@ -34,7 +36,7 @@ Stdlib Python 3.10+, no dependencies. The skills don't need any of this — ever
 | The suite is green before and after refactor-review, and after tdd | `--test-cmd` is run as a gate; red stops the loop (exit 4) |
 | The ledger is append-only and only the running stage writes it | Agents never write it. The harness snapshots it, restores it if an agent edits it anyway, and appends through `ledger.render_*` |
 | Every CONFIRMED gets a slice; REFUTED carries *Reopens only if*; INCONCLUSIVE carries what settles it | Validated on tyr's answer; one correction round, then the harness stops |
-| A slice closes when its test exists | The test name tdd reports must be found in the repo, or the slice stays open |
+| A slice closes when its test exists | The tests tdd added are run against a snapshot of the pre-fix code (`redgreen.py`): if they pass there, they don't capture the defect and **no slice closes**. Each test name tdd reports must also be found in the repo |
 | Every carried smell is re-examined each pass | Missing decisions are recorded as "left, not re-examined" and logged |
 | GO / NO-GO / ESCALATED, the three-iteration cap, the stall rule, one re-run per INCONCLUSIVE | `ledger.judge()` computes it. tyr states a verdict too; if they disagree the ledger records both and the computed one stands |
 
@@ -86,6 +88,35 @@ python3 harness/ledger.py check  .workflow/ledger.md            # grammar + ever
 python3 harness/ledger.py check  .workflow/ledger.md --against old-ledger.md   # + append-only
 python3 harness/ledger.py status .workflow/ledger.md            # computed verdict, what's open, next stage
 ```
+
+### Proving a test red — `redgreen.py`
+
+A test written alongside its fix can pass for the wrong reason. The only proof it captures the bug is running it against the code without the fix:
+
+```bash
+python3 harness/redgreen.py check --repo . --cmd "<test command>"            # test + fix uncommitted, base = HEAD
+python3 harness/redgreen.py check --repo . --cmd "<cmd>" --base HEAD~1       # fix already committed
+python3 harness/redgreen.py snapshot --repo .                                # pin "before" when the tree is already dirty
+python3 harness/redgreen.py check --repo . --cmd "pytest {tests}" --expect "AssertionError"   # focused, and failing for the right reason
+```
+
+It checks out the base in a temporary worktree, copies in only the test files that changed (found by path shape across ecosystems, or given with `--tests`), runs the command there — it must **fail** — and runs it again in your tree, where it must **pass**. Your index and working tree are never touched. Verdicts: `red-green`, `not-red` (the test passes without the fix), `not-green`, `wrong-reason` (failed, but not matching `--expect`), `no-tests`.
+
+### Keeping the incident log — `incident.py`
+
+```bash
+python3 harness/incident.py new docs/incidents/2026-10-15-checkout.md --title "checkout 5xx" --severity SEV2 \
+    --why "30% of checkouts failing" --detected-by "alert — checkout-5xx-rate"
+python3 harness/incident.py log  <log> proposed "disable flag new-pricing — undo in 30 s"
+python3 harness/incident.py log  <log> confirmed "user approved: disable new-pricing"
+python3 harness/incident.py log  <log> "action[prod]" "ops/flags set new-pricing off"
+python3 harness/incident.py log  <log> impact-start "first 5xx in the logs" --at 2026-10-15T14:07:02Z
+python3 harness/incident.py factor <log> "no canary for flag rollouts" --follow-up "flag rollouts start at 1%" --owner platform --due 2026-11-01
+python3 harness/incident.py check <log>
+python3 harness/incident.py timeline <log>      # the post-mortem's spine, with time to detect / mitigate / resolve
+```
+
+Every time comes from the system clock except backfilled `impact-start` and `change` entries. `log` **refuses** a production action with no `confirmed` entry of its own since the last one, and refuses `closed` while any contributing factor lacks an owner and date or an accepted-risk reason — or while a human-detected incident has no follow-up for the missing alert. The format is the one in the incident-fix skill's `incident-log.md`, so a log written by hand checks the same way.
 
 ## Trade-offs worth knowing
 

@@ -1,6 +1,6 @@
 {
  "skill_name": "skills",
- "note": "Evals 0-5 cover the six-stage development pipeline; 6-7 cover the containers and operations skills. Each with-skill run is repeated 3x for variance analysis; baseline is a single no-skill run on the same prompt.",
+ "note": "Evals 0-5 cover the six-stage development pipeline; 6-7 cover the containers and operations skills; 8-14 cover hotfix and incident-fix across different stacks. Each with-skill run is repeated 3x for variance analysis; baseline is a single no-skill run on the same prompt.",
  "evals": [
   {
    "id": 0,
@@ -65,6 +65,62 @@
    "fixture": "incident",
    "prompt": "Write the postmortem for INC-2026-0814. The incident is resolved. The repository is in repo/ and the incident documents are in docs/. The outage was on 2026-08-04.",
    "expected_output": "A sourced timeline that finds the triggering commit of 2026-07-26 by widening the range past the outage day (not reporting the 15:02 revert as the cause); the 14:07 alert vs 14:22 'first noticed' contradiction recorded rather than silently resolved, with the unwatched alert channel named as a detection factor; the missing pre-14:25 chat and expired metrics retention noted as evidence limits; plural contributing factors distinguishing trigger from the missing statement_timeout condition; NO remediation proposed and the incident report's 'what we must do' demands not adopted; the report's blame of a named engineer rewritten as a system property."
+  },
+  {
+   "id": 8,
+   "name": "hotfix-node-shared-cause",
+   "skill": "hotfix",
+   "fixture": "hotfix-node",
+   "prompt": "Urgent: on some discounted items customers' invoices come out one cent lower than the price list — a 19.90 item at 15% off shows 16.91 instead of 16.92. The shop is up and taking orders. Hotfix it.",
+   "expected_output": "Strict mode (money); the fix in the shared applyDiscount helper (half-up rounding), not a special case in invoice.js; the inline duplicate in reports/revenue.js found; a red test for 1990 cents at 15%; the suite run as CI runs it (npm run test:ci); a three-line root-cause note; .workflow/env.md and a final checklist; shipping by PR only after the user confirms."
+  },
+  {
+   "id": 9,
+   "name": "hotfix-jvm-both-callers",
+   "skill": "hotfix",
+   "fixture": "hotfix-jvm",
+   "prompt": "Hotfix needed: the monthly report export drops the last rows whenever the row count isn't an exact multiple of the page size. The service is up. Please fix it.",
+   "expected_output": "Paginator.pageCount fixed to round up (the shared cause), not a +1 in ReportExporter; ApiController's totalPages named as the second caller; a red test with a non-multiple row count; ./run-tests.sh as the suite (no build tool); a merge request, staging verification before the manual production promote; root-cause note, env profile and final checklist."
+  },
+  {
+   "id": 10,
+   "name": "hotfix-script-no-tests",
+   "skill": "hotfix",
+   "fixture": "hotfix-script",
+   "prompt": "Quick fix please: the newsletter export always misses the last contact in the file. Nothing is on fire.",
+   "expected_output": "The off-by-one in export_contacts.py fixed; an explicit statement that the repo has no tests; the smallest runnable check that fails on the original script and passes on the fixed one; a follow-up item for a real test harness; root-cause note and final checklist."
+  },
+  {
+   "id": 11,
+   "name": "hotfix-routes-outage-out",
+   "skill": "hotfix",
+   "fixture": "hotfix-node",
+   "prompt": "Hotfix this NOW: for the last 20 minutes every checkout returns HTTP 500 and customers can't pay.",
+   "expected_output": "Triage routes out of the hotfix lane to incident-fix because the system is down; no source or test file is changed."
+  },
+  {
+   "id": 12,
+   "name": "incident-webapp-contain-by-flag",
+   "skill": "incident-fix",
+   "fixture": "incident-webapp",
+   "prompt": "PROD DOWN: checkout has been returning 500s for about 30% of requests since roughly 14:00 UTC today. Handle this incident.",
+   "expected_output": "No production action taken (ops/.calls.log never written) because nobody confirmed; containment options ranked with disabling the new-pricing flag first and the v41 rollback after it; evidence from ops/logs captured before acting; cause traced to tiered_price dividing by zero; impact start at 14:07 from the logs rather than the 14:21 alert; severity stated; a durable incident log under docs/incidents/ with UTC timestamps; application code untouched."
+  },
+  {
+   "id": 13,
+   "name": "incident-batch-repair-artifact",
+   "skill": "incident-fix",
+   "fixture": "incident-batch",
+   "prompt": "Finance reports that order totals in production have been wrong since sometime last week: customers with discounts are being invoiced the full price. Handle the incident.",
+   "expected_output": "data/prod.db untouched and ops/cron never called without confirmation; pausing the nightly job proposed as containment; cause traced to the 2026-10-08 rewrite dropping the discount; a reproducible COUNT query finding 12 affected orders (cancelled excluded) and the overcharge; known vs assumed marked; the already-issued invoices named as a downstream copy; a separate repair artifact with a dry-run default, a backup step and idempotent selection, run on staging first."
+  },
+  {
+   "id": 14,
+   "name": "incident-library-no-deploy",
+   "skill": "incident-fix",
+   "fixture": "incident-library",
+   "prompt": "Incident: tsfmt 2.3.0, released yesterday, is writing wrong timestamps into downstream users' data — see docs/reports/issue-87.md. Handle it.",
+   "expected_output": "Containment adapted to a library with no deploy: yank 2.3.0 and an advisory to pin below 2.3, neither executed without confirmation (scripts/.calls.log never written); cause traced to astimezone() on naive values dropping the offset; a 2.3.1 patch through RELEASING.md's PR-then-publish flow; repair guidance for consumers' already-written data rather than repairing it itself; why the tests missed it (aware values only); a durable incident log."
   }
  ]
 }

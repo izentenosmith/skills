@@ -9,6 +9,7 @@ would. FAKE_SCENARIO bends that:
   stall     tdd never closes its slice → the second pass closes nothing → ESCALATED
   vandal    refactor-review writes to the ledger, which the harness must undo
   doubt     the only finding stays INCONCLUSIVE twice → ESCALATED
+  vacuous   tdd's remediation test passes without the fix → no slice closes → ESCALATED
 
 Every call is appended to FAKE_CLAUDE_LOG as one JSON line: stage, iteration, argv, cwd.
 """
@@ -91,9 +92,15 @@ elif stage == "fix":
         out = {"closed": [], "not_closed": [{"finding": f, "reason": "could not reproduce"} for f in ids],
                "brief_revised": False, "summary": "stuck"}
     else:
-        tests = cwd / "tests" / "test_app.py"
-        tests.write_text(tests.read_text() + "\n\ndef test_cutoff_reads_config():\n    assert True\n")
-        out = {"closed": [{"finding": f, "test": "test_cutoff_reads_config"} for f in ids],
+        # converge: a real fix with a test that fails without it. vacuous: a test that passes either way.
+        if scenario != "vacuous":
+            (cwd / "app.py").write_text('DEFAULT = 120\n\ndef check_cutoff(slot, config):\n'
+                                        '    return config.get("cutoff", DEFAULT)\n')
+        body = "assert check_cutoff(None, {'cutoff': 5}) == 5" if scenario != "vacuous" else "assert True"
+        (cwd / "tests" / "test_fix.py").write_text(
+            f"from app import check_cutoff\n\ndef test_cutoff_reads_config():\n    {body}\n\n"
+            "test_cutoff_reads_config()\n")
+        out = {"closed": [{"finding": f, "test": "tests/test_fix.py::test_cutoff_reads_config"} for f in ids],
                "not_closed": [], "brief_revised": False, "summary": "green"}
 
 else:

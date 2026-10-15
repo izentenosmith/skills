@@ -17,6 +17,8 @@ import ledger as L  # noqa: E402
 import loop  # noqa: E402
 
 FAKE = HERE / "fake_claude.py"
+# Each test file is a script that exits non-zero when an assertion fails.
+SUITE = 'for f in tests/test_*.py; do PYTHONPATH=. python3 "$f" || exit 1; done'
 BRIEF = """# Build Plan: Cutoff window
 
 **Acceptance criteria** (ordered):
@@ -39,7 +41,7 @@ class LoopTest(unittest.TestCase):
         self.repo = pathlib.Path(self.tmp.name) / "svc"
         (self.repo / "tests").mkdir(parents=True)
         (self.repo / "app.py").write_text("def check_cutoff(slot, config):\n    return None\n")
-        (self.repo / "tests" / "test_app.py").write_text("def test_placeholder():\n    assert True\n")
+        (self.repo / "tests" / "test_app.py").write_text("assert True\n")
         git(self.repo, "init", "-q", "-b", "main")
         git(self.repo, "add", ".")
         git(self.repo, "commit", "-qm", "base")
@@ -53,7 +55,7 @@ class LoopTest(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
-    def run_loop(self, scenario="converge", test_cmd="true", *extra):
+    def run_loop(self, scenario="converge", test_cmd=SUITE, *extra):
         old = {k: os.environ.get(k) for k in [*self.env, "FAKE_SCENARIO"]}
         os.environ.update(self.env, FAKE_SCENARIO=scenario)
         err = io.StringIO()
@@ -82,7 +84,7 @@ class LoopTest(unittest.TestCase):
         text = self.ledger()
         self.assertIn("### Verdict: NO-GO", text)
         self.assertIn("### Verdict: GO", text)
-        self.assertIn("- [x] F1 — verified by `test_cutoff_reads_config`", text)
+        self.assertIn("- [x] F1 — verified by `tests/test_fix.py::test_cutoff_reads_config`", text)
         self.assertIn("- **N1** — left: condition not met", text)
 
     def test_stage_order_is_the_pipeline(self):
@@ -120,16 +122,16 @@ class LoopTest(unittest.TestCase):
             self.assertIn("harness-verify-", c["cwd"])
 
     def test_resumes_from_the_ledger(self):
-        self.assertEqual(self.run_loop("converge", "true", "--once"), loop.EXIT_GO)
+        self.assertEqual(self.run_loop("converge", SUITE, "--once"), loop.EXIT_GO)
         self.assertEqual(L.status(self.ledger())["next_stage"], "teardown")
-        self.assertEqual(self.run_loop("converge", "true"), loop.EXIT_GO, self.output)
+        self.assertEqual(self.run_loop("converge", SUITE), loop.EXIT_GO, self.output)
         self.assertEqual(L.status(self.ledger())["next_stage"], "done")
         self.assertEqual(sum(1 for c in self.calls() if c["stage"] == "refactor" and c["n"] == 1), 1)
 
     def test_settings_are_remembered(self):
-        self.run_loop("converge", "true", "--once")
+        self.run_loop("converge", SUITE, "--once")
         cfg = json.loads((self.repo / ".workflow" / "harness.json").read_text())
-        self.assertEqual(cfg["test_cmd"], "true")
+        self.assertEqual(cfg["test_cmd"], SUITE)
         self.assertTrue(cfg["base"])
 
     # ---------------------------------------------------------------- the rules
@@ -144,6 +146,17 @@ class LoopTest(unittest.TestCase):
         self.assertEqual(rep["errors"], [])
         self.assertIn("stalled", rep["computed"]["reason"])
 
+    def test_a_remediation_test_that_passes_without_the_fix_closes_nothing(self):
+        self.assertEqual(self.run_loop("vacuous"), loop.EXIT_ESCALATED, self.output)
+        self.assertIn("not-red", self.output)
+        self.assertNotIn("- [x] F1", self.ledger())
+        self.assertIn("stalled", L.status(self.ledger())["computed"]["reason"])
+
+    def test_closed_slices_record_the_red_green_proof(self):
+        self.run_loop()
+        self.assertIn("— verified by `tests/test_fix.py::test_cutoff_reads_config` — red→green checked",
+                      self.ledger())
+
     def test_second_inconclusive_escalates(self):
         self.assertEqual(self.run_loop("doubt"), loop.EXIT_ESCALATED, self.output)
         text = self.ledger()
@@ -156,7 +169,7 @@ class LoopTest(unittest.TestCase):
         self.assertIn("restored", self.output)
 
     def test_dry_run_writes_prompts_and_calls_nothing(self):
-        self.assertEqual(self.run_loop("converge", "true", "--dry-run"), loop.EXIT_GO)
+        self.assertEqual(self.run_loop("converge", SUITE, "--dry-run"), loop.EXIT_GO)
         self.assertEqual(self.calls(), [])
         self.assertFalse((self.repo / ".workflow" / "ledger.md").exists())
         prompts = list((self.repo / ".workflow" / "runs").glob("*/calls/*.prompt.md"))

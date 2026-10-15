@@ -562,7 +562,8 @@ def render_iteration(n):
 
 
 def render_closed(items):
-    body = [f"- [x] {c['finding']} — verified by `{c['test']}`" for c in items] or ["- none"]
+    body = [f"- [x] {c['finding']} — verified by `{c['test'].strip('`')}`"
+            + (f" — {c['note']}" if c.get("note") else "") for c in items] or ["- none"]
     return "\n### Closed slices\n" + "\n".join(body) + "\n"
 
 

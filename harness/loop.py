@@ -36,6 +36,7 @@ import threading
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import ledger as L  # noqa: E402
+import redgreen  # noqa: E402
 
 EXIT_GO, EXIT_ERROR, EXIT_ESCALATED, EXIT_GATE = 0, 1, 3, 4
 
@@ -484,17 +485,27 @@ def stage_fix(ctx, n, st):
     def validate(out):
         return [f"{c['finding']} is not an open slice" for c in out["closed"] if c["finding"] not in open_ids]
 
+    before = None if ctx.dry else redgreen.snapshot(ctx.repo)     # the pre-fix code, exactly
     with LedgerGuard(ctx, "fix"):
         out = claude_checked(ctx, f"i{n}-fix", prompt, FIX_SCHEMA, WRITE_TOOLS, validate, write=True)
     if out is None:
         return
     gate(ctx, "after tdd")
+    proof = redgreen.check(ctx.repo, ctx.test_cmd, base=before, timeout=ctx.timeout)
+    (ctx.run_dir / f"redgreen-i{n}.json").write_text(json.dumps(
+        {k: v for k, v in proof.items() if k not in ("before", "after")}, indent=2))
+    log(f"  red→green: {proof['verdict']} — {proof['reason']}")
     closed = []
-    for c in out["closed"]:
-        if test_exists(ctx, c["test"]):
-            closed.append(c)
-        else:
-            log(f"  {c['finding']}: tdd named `{c['test']}`, which isn't in the repo — the slice stays open")
+    if proof["verdict"] != "red-green":
+        # A remediation test that passes on the pre-fix code doesn't capture the defect it claims to.
+        # Closing nothing turns that into a stall the ledger rules will escalate, not a silent GO.
+        log("  no slice closes: the new tests were not shown to fail without the fix")
+    else:
+        for c in out["closed"]:
+            if test_exists(ctx, c["test"]):
+                closed.append({**c, "note": "red→green checked"})
+            else:
+                log(f"  {c['finding']}: tdd named `{c['test']}`, which isn't in the repo — the slice stays open")
     for nc in out["not_closed"]:
         log(f"  {nc['finding']} not closed: {nc['reason']}")
     append(ctx, n, L.render_closed(closed))
@@ -502,12 +513,17 @@ def stage_fix(ctx, n, st):
 
 
 def test_exists(ctx, name):
-    leaf = re.split(r"[:.\s/]+", name.strip("`() "))[-1]
-    if not leaf:
+    """Every test the name lists ("a::test_x + b::test_y") is somewhere in the tree."""
+    names = [n for n in re.split(r"\s*(?:\+|,|\band\b)\s*", name.strip("`() ")) if n.strip("` ")]
+    if not names:
         return False
-    r = subprocess.run(["git", "grep", "-q", "--untracked", "-w", leaf, "--", ".", ":(exclude).workflow"],
-                       cwd=ctx.repo)
-    return r.returncode == 0
+    for one in names:
+        leaf = re.split(r"[:.\s/#]+", one.strip("`() "))[-1]
+        r = subprocess.run(["git", "grep", "-q", "--untracked", "-w", leaf, "--", ".", ":(exclude).workflow"],
+                           cwd=ctx.repo) if leaf else None
+        if not r or r.returncode:
+            return False
+    return True
 
 
 def stage_refactor(ctx, n, st):

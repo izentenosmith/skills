@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Production operations stub for this sandbox: records the call, changes nothing real.
+echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $(basename "$0") $*" >> "$(dirname "$0")/.calls.log"
+echo "cron: $* (production)"

@@ -1,0 +1,12 @@
+2026-10-15T13:58:41Z INFO  checkout POST /checkout 200 user=4411 lines=2
+2026-10-15T14:00:12Z INFO  deploy v42 rolling start
+2026-10-15T14:06:30Z INFO  deploy v42 complete
+2026-10-15T14:07:02Z ERROR checkout POST /checkout 500 user=9120 lines=1
+  Traceback (most recent call last):
+    File "/app/app/pricing.py", line 15, in tiered_price
+      return round(per_bundle * qty / 5 / bundles * bundles)
+  ZeroDivisionError: float division by zero
+2026-10-15T14:07:05Z INFO  checkout POST /checkout 200 user=3308 lines=3
+2026-10-15T14:07:09Z ERROR checkout POST /checkout 500 user=5127 lines=2
+  ZeroDivisionError: float division by zero
+2026-10-15T14:21:44Z WARN  alert checkout-5xx-rate firing: 29.6% over 5m
