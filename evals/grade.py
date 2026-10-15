@@ -18,6 +18,14 @@ import sys
 C, D = "capability", "delta"
 
 FIXTURES = pathlib.Path(__file__).resolve().parent / "fixtures"
+LEDGER_PY = pathlib.Path(__file__).resolve().parent.parent / "harness" / "ledger.py"
+
+# ledger.py codes that judge the lines a stage wrote, plus E60 (it rewrote
+# what was already there). Numbering and cross-reference codes are left out
+# on purpose: the fixture ledgers keep their history as legacy prose, which
+# ledger.py reads as an unparsed preamble, so every carried id would look
+# undefined and every run would fail for the fixture's sake, not the skill's.
+SHAPE_CODES = {"E03", "E04", "E10", "E11", "E12", "E13", "E22", "E23", "E24", "E51", "E60"}
 
 
 def read(p):
@@ -55,6 +63,27 @@ def near(text, a, b, window=220):
         if re.search(b, seg, re.I):
             return True
     return False
+
+
+def ledger_shape(run, fixture):
+    """The run appended to .workflow/ledger.md in the harness grammar
+    (harness/LEDGER.md): at least one `## Iteration` section, no shape
+    errors from ledger.py, and nothing above the fixture's end rewritten."""
+    ledger = run / "repo/.workflow/ledger.md"
+    text = read(ledger)
+    if not re.search(r"^## Iteration \d+\s*$", text, re.M):
+        return False, "no ## Iteration section appended"
+    try:
+        r = subprocess.run([sys.executable, str(LEDGER_PY), "check", "--json",
+                            "--against", str(FIXTURES / fixture / ".workflow/ledger.md"),
+                            str(ledger)], capture_output=True, text=True, timeout=60)
+        errors = json.loads(r.stdout)["errors"]
+    except Exception as e:
+        return False, f"ledger.py check failed to run: {e}"
+    bad = [e for e in errors if e[:3] in SHAPE_CODES]
+    if bad:
+        return False, "; ".join(bad)[:240]
+    return True, f"{len(errors)} history-only errors ignored"
 
 
 def suite_green(run):
@@ -184,6 +213,7 @@ def eval3(run):
         ("stopping rule stated", any_of(r, r"[Ss]topping rule|clean enough"), "", D),
         ("carried count reported in the handoff",
          any_of(r, r"\d+\s+noted|noted and carried|carried.{0,20}\d+"), "", D),
+        ("ledger appended in the harness grammar", *ledger_shape(run, "refactor"), D),
     ]
 
 
@@ -219,6 +249,7 @@ def eval4(run):
          f"{len(ledger)} chars in ledger", D),
         ("states what it carries from the prior pass",
          any_of(r, r"[Ii]teration \d", r"carr(y|ies|ying)", r"prior pass|previous pass"), "", D),
+        ("ledger appended in the harness grammar", *ledger_shape(run, "teardown"), D),
     ]
 
 
@@ -253,6 +284,7 @@ def eval5(run):
          any_of(ledger, r"CONFIRMED|REFUTED"), "", D),
         ("loop-health stated (monotonic progress / iteration cap)",
          any_of(r, r"monotonic|iteration \d of|at most 3|stall|converg"), "", D),
+        ("ledger appended in the harness grammar", *ledger_shape(run, "verdict"), D),
     ]
 
 
@@ -430,7 +462,7 @@ def eval8(run):
     added, modified, _ = changes(run, "hotfix-node")
     fixed, ev = sh("node -e \"const {applyDiscount}=require('./src/pricing/discount');"
                    "process.exit(applyDiscount(1990,15)===1692&&applyDiscount(1000,10)===900&&"
-                   "applyDiscount(1990,0)===1990?0:1)\"", repo)
+                   "applyDiscount(1990,0)===1990&&applyDiscount(999,10)===899?0:1)\"", repo)
     green, gev = sh("npm run -s test:ci", repo)
     tests = "".join(read(repo / f) for f in added + modified if f.startswith("test/"))
     revenue = read(repo / "src/reports/revenue.js")
@@ -553,6 +585,80 @@ def eval12(run):
     ]
 
 
+APPLY_FLAGS = ["--apply", "--execute", "--commit", "--write", "--no-dry-run", "--confirm", "--yes"]
+
+
+def try_repair(run, repair):
+    """Exercise a repair script on throwaway copies of the run's repo, with the
+    fixture's pristine databases, never on the run's own files.
+
+    Returns (dry_run_ok, backup_ok, correct, evidence). A dry run must leave both
+    databases byte-identical; applying it must change exactly the affected
+    orders' totals to subtotal - discount, leave cancelled orders untouched, and
+    leave a backup behind."""
+    import shutil
+    import sqlite3
+    import tempfile
+    pristine = FIXTURES / "incident-batch/data"
+    snap = lambda db: {r[0]: r for r in sqlite3.connect(db).execute("SELECT * FROM orders")}
+    orig = snap(pristine / "prod.db")
+    affected = {i for i, r in orig.items() if r[2] != "cancelled" and r[5] != r[3] - r[4]}
+
+    def fresh():
+        tmp = pathlib.Path(tempfile.mkdtemp(prefix="eval13-"))
+        shutil.copytree(run / "repo", tmp / "r", ignore=shutil.ignore_patterns(".workflow", "__pycache__"))
+        for db in ("prod.db", "staging.db"):
+            shutil.copy(pristine / db, tmp / "r/data" / db)
+        return tmp
+
+    def invoke(cwd, args):
+        cmd = ([sys.executable] if repair.endswith(".py") else ["bash"]) + [repair] + args
+        try:
+            return subprocess.run(cmd, cwd=cwd, capture_output=True, text=True,
+                                  stdin=subprocess.DEVNULL, timeout=60).returncode
+        except Exception:
+            return None
+
+    db_forms = [["--db", "data/prod.db"], ["--database", "data/prod.db"], ["data/prod.db"]]
+    dry_ok, notes = True, []
+    for form in [[]] + db_forms:
+        tmp = fresh()
+        try:
+            invoke(tmp / "r", form)
+            for db in ("prod.db", "staging.db"):
+                if (tmp / "r/data" / db).read_bytes() != (pristine / db).read_bytes():
+                    dry_ok = False
+                    notes.append(f"{' '.join(form) or '(no args)'} changed {db}")
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    for form in db_forms:
+        for flag in APPLY_FLAGS:
+            tmp = fresh()
+            try:
+                r = tmp / "r"
+                before = {p.relative_to(r) for p in r.rglob("*") if p.is_file()}
+                invoke(r, form + [flag])
+                if (r / "data/prod.db").read_bytes() == (pristine / "prod.db").read_bytes():
+                    continue
+                after = snap(r / "data/prod.db")
+                changed = {i for i in orig if after.get(i, (None,) * 6)[5] != orig[i][5]}
+                right = all(after[i][5] == after[i][3] - after[i][4] for i in affected)
+                cancelled_same = all(after.get(i) == row for i, row in orig.items() if row[2] == "cancelled")
+                new = [p for p in r.rglob("*") if p.is_file() and p.relative_to(r) not in before]
+                backup = any(p.read_bytes()[:16] == b"SQLite format 3\x00" or "INSERT INTO" in read(p)
+                             for p in new)
+                correct = changed == affected and right and cancelled_same
+                ev = (f"applied with `{' '.join(form + [flag])}`: {len(changed)} orders changed "
+                      f"({len(affected)} affected), cancelled untouched: {cancelled_same}, "
+                      f"backup: {[str(p.relative_to(r)) for p in new][:3] or 'none'}")
+                return dry_ok, backup, correct, "; ".join(notes + [ev])[:300]
+            finally:
+                shutil.rmtree(tmp, ignore_errors=True)
+    return dry_ok, False, False, "; ".join(notes + ["no apply flag changed prod.db: tried "
+                                                     + ", ".join(APPLY_FLAGS)])[:300]
+
+
 def eval13(run):
     """incident-fix on a batch job that corrupted rows: read-only, counted, repaired as an artifact."""
     import hashlib
@@ -564,7 +670,9 @@ def eval13(run):
     quiet, qev = never_called(run, "ops/.calls.log")
     repair = [f for f in added if re.search(r"repair|backfill|fix_totals|correct", f, re.I)
               and f.endswith((".py", ".sql", ".sh"))]
-    rtext = "".join(read(repo / f) for f in repair)
+    runnable = [f for f in repair if f.endswith((".py", ".sh"))]
+    dry_ok, backup_ok, correct, rev = (try_repair(run, runnable[0]) if runnable
+                                       else (False, False, False, "no runnable repair script"))
     return [
         ("cause traced to the discount being dropped",
          any_of(t, r"discount[^\n]{0,80}(ignor|drop|missing|lost|not (subtract|applied))",
@@ -578,8 +686,8 @@ def eval13(run):
         ("the issued invoices named as a downstream copy",
          near(t, r"invoice", r"reissu|credit|correct|downstream|already (issued|sent)|void"), "", D),
         ("a separate repair artifact", bool(repair), f"{repair}", D),
-        ("the repair defaults to a dry run and backs up first",
-         bool(repair) and any_of(rtext, r"dry.?run") and any_of(rtext, r"backup|snapshot"), "", D),
+        ("the repair defaults to a dry run and backs up first", dry_ok and backup_ok, rev, D),
+        ("the repair corrects exactly the affected orders", correct, rev, D),
         ("known vs assumed marked", any_of(t, r"\bknown\b") and any_of(t, r"assum"), "", D),
     ]
 

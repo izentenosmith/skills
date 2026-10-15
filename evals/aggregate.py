@@ -95,8 +95,9 @@ def main():
     db = [r["delta_base"] for r in out if r["delta_base"] is not None]
     cm = [r["cap_mean"] for r in out if r["cap_mean"] is not None]
     cb = [r["cap_base"] for r in out if r["cap_base"] is not None]
-    L += ["", f"**Delta — current {st.mean(dm):.2f} vs baseline {st.mean(db):.2f}**",
-          f"**Capability — current {st.mean(cm):.2f} vs baseline {st.mean(cb):.2f}**", ""]
+    m = lambda v: f"{st.mean(v):.2f}" if v else "—"
+    L += ["", f"**Delta — current {m(dm)} vs baseline {m(db)}**",
+          f"**Capability — current {m(cm)} vs baseline {m(cb)}**", ""]
 
     L += ["## Delta assertions the baseline also passed (still non-discriminating)", ""]
     any_nd = False

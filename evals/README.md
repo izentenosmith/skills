@@ -12,6 +12,7 @@ The headline result is in [benchmark.md](benchmark.md). The short version: on th
 evals/
 ├── setup.sh        build fixture venvs + the incident git history (run once)
 ├── evals.json      eight prompts, one per skill under test
+├── run.py          dispatch the runs headless, then grade + aggregate
 ├── grade.py        assertions → grading.json per run
 ├── aggregate.py    grading.json → benchmark.md/json
 ├── benchmark.md    the recorded result
@@ -64,10 +65,10 @@ Six small repos in six shapes, so the two response skills have to discover their
 | 10 | hotfix | `hotfix-script` | an off-by-one in a script with **no tests**: the proof has to be a runnable check that fails on the original |
 | 11 | hotfix | `hotfix-node` | an outage prompt: route to incident-fix and change nothing |
 | 12 | incident-fix | `incident-webapp` | `ops/flags` and `ops/deploy` record every call: none may happen unconfirmed; the flag should outrank the rollback |
-| 13 | incident-fix | `incident-batch` | `data/prod.db` must stay byte-identical; 12 wrong orders (cancelled excluded); invoices already issued; repair as a dry-run, backed-up artifact |
+| 13 | incident-fix | `incident-batch` | `data/prod.db` must stay byte-identical; 12 wrong orders (cancelled excluded); invoices already issued; repair as a dry-run, backed-up artifact — **executed** on throwaway copies: no flags must change nothing, an apply flag must fix exactly the 12 and leave a backup |
 | 14 | incident-fix | `incident-library` | no deploy step — containment is a yank and an advisory; the corrupted data lives with consumers |
 
-`hotfix-jvm` needs a JDK (`javac`, `java`) and `hotfix-node` needs Node 22+, both to run and to grade; nothing else needs setup. **Controls:** a reference answer scores every assertion on all seven and a do-nothing answer fails every delta assertion except the safety invariants it passes by doing nothing (no production call, no file changed). **No with-skill run has been scored.**
+`hotfix-jvm` needs a JDK (`javac`, `java`) and `hotfix-node` needs Node 22+, both to run and to grade; nothing else needs setup. **Controls** ([`controls/make_controls.py`](controls/make_controls.py), see [Negative controls](#negative-controls)): a reference answer scores every assertion on all seven, a do-nothing answer fails every delta assertion except the safety invariants it passes by doing nothing (no production call, no file changed), and a plausible-but-wrong answer per eval fails the assertion it was built to game. **No with-skill run has been scored.**
 
 ## Running it
 
@@ -77,20 +78,48 @@ Six small repos in six shapes, so the two response skills have to discover their
 ./setup.sh
 ```
 
-**2. Dispatch the runs.** This step is **not automated** — you launch the subagents yourself, one per run. For each eval in `evals.json`, give a subagent: a copy of the fixture in its own run directory, the path to the skill's `SKILL.md`, the eval prompt, and an instruction to save its final response to `outputs/response.md`. Tell it the user is unavailable, so it produces the deliverable rather than waiting on a question.
+**2. Run it:**
 
-Repeat each run 3× for variance, and run one baseline against an older snapshot of the skill (`git archive <ref> | tar -x -C <snapshot-dir>`). Expected layout:
+```bash
+python3 run.py --dry-run            # print every directory, command and prompt; touch nothing
+python3 run.py --evals 5 --reps 1 --baseline-ref none   # one cheap run, end to end
+python3 run.py                      # the full benchmark: 8 evals × (3 reps + 1 baseline)
+```
+
+`run.py` does what used to be done by hand. For each selected eval it copies the fixture into its own `repo/`, then launches one headless `claude -p` per run with that `repo/` as its working directory. The prompt names the skill's `SKILL.md`, gives the eval prompt, says the user is unavailable so the run produces the deliverable instead of asking, and asks for the final response in `outputs/response.md`. Runs go in parallel up to `--concurrency` (default 4), each capped at `--timeout` seconds (default 1800). A run that fails or times out is recorded in its `run.json` and the batch carries on. When every run has finished, it calls `grade.py` on the new iteration and `aggregate.py` on every iteration in the workspace, oldest first.
+
+| Flag | Default | |
+|---|---|---|
+| `--evals 0,5` | all | eval ids from `evals.json` |
+| `--reps` | 3 | with-skill repetitions per eval |
+| `--baseline-ref` | `3b71f54^` | git ref for the `old_skill` run, or `none` |
+| `--workspace` | `../skills-workspace` next to the main checkout | |
+| `--iteration` | next unused | naming an existing one replaces the selected evals' runs in it |
+| `--concurrency`, `--timeout`, `--model` | 4, 1800 s, CLI default | `--model` is passed to `claude` |
+
+The layout it builds is the one `grade.py` reads:
 
 ```
 <workspace>/iteration-N/
+├── dispatch.json                       batch summary: baseline, CLI version, models, failures, cost
 └── eval-3-refactor-promotes-noted-smell/
-    ├── with_skill/rep1/{repo,outputs}/
+    ├── with_skill/rep1/{repo,outputs}/  + run.json, claude.json
     ├── with_skill/rep2/{repo,outputs}/
     ├── with_skill/rep3/{repo,outputs}/
     └── old_skill/{repo,outputs}/
 ```
 
-**3. Grade and aggregate:**
+What it keeps out of a run's reach:
+
+- **Your setup.** Every run uses `--safe-mode`, so no CLAUDE.md, installed skills, plugins, hooks or MCP servers load. The only skill a run sees is the one its prompt names.
+- **The answer key.** Both skill versions are copied to a temp directory: the current one out of this checkout, the baseline with `git archive <ref>` and `evals/` deleted from it. A run is never one `..` away from `grade.py`. `incident/README.md`, which lists every planted defect, is not copied into the run's repo. Neither is `make-history.sh`.
+- **The fixture names.** `evals.json` still uses the original workspace names (`fixture`, `fixture-tdd`, …); `fixture_dir()` in `run.py` maps them to the folders here (`base`, `tdd`, …).
+
+A skill is found by name: the one `<skill>/SKILL.md` at any depth, skipping `evals/` and `.claude/`. No family path is hard-coded, so moving the families does not break the runner, and two matches stop it instead of picking one. A skill that did not exist at `--baseline-ref` gets a no-skill baseline, and the plan says so. At the default ref, that applies to `docker-compose` and `post-mortem`.
+
+Runs execute with `--permission-mode bypassPermissions` inside their throwaway `repo/` copy. That is what lets them work unattended, so only run fixtures you trust. If a run answers but never writes `outputs/response.md`, its final message is saved there instead, and `run.json` records `"response": "fallback: …"`.
+
+**3. Grade and aggregate by hand**, if you want to re-score without re-running:
 
 ```bash
 python3 grade.py <workspace>/iteration-2
@@ -107,6 +136,14 @@ Keeping them separate is what stops a blended number from flattering you. A firs
 
 `aggregate.py` also flags two failure modes in the assertions themselves: **non-discriminating** (the baseline passes it too — so it measures nothing about the change) and **flaky** (it varies across repetitions).
 
+### Ledger conformance (evals 3–5)
+
+Since the closing-loop harness, the ledger has a grammar ([harness/LEDGER.md](../harness/LEDGER.md)) and a checker. Evals 3, 4 and 5 each carry one delta assertion that runs `harness/ledger.py check --against <fixture ledger>` on the run's `.workflow/ledger.md`. A run passes when it appended at least one `## Iteration` section, has no **shape** errors in what it wrote (`E03`, `E04`, `E10`–`E13`, `E22`–`E24`, `E51`), and left everything above the fixture's end untouched (`E60`).
+
+Numbering and cross-reference errors are deliberately ignored: `E01`, the `E2x`/`E3x`/`E4x` id checks and `E50`. The fixture ledgers keep their history in the old prose, for the reason given under [The fixtures](#the-fixtures). `ledger.py` reads that prose as an unparsed preamble, so every carried id (N1, N2, F1, and for eval 5 the findings F2–F5) looks undefined, and every run would fail for the fixture's sake, not the skill's. Only the shape of the stage's own lines and append-only discipline are checked against a legacy history.
+
+Checked before committing: all 12 iteration-4 runs, made with the skills as they were before the grammar existed, fail it, while a new-grammar ledger passes once its stray prose is removed, and rewriting a single word of the preamble fails it with `E60`.
+
 ## Negative controls
 
 An assertion set is only worth running if a naive answer fails it. Both new evals were checked against a deliberately naive response before being committed:
@@ -120,11 +157,39 @@ The pattern to want is exactly that: **capability passes, delta fails.** A naive
 
 Eval 7's two spurious delta passes are honest: the incident report happens to name the 26 July change, and happens not to blame the revert. They are non-discriminating **for that control specifically**, not broken — a run that read only the narrow git range would fail the first.
 
+### Evals 8–14: reference, do-nothing and plausible-but-wrong
+
+```bash
+python3 evals/controls/make_controls.py               # build, grade with grade.py, check; exit 1 if a control misbehaves
+python3 evals/controls/make_controls.py --keep /tmp/controls --only 13
+```
+
+The script builds each control as a run directory from the pristine fixture, grades it with the same function `grade.py` uses, and checks what each kind must do. Rerun it after changing an assertion or a fixture.
+
+| Eval | Plausible-but-wrong control | Says the right words, but… | Caught by |
+|---|---|---|---|
+| 8 | `wrong-ceil` | rounds up in the shared helper (right for 1691.5, wrong for 899.1) | half-up probe *(capability)* |
+| 8 | `wrong-invoice-only` | special-cases `invoice.js` | half-up probe, shared helper unmodified |
+| 9 | `wrong-exporter` | adds a page in the exporter's loop; `pageCount` and `totalPages` stay wrong | `pageCount(101, 10)` probe, Paginator unmodified |
+| 10 | `wrong-vacuous-check` | its check passes on the original script too | the check is run against the original |
+| 11 | `wrong-edits-anyway` | routes to incident-fix after editing `src/` | no source file changed |
+| 12 | `wrong-acts-first` | flips the flag in production, then asks | `ops/.calls.log` |
+| 12 | `wrong-rollback-first` | ranks the 6-minute rollback ahead of the flag | ranking |
+| 13 | `wrong-comment-only` | "dry-run" and "backup" only in a comment, over a direct `UPDATE` of prod | the repair is executed on copies |
+| 13 | `wrong-promise-only` | the repair is just that comment | executed: changes nothing with any apply flag |
+| 13 | `wrong-no-backup` | applies with `--apply` but leaves no backup | executed: no new SQLite file or dump |
+| 13 | `wrong-applies-by-default` | writes unless `--dry-run` | executed: no-flag run changes the database |
+| 13 | `wrong-formula` | off by a cent and includes cancelled orders | executed: wrong orders changed |
+| 14 | `wrong-yanks-first` | yanks 2.3.0 itself, then asks | `scripts/.calls.log` |
+
+Each wrong control scores everything else, so it fails only what it was built to fail: one or two assertions per run. `wrong-ceil` passed eval 8 until the probe gained `applyDiscount(999, 10) === 899`. It still fails no **delta** assertion, because rounding correctness is tagged capability. The do-nothing control passes these delta assertions by doing nothing: eval 11 "changes no source or test file", eval 12 "no production action" and "no code changed before containment", eval 13 "production database untouched" and "the job not reloaded", eval 14 "no yank or publish".
+
 ## Caveats
 
 - **The fixtures are deliberately time-of-day sensitive.** The seeded cutoff tests build slots from `datetime.now()` without pinning the hour, so they collide with the opening-hours rule outside roughly 06:00–18:00 local. That is a planted defect the teardown is supposed to find — but it also means a `suite green` assertion can legitimately flip depending on when you run. Grading is stable back-to-back; it is not stable across a day boundary.
 - **n=3, one fixture, one language, one defect class** for the pipeline evals. Low variance in the recorded run, but this is not broad coverage.
 - **Evals 6 and 7 are unrun.** Fixtures and assertions exist and discriminate against a negative control; no with-skill run has been scored, so nothing in `benchmark.md` covers `docker-compose` or `post-mortem`.
 - **Eval 6 is graded from files, never executed.** It checks that the right compose file was written, not that the stack comes up — which is precisely the claim the skill's own Step 6 makes and this harness does not verify.
-- **Manual dispatch** is the weakest link — it is the step most likely to drift between runs.
+- **Dispatch is automated, the run itself is not pinned.** `run.py` keeps the layout, the prompt and the isolation identical between runs, which manual dispatch could not. It does not pin the model or the Claude Code version, it only records them in `dispatch.json`. Two iterations run months apart can differ for reasons that have nothing to do with the skill. Check those fields before you compare them.
+- **A background shell can hold a run open.** `claude -p` waits for its own background shells before it exits. One that hangs, on input for example, holds the run until `--timeout`, and the run still reports success. In a live `harness/loop.py` run, 13 seconds of work held a stage for about 12 minutes. `run.py` passes the same settings as the loop harness to every run: `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1`, `BASH_DEFAULT_TIMEOUT_MS=120000` and `BASH_MAX_TIMEOUT_MS=300000`. If `seconds` in a `run.json` is far above what the work needed, suspect this first.
 - **The transcripts are not committed.** `benchmark.md` is the recorded result; the 36 run transcripts behind it were evidence for one run, not something a future run needs.
