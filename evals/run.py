@@ -72,10 +72,23 @@ def fixture_built(d):
     return True
 
 
+# Never searched for skills: the harness itself, agent state (which holds
+# whole worktrees of this repo), and build output.
+SKIP_DIRS = {"evals", ".claude", ".git", ".venv", "node_modules"}
+
+
 def find_skill(root, skill):
-    """SKILL.md for `skill` under root, across the layouts this repo has had:
-    <family>/<skill>/SKILL.md, <skill>/SKILL.md, and the older <skill>.md."""
-    hits = sorted(root.glob(f"*/{skill}/SKILL.md")) + sorted(root.glob(f"{skill}/SKILL.md"))
+    """SKILL.md for `skill` at any depth under root, so the family layout can
+    move (<family>/<skill>/, skills/<family>/<skill>/, ...) without touching
+    this. Falls back to the oldest layout, a flat <skill>.md at the root."""
+    hits = []
+    for d, dirs, files in os.walk(root):
+        dirs[:] = sorted(n for n in dirs if n not in SKIP_DIRS)
+        if pathlib.Path(d).name == skill and "SKILL.md" in files:
+            hits.append(pathlib.Path(d) / "SKILL.md")
+    if len(hits) > 1:
+        sys.exit(f"skill {skill!r} is ambiguous under {root}: "
+                 + ", ".join(str(h.relative_to(root)) for h in hits))
     if hits:
         return hits[0]
     flat = root / f"{skill}.md"
