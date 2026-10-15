@@ -1,0 +1,4 @@
+{
+  "new-pricing": {"enabled": true, "rollout_percent": 30},
+  "gift-wrap": {"enabled": true, "rollout_percent": 100}
+}

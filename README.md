@@ -16,7 +16,7 @@ Four families of skills under `skills/` — the first three in the order work ac
 skills/
   development/      build the change      six stages, design → adversarial close
   containers/       package it to run     dockerfile → docker-compose
-  operations/       live with it          release-notes · post-mortem
+  operations/       live with it          hotfix → incident-fix → post-mortem · release-notes
   database/         grade, then redesign  dbaudit → dbpropose
 harness/            run stages 4–6 and the fix loop with claude -p; check any ledger
 evals/              seeded fixtures, scored assertions, the recorded benchmark
@@ -26,10 +26,10 @@ evals/              seeded fixtures, scored assertions, the recorded benchmark
 |---|---|
 | **[development/](skills/development/README.md)** | [architect-deep-dive](skills/development/architect-deep-dive/SKILL.md) · [agent-brief](skills/development/agent-brief/SKILL.md) · [tdd](skills/development/tdd/SKILL.md) · [refactor-review](skills/development/refactor-review/SKILL.md) · [devils-advocate](skills/development/devils-advocate/SKILL.md) · [tyr-verdict](skills/development/tyr-verdict/SKILL.md) |
 | **[containers/](skills/containers/README.md)** | [dockerfile](skills/containers/dockerfile/SKILL.md) · [docker-compose](skills/containers/docker-compose/SKILL.md) |
-| **[operations/](skills/operations/README.md)** | [release-notes](skills/operations/release-notes/SKILL.md) · [post-mortem](skills/operations/post-mortem/SKILL.md) |
+| **[operations/](skills/operations/README.md)** | [hotfix](skills/operations/hotfix/SKILL.md) · [incident-fix](skills/operations/incident-fix/SKILL.md) · [post-mortem](skills/operations/post-mortem/SKILL.md) · [release-notes](skills/operations/release-notes/SKILL.md) |
 | **[database/](skills/database/README.md)** | [dbaudit](skills/database/dbaudit/SKILL.md) · [dbpropose](skills/database/dbpropose/SKILL.md) |
 
-The families are loosely coupled by design. `development` is a genuine pipeline where each stage checks the one before it; `containers` is an ordered pair; `operations` is two independent skills that happen to share an audience outside the code; `database` is an ordered pair whose second skill can feed `development` when its proposal is built. Every skill also works entirely on its own.
+The families are loosely coupled by design. `development` is a genuine pipeline where each stage checks the one before it; `containers` is an ordered pair; `operations` is a response chain — hotfix escalates to incident-fix, which hands its record to post-mortem — plus release-notes, which stands alone; `database` is an ordered pair whose second skill can feed `development` when its proposal is built. Every skill also works entirely on its own.
 
 **The family directories are scaffolding for reading this repo, nothing more.** The agent never sees them — it selects on each `SKILL.md`'s frontmatter `description`. When you take a skill, you take the skill folder; see [How to use](#how-to-use).
 
@@ -115,14 +115,23 @@ dockerfile → docker-compose
 
 ## operations
 
-What happens around a system that's already running. Two independent skills — neither depends on the other, and both compose backwards into `development`.
+What happens around a system that's already running: fixing it when it breaks, recording what happened, and telling people what changed.
+
+```
+hotfix ──escalates──► incident-fix ──hands its log to──► post-mortem      release-notes
+ (urgent, not down)    (contain → diagnose → fix → learn)  (the record)     (stands alone)
+```
 
 | Skill | What it does |
 |-------|--------------|
+| [hotfix](skills/operations/hotfix/SKILL.md) | A fast lane for an urgent bug in a system that is **up**: discovers the repo's own commands and conventions, routes outages and design questions out, proves the bug red, fixes it once at the shared cause, runs one adversarial pass (strict on data, money, permissions and tenancy), and ships with recorded evidence. |
+| [incident-fix](skills/operations/incident-fix/SKILL.md) | Production incidents end to end: contain first with ranked, reversible levers, diagnose read-only and size the impact with a reproducible count, fix through the review pipeline capped at two loops with data repair as its own artifact, then post-mortem and **follow-through** — every factor owned or explicitly accepted. Every production action waits for confirmation. |
 | [release-notes](skills/operations/release-notes/SKILL.md) | Reads the change set from git, classifies every change (including an explicit **drop** bucket for anything with no user-visible effect), and translates each survivor from what was built into what the reader can now do. Depth matched to scope; breaking changes above the fold. |
 | [post-mortem](skills/operations/post-mortem/SKILL.md) | Reconstructs a **resolved** incident into a blameless written record — timeline built from a git history date range plus incident docs and PDFs, quantified impact, and **contributing factors** rather than a single root cause. Ends with a pass over the prose hunting the blame that leaks in through grammar. |
 
-`post-mortem` **documents; it does not prescribe.** The incident is already solved, so the skill reconstructs what happened and stops there — no remediation plan, no recommendations, no handoff into the build pipeline. That boundary is what keeps the record trustworthy: a document that reconstructs *and* prescribes has an incentive to shape the reconstruction toward the prescription. What to change next is a decision for whoever owns the system.
+`hotfix` and `incident-fix` discover everything environment-specific at runtime — build and test commands as CI runs them, the merge convention, the tracker, rollback levers, observability — and cache it in `.workflow/env.md`, which both read. Neither hardcodes a stack, a CI product, a cloud or a ticket system.
+
+`post-mortem` **documents; it does not prescribe.** The incident is already solved, so the skill reconstructs what happened and stops there — no remediation plan, no recommendations, no handoff into the build pipeline. That boundary is what keeps the record trustworthy: a document that reconstructs *and* prescribes has an incentive to shape the reconstruction toward the prescription. What to change next is a decision for whoever owns the system. Inside the response chain that decision is incident-fix's **follow-through** step — written after the record, as a separate artifact, so the record stays descriptive.
 
 It needs inputs you supply: a **date range for the git history** and whatever **incident documentation** exists — the report, a vendor PDF, a chat export, alert emails. It reconstructs from artifacts, not from a description of the incident.
 
@@ -195,6 +204,8 @@ Any stage can optionally hand its **read-only or fresh-context** work to a subag
 | dockerfile | per-service stack inference in a monorepo | writing and verifying the image |
 | docker-compose | per-service dependency detection in a monorepo | **the wiring** — it's all relationships between services |
 | release-notes | gathering and classifying a large change set | **writing the prose — it must be one voice** |
+| hotfix | the caller sweep; convention lookups | **the red→green and the fix** |
+| incident-fix | evidence gathering in diagnosis, one delegate per source | **containment, every production action, and the fix decisions** |
 | post-mortem | gathering and timeline reconstruction, split by source | the factors and the blamelessness pass |
 | dbaudit | per-database evaluation of each DDL file | **scoring and the synthesis** |
 | dbpropose | coupling collection; per-domain model recovery | **the verdicts, the topology, the modelling decisions and the DDL** |
@@ -210,6 +221,8 @@ Assertions are split: **capability** (does the stage do its job at all) from **d
 **Scored:** the six `development` stages only.
 
 **Fixtures and assertions, not yet run:** `docker-compose` (a service with RQ queues on Redis and a stale `ELASTICSEARCH_URL` for a dependency the code dropped) and `post-mortem` (a git history whose trigger sits nine days before the outage, plus four contradicting documents). Both assertion sets are checked against a naive answer first — a framework-habit compose file scores 6/6 capability and **0/9** delta; the incident report submitted verbatim scores **3/10**. That says the assertions discriminate; it says nothing yet about the skills.
+
+**Also not yet run:** `hotfix` (evals 8–11 — a Node service, a JVM service with no build tool, a Python script with no tests, and an outage it must route out) and `incident-fix` (evals 12–14 — a web app with feature flags, a batch job that corrupted rows, a library with no deploy step). Every production lever in those fixtures is a stub that records its calls, so "took no action without confirmation" is checked, not inferred.
 
 `dockerfile`, `release-notes`, `dbaudit` and `dbpropose` have no eval.
 
@@ -241,11 +254,12 @@ Assertions are split: **capability** (does the stage do its job at all) from **d
    /architect-deep-dive   /agent-brief      /tdd
    /refactor-review       /devils-advocate  /tyr-verdict
    /dockerfile            /docker-compose
+   /hotfix                /incident-fix
    /release-notes         /post-mortem
    /dbaudit               /dbpropose
    ```
 
-Take one skill, take a family, take all twelve. Every skill works on its own — `tdd` plans from scratch when there's no brief, `refactor-review` reviews any diff, `devils-advocate` tears down a change it didn't build, `post-mortem` reconstructs an incident in a system it has never seen. Where skills cross-link and the other one isn't installed, the prompt still names it, so you know what would have run.
+Take one skill, take a family, take all fourteen. Every skill works on its own — `tdd` plans from scratch when there's no brief, `refactor-review` reviews any diff, `devils-advocate` tears down a change it didn't build, `post-mortem` reconstructs an incident in a system it has never seen. Where skills cross-link and the other one isn't installed, the prompt still names it, so you know what would have run.
 
 Each family has its own README with more detail: [development](skills/development/README.md) · [containers](skills/containers/README.md) · [operations](skills/operations/README.md) · [database](skills/database/README.md).
 

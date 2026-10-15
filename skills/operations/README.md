@@ -1,11 +1,18 @@
 # operations
 
-Two skills for a system that is already running and already shipped. They share nothing but an audience outside the code, and neither depends on the other.
+Four skills for a system that is already running and already shipped. Three of them form a response chain; the fourth stands alone.
+
+```
+hotfix ──escalates──► incident-fix ──hands its log to──► post-mortem      release-notes
+ (urgent, not down)    (contain → diagnose → fix → learn)  (the record)     (stands alone)
+```
 
 ## The skills
 
 | Skill | What it does |
 |-------|--------------|
+| [hotfix](hotfix/SKILL.md) | A fast, still-disciplined lane for an urgent bug in a system that is **up**. Discovers the repo's commands and conventions, routes outages and design questions out, proves the bug with a red test, fixes it once at the shared cause, runs one adversarial pass — blocking on data, money, permissions and tenancy — and ships by the repo's convention with recorded evidence. |
+| [incident-fix](incident-fix/SKILL.md) | Production incidents end to end. Contains first with ranked, reversible levers; diagnoses read-only and sizes the impact with a reproducible count; fixes through the review pipeline capped at two loops, with any data repair as its own audited artifact; then hands the log to post-mortem and runs the **follow-through** — every contributing factor becomes an owned follow-up or an explicitly accepted risk. Every production action waits for its own confirmation. |
 | [release-notes](release-notes/SKILL.md) | Reads the change set from git, classifies every change (including an explicit **drop** bucket for anything with no user-visible effect), and translates each survivor from what was built into what the reader can now do. Depth matched to scope; breaking changes above the fold. |
 | [post-mortem](post-mortem/SKILL.md) | Reconstructs a **resolved** incident into a blameless written record — timeline built from a git history date range plus incident docs and PDFs, quantified impact, and contributing factors rather than a single root cause. |
 
@@ -16,14 +23,24 @@ Two skills for a system that is already running and already shipped. They share 
 Then either let the agent trigger the skill when your request matches its `description`, or call it by name:
 
 ```
-/release-notes   /post-mortem
+/hotfix   /incident-fix   /post-mortem   /release-notes
 ```
+
+**`hotfix` and `incident-fix` hardcode nothing about your environment.** Build, test and lint commands come from your CI config; the merge convention from your instructions and history; the tracker only from evidence (otherwise a local log); rollback levers, observability and data access from what the repo and the machine expose. The result is cached in `.workflow/env.md`, which both skills share, and anything that can't be discovered is asked once, in one question.
+
+**Both stop before anything outward-facing** — push, merge, deploy, publish, a ticket, a flag flip, a data write — and wait for your confirmation, one action at a time.
 
 **`post-mortem` takes inputs you have to supply**: a date range for the git history (`2026-08-03 12:00 UTC → 2026-08-04 10:00 UTC`) and whatever incident documentation exists — the incident report, a vendor PDF, a chat export, alert emails, monitoring screenshots. It reconstructs from those; it cannot reconstruct from a description of the incident alone.
 
 `release-notes` takes a range too, usually a tag pair (`v2.3.0..v2.4.0`) or a date window.
 
-## What they have in common
+## The response chain's boundaries
+
+- **hotfix routes out** the moment the system is down, data is being corrupted or exposed, or the fix turns out to need a design decision. A lane that keeps going past those is how a quick fix becomes an incident.
+- **incident-fix contains before it diagnoses**, logs every step with clock-read UTC times in a log committed at each phase gate, and treats data repair as a separate artifact with a backup, a dry run and before/after counts.
+- **post-mortem stays descriptive.** incident-fix's follow-through — owners, dates, accepted risks — is written *after* the record, separately, so the record never bends toward a fix it is arguing for.
+
+## What post-mortem and release-notes have in common
 
 **Both are written for someone who is not reading your code**, and both are therefore mostly exercises in translation and in deciding what to leave out.
 
@@ -36,6 +53,17 @@ Both also publish under a deadline rather than at completeness. Release notes ar
 
 | Doc | Used by |
 |-----|---------|
+| [discovery](hotfix/discovery.md) | hotfix, incident-fix (incident-fix's copy adds levers, observability, data access) — the `.workflow/env.md` profile |
+| [root-cause-note](hotfix/root-cause-note.md) | hotfix — the three-line note and the caller sweep |
+| [review-checklist](hotfix/review-checklist.md) | hotfix — the review pass without a review skill |
+| [follow-up](hotfix/follow-up.md) | hotfix — what a band-aid owes |
+| [final-checklist](hotfix/final-checklist.md) | hotfix — the closing record and what counts as evidence |
+| [severity](incident-fix/severity.md) | incident-fix — incident vs. hotfix, and SEV levels |
+| [incident-log](incident-fix/incident-log.md) | incident-fix — the durable, clock-stamped log and its rules |
+| [data-repair](incident-fix/data-repair.md) | incident-fix — repairing what the bug wrote |
+| [follow-through](incident-fix/follow-through.md) | incident-fix — every factor owned or accepted |
+| [postmortem-fallback](incident-fix/postmortem-fallback.md) | incident-fix — the record when post-mortem isn't installed |
+| [phase-gates](incident-fix/phase-gates.md) | incident-fix — each phase's exit condition, and the fix-review fallback |
 | [anatomy](release-notes/anatomy.md) | release-notes — the six elements, the commit→outcome translation rules, a full template |
 | [distribution](release-notes/distribution.md) | release-notes — depth to scope, when visuals earn their place, where to publish |
 | [evidence-sources](post-mortem/evidence-sources.md) | post-mortem — reading a git range, incident PDFs, chat exports and monitoring into a sourced timeline |
@@ -45,5 +73,7 @@ Both also publish under a deadline rather than at completeness. Release notes ar
 ## Measured, partly
 
 `post-mortem` has an eval fixture and a scored assertion set in [`../evals/`](../../evals/README.md): a git repository whose triggering commit sits nine days before the outage window, plus four documents that contradict each other on detection time — one of which blames a named engineer and demands specific remediation. Submitting that incident report verbatim as the answer scores **3/10** on the assertions that test what this skill instructs. **No with-skill run has been scored yet**, so there is no number for the skill itself.
+
+`hotfix` (evals 8–11: a Node service, a JVM service with no build tool, a Python script with no tests, and an outage it must route out) and `incident-fix` (evals 12–14: a containerized web app with feature flags, a batch job that corrupted rows, a library with no deploy step) have fixtures and assertions; both assertion sets separate a reference answer from a do-nothing one, but **no with-skill run has been scored yet**.
 
 `release-notes` has no eval.

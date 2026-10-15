@@ -1,0 +1,10 @@
+{
+  "name": "shopfront",
+  "version": "1.4.2",
+  "private": true,
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test 'test/unit/**/*.test.js'",
+    "test:ci": "node --test 'test/**/*.test.js'"
+  }
+}

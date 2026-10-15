@@ -106,3 +106,6 @@ evals/fixtures/incident/repo/
 
 # --- harness: run artifacts in a repo under review ---
 .workflow/runs/
+evals/fixtures/hotfix-jvm/build/
+evals/fixtures/*/ops/.calls.log
+evals/fixtures/*/scripts/.calls.log

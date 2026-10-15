@@ -1,0 +1,23 @@
+stages: [test, package, staging, production]
+
+test:
+  stage: test
+  image: eclipse-temurin:21-jdk
+  script: ./run-tests.sh
+
+package:
+  stage: package
+  image: eclipse-temurin:21-jdk
+  script: ./package.sh
+  only: [tags]
+
+deploy_staging:
+  stage: staging
+  script: ./deploy.sh staging
+  only: [tags]
+
+promote_production:
+  stage: production
+  script: ./deploy.sh production
+  when: manual
+  only: [tags]

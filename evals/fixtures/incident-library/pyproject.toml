@@ -1,0 +1,5 @@
+[project]
+name = "tsfmt"
+version = "2.3.0"
+description = "Timestamp formatting for event pipelines"
+requires-python = ">=3.10"
