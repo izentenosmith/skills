@@ -44,6 +44,6 @@ Both also publish under a deadline rather than at completeness. Release notes ar
 
 ## Measured, partly
 
-`post-mortem` has an eval fixture and a scored assertion set in [`../evals/`](../evals/README.md): a git repository whose triggering commit sits nine days before the outage window, plus four documents that contradict each other on detection time — one of which blames a named engineer and demands specific remediation. Submitting that incident report verbatim as the answer scores **3/10** on the assertions that test what this skill instructs. **No with-skill run has been scored yet**, so there is no number for the skill itself.
+`post-mortem` has an eval fixture and a scored assertion set in [`../evals/`](../../evals/README.md): a git repository whose triggering commit sits nine days before the outage window, plus four documents that contradict each other on detection time — one of which blames a named engineer and demands specific remediation. Submitting that incident report verbatim as the answer scores **3/10** on the assertions that test what this skill instructs. **No with-skill run has been scored yet**, so there is no number for the skill itself.
 
 `release-notes` has no eval.

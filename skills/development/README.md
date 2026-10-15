@@ -56,10 +56,12 @@ The pipeline keeps two files in the repo it's working on — `.workflow/brief.md
 |---|---|---|
 | architect-deep-dive | — (its charter feeds stage 2) | — |
 | agent-brief | **creates** | — |
-| tdd | reads; **revises** via the feedback edge; ticks criteria | closes remediation slices |
+| tdd | reads; **revises** via the feedback edge; ticks criteria | **appends** closed slices |
 | refactor-review | reads (scope boundaries) | **re-rates** prior noted smells; appends new ones |
 | devils-advocate | reads (criteria, edge cases, deferrals) | **appends findings** |
 | tyr-verdict | reads | **appends verdicts and slices**; reads noted smells into the verdict |
+
+The ledger is an **append-only log** in a strict grammar — every stage appends its own section to the current iteration, and state (what's open, what's closed, which smells are carried) is read by replaying it. The grammar is in each writing skill, and in [harness/LEDGER.md](../../harness/LEDGER.md) for the whole picture; [harness/](../../harness/README.md) can check a ledger, or run stages 4–6 and the loop itself.
 
 Add `.workflow/` to the host repo's `.gitignore` unless you want the plan and the ledger in version control — both are legitimate choices, and committing them makes the loop's reasoning reviewable.
 
@@ -80,4 +82,4 @@ Each lives in the folder of the skill that uses it.
 
 ## Measured
 
-These six are the only skills in this repo with a **scored** result behind them — 0.98 vs 0.22 on delta over 36 runs. See [`../evals/`](../evals/README.md) and [benchmark.md](../evals/benchmark.md). (`docker-compose` and `post-mortem` have fixtures and assertions but no scored run.)
+These six are the only skills in this repo with a **scored** result behind them — 0.98 vs 0.22 on delta over 36 runs. See [`../evals/`](../../evals/README.md) and [benchmark.md](../../evals/benchmark.md). (`docker-compose` and `post-mortem` have fixtures and assertions but no scored run.)

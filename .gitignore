@@ -103,3 +103,6 @@ evals/fixtures/*/.pytest_cache/
 # --- eval fixtures: build output, not fixture content ---
 evals/fixtures/*/.venv/
 evals/fixtures/incident/repo/
+
+# --- harness: run artifacts in a repo under review ---
+.workflow/runs/

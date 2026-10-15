@@ -22,7 +22,7 @@ This is **stage 3 of a six-stage workflow**:
 
 > **The working files.** The pipeline keeps `.workflow/brief.md` (the plan you execute) and `.workflow/ledger.md` (findings and remediation slices across loop iterations) in the repo under review. The brief is revised in place, never forked; the ledger is append-only, and its finding IDs are stable — `F1` in iteration 1 is the same finding in iteration 3. Running standalone, neither file exists: work from what you have and say so.
 
-> **Loop-back edge.** This stage also runs as the fix step of the closing loop: when [tyr-verdict](../tyr-verdict/SKILL.md) returns NO-GO, its confirmed defects arrive as remediation slices already shaped like acceptance criteria, in `.workflow/ledger.md` under **Remediation slices — open**. Execute them here red-green exactly as you would a fresh brief. As each one goes green, move it to **closed** with the test that verifies it — that record is how the loop proves it is making progress rather than circling. Then send the result back through refactor-review → devils-advocate → tyr-verdict.
+> **Loop-back edge.** This stage also runs as the fix step of the closing loop: when [tyr-verdict](../tyr-verdict/SKILL.md) returns NO-GO, its confirmed defects arrive as remediation slices already shaped like acceptance criteria, in `.workflow/ledger.md` under the last iteration's `### Remediation slices`. Execute them here red-green exactly as you would a fresh brief. As each one goes green, close it by appending `- [x] F<id> — verified by <test name>` under `### Closed slices` in a new `## Iteration <n+1>` of the ledger — never tick or move the line tyr-verdict wrote, because the ledger is an append-only log and the opening line and the closing line together are the record. That record is how the loop proves it is making progress rather than circling. Then send the result back through refactor-review → devils-advocate → tyr-verdict.
 
 ## Philosophy
 
@@ -157,7 +157,7 @@ After all tests pass, look for refactor candidates:
 The loop is finished when every one of these holds:
 
 - [ ] Every **acceptance criterion in `.workflow/brief.md`** is implemented and has a test that verifies it — check each one off in the file, so the record survives the next loop iteration. (Running standalone: every behavior agreed in Planning.)
-- [ ] On a loop-back pass: every **remediation slice** you were handed is moved to **closed** in `.workflow/ledger.md`, naming the test that verifies it
+- [ ] On a loop-back pass: every **remediation slice** you were handed is closed in `.workflow/ledger.md` — one `### Closed slices` line per slice, naming the test that verifies it
 - [ ] The full suite is GREEN
 
 Then the structure gets cleaned, in [refactor-review](../refactor-review/SKILL.md) — that is stage 4, not a checklist item here, and it has its own severity rules and stopping rule. Invoke it against the new changes only, apply what it prescribes as **structural-only** changes, and keep the suite GREEN through every step.

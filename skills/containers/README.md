@@ -51,6 +51,6 @@ Both also stop deliberately. There is always another 8MB and another compose set
 
 ## Measured, partly
 
-`docker-compose` has an eval fixture and a scored assertion set in [`../evals/`](../evals/README.md) — a Flask service with RQ queues on Redis, a stale `ELASTICSEARCH_URL` pointing at a service the code no longer uses, and a migration step that must finish before the API starts. The assertions discriminate: a naive compose file scores 6/6 on capability and **0/9** on the assertions that test what this skill instructs. **No with-skill run has been scored yet**, so there is no number for the skill itself.
+`docker-compose` has an eval fixture and a scored assertion set in [`../evals/`](../../evals/README.md) — a Flask service with RQ queues on Redis, a stale `ELASTICSEARCH_URL` pointing at a service the code no longer uses, and a migration step that must finish before the API starts. The assertions discriminate: a naive compose file scores 6/6 on capability and **0/9** on the assertions that test what this skill instructs. **No with-skill run has been scored yet**, so there is no number for the skill itself.
 
 `dockerfile` has no eval.

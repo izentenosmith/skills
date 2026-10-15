@@ -74,25 +74,26 @@ A `noted` rating is a bet about the future: *this code won't be touched*, or *th
 So a noted smell is not filed and forgotten. It is filed **with the condition that promotes it**:
 
 ```markdown
-- **N1** Dispensables / Duplicate Code at the two constraint validators — noted iteration 1,
-  left because the architect ruled the duplication accidental and the two will diverge
+- **N1** Dispensables / Duplicate Code at the two constraint validators — noted: the
+  architect ruled the duplication accidental and the two will diverge
   - **Promote if:** a third instance appears, or a change has to be made in both at once
 ```
 
-**Every pass after the first begins by re-reading `.workflow/ledger.md` → Noted smells**, and for each entry does exactly one of three things:
+**Every pass after the first begins by re-reading `.workflow/ledger.md` for the carried smells** — every `N` id noted in an earlier `### Smells` section and not since promoted or retired — and for each one does exactly one of three things, recorded as one line in this pass's `### Smells`:
 
-- [ ] **Promote** it — its condition has fired. The commonest trigger by far: *this iteration's changes touched that code*, which retires the "stable, won't be touched" justification outright. Re-rate it `blocking` or `worthwhile` and work it in Step 2 like any other finding.
-- [ ] **Leave** it — the condition has not fired. One line, no re-derivation: `N1 — still noted, condition not met.` You are not re-litigating a judgment you already made.
-- [ ] **Retire** it — the smell is gone, because a refactor or a remediation slice removed it. Strike it with the reason.
+- [ ] **Promote** it — its condition has fired. The commonest trigger by far: *this iteration's changes touched that code*, which retires the "stable, won't be touched" justification outright. Re-rate it `blocking` or `worthwhile` and work it in Step 2 like any other finding. Record `- **N1** — promoted: <what fired>`.
+- [ ] **Leave** it — the condition has not fired. One line, no re-derivation: `- **N1** — left: condition not met` You are not re-litigating a judgment you already made.
+- [ ] **Retire** it — the smell is gone, because a refactor or a remediation slice removed it. Strike it with the reason. Record `- **N1** — retired: <what removed it>`.
 
 This is what stops the section becoming a graveyard. A noted smell that is never re-read is not a decision, it's a shrug with a timestamp — and the honest alternative would be to not write it down at all.
 
-**The ledger.** `.workflow/ledger.md`, in the repo under review, is where the closing stages record findings, verdicts and carried smells across loop iterations. It is **append-only** — never rewrite a past iteration, because an erased decision gets re-argued from scratch — and its ids are stable (`N1` stays `N1`). Your section looks like this:
+**The ledger.** `.workflow/ledger.md`, in the repo under review, is where the closing stages record findings, verdicts and carried smells across loop iterations. It is an **append-only log** — never edit an earlier iteration, because an erased decision gets re-argued from scratch; a smell's status changes by a new line in a later pass, never by rewriting the line that noted it — and its ids are stable (`N1` stays `N1`; a new smell takes the next unused id). Your section goes under the current `## Iteration <n>`, and goes in even when it is empty (`- none`):
 
 ```markdown
-## Noted smells (not acted on)
-- **N<id>** <Type / Subtype> at <location> — noted iteration <n>, left because <reason>
+### Smells
+- **N<id>** <Type / Subtype> at <location> — noted: <reason>
   - **Promote if:** the condition that would make this worth fixing
+- **N<id>** — left: condition not met
 ```
 
 Running standalone on a diff, the file won't exist — review what's in front of you and say the carried smells were unavailable.

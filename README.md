@@ -10,21 +10,24 @@ Inspired by [mattpocock/skills](https://github.com/mattpocock/skills).
 
 ## What's in here
 
-Four families — the first three in the order work actually moves through them, the fourth for the database underneath.
+Four families of skills under `skills/` — the first three in the order work actually moves through them, the fourth for the database underneath — plus a harness that runs the development pipeline's closing loop as code, and the evals that measure the skills.
 
 ```
-development/        build the change      six stages, design → adversarial close
-containers/         package it to run     dockerfile → docker-compose
-operations/         live with it          release-notes · post-mortem
-database/           grade, then redesign  dbaudit → dbpropose
+skills/
+  development/      build the change      six stages, design → adversarial close
+  containers/       package it to run     dockerfile → docker-compose
+  operations/       live with it          release-notes · post-mortem
+  database/         grade, then redesign  dbaudit → dbpropose
+harness/            run stages 4–6 and the fix loop with claude -p; check any ledger
+evals/              seeded fixtures, scored assertions, the recorded benchmark
 ```
 
 | Family | Skills |
 |---|---|
-| **[development/](development/README.md)** | [architect-deep-dive](development/architect-deep-dive/SKILL.md) · [agent-brief](development/agent-brief/SKILL.md) · [tdd](development/tdd/SKILL.md) · [refactor-review](development/refactor-review/SKILL.md) · [devils-advocate](development/devils-advocate/SKILL.md) · [tyr-verdict](development/tyr-verdict/SKILL.md) |
-| **[containers/](containers/README.md)** | [dockerfile](containers/dockerfile/SKILL.md) · [docker-compose](containers/docker-compose/SKILL.md) |
-| **[operations/](operations/README.md)** | [release-notes](operations/release-notes/SKILL.md) · [post-mortem](operations/post-mortem/SKILL.md) |
-| **[database/](database/README.md)** | [dbaudit](database/dbaudit/SKILL.md) · [dbpropose](database/dbpropose/SKILL.md) |
+| **[development/](skills/development/README.md)** | [architect-deep-dive](skills/development/architect-deep-dive/SKILL.md) · [agent-brief](skills/development/agent-brief/SKILL.md) · [tdd](skills/development/tdd/SKILL.md) · [refactor-review](skills/development/refactor-review/SKILL.md) · [devils-advocate](skills/development/devils-advocate/SKILL.md) · [tyr-verdict](skills/development/tyr-verdict/SKILL.md) |
+| **[containers/](skills/containers/README.md)** | [dockerfile](skills/containers/dockerfile/SKILL.md) · [docker-compose](skills/containers/docker-compose/SKILL.md) |
+| **[operations/](skills/operations/README.md)** | [release-notes](skills/operations/release-notes/SKILL.md) · [post-mortem](skills/operations/post-mortem/SKILL.md) |
+| **[database/](skills/database/README.md)** | [dbaudit](skills/database/dbaudit/SKILL.md) · [dbpropose](skills/database/dbpropose/SKILL.md) |
 
 The families are loosely coupled by design. `development` is a genuine pipeline where each stage checks the one before it; `containers` is an ordered pair; `operations` is two independent skills that happen to share an audience outside the code; `database` is an ordered pair whose second skill can feed `development` when its proposal is built. Every skill also works entirely on its own.
 
@@ -56,12 +59,12 @@ The pipeline keeps two files in the repo it's working on — `.workflow/brief.md
 
 | Skill | What it does |
 |-------|--------------|
-| [architect-deep-dive](development/architect-deep-dive/SKILL.md) | Staff-architect design review that resolves the plan one question at a time — options with trade-offs, a recommendation and its reversal cost — against a stated charter and a live question count. Infers answers from the codebase where it can. Run this first. |
-| [agent-brief](development/agent-brief/SKILL.md) | Turns the resolved design decisions into the pure-text build plan TDD executes — ordered acceptance criteria, test seams, prior art, and scope. |
-| [tdd](development/tdd/SKILL.md) | Test-driven development via the red-green-refactor loop (vertical slices, not horizontal). Ends by handing off to refactor-review. |
-| [refactor-review](development/refactor-review/SKILL.md) | Reviews the current diff: names the smell, then prescribes a behavior-preserving refactoring. |
-| [devils-advocate](development/devils-advocate/SKILL.md) | Assumes everything just built is wrong and hunts concrete evidence for each defect. Over-reports on purpose; does not fix or judge. |
-| [tyr-verdict](development/tyr-verdict/SKILL.md) | Adjudicates the devils-advocate findings, cuts false claims, turns confirmed defects into red→green remediation slices, and issues a go/no-go verdict. |
+| [architect-deep-dive](skills/development/architect-deep-dive/SKILL.md) | Staff-architect design review that resolves the plan one question at a time — options with trade-offs, a recommendation and its reversal cost — against a stated charter and a live question count. Infers answers from the codebase where it can. Run this first. |
+| [agent-brief](skills/development/agent-brief/SKILL.md) | Turns the resolved design decisions into the pure-text build plan TDD executes — ordered acceptance criteria, test seams, prior art, and scope. |
+| [tdd](skills/development/tdd/SKILL.md) | Test-driven development via the red-green-refactor loop (vertical slices, not horizontal). Ends by handing off to refactor-review. |
+| [refactor-review](skills/development/refactor-review/SKILL.md) | Reviews the current diff: names the smell, then prescribes a behavior-preserving refactoring. |
+| [devils-advocate](skills/development/devils-advocate/SKILL.md) | Assumes everything just built is wrong and hunts concrete evidence for each defect. Over-reports on purpose; does not fix or judge. |
+| [tyr-verdict](skills/development/tyr-verdict/SKILL.md) | Adjudicates the devils-advocate findings, cuts false claims, turns confirmed defects into red→green remediation slices, and issues a go/no-go verdict. |
 
 ### How much pipeline does this change need?
 
@@ -80,6 +83,16 @@ Two rules that make the tiering honest:
 
 Stage numbers throughout the skills refer to position in the full pipeline, not to a requirement that all six run.
 
+### Running the closing loop as code
+
+The loop's rules — read-only teardown, one verifier per finding, sticky refutations, one evidence re-run per INCONCLUSIVE, three iterations, a verdict that follows from what's open — are prose in the skills, which means the agent is both worker and referee. **[harness/](harness/README.md)** moves the referee into a program: `loop.py` drives refactor-review → devils-advocate → tyr-verdict (and tdd on NO-GO) through headless `claude -p` calls, enforces each rule in code, and keeps the ledger as an append-only log in a [strict grammar](harness/LEDGER.md) it can replay and resume from. `ledger.py` checks any ledger, including one the skills wrote by hand.
+
+```bash
+python3 harness/loop.py --repo ../my-service --test-cmd ".venv/bin/python -m pytest -q"
+```
+
+It's optional and Claude Code only; the skills don't depend on it.
+
 ---
 
 ## containers
@@ -93,8 +106,8 @@ dockerfile → docker-compose
 
 | Skill | What it does |
 |-------|--------------|
-| [dockerfile](containers/dockerfile/SKILL.md) | Reads the stack off the repo, writes a multi-stage production Dockerfile — pinned base, non-root runtime, cache-correct layer order — and generates or repairs the `.dockerignore` that defines its build context. Verifies by building and running, not by reading. |
-| [docker-compose](containers/docker-compose/SKILL.md) | Detects the services the code actually connects to, wires them with named volumes, an isolated network and real health gates, and ships a documented `.env.example` plus a dev override. Verifies from cold, twice. |
+| [dockerfile](skills/containers/dockerfile/SKILL.md) | Reads the stack off the repo, writes a multi-stage production Dockerfile — pinned base, non-root runtime, cache-correct layer order — and generates or repairs the `.dockerignore` that defines its build context. Verifies by building and running, not by reading. |
+| [docker-compose](skills/containers/docker-compose/SKILL.md) | Detects the services the code actually connects to, wires them with named volumes, an isolated network and real health gates, and ships a documented `.env.example` plus a dev override. Verifies from cold, twice. |
 
 **Run `dockerfile` first.** Compose orchestrates images; it cannot repair one. Most "compose is broken" reports are an image that doesn't start, doesn't answer its healthcheck, or dies on `SIGTERM`.
 
@@ -106,8 +119,8 @@ What happens around a system that's already running. Two independent skills — 
 
 | Skill | What it does |
 |-------|--------------|
-| [release-notes](operations/release-notes/SKILL.md) | Reads the change set from git, classifies every change (including an explicit **drop** bucket for anything with no user-visible effect), and translates each survivor from what was built into what the reader can now do. Depth matched to scope; breaking changes above the fold. |
-| [post-mortem](operations/post-mortem/SKILL.md) | Reconstructs a **resolved** incident into a blameless written record — timeline built from a git history date range plus incident docs and PDFs, quantified impact, and **contributing factors** rather than a single root cause. Ends with a pass over the prose hunting the blame that leaks in through grammar. |
+| [release-notes](skills/operations/release-notes/SKILL.md) | Reads the change set from git, classifies every change (including an explicit **drop** bucket for anything with no user-visible effect), and translates each survivor from what was built into what the reader can now do. Depth matched to scope; breaking changes above the fold. |
+| [post-mortem](skills/operations/post-mortem/SKILL.md) | Reconstructs a **resolved** incident into a blameless written record — timeline built from a git history date range plus incident docs and PDFs, quantified impact, and **contributing factors** rather than a single root cause. Ends with a pass over the prose hunting the blame that leaks in through grammar. |
 
 `post-mortem` **documents; it does not prescribe.** The incident is already solved, so the skill reconstructs what happened and stops there — no remediation plan, no recommendations, no handoff into the build pipeline. That boundary is what keeps the record trustworthy: a document that reconstructs *and* prescribes has an incentive to shape the reconstruction toward the prescription. What to change next is a decision for whoever owns the system.
 
@@ -126,8 +139,8 @@ dbaudit  →  dbpropose
 
 | Skill | What it does |
 |-------|--------------|
-| [dbaudit](database/dbaudit/SKILL.md) | Grades DDL — tables, indexes, views, procedures, triggers — against relational theory and ER-modelling rules with a repeatable 0–10 formula, severity caps and ✅/⚠️/🔬 confidence tags; per-file evaluations, per-database summaries, an estate synthesis with a coupling edge list. Evaluates and stops. |
-| [dbpropose](database/dbpropose/SKILL.md) | Turns the audit into a reuse / refactor / rework / rebuild / drop verdict per object, a topology derived from real coupling, and either a modelled target schema (ER model → Table Instance Diagrams → PostgreSQL 18 DDL) with a migration plan or an in-place remediation register. Also designs or reviews a model from requirements. |
+| [dbaudit](skills/database/dbaudit/SKILL.md) | Grades DDL — tables, indexes, views, procedures, triggers — against relational theory and ER-modelling rules with a repeatable 0–10 formula, severity caps and ✅/⚠️/🔬 confidence tags; per-file evaluations, per-database summaries, an estate synthesis with a coupling edge list. Evaluates and stops. |
+| [dbpropose](skills/database/dbpropose/SKILL.md) | Turns the audit into a reuse / refactor / rework / rebuild / drop verdict per object, a topology derived from real coupling, and either a modelled target schema (ER model → Table Instance Diagrams → PostgreSQL 18 DDL) with a migration plan or an in-place remediation register. Also designs or reviews a model from requirements. |
 
 **The audit doesn't prescribe and the proposal doesn't run ahead of the audit.** Every verdict cites the score and the finding that set it, every runtime claim stays a 🔬 flag rather than a graded defect, and every target table is modelled — entity, relationships, identifier, via `er-modeling.md`'s CAP1–CAP4 — before it gets DDL. `dbpropose`'s handoff feeds `architect-deep-dive` and `agent-brief` when the proposal is going to be built.
 
@@ -139,31 +152,31 @@ These carry no workflow of their own — the skill in the same folder links into
 
 | Doc | Used by |
 |-----|---------|
-| [clean-architecture](development/architect-deep-dive/clean-architecture.md) | architect-deep-dive — dependency direction, policy vs. detail, boundary placement (Martin) |
-| [code-smells](development/refactor-review/code-smells.md) | refactor-review — the symptom catalog (Refactoring Guru / Fowler) |
-| [refactoring-techniques](development/refactor-review/refactoring-techniques.md) | refactor-review — the treatment catalog |
-| [comments](development/refactor-review/comments.md) | refactor-review — which comments earn their place (tdd carries the ladder inline) |
-| [good-tests](development/tdd/good-tests.md) | tdd — good vs. bad test examples |
-| [mocking](development/tdd/mocking.md) | tdd — when and how to mock |
-| [deep-modules](development/tdd/deep-modules.md) | tdd — the deep-module principle |
-| [interface-design](development/tdd/interface-design.md) | tdd — designing for testability |
-| [optimization](containers/dockerfile/optimization.md) | dockerfile — base image trade-offs, layer order, cache mounts, secrets, signals |
-| [dockerignore](containers/dockerfile/dockerignore.md) | dockerfile — what to exclude and what each exclusion buys |
-| [service-catalog](containers/docker-compose/service-catalog.md) | docker-compose — per-service image, readiness probe, volume path, connection string |
-| [environments](containers/docker-compose/environments.md) | docker-compose — overrides, merge rules, `.env.example`, secrets |
-| [anatomy](operations/release-notes/anatomy.md) | release-notes — the six elements and the commit→outcome translation rules |
-| [distribution](operations/release-notes/distribution.md) | release-notes — depth to scope, when visuals earn their place, where to publish |
-| [blameless-culture](operations/post-mortem/blameless-culture.md) | post-mortem — why blameless is a data-collection strategy (Google SRE; Dekker) |
-| [contributing-factors](operations/post-mortem/contributing-factors.md) | post-mortem — past single-root-cause; the categories to sweep and where to stop |
-| [evidence-sources](operations/post-mortem/evidence-sources.md) | post-mortem — reading a git range, incident PDFs, chat exports and monitoring into a sourced timeline |
-| [theory](database/dbaudit/theory.md) | dbaudit, dbpropose (identical copies) — integrity, functional dependencies, normal forms, ACID, SSOT, ER vocabulary |
-| [er-modeling](database/dbaudit/er-modeling.md) | dbaudit, dbpropose (identical copies) — CAP1–CAP4 pure modelling, reverse-engineering, 25 drills |
-| [scoring](database/dbaudit/scoring.md) | dbaudit — severity, confidence tags, the 0–10 formula, triage, output templates |
-| [audit-lenses](database/dbaudit/audit-lenses.md) | dbaudit — dead/copy schemas, coupling, dark data, security |
-| [tables](database/dbaudit/tables.md) · [indexes](database/dbaudit/indexes.md) · [views](database/dbaudit/views.md) · [procedures](database/dbaudit/procedures.md) · [triggers](database/dbaudit/triggers.md) | dbaudit — the per-object-type rubrics |
-| [detection-signals](database/dbaudit/detection-signals.md) | dbaudit — grep/regex per anti-pattern, with engine notes |
-| [proposal](database/dbpropose/proposal.md) | dbpropose — input contract, verdicts, topology, translation, target-schema and remediation skeletons |
-| [physical-design](database/dbpropose/physical-design.md) | dbpropose — the PostgreSQL 18 physical standard |
+| [clean-architecture](skills/development/architect-deep-dive/clean-architecture.md) | architect-deep-dive — dependency direction, policy vs. detail, boundary placement (Martin) |
+| [code-smells](skills/development/refactor-review/code-smells.md) | refactor-review — the symptom catalog (Refactoring Guru / Fowler) |
+| [refactoring-techniques](skills/development/refactor-review/refactoring-techniques.md) | refactor-review — the treatment catalog |
+| [comments](skills/development/refactor-review/comments.md) | refactor-review — which comments earn their place (tdd carries the ladder inline) |
+| [good-tests](skills/development/tdd/good-tests.md) | tdd — good vs. bad test examples |
+| [mocking](skills/development/tdd/mocking.md) | tdd — when and how to mock |
+| [deep-modules](skills/development/tdd/deep-modules.md) | tdd — the deep-module principle |
+| [interface-design](skills/development/tdd/interface-design.md) | tdd — designing for testability |
+| [optimization](skills/containers/dockerfile/optimization.md) | dockerfile — base image trade-offs, layer order, cache mounts, secrets, signals |
+| [dockerignore](skills/containers/dockerfile/dockerignore.md) | dockerfile — what to exclude and what each exclusion buys |
+| [service-catalog](skills/containers/docker-compose/service-catalog.md) | docker-compose — per-service image, readiness probe, volume path, connection string |
+| [environments](skills/containers/docker-compose/environments.md) | docker-compose — overrides, merge rules, `.env.example`, secrets |
+| [anatomy](skills/operations/release-notes/anatomy.md) | release-notes — the six elements and the commit→outcome translation rules |
+| [distribution](skills/operations/release-notes/distribution.md) | release-notes — depth to scope, when visuals earn their place, where to publish |
+| [blameless-culture](skills/operations/post-mortem/blameless-culture.md) | post-mortem — why blameless is a data-collection strategy (Google SRE; Dekker) |
+| [contributing-factors](skills/operations/post-mortem/contributing-factors.md) | post-mortem — past single-root-cause; the categories to sweep and where to stop |
+| [evidence-sources](skills/operations/post-mortem/evidence-sources.md) | post-mortem — reading a git range, incident PDFs, chat exports and monitoring into a sourced timeline |
+| [theory](skills/database/dbaudit/theory.md) | dbaudit, dbpropose (identical copies) — integrity, functional dependencies, normal forms, ACID, SSOT, ER vocabulary |
+| [er-modeling](skills/database/dbaudit/er-modeling.md) | dbaudit, dbpropose (identical copies) — CAP1–CAP4 pure modelling, reverse-engineering, 25 drills |
+| [scoring](skills/database/dbaudit/scoring.md) | dbaudit — severity, confidence tags, the 0–10 formula, triage, output templates |
+| [audit-lenses](skills/database/dbaudit/audit-lenses.md) | dbaudit — dead/copy schemas, coupling, dark data, security |
+| [tables](skills/database/dbaudit/tables.md) · [indexes](skills/database/dbaudit/indexes.md) · [views](skills/database/dbaudit/views.md) · [procedures](skills/database/dbaudit/procedures.md) · [triggers](skills/database/dbaudit/triggers.md) | dbaudit — the per-object-type rubrics |
+| [detection-signals](skills/database/dbaudit/detection-signals.md) | dbaudit — grep/regex per anti-pattern, with engine notes |
+| [proposal](skills/database/dbpropose/proposal.md) | dbpropose — input contract, verdicts, topology, translation, target-schema and remediation skeletons |
+| [physical-design](skills/database/dbpropose/physical-design.md) | dbpropose — the PostgreSQL 18 physical standard |
 
 Each doc lives in the folder of the skill that uses it, and nothing reaches across folders.
 
@@ -213,9 +226,9 @@ Assertions are split: **capability** (does the stage do its job at all) from **d
 2. **Copy the skill folders you want** into wherever the target repo keeps its agent skills — `.claude/skills/` for Claude Code, `.cursor/skills/` for Cursor, or your user-level skills directory.
 
    ```bash
-   cp -r skills/containers/dockerfile   my-project/.claude/skills/
-   cp -r skills/operations/post-mortem  my-project/.claude/skills/
-   cp -r skills/database/dbaudit        my-project/.claude/skills/
+   cp -r skills/skills/containers/dockerfile   my-project/.claude/skills/
+   cp -r skills/skills/operations/post-mortem  my-project/.claude/skills/
+   cp -r skills/skills/database/dbaudit        my-project/.claude/skills/
    ```
 
    **Copy the skill folder, not the category folder.** `development/`, `containers/`, `operations/` and `database/` are scaffolding for reading this repo — the agent never sees them, and copying one wholesale just nests your skills a level too deep.
@@ -234,12 +247,13 @@ Assertions are split: **capability** (does the stage do its job at all) from **d
 
 Take one skill, take a family, take all twelve. Every skill works on its own — `tdd` plans from scratch when there's no brief, `refactor-review` reviews any diff, `devils-advocate` tears down a change it didn't build, `post-mortem` reconstructs an incident in a system it has never seen. Where skills cross-link and the other one isn't installed, the prompt still names it, so you know what would have run.
 
-Each family has its own README with more detail: [development](development/README.md) · [containers](containers/README.md) · [operations](operations/README.md) · [database](database/README.md).
+Each family has its own README with more detail: [development](skills/development/README.md) · [containers](skills/containers/README.md) · [operations](skills/operations/README.md) · [database](skills/database/README.md).
 
 ## Conventions
 
 - **One skill per folder, and the folder stands alone.** Each folder contains a `SKILL.md` (the workflow) plus every reference doc it needs. **Copy any one folder into any project and it works** — no shared root docs, no reference doc outside its own folder. The only cross-folder links are the stage list and the handoff, which name the next skill; if it isn't installed, the prompt still tells you which one to run.
-- **Families are scaffolding, not structure.** The top-level directories exist to make this repo readable; the agent selects on the frontmatter `description` and never sees a folder name. Nothing installs a family, and no skill depends on its family's path — so families are free to reorganize, and skills are free to cross-link between them.
+- **Families are scaffolding, not structure.** The family directories under `skills/` exist to make this repo readable; the agent selects on the frontmatter `description` and never sees a folder name. Nothing installs a family, and no skill depends on its family's path — so families are free to reorganize, and skills are free to cross-link between them.
+- **The harness is a layer, not a dependency.** `harness/` enforces the development pipeline's rules when you run it, and nothing in a skill folder refers to it. Its ledger grammar is the same one the skills write by hand — so a skill folder copied alone still produces a ledger the harness can check and resume.
 - **No installer, by design.** Skills are copied into a target repo one folder at a time. An install script implies a managed set that stays in sync; this is a shelf you take things off.
 - **Self-containment beats DRY here.** The dispatch contract, the `.workflow/` file rules and the six-stage list are repeated across folders on purpose. That is real duplication with a real cost — change the pipeline's shape and you edit six files — and it buys the thing that matters more: a folder you can paste anywhere.
 - **Every `SKILL.md` carries frontmatter** (`name`, `description`) so the agent can decide relevance.

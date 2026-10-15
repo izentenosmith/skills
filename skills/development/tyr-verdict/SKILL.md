@@ -39,13 +39,15 @@ For each finding from the teardown, render exactly one verdict:
   - **major** — a real defect on a supported path that a user will hit, but not catastrophic.
   - **minor** — a genuine but low-impact defect (narrow edge, cosmetic, degraded-but-correct).
 
-Record each in `.workflow/ledger.md`, under the current iteration:
+Record each in `.workflow/ledger.md`, in the current iteration's `### Verdicts` section:
 
 ```markdown
-### F<id> — <CONFIRMED blocker | CONFIRMED major | CONFIRMED minor | REFUTED | INCONCLUSIVE>
+### Verdicts
+#### F<id> — <CONFIRMED blocker | CONFIRMED major | CONFIRMED minor | REFUTED | INCONCLUSIVE>
 - **Reason:** why the evidence does or doesn't hold (one or two sentences)
-- **For REFUTED:** **Reopens only if:** the new evidence that would overturn this
-- **For INCONCLUSIVE:** the specific evidence that would settle it, and who gets it (devils-advocate re-run / the user); note whether this is its first or second pass
+- **Reopens only if:** (REFUTED only) the new evidence that would overturn this
+- **Settled by:** (INCONCLUSIVE only) the specific evidence that would settle it, and who gets it (devils-advocate re-run / the user)
+- **Pass:** (INCONCLUSIVE only) 1 or 2
 ```
 
 ## The ledger — how the loop terminates
@@ -55,27 +57,41 @@ Adjudicating one iteration in isolation is what lets this loop run forever: the 
 Four rules break it. All of them depend on the ledger being a file, not a memory.
 
 1. **REFUTED is sticky.** A finding you struck down stays struck down. It is not re-adjudicated on a later iteration unless *new* evidence appears that meets the **Reopens only if** condition you wrote when you cut it. If a teardown re-reports a refuted finding with the same evidence, strike it in one line citing the prior verdict — do not re-derive the reasoning.
-2. **Progress must be monotonic.** From iteration 2 on, each pass must close something: a remediation slice moved to closed, a finding newly CONFIRMED, or an INCONCLUSIVE settled either way. Read the outcome carefully, because an iteration that closes nothing means one of two opposite things — **nothing left open** is convergence, and the verdict is GO; **something still open and nothing closed** is a stall, and the loop is spinning. Say which, and never let a stall buy another iteration.
+2. **Progress must be monotonic.** From iteration 2 on, each pass must close something: a remediation slice closed, a finding newly CONFIRMED, or an INCONCLUSIVE settled either way. Read the outcome carefully, because an iteration that closes nothing means one of two opposite things — **nothing left open** is convergence, and the verdict is GO; **something still open and nothing closed** is a stall, and the loop is spinning. Say which, and never let a stall buy another iteration.
 3. **Escalate rather than recirculate.** Any single INCONCLUSIVE gets **one** re-run for evidence. After that it goes to the user with the options stated plainly: accept the risk and ship, treat it as CONFIRMED and fix it, or block pending investigation outside this loop. Guessing is still forbidden; so is looping on it.
-4. **Cap at three iterations.** If a third adjudication still leaves confirmed blockers or majors open, the loop is not converging and the problem is upstream — a design decision that was never actually resolved, or a brief that doesn't match reality. Stop the loop and say which, rather than grinding stage 3 against a plan that can't succeed. That is a finding about `.workflow/brief.md`, and it goes back to [agent-brief](../agent-brief/SKILL.md) or [architect-deep-dive](../architect-deep-dive/SKILL.md).
+4. **Cap at three iterations.** If a third adjudication still leaves confirmed blockers or majors open — or an INCONCLUSIVE, since there is no fourth pass to settle it in — the loop is not converging and the problem is upstream — a design decision that was never actually resolved, or a brief that doesn't match reality. Stop the loop and say which, rather than grinding stage 3 against a plan that can't succeed. That is a finding about `.workflow/brief.md`, and it goes back to [agent-brief](../agent-brief/SKILL.md) or [architect-deep-dive](../architect-deep-dive/SKILL.md).
 
-The file lives in the repo under review and is **append-only** — never rewrite a past iteration, and never reuse or renumber a finding id. It carries your verdicts, the open and closed remediation slices, and the noted smells refactor-review left behind:
+The file lives in the repo under review and is an **append-only log** — never edit anything above its end, and never reuse or renumber an id. Every stage appends its own section to the current iteration, and the state is read by replaying the log from the top: a slice is opened by your line and closed by a later line of tdd's, never by ticking yours. Every stage writes its section even when it has nothing to record (`- none`), so a stage that found nothing is distinguishable from one that never ran. One iteration, in loop order:
 
 ```markdown
 ## Iteration <n>
-### F<id> — <verdict>
+
+### Closed slices
+- [x] F<id> — verified by <test name>
+
+### Smells
+- **N<id>** <Type / Subtype> at <location> — noted: <reason>
+  - **Promote if:** <condition>
+
+### Findings (unadjudicated)
+#### F<id>
+- **Target:** …
+
+### Surfaces
+- **Swept:** <surface> — <what held>
+
+### Verdicts
+#### F<id> — <verdict>
 - **Reason:** …
-- **Reopens only if:** (REFUTED only) the new evidence that would overturn this
 
-## Remediation slices — open
-- [ ] [blocker] F3 — <observable behavior that must hold>
+### Remediation slices
+- [ ] [blocker] F<id> — <observable behavior that must hold>
 
-## Remediation slices — closed
-- [x] [major] F1 — closed iteration 2, verified by <test name>
-
-## Noted smells (not acted on)
-- **N<id>** <Type / Subtype> at <location> — left because <reason>
+### Verdict: <GO | NO-GO | ESCALATED>
+- **Reason:** …
 ```
+
+tdd writes **Closed slices** (on a loop-back pass), refactor-review **Smells**, devils-advocate **Findings** and **Surfaces**, and you the last three. The user may append `### Decisions` with `- **F<id>** — waived: <reason>` to accept a risk; a waived finding stops counting as open. The grammar is strict on purpose — strict enough for a script to check, and for the verdict below to be arithmetic over it.
 
 Adjudicating a standalone teardown with no ledger is fine: render the verdicts, and say the loop history was unavailable.
 
@@ -97,20 +113,20 @@ Then adjudicate here, on the returned evidence. A delegate's recommendation is a
 
 ## Remediation plan
 
-For every **CONFIRMED** finding, write a remediation slice in agent-brief acceptance-criterion form — an observable behavior verifiable through the public interface, phrased as a red→green target. Order them by severity (all blockers, then majors, then minors); that order is the build order [tdd](../tdd/SKILL.md) will follow. Write them into `.workflow/ledger.md` under **Remediation slices — open**, tagged with the finding ID they close:
+For every **CONFIRMED** finding, write a remediation slice in agent-brief acceptance-criterion form — an observable behavior verifiable through the public interface, phrased as a red→green target. Order them by severity (all blockers, then majors, then minors); that order is the build order [tdd](../tdd/SKILL.md) will follow. Write them into `.workflow/ledger.md` under `### Remediation slices`, tagged with the finding ID they close:
 
 ```markdown
-## Remediation slices — open (red→green build order)
+### Remediation slices
 - [ ] [blocker] F3 — <observable behavior that must hold, stated as a spec sentence>
 - [ ] [major]   F7 — <observable behavior that must hold>
 - [ ] [minor]   F2 — <observable behavior that must hold>
 ```
 
-TDD moves each one to **closed** as it goes green. Those two lists are the loop's progress record — rule 2 above reads them.
+Every CONFIRMED finding gets exactly one slice, at the severity you gave it. TDD closes each one as it goes green with a `### Closed slices` line in the next iteration. Opened and closed lines together are the loop's progress record — rule 2 above reads them.
 
 ## Carried debt — the noted smells
 
-Before the verdict, read `.workflow/ledger.md` → **Noted smells**. Those are structural problems [refactor-review](../refactor-review/SKILL.md) found, judged not worth fixing, and left in the code — and a GO ships every one of them. They are not defects and they get no verdict, but they must not ship by omission either. Two jobs:
+Before the verdict, read the carried smells in `.workflow/ledger.md` — every `N` id noted in a `### Smells` section and not since promoted or retired. Those are structural problems [refactor-review](../refactor-review/SKILL.md) found, judged not worth fixing, and left in the code — and a GO ships every one of them. They are not defects and they get no verdict, but they must not ship by omission either. Two jobs:
 
 - **Enumerate them in the verdict** so the user accepts them explicitly rather than by silence: *"Shipping with 2 noted smells: N1, N3."*
 - **Cross-check them against the confirmed findings.** A noted smell in the same code as a CONFIRMED blocker is worth a second look — the structure you tolerated may be why the defect was possible, in which case the remediation slice should fix the structure rather than patch around it. Say so when you see it; that is a judgment only this stage is positioned to make, because only this stage sees both lists.
@@ -123,7 +139,9 @@ Conclude with one explicit call:
 
 - **GO** — no CONFIRMED blocker or major remains, and no INCONCLUSIVE finding is still open. Minors may ship as recorded, tracked follow-ups if the user accepts them.
 - **NO-GO** — at least one CONFIRMED blocker/major, or an open INCONCLUSIVE. The change does not ship. The remediation slices above are the exit condition.
-- **ESCALATED** — the loop is not converging: an INCONCLUSIVE has already had its evidence re-run, or a third iteration still leaves blockers open (ledger rules 3 and 4). This is not a GO and not a NO-GO; it is a decision that has left your hands. State what is unresolved, what evidence is missing, and which upstream stage or user decision would settle it.
+- **ESCALATED** — the loop is not converging: an INCONCLUSIVE has already had its evidence re-run, a third iteration still leaves something open, or a pass closed nothing while something stayed open (ledger rules 2–4). This is not a GO and not a NO-GO; it is a decision that has left your hands. State what is unresolved, what evidence is missing, and which upstream stage or user decision would settle it.
+
+Write the call as the iteration's last section — `### Verdict: <GO | NO-GO | ESCALATED>` followed by a `- **Reason:**` line. The call is not a free choice: given your verdicts, slices and the ledger's history, the four rules above and the three definitions here determine it. Work it out from the ledger rather than from how the change feels — a script reading the same log must reach the same call.
 
 ## The loop
 

@@ -91,10 +91,11 @@ If you have a real suspicion but cannot yet produce any of the above, record it 
 
 ## Output — an unadjudicated findings list
 
-Append to `.workflow/ledger.md` under the current iteration, labelled clearly as **unadjudicated** — these are suspicions with evidence, not confirmed defects. For each finding:
+Append to `.workflow/ledger.md` under the current iteration (`## Iteration <n>`), in a section labelled **unadjudicated** — these are suspicions with evidence, not confirmed defects. The ledger is an append-only log with a strict grammar, so write exactly this shape:
 
 ```markdown
-### F<id>
+### Findings (unadjudicated)
+#### F<id>
 - **Target:** which acceptance criterion / behavior / seam / test this challenges
 - **Claim challenged:** the "fact" you are trying to falsify (e.g. "the cutoff check rejects same-day requests")
 - **Evidence:** the contradicting path, mutation-surviving test, constructed breaking case, or missing branch (per the evidence rule)
@@ -102,11 +103,20 @@ Append to `.workflow/ledger.md` under the current iteration, labelled clearly as
 - **Confidence:** proven | unproven
 - **Would be settled by:** (unproven only) the specific run or check that would confirm or refute it — this is what Tyr executes
 - **Severity hint:** blocker | major | minor (a hint for Tyr, not a verdict)
+- **Reopens:** (only when re-reporting a REFUTED finding with evidence that meets its *Reopens only if*) that finding's id
 ```
+
+New findings take the next unused id. The one exception is a finding Tyr sent back as **INCONCLUSIVE**: report the new evidence under the *same* id, headed `#### F<id> (re-examined)`, so the second adjudication lands on the finding it settles. If you found nothing at all, the section still goes in, holding `- none`.
 
 Rank the list most-severe first. Do not summarize away the weak ones — Tyr needs the full slate.
 
-Also record the attack surfaces you swept and found nothing on. A surface that never appears in the ledger is indistinguishable from one that was never attacked, and Tyr cannot tell a clean result from a gap.
+Also record the attack surfaces you swept and found nothing on, and any you never reached. A surface that never appears in the ledger is indistinguishable from one that was never attacked, and Tyr cannot tell a clean result from a gap:
+
+```markdown
+### Surfaces
+- **Swept:** <surface> — <what you attacked, and that it held>
+- **Unattacked:** <surface> — <why: budget, a delegate that never returned>
+```
 
 ## Handoff
 
