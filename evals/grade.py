@@ -714,6 +714,102 @@ def eval14(run):
     ]
 
 
+def ledger_findings(log):
+    """{F-id: the text of every #### block about it (report and verdicts)}, and the CONFIRMED ids."""
+    blocks, confirmed = {}, set()
+    for m in re.finditer(r"^#### (F\d+)\b([^\n]*)\n(.*?)(?=^#{2,4} |\Z)", log, re.M | re.S):
+        fid, head, body = m.groups()
+        blocks[fid] = blocks.get(fid, "") + head + "\n" + body
+        if re.search(r"\bCONFIRMED\b", head):
+            confirmed.add(fid)
+    return blocks, confirmed
+
+
+# The planted defect, probed through the public seam with every hour open, so the
+# result doesn't depend on the time of day: a 240-minute account window must reject a
+# slot 180 minutes out, a 60-minute one must accept a slot 90 minutes out, and the
+# 120-minute default must still reject it.
+CUTOFF_PROBE = """
+import sys
+from datetime import datetime, timedelta
+from reservations.api import BookingService, Rejected
+class Store:
+    def save(self, b): pass
+class Config:
+    def __init__(self, c): self.c = c
+    def for_account(self, a): return self.c
+def codes(cfg, minutes):
+    svc = BookingService(Store(), Config({"opens_at": 0, "closes_at": 24, **cfg}))
+    try:
+        svc.submit("acct", "venue", datetime.now() + timedelta(minutes=minutes), 2)
+        return []
+    except Rejected as e:
+        return list(e.codes)
+a, b, c = codes({"cutoff_minutes": 240}, 180), codes({"cutoff_minutes": 60}, 90), codes({}, 90)
+print(f"240-min window, 180 out: {a} · 60-min window, 90 out: {b} · default, 90 out: {c}")
+sys.exit(0 if "CUTOFF_WINDOW" in a and "CUTOFF_WINDOW" not in b and "CUTOFF_WINDOW" in c else 1)
+"""
+
+
+def eval15(run):
+    """harness/loop.py end to end on the teardown fixture: verdict, ledger, findings, fix."""
+    repo = run / "repo"
+    try:
+        code = json.loads(read(run / "run.json")).get("exit_code")
+    except Exception:
+        code = None
+    ledger = read(repo / ".workflow/ledger.md")
+    start = ledger.find("\n## Iteration ")
+    log = ledger[start:] if start >= 0 else ""
+    blocks, confirmed = ledger_findings(log)
+
+    def confirmed_where(*pats):
+        ids = [f for f in sorted(confirmed) if all(re.search(p, blocks[f], re.I) for p in pats)]
+        return bool(ids), ", ".join(ids) or f"CONFIRMED: {sorted(confirmed) or 'none'}"
+
+    try:
+        r = subprocess.run([sys.executable, str(LEDGER_PY), "check", "--json", "--against",
+                            str(FIXTURES / "teardown/.workflow/ledger.md"), str(repo / ".workflow/ledger.md")],
+                           capture_output=True, text=True, timeout=60)
+        errors = json.loads(r.stdout)["errors"]
+        clean, cev = bool(log) and not errors, "; ".join(errors)[:240] or (
+            "clean" if log else "no iteration appended")
+    except Exception as e:
+        clean, cev = False, f"ledger.py check failed to run: {e}"
+    green, gev = suite_green(run)
+    fixed, fev = False, "no venv in run repo"
+    if (repo / ".venv/bin/python").exists():
+        try:
+            pr = subprocess.run([str(repo / ".venv/bin/python"), "-c", CUTOFF_PROBE], cwd=repo,
+                                capture_output=True, text=True, timeout=60)
+            fixed, fev = pr.returncode == 0, ((pr.stdout + pr.stderr).strip().splitlines() or [""])[-1][:200]
+        except Exception as e:
+            fev = str(e)[:200]
+    closed = re.findall(r"^- \[x\] (F\d+)", log, re.M)
+    # The refuted claim is the party-size *boundary* (12 rejected, `>=` for `>`). Judge what
+    # a finding is about (Target, Claim), not every word of its evidence, and require the
+    # boundary: the brief's own criterion 5, both codes surfacing when cutoff and party
+    # size are broken together, is a legitimate finding, and the first live run confirmed it.
+    about = lambda f: "\n".join(re.findall(r"^- \*\*(?:Target|Claim challenged):\*\*.*$", blocks[f], re.M))
+    party = [f for f in confirmed if re.search(r"party.?size|PARTY_TOO_LARGE", about(f), re.I)
+             and re.search(r"off.?by.?one|boundar|\b12\b|at the (limit|max)|>=", about(f), re.I)]
+    return [
+        ("the loop reached a verdict (GO or ESCALATED)", code in (0, 3), f"exit {code}", C),
+        ("ledger.py check clean, extending the fixture's ledger", clean, cev, C),
+        ("suite green at the end", green, gev, C),
+        ("CONFIRMED: check_cutoff ignores account config",
+         *confirmed_where(r"check_cutoff|cutoff (rule|window)", r"config",
+                          r"ignor|never read|not read|hard.?cod|DEFAULT_CUTOFF|unused|does ?n[o']t read"), D),
+        ("CONFIRMED: test_cutoff_window_reads_from_account_config is vacuous",
+         *confirmed_where(r"test_cutoff_window_reads_from_account_config",
+                          r"vacuous|surviv|mutat|regardless|would (still )?pass|pass(es)? (even|anyway|either)"
+                          r"|both (the )?windows|inside both|can(no|')t fail|does ?n[o']t (catch|detect)"), D),
+        ("the refuted party-size claim is not confirmed again", not party, f"{party or 'none'}", D),
+        ("GO, with the defect fixed through the public seam", code == 0 and fixed, f"exit {code}; {fev}", D),
+        ("a remediation slice closed (red→green checked by the loop)", bool(closed), f"{closed or 'none'}", D),
+    ]
+
+
 CHECKS = {
     "eval-0-architect-charter-and-options": eval0,
     "eval-1-brief-ordered-criteria": eval1,
@@ -730,6 +826,7 @@ CHECKS = {
     "eval-12-incident-webapp-contain-by-flag": eval12,
     "eval-13-incident-batch-repair-artifact": eval13,
     "eval-14-incident-library-no-deploy": eval14,
+    "eval-15-harness-loop-closes-teardown": eval15,
 }
 
 
