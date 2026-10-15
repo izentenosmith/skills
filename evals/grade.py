@@ -18,6 +18,14 @@ import sys
 C, D = "capability", "delta"
 
 FIXTURES = pathlib.Path(__file__).resolve().parent / "fixtures"
+LEDGER_PY = pathlib.Path(__file__).resolve().parent.parent / "harness" / "ledger.py"
+
+# ledger.py codes that judge the lines a stage wrote, plus E60 (it rewrote
+# what was already there). Numbering and cross-reference codes are left out
+# on purpose: the fixture ledgers keep their history as legacy prose, which
+# ledger.py reads as an unparsed preamble, so every carried id would look
+# undefined and every run would fail for the fixture's sake, not the skill's.
+SHAPE_CODES = {"E03", "E04", "E10", "E11", "E12", "E13", "E22", "E23", "E24", "E51", "E60"}
 
 
 def read(p):
@@ -55,6 +63,27 @@ def near(text, a, b, window=220):
         if re.search(b, seg, re.I):
             return True
     return False
+
+
+def ledger_shape(run, fixture):
+    """The run appended to .workflow/ledger.md in the harness grammar
+    (harness/LEDGER.md): at least one `## Iteration` section, no shape
+    errors from ledger.py, and nothing above the fixture's end rewritten."""
+    ledger = run / "repo/.workflow/ledger.md"
+    text = read(ledger)
+    if not re.search(r"^## Iteration \d+\s*$", text, re.M):
+        return False, "no ## Iteration section appended"
+    try:
+        r = subprocess.run([sys.executable, str(LEDGER_PY), "check", "--json",
+                            "--against", str(FIXTURES / fixture / ".workflow/ledger.md"),
+                            str(ledger)], capture_output=True, text=True, timeout=60)
+        errors = json.loads(r.stdout)["errors"]
+    except Exception as e:
+        return False, f"ledger.py check failed to run: {e}"
+    bad = [e for e in errors if e[:3] in SHAPE_CODES]
+    if bad:
+        return False, "; ".join(bad)[:240]
+    return True, f"{len(errors)} history-only errors ignored"
 
 
 def suite_green(run):
@@ -184,6 +213,7 @@ def eval3(run):
         ("stopping rule stated", any_of(r, r"[Ss]topping rule|clean enough"), "", D),
         ("carried count reported in the handoff",
          any_of(r, r"\d+\s+noted|noted and carried|carried.{0,20}\d+"), "", D),
+        ("ledger appended in the harness grammar", *ledger_shape(run, "refactor"), D),
     ]
 
 
@@ -219,6 +249,7 @@ def eval4(run):
          f"{len(ledger)} chars in ledger", D),
         ("states what it carries from the prior pass",
          any_of(r, r"[Ii]teration \d", r"carr(y|ies|ying)", r"prior pass|previous pass"), "", D),
+        ("ledger appended in the harness grammar", *ledger_shape(run, "teardown"), D),
     ]
 
 
@@ -253,6 +284,7 @@ def eval5(run):
          any_of(ledger, r"CONFIRMED|REFUTED"), "", D),
         ("loop-health stated (monotonic progress / iteration cap)",
          any_of(r, r"monotonic|iteration \d of|at most 3|stall|converg"), "", D),
+        ("ledger appended in the harness grammar", *ledger_shape(run, "verdict"), D),
     ]
 
 

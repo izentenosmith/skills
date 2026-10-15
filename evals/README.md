@@ -120,6 +120,14 @@ Keeping them separate is what stops a blended number from flattering you. A firs
 
 `aggregate.py` also flags two failure modes in the assertions themselves: **non-discriminating** (the baseline passes it too — so it measures nothing about the change) and **flaky** (it varies across repetitions).
 
+### Ledger conformance (evals 3–5)
+
+Since the closing-loop harness, the ledger has a grammar ([harness/LEDGER.md](../harness/LEDGER.md)) and a checker. Evals 3, 4 and 5 each carry one delta assertion that runs `harness/ledger.py check --against <fixture ledger>` on the run's `.workflow/ledger.md`. A run passes when it appended at least one `## Iteration` section, has no **shape** errors in what it wrote (`E03`, `E04`, `E10`–`E13`, `E22`–`E24`, `E51`), and left everything above the fixture's end untouched (`E60`).
+
+Numbering and cross-reference errors are deliberately ignored: `E01`, the `E2x`/`E3x`/`E4x` id checks and `E50`. The fixture ledgers keep their history in the old prose, for the reason given under [The fixtures](#the-fixtures). `ledger.py` reads that prose as an unparsed preamble, so every carried id (N1, N2, F1, and for eval 5 the findings F2–F5) looks undefined, and every run would fail for the fixture's sake, not the skill's. Only the shape of the stage's own lines and append-only discipline are checked against a legacy history.
+
+Checked before committing: all 12 iteration-4 runs, made with the skills as they were before the grammar existed, fail it, while a new-grammar ledger passes once its stray prose is removed, and rewriting a single word of the preamble fails it with `E60`.
+
 ## Negative controls
 
 An assertion set is only worth running if a naive answer fails it. Both new evals were checked against a deliberately naive response before being committed:
