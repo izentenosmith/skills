@@ -786,10 +786,13 @@ def eval15(run):
         except Exception as e:
             fev = str(e)[:200]
     closed = re.findall(r"^- \[x\] (F\d+)", log, re.M)
-    # What the finding is about, not every word of its evidence: a cutoff finding may
-    # mention party size in passing (both violations surface) without re-reporting it.
+    # The refuted claim is the party-size *boundary* (12 rejected, `>=` for `>`). Judge what
+    # a finding is about (Target, Claim), not every word of its evidence, and require the
+    # boundary: the brief's own criterion 5, both codes surfacing when cutoff and party
+    # size are broken together, is a legitimate finding, and the first live run confirmed it.
     about = lambda f: "\n".join(re.findall(r"^- \*\*(?:Target|Claim challenged):\*\*.*$", blocks[f], re.M))
-    party = [f for f in confirmed if re.search(r"party.?size|PARTY_TOO_LARGE", about(f), re.I)]
+    party = [f for f in confirmed if re.search(r"party.?size|PARTY_TOO_LARGE", about(f), re.I)
+             and re.search(r"off.?by.?one|boundar|\b12\b|at the (limit|max)|>=", about(f), re.I)]
     return [
         ("the loop reached a verdict (GO or ESCALATED)", code in (0, 3), f"exit {code}", C),
         ("ledger.py check clean, extending the fixture's ledger", clean, cev, C),
