@@ -462,7 +462,7 @@ def eval8(run):
     added, modified, _ = changes(run, "hotfix-node")
     fixed, ev = sh("node -e \"const {applyDiscount}=require('./src/pricing/discount');"
                    "process.exit(applyDiscount(1990,15)===1692&&applyDiscount(1000,10)===900&&"
-                   "applyDiscount(1990,0)===1990?0:1)\"", repo)
+                   "applyDiscount(1990,0)===1990&&applyDiscount(999,10)===899?0:1)\"", repo)
     green, gev = sh("npm run -s test:ci", repo)
     tests = "".join(read(repo / f) for f in added + modified if f.startswith("test/"))
     revenue = read(repo / "src/reports/revenue.js")
