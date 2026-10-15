@@ -401,8 +401,10 @@ def main():
         ws_iter.mkdir(parents=True, exist_ok=True)
         for r in runs:
             prepare(r)
+        longer = "".join(f" ({r['eval']}: {r['timeout']}s)" for r in runs
+                         if (r.get("timeout") or 0) > args.timeout)
         print(f"{len(runs)} runs in {ws_iter}, concurrency {args.concurrency}, "
-              f"timeout {args.timeout}s, baseline {label}", flush=True)
+              f"timeout {args.timeout}s per run{longer}, baseline {label}", flush=True)
 
         results = []
         with cf.ThreadPoolExecutor(max_workers=args.concurrency) as pool:

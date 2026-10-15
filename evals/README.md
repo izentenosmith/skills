@@ -84,11 +84,13 @@ The run's repo is a git work tree whose only commit is the `base` fixture, with 
 | the suite is green at the end | capability |
 | a CONFIRMED finding names `check_cutoff` ignoring account config | delta |
 | a CONFIRMED finding names `test_cutoff_window_reads_from_account_config` as vacuous | delta |
-| the refuted party-size claim is not confirmed again (judged on Target / Claim, not evidence) | delta |
+| the refuted party-size *boundary* claim is not confirmed again (judged on Target / Claim; criterion 5, both codes surfacing, is a legitimate finding) | delta |
 | GO, **and** the defect is fixed through `BookingService.submit`: a 240-minute window rejects a slot 180 minutes out, a 60-minute one accepts 90, the default rejects 90 | delta |
 | at least one remediation slice closed (loop.py closes one only after redgreen's proof) | delta |
 
 The fix is probed with every hour open, so the result does not depend on the time of day. A GO is not taken on the loop's word: the stub-driven control below reaches GO without fixing anything.
+
+**First live run** (2026-10-15, one rep, $6.70, 24 minutes): **8/8**. The loop used all three iterations. Iteration 1 confirmed both planted defects among nine findings. Iterations 2 and 3 closed 14 slices, each after red→green proof, and found smaller defects in the fixes themselves. It ended GO with four minors tracked. The probe confirms that `check_cutoff` now reads the account window, and the suite grew from 7 tests to 36. As first written, the party-size assertion failed this run on a legitimate finding (criterion 5). It now requires the boundary claim.
 
 There is no baseline: `harness/loop.py` does not exist at `3b71f54^` or `dd2a41c`, and `run.py` says so instead of inventing a no-harness run. A live run costs about $4 and 15–40 minutes; its `timeout` in `evals.json` is 3600 s.
 
@@ -206,7 +208,9 @@ The script builds each control as a run directory from the pristine fixture, gra
 
 Each wrong control scores everything else, so it fails only what it was built to fail: one or two assertions per run. `wrong-ceil` passed eval 8 until the probe gained `applyDiscount(999, 10) === 899`. It still fails no **delta** assertion, because rounding correctness is tagged capability. The do-nothing control passes these delta assertions by doing nothing: eval 11 "changes no source or test file", eval 12 "no production action" and "no code changed before containment", eval 13 "production database untouched" and "the job not reloaded", eval 14 "no yank or publish".
 
-Eval 15's controls are a script, so they can be re-run: `python3 evals/controls/eval15.py <workspace>` builds all three runs the way `run.py` would, calls no model, and fails if a control stops holding.
+### Eval 15: reference, plausible-but-wrong and do-nothing
+
+Eval 15's controls are a separate script, because its runs are whole loop.py runs rather than one response: `python3 evals/controls/eval15.py <workspace>` builds all three runs the way `run.py` would, calls no model, and fails if a control stops holding.
 
 | Eval | Control | Capability | Delta |
 |---|---|---|---|
