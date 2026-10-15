@@ -1,6 +1,6 @@
 {
  "skill_name": "skills",
- "note": "Evals 0-5 cover the six-stage development pipeline; 6-7 cover the containers and operations skills; 8-14 cover hotfix and incident-fix across different stacks. Each with-skill run is repeated 3x for variance analysis; baseline is a single no-skill run on the same prompt.",
+ "note": "Evals 0-5 cover the six-stage development pipeline; 6-7 cover the containers and operations skills; 8-14 cover hotfix and incident-fix across different stacks; 15 runs harness/loop.py end to end (runner: loop) instead of one claude -p call. Each with-skill run is repeated 3x for variance analysis; baseline is a single no-skill run on the same prompt.",
  "evals": [
   {
    "id": 0,
@@ -121,6 +121,21 @@
    "fixture": "incident-library",
    "prompt": "Incident: tsfmt 2.3.0, released yesterday, is writing wrong timestamps into downstream users' data — see docs/reports/issue-87.md. Handle it.",
    "expected_output": "Containment adapted to a library with no deploy: yank 2.3.0 and an advisory to pin below 2.3, neither executed without confirmation (scripts/.calls.log never written); cause traced to astimezone() on naive values dropping the offset; a 2.3.1 patch through RELEASING.md's PR-then-publish flow; repair guidance for consumers' already-written data rather than repairing it itself; why the tests missed it (aware values only); a durable incident log."
+  },
+  {
+   "id": 15,
+   "name": "harness-loop-closes-teardown",
+   "skill": "harness/loop.py",
+   "runner": "loop",
+   "fixture": "teardown",
+   "loop": {
+    "base_fixture": "base",
+    "test_cmd": ".venv/bin/python -m pytest -q",
+    "delegate_model": "sonnet",
+    "timeout": 3600
+   },
+   "prompt": "(none: harness/loop.py drives refactor-review, devils-advocate and tyr-verdict, and tdd on NO-GO, through its own claude -p calls)",
+   "expected_output": "The loop reaches a verdict (GO, or ESCALATED with a reason) and leaves a ledger that ledger.py checks clean and that extends the fixture's. A CONFIRMED finding names check_cutoff ignoring account config, another names test_cutoff_window_reads_from_account_config as vacuous, and the refuted party-size claim is not confirmed again. On GO the planted defect is fixed through the public seam (a 240-minute account window rejects a slot 180 minutes out), the suite is green, and at least one remediation slice was closed after red-green proof."
   }
  ]
 }

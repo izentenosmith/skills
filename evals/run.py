@@ -23,6 +23,7 @@ import concurrent.futures as cf
 import json
 import os
 import pathlib
+import re
 import shlex
 import shutil
 import signal
@@ -165,6 +166,63 @@ def stage_skill(skill_md, dest_root):
     return dest / skill_md.name
 
 
+def stage_harness(src_root, dest_root):
+    """harness/ and skills/ from src_root, copied to dest_root. Returns (loop.py, skills dir),
+    or None when src_root has no harness (a baseline ref older than it)."""
+    if not (src_root / "harness/loop.py").is_file():
+        return None
+    shutil.copytree(src_root / "harness", dest_root / "harness", dirs_exist_ok=True,
+                    ignore=shutil.ignore_patterns("tests", "__pycache__"))
+    skills = src_root / "skills" if (src_root / "skills").is_dir() else src_root
+    shutil.copytree(skills, dest_root / "skills", dirs_exist_ok=True,
+                    ignore=shutil.ignore_patterns("evals", "harness", ".git", ".claude"))
+    return dest_root / "harness/loop.py", dest_root / "skills"
+
+
+def plan_loop(ev, ed, fix, args, snap_dir, cur_dir):
+    """An eval of harness/loop.py itself: no prompt, the loop drives the stages.
+
+    The run's repo is a git work tree whose one commit is the base fixture and
+    whose working tree is `fixture` on top, uncommitted — so `--base HEAD` hands
+    the teardown exactly the change under review."""
+    cfg = ev["loop"]
+    base_fix = fixture_dir(cfg["base_fixture"])
+    variants = [(ed / "with_skill" / f"rep{i}", stage_harness(REPO_ROOT, cur_dir), "with_skill")
+                for i in range(1, args.reps + 1)]
+    if snap_dir:
+        old = stage_harness(snap_dir, snap_dir.parent / "snapshot-harness")
+        if old:
+            variants.append((ed / "old_skill", old, "old_skill"))
+        else:
+            print(f"note: {ed.name} has no baseline — harness/loop.py is absent at the baseline ref",
+                  file=sys.stderr)
+    runs = []
+    for run, (loop_py, skills), kind in variants:
+        cmd = [sys.executable, str(loop_py), "--repo", str(run / "repo"),
+               "--test-cmd", cfg["test_cmd"], "--base", "HEAD", "--skills", str(skills)]
+        if cfg.get("delegate_model"):
+            cmd += ["--delegate-model", cfg["delegate_model"]]
+        if args.model:
+            cmd += ["--model", args.model]
+        runs.append({"eval": ed.name, "kind": kind, "run": run, "fixture": fix, "runner": "loop",
+                     "base_fixture": base_fix, "skill_md": loop_py, "prompt": None,
+                     "timeout": cfg.get("timeout"), "cmd": cmd})
+    return runs
+
+
+GIT_ID = ["-c", "user.name=evals", "-c", "user.email=evals@example.invalid", "-c", "commit.gpgsign=false"]
+LOOP_EXCLUDE = ".venv/\n.pytest_cache/\n__pycache__/\n.workflow/runs/\n"
+
+
+def git_base(repo, base_fix):
+    """Init `repo` with base_fix as its only commit, leaving repo's own files as the change."""
+    git = lambda *a, **kw: subprocess.run(["git", *GIT_ID, *a], check=True, capture_output=True, **kw)
+    git("init", "-q", "-b", "main", str(repo))
+    (repo / ".git/info/exclude").write_text(LOOP_EXCLUDE)
+    git(f"--git-dir={repo / '.git'}", f"--work-tree={base_fix}", "add", "-A", ".", cwd=base_fix)
+    git("commit", "-q", "-m", f"base: {base_fix.name} fixture", cwd=repo)
+
+
 def plan(args, ws_iter, snap_dir, cur_dir):
     data = json.loads((EVALS_DIR / "evals.json").read_text())
     wanted = set(args.evals) if args.evals is not None else None
@@ -174,6 +232,9 @@ def plan(args, ws_iter, snap_dir, cur_dir):
             continue
         ed = ws_iter / f"eval-{ev['id']}-{ev['name']}"
         fix = fixture_dir(ev["fixture"])
+        if ev.get("runner") == "loop":
+            runs += plan_loop(ev, ed, fix, args, snap_dir, cur_dir)
+            continue
         current = find_skill(REPO_ROOT, ev["skill"])
         if current is None:
             sys.exit(f"skill {ev['skill']!r} not found in this checkout")
@@ -203,13 +264,21 @@ def prepare(r):
                                                     if pathlib.Path(d) / n in harness}
     shutil.copytree(r["fixture"], run / "repo", symlinks=True, ignore=ignore)
     (run / "outputs").mkdir(parents=True)
+    if r.get("runner") == "loop":
+        git_base(run / "repo", r["base_fixture"])
+
+
+class _Done(Exception):
+    pass
 
 
 def execute(r, timeout):
     run, t0 = r["run"], time.time()
+    timeout = max(timeout, r.get("timeout") or 0)
     rec = {"eval": r["eval"], "kind": r["kind"],
            "skill_md": str(r["skill_md"]) if r["skill_md"] else None,
-           "cmd": r["cmd"][:-1] + ["<prompt>"], "prompt": r["prompt"]}
+           "cmd": r["cmd"] if r["prompt"] is None else r["cmd"][:-1] + ["<prompt>"],
+           "prompt": r["prompt"]}
     try:
         # Own process group, so a timeout also kills whatever the run spawned.
         p = subprocess.Popen(r["cmd"], cwd=run / "repo", env=os.environ | RUN_ENV,
@@ -223,6 +292,14 @@ def execute(r, timeout):
             p.communicate()
             raise
         rec.update(exit_code=p.returncode, timed_out=False, stderr_tail=stderr[-2000:])
+        if r.get("runner") == "loop":
+            # loop.py logs to stderr; that log is the run's response. 0 GO and
+            # 3 ESCALATED are both verdicts — grade.py scores which one it was.
+            (run / "outputs" / "response.md").write_text(stdout + stderr)
+            spent = re.findall(r"spent \$([\d.]+) this run", stderr)
+            rec.update(cost_usd=float(spent[-1]) if spent else None,
+                       response="harness log", is_error=p.returncode not in (0, 3))
+            raise _Done
         (run / "claude.json").write_text(stdout)
         try:
             out = json.loads(stdout)
@@ -239,17 +316,20 @@ def execute(r, timeout):
             rec["response"] = "fallback: final message from claude.json"
         else:
             rec["response"] = "missing"
+    except _Done:
+        pass
     except subprocess.TimeoutExpired:
         rec.update(exit_code=None, timed_out=True, response="missing")
     except Exception as e:  # never let one run abort the batch
         rec.update(exit_code=None, timed_out=False, error=repr(e), response="missing")
     rec["seconds"] = round(time.time() - t0, 1)
-    rec["ok"] = rec["response"] != "missing" and rec.get("exit_code") == 0 and not rec.get("is_error")
+    rec["ok"] = rec["response"] != "missing" and not rec.get("is_error") and (
+        rec.get("exit_code") == 0 or (r.get("runner") == "loop" and rec.get("exit_code") == 3))
     (run / "run.json").write_text(json.dumps(rec, indent=2))
     return rec
 
 
-def print_plan(runs, ws_iter, baseline):
+def print_plan(runs, ws_iter, baseline, args_timeout):
     print(f"iteration: {ws_iter}")
     print(f"baseline:  {baseline}")
     print(f"runs:      {len(runs)}\n")
@@ -259,6 +339,14 @@ def print_plan(runs, ws_iter, baseline):
         print(f"   copy     {r['fixture']} -> {r['run'] / 'repo'}"
               + (f"  (without {', '.join(skip)})" if skip else ""))
         print(f"   mkdir    {r['run'] / 'outputs'}")
+        if r.get("runner") == "loop":
+            print(f"   git      init; commit {r['base_fixture']} as the only commit; "
+                  f"{r['fixture'].name} stays on top, uncommitted (exclude: {LOOP_EXCLUDE.strip().replace(chr(10), ' ')})")
+            print(f"   loop     {r['skill_md']}")
+            print(f"   timeout  {max(args_timeout, r.get('timeout') or 0)}s")
+            print(f"   command  {shlex.join(r['cmd'])}")
+            print()
+            continue
         print(f"   skill    {r['skill_md'] or '(none: skill absent at baseline ref)'}")
         print(f"   cwd      {r['run'] / 'repo'}")
         print(f"   env      {' '.join(f'{k}={v}' for k, v in RUN_ENV.items())}")
@@ -301,7 +389,7 @@ def main():
         unbuilt = sorted({str(r["fixture"]) for r in runs if not fixture_built(r["fixture"])})
 
         if args.dry_run:
-            print_plan(runs, ws_iter, label)
+            print_plan(runs, ws_iter, label, args.timeout)
             if unbuilt:
                 print(f"\nwarning: run ./setup.sh first — not built: {', '.join(unbuilt)}")
             return
