@@ -136,6 +136,26 @@ class LoopTest(unittest.TestCase):
 
     # ---------------------------------------------------------------- the rules
 
+    def test_red_acceptance_tests_stop_at_the_gate(self):
+        brief = self.repo / ".workflow" / "brief.md"
+        brief.write_text(brief.read_text().replace(
+            "## Revisions", "**Acceptance tests** (stage 3):\n- **Command:** `false`\n\n## Revisions"))
+        self.assertEqual(self.run_loop(), loop.EXIT_GATE)
+        self.assertIn("acceptance tests are red", self.output)
+        self.assertEqual(self.calls(), [])
+
+    def test_green_acceptance_tests_from_the_brief_are_gated_every_time(self):
+        brief = self.repo / ".workflow" / "brief.md"
+        brief.write_text(brief.read_text().replace(
+            "## Revisions", "**Acceptance tests** (stage 3):\n- **Command:** `true`\n\n## Revisions"))
+        self.assertEqual(self.run_loop(), loop.EXIT_GO, self.output)
+        self.assertGreaterEqual(self.output.count("acceptance GREEN"), 4)
+
+    def test_acceptance_cmd_flag_overrides_and_is_remembered(self):
+        self.assertEqual(self.run_loop("converge", SUITE, "--acceptance-cmd", "false"), loop.EXIT_GATE)
+        cfg = json.loads((self.repo / ".workflow" / "harness.json").read_text())
+        self.assertEqual(cfg["acceptance_cmd"], "false")
+
     def test_red_suite_stops_at_the_gate(self):
         self.assertEqual(self.run_loop("converge", "false"), loop.EXIT_GATE)
         self.assertEqual(self.calls(), [])

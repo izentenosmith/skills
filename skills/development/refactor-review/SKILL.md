@@ -7,14 +7,15 @@ description: Review the current diff for code smells and prescribe structural re
 
 ## Where this fits
 
-This is **stage 4 of a six-stage workflow**:
+This is **stage 5 of a seven-stage workflow**:
 
 1. [architect-deep-dive](../architect-deep-dive/SKILL.md) — resolves the design tree, scope, and edge cases
-2. [agent-brief](../agent-brief/SKILL.md) — turns those decisions into the pure-text plan TDD builds from
-3. [tdd](../tdd/SKILL.md) — executes that plan red-green
-4. **refactor-review** (this skill) — cleans the structure once behavior is verified
-5. [devils-advocate](../devils-advocate/SKILL.md) — assumes the result is wrong and hunts evidence for every defect
-6. [tyr-verdict](../tyr-verdict/SKILL.md) — adjudicates the findings, cuts false claims, and enforces the fixes
+2. [agent-brief](../agent-brief/SKILL.md) — turns those decisions into the pure-text plan the rest builds from
+3. [acceptance-tests](../acceptance-tests/SKILL.md) — turns the plan's acceptance criteria into failing black-box tests, before any code
+4. [tdd](../tdd/SKILL.md) — builds it red-green until the acceptance tests pass
+5. **refactor-review** (this skill) — cleans the structure once behavior is verified
+6. [devils-advocate](../devils-advocate/SKILL.md) — assumes the result is wrong and hunts evidence for every defect
+7. [tyr-verdict](../tyr-verdict/SKILL.md) — adjudicates the findings, cuts false claims, and enforces the fixes
 
 TDD gets you to verified behavior; this stage gets you to clean structure. It runs on a GREEN suite and keeps it GREEN.
 
@@ -151,7 +152,7 @@ Worth it on a **large diff**, unnecessary on a small one.
 ## Rules of Engagement
 
 1. **Behavior is frozen.** A refactor that changes observable behavior is a bug, not a refactor.
-2. **Tests are the safety net.** Green before, green after — see the Pre/Post checks above. Never refactor without coverage.
+2. **Tests are the safety net.** Green before, green after — the acceptance tests in the brief included — see the Pre/Post checks above. Never refactor without coverage.
 3. **Small steps.** Apply one technique, run tests, commit. Don't batch unrelated refactors.
 4. **Name the smell first.** Don't refactor on vibes; map symptom → treatment via the two catalogs.
 5. **New code only.** Pre-existing smells outside the diff are out of scope unless they **block** the change — and "blocks" has a test: *the new code cannot be made clean without touching it.* In practice that means one of two things — you would have to duplicate the old code to avoid it, or the new code has to work around it in a way that is itself a smell. Anything else is merely adjacent: name it, record it as `noted`, and leave it. Scope creep dressed as tidiness is the most common way a behavior-preserving refactor stops being behavior-preserving.

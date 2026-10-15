@@ -14,11 +14,11 @@ Four families of skills under `skills/` — the first three in the order work ac
 
 ```
 skills/
-  development/      build the change      six stages, design → adversarial close
+  development/      build the change      seven stages, design → adversarial close
   containers/       package it to run     dockerfile → docker-compose
   operations/       live with it          hotfix → incident-fix → post-mortem · release-notes
   database/         grade, then redesign  dbaudit → dbpropose
-harness/            run stages 4–6 and the fix loop with claude -p; check any ledger
+harness/            the skills' rules as code: the closing loop, bug → PR, incident → post-mortem, DB audit → proposal
 evals/              seeded fixtures, scored assertions, the recorded benchmark
 ```
 
@@ -35,13 +35,13 @@ The families are loosely coupled by design. `development` is a genuine pipeline 
 
 ---
 
-## development — the six-stage pipeline
+## development — the seven-stage pipeline
 
-Design, specify, build, clean, then an adversarial close.
+Design, specify, write the finish line, build, clean, then an adversarial close.
 
 ```
-architect-deep-dive → agent-brief → tdd → refactor-review → devils-advocate → tyr-verdict
-   (resolve design)    (the plan)   (build)  (clean up)      (assume broken)   (judge + fix loop)
+architect-deep-dive → agent-brief → acceptance-tests → tdd → refactor-review → devils-advocate → tyr-verdict
+   (resolve design)    (the plan)   (the finish line)  (build)  (clean up)     (assume broken)   (judge + fix loop)
 ```
 
 The last three stages form a **loop**: if `tyr-verdict` returns NO-GO, its remediation slices feed back into `tdd → refactor-review → devils-advocate → tyr-verdict`, converging when the teardown finds nothing new and the verdict confirms nothing.
@@ -52,6 +52,7 @@ The pipeline keeps two files in the repo it's working on — `.workflow/brief.md
 |---|---|---|
 | architect-deep-dive | — (its charter feeds stage 2) | — |
 | agent-brief | **creates** | — |
+| acceptance-tests | reads criteria; **records** the acceptance tests and their command | — |
 | tdd | reads; **revises** via the feedback edge; ticks criteria | closes remediation slices |
 | refactor-review | reads (scope boundaries) | **re-rates** prior noted smells; appends new ones |
 | devils-advocate | reads (criteria, edge cases, deferrals) | **appends findings** |
@@ -61,6 +62,7 @@ The pipeline keeps two files in the repo it's working on — `.workflow/brief.md
 |-------|--------------|
 | [architect-deep-dive](skills/development/architect-deep-dive/SKILL.md) | Staff-architect design review that resolves the plan one question at a time — options with trade-offs, a recommendation and its reversal cost — against a stated charter and a live question count. Infers answers from the codebase where it can. Run this first. |
 | [agent-brief](skills/development/agent-brief/SKILL.md) | Turns the resolved design decisions into the pure-text build plan TDD executes — ordered acceptance criteria, test seams, prior art, and scope. |
+| [acceptance-tests](skills/development/acceptance-tests/SKILL.md) | Turns the brief's acceptance criteria into executable black-box tests through the outermost boundary — written before any code, each red for the right reason — and maps every criterion to its test. tdd is done when they pass. |
 | [tdd](skills/development/tdd/SKILL.md) | Test-driven development via the red-green-refactor loop (vertical slices, not horizontal). Ends by handing off to refactor-review. |
 | [refactor-review](skills/development/refactor-review/SKILL.md) | Reviews the current diff: names the smell, then prescribes a behavior-preserving refactoring. |
 | [devils-advocate](skills/development/devils-advocate/SKILL.md) | Assumes everything just built is wrong and hunts concrete evidence for each defect. Over-reports on purpose; does not fix or judge. |
@@ -68,20 +70,20 @@ The pipeline keeps two files in the repo it's working on — `.workflow/brief.md
 
 ### How much pipeline does this change need?
 
-Six stages on a two-line fix cost more than the fix. Pick a tier **once, up front**, and say which you picked:
+Seven stages on a two-line fix cost more than the fix. Pick a tier **once, up front**, and say which you picked:
 
 | Tier | The change | Run |
 |------|-----------|-----|
-| **Trivial** | A localized fix behind an existing seam. No new behavior surface, no new boundary. | `tdd → refactor-review` (3–4) |
-| **Standard** | A new capability inside existing structure. | `agent-brief → … → tyr-verdict` (2–6); add stage 1 if the design isn't already obvious |
-| **Large / risky** | New subsystem, a change that crosses existing boundaries, or one touching data migration, money, permissions, or tenancy. | All six — and stage 1's decomposition splits it into increments that each run 2–6 |
+| **Trivial** | A localized fix behind an existing seam. No new behavior surface, no new boundary. | `tdd → refactor-review` (4–5) |
+| **Standard** | A new capability inside existing structure. | `agent-brief → … → tyr-verdict` (2–7); add stage 1 if the design isn't already obvious |
+| **Large / risky** | New subsystem, a change that crosses existing boundaries, or one touching data migration, money, permissions, or tenancy. | All seven — and stage 1's decomposition splits it into increments that each run 2–7 |
 
 Two rules that make the tiering honest:
 
 - **Calibrate once, not stage by stage.** Deciding to skip a stage *while you're standing in front of it* is how the discipline erodes everywhere, because the stage you skip is always the one that looked unnecessary.
-- **Stages 5–6 don't get dropped** on anything touching data, money, permissions, or tenancy — regardless of how small the diff is. Those are the failures a green suite is worst at catching, and a two-line diff is perfectly capable of causing one.
+- **Stages 6–7 don't get dropped** on anything touching data, money, permissions, or tenancy — regardless of how small the diff is. Those are the failures a green suite is worst at catching, and a two-line diff is perfectly capable of causing one.
 
-Stage numbers throughout the skills refer to position in the full pipeline, not to a requirement that all six run.
+Stage numbers throughout the skills refer to position in the full pipeline, not to a requirement that all seven run.
 
 ### Running the closing loop as code
 
@@ -91,7 +93,7 @@ The loop's rules — read-only teardown, one verifier per finding, sticky refuta
 python3 harness/loop.py --repo ../my-service --test-cmd ".venv/bin/python -m pytest -q"
 ```
 
-It's optional and Claude Code only; the skills don't depend on it.
+The same folder holds three more: `fix.py` takes a bug report to a draft PR (the hotfix lane, or incident-fix's fix phase), `postmortem.py` turns a resolved incident log into a linted post-mortem with an owned follow-through, and `dbreview.py` audits a database from DDL or a read-only connection and proposes changes only where its gate says they're owed. It's optional and Claude Code only; the skills don't depend on it.
 
 ---
 
@@ -197,6 +199,7 @@ Any stage can optionally hand its **read-only or fresh-context** work to a subag
 |-------|----------|-------------------------|
 | architect-deep-dive | codebase inference behind **[inferred]** answers | the question-by-question dialogue |
 | agent-brief | the prior-art hunt | writing and ordering the plan |
+| acceptance-tests | finding the outermost boundary and existing acceptance suites | **writing the tests, one criterion at a time** |
 | tdd | convention lookups only | **every RED and GREEN — the whole loop** |
 | refactor-review | smell identification on a large diff | prescribing and applying the refactors |
 | devils-advocate | **the whole teardown** — fresh context is the point | ranking the findings |
@@ -224,7 +227,7 @@ Assertions are split: **capability** (does the stage do its job at all) from **d
 
 **Also not yet run:** `hotfix` (evals 8–11 — a Node service, a JVM service with no build tool, a Python script with no tests, and an outage it must route out) and `incident-fix` (evals 12–14 — a web app with feature flags, a batch job that corrupted rows, a library with no deploy step). Every production lever in those fixtures is a stub that records its calls, so "took no action without confirmation" is checked, not inferred.
 
-`dockerfile`, `release-notes`, `dbaudit` and `dbpropose` have no eval.
+`acceptance-tests`, `dockerfile`, `release-notes`, `dbaudit` and `dbpropose` have no eval.
 
 ## How to use
 
@@ -251,15 +254,15 @@ Assertions are split: **capability** (does the stage do its job at all) from **d
 3. **Invoke a skill** — either let the agent trigger it when your request matches its `description`, or call it explicitly:
 
    ```
-   /architect-deep-dive   /agent-brief      /tdd
-   /refactor-review       /devils-advocate  /tyr-verdict
+   /architect-deep-dive   /agent-brief      /acceptance-tests
+   /tdd                   /refactor-review  /devils-advocate  /tyr-verdict
    /dockerfile            /docker-compose
    /hotfix                /incident-fix
    /release-notes         /post-mortem
    /dbaudit               /dbpropose
    ```
 
-Take one skill, take a family, take all fourteen. Every skill works on its own — `tdd` plans from scratch when there's no brief, `refactor-review` reviews any diff, `devils-advocate` tears down a change it didn't build, `post-mortem` reconstructs an incident in a system it has never seen. Where skills cross-link and the other one isn't installed, the prompt still names it, so you know what would have run.
+Take one skill, take a family, take all fifteen. Every skill works on its own — `tdd` plans from scratch when there's no brief, `refactor-review` reviews any diff, `devils-advocate` tears down a change it didn't build, `post-mortem` reconstructs an incident in a system it has never seen. Where skills cross-link and the other one isn't installed, the prompt still names it, so you know what would have run.
 
 Each family has its own README with more detail: [development](skills/development/README.md) · [containers](skills/containers/README.md) · [operations](skills/operations/README.md) · [database](skills/database/README.md).
 
@@ -269,7 +272,7 @@ Each family has its own README with more detail: [development](skills/developmen
 - **Families are scaffolding, not structure.** The family directories under `skills/` exist to make this repo readable; the agent selects on the frontmatter `description` and never sees a folder name. Nothing installs a family, and no skill depends on its family's path — so families are free to reorganize, and skills are free to cross-link between them.
 - **The harness is a layer, not a dependency.** `harness/` enforces the development pipeline's rules when you run it, and nothing in a skill folder refers to it. Its ledger grammar is the same one the skills write by hand — so a skill folder copied alone still produces a ledger the harness can check and resume.
 - **No installer, by design.** Skills are copied into a target repo one folder at a time. An install script implies a managed set that stays in sync; this is a shelf you take things off.
-- **Self-containment beats DRY here.** The dispatch contract, the `.workflow/` file rules and the six-stage list are repeated across folders on purpose. That is real duplication with a real cost — change the pipeline's shape and you edit six files — and it buys the thing that matters more: a folder you can paste anywhere.
+- **Self-containment beats DRY here.** The dispatch contract, the `.workflow/` file rules and the seven-stage list are repeated across folders on purpose. That is real duplication with a real cost — change the pipeline's shape and you edit six files — and it buys the thing that matters more: a folder you can paste anywhere.
 - **Every `SKILL.md` carries frontmatter** (`name`, `description`) so the agent can decide relevance.
 - **Every skill carries a calibration tier and a stopping rule.** The tier says how much of the skill to run before starting; the stopping rule says when to stop, so a workflow with an open-ended quality goal terminates instead of iterating on taste.
 - **Skills cross-link** with relative Markdown links to compose into pipelines.

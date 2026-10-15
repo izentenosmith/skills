@@ -5,14 +5,15 @@ description: Staff-architect design review that resolves a plan one question at 
 
 You are a Staff Systems Architect conducting a rigorous design review. Our goal is to map out every branch of the design tree, resolve dependencies sequentially, and establish a bulletproof execution plan.
 
-This skill is the **first stage** of a six-stage workflow:
+This skill is the **first stage** of a seven-stage workflow:
 
-1. **architect-deep-dive** (this skill) — resolve the design tree, structure, scope, and edge cases
-2. [agent-brief](../agent-brief/SKILL.md) — synthesize the resolved decisions into the pure-text plan TDD builds from
-3. [tdd](../tdd/SKILL.md) — build it red-green
-4. [refactor-review](../refactor-review/SKILL.md) — clean the structure once behavior is verified
-5. [devils-advocate](../devils-advocate/SKILL.md) — assume the result is wrong and hunt evidence for every defect
-6. [tyr-verdict](../tyr-verdict/SKILL.md) — adjudicate the findings, cut false claims, and enforce the fixes
+1. **architect-deep-dive** (this skill) — resolves the design tree, scope, and edge cases
+2. [agent-brief](../agent-brief/SKILL.md) — turns those decisions into the pure-text plan the rest builds from
+3. [acceptance-tests](../acceptance-tests/SKILL.md) — turns the plan's acceptance criteria into failing black-box tests, before any code
+4. [tdd](../tdd/SKILL.md) — builds it red-green until the acceptance tests pass
+5. [refactor-review](../refactor-review/SKILL.md) — cleans the structure once behavior is verified
+6. [devils-advocate](../devils-advocate/SKILL.md) — assumes the result is wrong and hunts evidence for every defect
+7. [tyr-verdict](../tyr-verdict/SKILL.md) — adjudicates the findings, cuts false claims, and enforces the fixes
 
 Everything you resolve here becomes the raw material for the stages that follow, so resolve it precisely.
 
@@ -132,7 +133,7 @@ Surface each dimension as its own one-at-a-time question, interleaved with the r
 - [ ] **Testability.** Can each resolved business rule be verified without the web server running, the database connected, or the framework booted? If not, the boundary is in the wrong place — move the line rather than planning to mock around it. Name the level each rule is testable at, so TDD doesn't drive policy through volatile UI. The test to apply: a rule you can only reach by booting the framework is a rule whose boundary is in the wrong place — the dependency points outward, from policy to a detail, and mocking around it hides the error rather than fixing it.
 - [ ] **Migration & rollout.** Data backfill, feature-flagging, sequencing, and how the change ships safely.
 
-If the effort is large, also resolve **decomposition**: how it splits into independently shippable increments (each of which can become its own brief → TDD → refactor-review → devils-advocate → tyr-verdict pass). Group into one increment what changes for the same reasons at the same times; split what changes for different reasons. Dependencies between increments must be acyclic and point toward the more stable side — never let a rigid, widely-depended-on piece depend on a volatile one.
+If the effort is large, also resolve **decomposition**: how it splits into independently shippable increments (each of which can become its own brief → acceptance-tests → TDD → refactor-review → devils-advocate → tyr-verdict pass). Group into one increment what changes for the same reasons at the same times; split what changes for different reasons. Dependencies between increments must be acyclic and point toward the more stable side — never let a rigid, widely-depended-on piece depend on a volatile one.
 
 ## Subagents — optional
 

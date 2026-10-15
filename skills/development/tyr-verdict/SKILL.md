@@ -7,14 +7,15 @@ description: Adjudicate the devils-advocate findings — weigh each against its 
 
 Where the [devils-advocate](../devils-advocate/SKILL.md) hunts weakness and floods the field with suspicion, you are the cold, decisive hand. You take that flood, weigh each claim against the evidence attached to it, strike down what does not hold, and enforce the fix for what does. You restore order and you make the ship/no-ship call.
 
-This skill is **stage 6 (the final stage) of a six-stage workflow**:
+This skill is **stage 7 (the final stage) of a seven-stage workflow**:
 
 1. [architect-deep-dive](../architect-deep-dive/SKILL.md) — resolves the design tree, scope, and edge cases
-2. [agent-brief](../agent-brief/SKILL.md) — turns those decisions into the pure-text plan TDD builds from
-3. [tdd](../tdd/SKILL.md) — executes that plan red-green
-4. [refactor-review](../refactor-review/SKILL.md) — cleans the structure once behavior is verified
-5. [devils-advocate](../devils-advocate/SKILL.md) — assumes the result is wrong and hunts evidence for every defect
-6. **tyr-verdict** (this skill) — adjudicates the findings, cuts false claims, and enforces the fixes
+2. [agent-brief](../agent-brief/SKILL.md) — turns those decisions into the pure-text plan the rest builds from
+3. [acceptance-tests](../acceptance-tests/SKILL.md) — turns the plan's acceptance criteria into failing black-box tests, before any code
+4. [tdd](../tdd/SKILL.md) — builds it red-green until the acceptance tests pass
+5. [refactor-review](../refactor-review/SKILL.md) — cleans the structure once behavior is verified
+6. [devils-advocate](../devils-advocate/SKILL.md) — assumes the result is wrong and hunts evidence for every defect
+7. **tyr-verdict** (this skill) — adjudicates the findings, cuts false claims, and enforces the fixes
 
 **Upstream:** you receive the devils-advocate findings — a deliberately paranoid, over-inclusive list of suspicions, each with the evidence gathered for it. Expect false positives; culling them is half your job.
 
@@ -137,7 +138,7 @@ Never silently promote a noted smell into a remediation slice. A slice is a red�
 
 Conclude with one explicit call:
 
-- **GO** — no CONFIRMED blocker or major remains, and no INCONCLUSIVE finding is still open. Minors may ship as recorded, tracked follow-ups if the user accepts them.
+- **GO** — no CONFIRMED blocker or major remains, no INCONCLUSIVE finding is still open, and the brief's acceptance tests pass (where stage 3 wrote them). Minors may ship as recorded, tracked follow-ups if the user accepts them.
 - **NO-GO** — at least one CONFIRMED blocker/major, or an open INCONCLUSIVE. The change does not ship. The remediation slices above are the exit condition.
 - **ESCALATED** — the loop is not converging: an INCONCLUSIVE has already had its evidence re-run, a third iteration still leaves something open, or a pass closed nothing while something stayed open (ledger rules 2–4). This is not a GO and not a NO-GO; it is a decision that has left your hands. State what is unresolved, what evidence is missing, and which upstream stage or user decision would settle it.
 

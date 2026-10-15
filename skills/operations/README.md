@@ -28,6 +28,8 @@ Then either let the agent trigger the skill when your request matches its `descr
 
 **`hotfix` and `incident-fix` hardcode nothing about your environment.** Build, test and lint commands come from your CI config; the merge convention from your instructions and history; the tracker only from evidence (otherwise a local log); rollback levers, observability and data access from what the repo and the machine expose. The result is cached in `.workflow/env.md`, which both skills share, and anything that can't be discovered is asked once, in one question.
 
+**Both have harnesses** in [`harness/`](../../harness/README.md): `fix.py` runs the hotfix lane (or incident-fix's fix phase) from a bug report to a committed branch and, with `--open-pr`, a draft PR; `postmortem.py` runs Phase 4 from a resolved incident log to a linted post-mortem. Neither runs containment — that needs a person at every step.
+
 **Both stop before anything outward-facing** — push, merge, deploy, publish, a ticket, a flag flip, a data write — and wait for your confirmation, one action at a time.
 
 **`post-mortem` takes inputs you have to supply**: a date range for the git history (`2026-08-03 12:00 UTC → 2026-08-04 10:00 UTC`) and whatever incident documentation exists — the incident report, a vendor PDF, a chat export, alert emails, monitoring screenshots. It reconstructs from those; it cannot reconstruct from a description of the incident alone.

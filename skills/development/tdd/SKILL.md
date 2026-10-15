@@ -1,22 +1,25 @@
 ---
 name: tdd
-description: Test-driven development via the red-green-refactor loop, building in vertical slices. Executes an agent-brief build plan when one exists (stage 3 of the six-stage workflow) and works standalone when it doesn't. Use when the user wants to build a feature or fix a bug test-first, mentions "red-green-refactor", wants integration tests, or is acting on a build plan or remediation slices.
+description: Test-driven development via the red-green-refactor loop, building in vertical slices. Executes an agent-brief build plan when one exists (stage 4 of the seven-stage workflow, building until stage 3's acceptance tests pass) and works standalone when it doesn't. Use when the user wants to build a feature or fix a bug test-first, mentions "red-green-refactor", wants integration tests, or is acting on a build plan or remediation slices.
 ---
 
 # Test-Driven Development
 
 ## Where this fits
 
-This is **stage 3 of a six-stage workflow**:
+This is **stage 4 of a seven-stage workflow**:
 
 1. [architect-deep-dive](../architect-deep-dive/SKILL.md) — resolves the design tree, scope, and edge cases
-2. [agent-brief](../agent-brief/SKILL.md) — turns those decisions into the pure-text plan TDD builds from
-3. **tdd** (this skill) — executes that plan red-green
-4. [refactor-review](../refactor-review/SKILL.md) — cleans the structure once behavior is verified
-5. [devils-advocate](../devils-advocate/SKILL.md) — assumes the result is wrong and hunts evidence for every defect
-6. [tyr-verdict](../tyr-verdict/SKILL.md) — adjudicates the findings, cuts false claims, and enforces the fixes
+2. [agent-brief](../agent-brief/SKILL.md) — turns those decisions into the pure-text plan the rest builds from
+3. [acceptance-tests](../acceptance-tests/SKILL.md) — turns the plan's acceptance criteria into failing black-box tests, before any code
+4. **tdd** (this skill) — builds it red-green until the acceptance tests pass
+5. [refactor-review](../refactor-review/SKILL.md) — cleans the structure once behavior is verified
+6. [devils-advocate](../devils-advocate/SKILL.md) — assumes the result is wrong and hunts evidence for every defect
+7. [tyr-verdict](../tyr-verdict/SKILL.md) — adjudicates the findings, cuts false claims, and enforces the fixes
 
 **You execute the agent brief's contract**, read from `.workflow/brief.md`. Its **Acceptance criteria** are already ordered as a build order (first = tracer bullet, then incremental slices, edge cases marked); its **Key interfaces (test seams)** and **Test seams & prior art** tell you where to test and what to mirror. Do not re-derive the plan — read it from the brief.
+
+**The acceptance tests are your outer loop.** Where [acceptance-tests](../acceptance-tests/SKILL.md) ran, the brief's **Acceptance tests** section maps every criterion to a failing black-box test and names the command that runs them. Your red→green cycles are the inner loop; **you are done when that command passes**. Never edit an acceptance test to make it pass: if one encodes a wrong reading of the brief, that is the feedback edge — revise the brief first, log it, then change the test.
 
 > **Feedback edge — the brief is a living contract.** If, while implementing, you find that the brief is wrong, incomplete, or contradicted by reality — a seam that doesn't exist, an edge case that can't behave as specified, an acceptance criterion that conflicts with another — **STOP. Do not silently code around it.** Surface the contradiction, **edit `.workflow/brief.md` in place** to match the new understanding, log the change in its **Revisions** section, then resume the loop against the corrected contract. Never fork the brief; the file stays the single authority.
 
@@ -78,12 +81,13 @@ Take the answer, then write the test yourself.
 
 #### With a brief — planning is a lookup, not a design session
 
-Stages 1 and 2 already resolved the interface, chose the behaviors, prioritized them, and got the user's approval. Re-asking any of that reopens settled decisions and wastes the two stages that settled them. Read `.workflow/brief.md` and take:
+Stages 1–3 already resolved the interface, chose and prioritized the behaviors, got the user's approval, and wrote the acceptance tests. Re-asking any of that reopens settled decisions and wastes the stages that settled them. Read `.workflow/brief.md` and take:
 
 - [ ] **The interface** ← **Key interfaces (test seams)**. Test through the highest seam it names.
 - [ ] **The build order** ← **Acceptance criteria**, top to bottom, first as the tracer bullet.
 - [ ] **The conventions** ← **Test seams & prior art**. Mirror what it points at.
 - [ ] **The limits** ← **Out of scope** and **Deferred by design**. A deferred detail stays deferred; do not let a test commit to it.
+- [ ] **The finish line** ← **Acceptance tests**: run the command once now and see every mapped test red. A tracer bullet that turns its criterion's acceptance test green is the clearest progress signal you have.
 
 Then verify the brief is actually executable before writing a test — that the named seams exist, and that no criterion depends on one that doesn't. **A gap here is the feedback edge, not a licence to re-plan:** fix `.workflow/brief.md` and log the revision. Confirm with the user only where the brief is silent or self-contradictory.
 
@@ -158,9 +162,10 @@ The loop is finished when every one of these holds:
 
 - [ ] Every **acceptance criterion in `.workflow/brief.md`** is implemented and has a test that verifies it — check each one off in the file, so the record survives the next loop iteration. (Running standalone: every behavior agreed in Planning.)
 - [ ] On a loop-back pass: every **remediation slice** you were handed is closed in `.workflow/ledger.md` — one `### Closed slices` line per slice, naming the test that verifies it
+- [ ] **The acceptance tests are GREEN** — the command in the brief's **Acceptance tests** section passes, and each mapped criterion is ticked there. (No acceptance stage ran: skip this line and say so.)
 - [ ] The full suite is GREEN
 
-Then the structure gets cleaned, in [refactor-review](../refactor-review/SKILL.md) — that is stage 4, not a checklist item here, and it has its own severity rules and stopping rule. Invoke it against the new changes only, apply what it prescribes as **structural-only** changes, and keep the suite GREEN through every step.
+Then the structure gets cleaned, in [refactor-review](../refactor-review/SKILL.md) — that is stage 5, not a checklist item here, and it has its own severity rules and stopping rule. Invoke it against the new changes only, apply what it prescribes as **structural-only** changes, and keep the suite GREEN through every step.
 
 The division of labor is strict: **TDD gets you to verified behavior, refactor-review gets you to clean structure.** Do not skip it.
 
@@ -168,9 +173,9 @@ The division of labor is strict: **TDD gets you to verified behavior, refactor-r
 
 Green tests and a clean diff are a *claim* of correctness, not proof of it. Once the suite is GREEN, the change goes through the rest of the pipeline:
 
-1. Run **[refactor-review](../refactor-review/SKILL.md)** (stage 4) — clean the structure on a green suite.
-2. Run **[devils-advocate](../devils-advocate/SKILL.md)** (stage 5) — assume everything you built is wrong and hunt evidence for each defect.
-3. Run **[tyr-verdict](../tyr-verdict/SKILL.md)** (stage 6) — adjudicate those findings and issue a go/no-go verdict.
+1. Run **[refactor-review](../refactor-review/SKILL.md)** (stage 5) — clean the structure on a green suite.
+2. Run **[devils-advocate](../devils-advocate/SKILL.md)** (stage 6) — assume everything you built is wrong and hunt evidence for each defect.
+3. Run **[tyr-verdict](../tyr-verdict/SKILL.md)** (stage 7) — adjudicate those findings and issue a go/no-go verdict.
 
 If tyr-verdict returns **NO-GO**, its remediation slices come back to this skill as a new red→green build order (see the loop-back edge above). The loop converges when devils-advocate turns up nothing new and tyr-verdict confirms nothing.
 

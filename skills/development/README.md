@@ -1,10 +1,10 @@
 # development
 
-Six skills that take a change from a vague idea to reviewed, tested code. They form a pipeline — each stage checks the one before it — but every one also works alone.
+Seven skills that take a change from a vague idea to reviewed, tested code. They form a pipeline — each stage checks the one before it — but every one also works alone.
 
 ```
-architect-deep-dive → agent-brief → tdd → refactor-review → devils-advocate → tyr-verdict
-   (resolve design)    (the plan)   (build)  (clean up)      (assume broken)   (judge + fix loop)
+architect-deep-dive → agent-brief → acceptance-tests → tdd → refactor-review → devils-advocate → tyr-verdict
+   (resolve design)    (the plan)   (the finish line)  (build)  (clean up)     (assume broken)   (judge + fix loop)
 ```
 
 ## The skills
@@ -13,6 +13,7 @@ architect-deep-dive → agent-brief → tdd → refactor-review → devils-advoc
 |-------|--------------|
 | [architect-deep-dive](architect-deep-dive/SKILL.md) | Staff-architect design review that resolves the plan one question at a time — options with trade-offs, a recommendation and its reversal cost — against a stated charter and a live question count. Infers answers from the codebase where it can. |
 | [agent-brief](agent-brief/SKILL.md) | Turns the resolved design decisions into the pure-text build plan TDD executes — ordered acceptance criteria, test seams, prior art, and scope. |
+| [acceptance-tests](acceptance-tests/SKILL.md) | Turns the brief's acceptance criteria into executable black-box tests through the outermost boundary — written before any code, each red for the right reason — and maps every criterion to its test. tdd is done when they pass. |
 | [tdd](tdd/SKILL.md) | Test-driven development via the red-green-refactor loop, in vertical slices rather than horizontal layers. |
 | [refactor-review](refactor-review/SKILL.md) | Reviews the current diff: names the smell, then prescribes a behavior-preserving refactoring. |
 | [devils-advocate](devils-advocate/SKILL.md) | Assumes everything just built is wrong and hunts concrete evidence for each defect. Over-reports on purpose; does not fix or judge. |
@@ -25,26 +26,26 @@ architect-deep-dive → agent-brief → tdd → refactor-review → devils-advoc
 Then either let the agent trigger a skill when your request matches its `description`, or call it by name:
 
 ```
-/architect-deep-dive   /agent-brief      /tdd
-/refactor-review       /devils-advocate  /tyr-verdict
+/architect-deep-dive   /agent-brief      /acceptance-tests
+/tdd                   /refactor-review  /devils-advocate  /tyr-verdict
 ```
 
 If you copy only some of them, the cross-links between stages will point at folders that aren't there. That's survivable by design: the handoff text still names the next skill, so you know what would have run.
 
 ## How much of the pipeline to run
 
-Six stages on a two-line fix cost more than the fix. Pick a tier **once, up front**, and say which you picked:
+Seven stages on a two-line fix cost more than the fix. Pick a tier **once, up front**, and say which you picked:
 
 | Tier | The change | Run |
 |------|-----------|-----|
-| **Trivial** | A localized fix behind an existing seam. No new behavior surface, no new boundary. | `tdd → refactor-review` (3–4) |
-| **Standard** | A new capability inside existing structure. | `agent-brief → … → tyr-verdict` (2–6); add stage 1 if the design isn't already obvious |
-| **Large / risky** | New subsystem, a change crossing existing boundaries, or one touching data migration, money, permissions, or tenancy. | All six — and stage 1's decomposition splits it into increments that each run 2–6 |
+| **Trivial** | A localized fix behind an existing seam. No new behavior surface, no new boundary. | `tdd → refactor-review` (4–5) |
+| **Standard** | A new capability inside existing structure. | `agent-brief → … → tyr-verdict` (2–7); add stage 1 if the design isn't already obvious |
+| **Large / risky** | New subsystem, a change crossing existing boundaries, or one touching data migration, money, permissions, or tenancy. | All seven — and stage 1's decomposition splits it into increments that each run 2–7 |
 
 Two rules that make the tiering honest:
 
 - **Calibrate once, not stage by stage.** Deciding to skip a stage *while standing in front of it* is how the discipline erodes everywhere, because the stage you skip is always the one that looked unnecessary.
-- **Stages 5–6 don't get dropped** on anything touching data, money, permissions, or tenancy — regardless of diff size. Those are the failures a green suite is worst at catching.
+- **Stages 6–7 don't get dropped** on anything touching data, money, permissions, or tenancy — regardless of diff size. Those are the failures a green suite is worst at catching.
 
 ## The loop, and the two working files
 
@@ -56,12 +57,13 @@ The pipeline keeps two files in the repo it's working on — `.workflow/brief.md
 |---|---|---|
 | architect-deep-dive | — (its charter feeds stage 2) | — |
 | agent-brief | **creates** | — |
+| acceptance-tests | reads criteria; **records** the acceptance tests and their command | — |
 | tdd | reads; **revises** via the feedback edge; ticks criteria | **appends** closed slices |
 | refactor-review | reads (scope boundaries) | **re-rates** prior noted smells; appends new ones |
 | devils-advocate | reads (criteria, edge cases, deferrals) | **appends findings** |
 | tyr-verdict | reads | **appends verdicts and slices**; reads noted smells into the verdict |
 
-The ledger is an **append-only log** in a strict grammar — every stage appends its own section to the current iteration, and state (what's open, what's closed, which smells are carried) is read by replaying it. The grammar is in each writing skill, and in [harness/LEDGER.md](../../harness/LEDGER.md) for the whole picture; [harness/](../../harness/README.md) can check a ledger, or run stages 4–6 and the loop itself.
+The ledger is an **append-only log** in a strict grammar — every stage appends its own section to the current iteration, and state (what's open, what's closed, which smells are carried) is read by replaying it. The grammar is in each writing skill, and in [harness/LEDGER.md](../../harness/LEDGER.md) for the whole picture; [harness/](../../harness/README.md) can check a ledger, or run stages 5–7 and the loop itself.
 
 Add `.workflow/` to the host repo's `.gitignore` unless you want the plan and the ledger in version control — both are legitimate choices, and committing them makes the loop's reasoning reviewable.
 

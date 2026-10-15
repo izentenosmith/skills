@@ -7,14 +7,15 @@ description: Adversarial teardown that assumes everything just built is wrong an
 
 Your job is to **dismantle the work**. Adopt the prior that the implementation is wrong, the tests are lying, and the feature does not do what it claims. Everything green is *guilty until proven innocent*. You are not here to be fair — you are here to find the failure that everyone else missed.
 
-This skill is **stage 5 of a six-stage workflow**:
+This skill is **stage 6 of a seven-stage workflow**:
 
 1. [architect-deep-dive](../architect-deep-dive/SKILL.md) — resolves the design tree, scope, and edge cases
-2. [agent-brief](../agent-brief/SKILL.md) — turns those decisions into the pure-text plan TDD builds from
-3. [tdd](../tdd/SKILL.md) — executes that plan red-green
-4. [refactor-review](../refactor-review/SKILL.md) — cleans the structure once behavior is verified
-5. **devils-advocate** (this skill) — assumes the result is wrong and hunts evidence for every defect
-6. [tyr-verdict](../tyr-verdict/SKILL.md) — adjudicates your findings, cuts false claims, and enforces the fixes
+2. [agent-brief](../agent-brief/SKILL.md) — turns those decisions into the pure-text plan the rest builds from
+3. [acceptance-tests](../acceptance-tests/SKILL.md) — turns the plan's acceptance criteria into failing black-box tests, before any code
+4. [tdd](../tdd/SKILL.md) — builds it red-green until the acceptance tests pass
+5. [refactor-review](../refactor-review/SKILL.md) — cleans the structure once behavior is verified
+6. **devils-advocate** (this skill) — assumes the result is wrong and hunts evidence for every defect
+7. [tyr-verdict](../tyr-verdict/SKILL.md) — adjudicates the findings, cuts false claims, and enforces the fixes
 
 **Upstream:** you receive a change that TDD built green and refactor-review cleaned. Treat that pedigree as *marketing*, not evidence. Read `.workflow/brief.md` where it exists — its acceptance criteria, edge cases and deferrals are the claims you are falsifying, and a deferral reported as a gap is a wasted finding. Where it doesn't exist (a standalone teardown, someone else's change), derive the claims from the diff and say that is what you did.
 
@@ -66,7 +67,7 @@ A delegate's report is evidence, not truth — weigh it the way Tyr will weigh y
 
 Walk each of these deliberately. For each, state what you attacked and what you found (including "attacked, found nothing" — a negative result is a real result).
 
-- [ ] **Acceptance criteria.** For each criterion in the brief: does the behavior actually hold, or does its test pass vacuously (asserting nothing meaningful, asserting on setup, or asserting a value that would be true even if the feature were deleted)?
+- [ ] **Acceptance criteria.** For each criterion in the brief: does the behavior actually hold, or does its test pass vacuously (asserting nothing meaningful, asserting on setup, or asserting a value that would be true even if the feature were deleted)? That includes the **acceptance tests** the brief maps to each criterion — were any edited since stage 3 wrote them, and does each still fail if its criterion breaks?
 - [ ] **Test integrity.** Would each test actually fail if the behavior broke? Mentally mutate the implementation (invert a condition, drop a branch, return a constant) — does a test go red? A test no mutation can break tests nothing.
 - [ ] **Listed edge cases.** The unhappy paths the brief called out — are they genuinely handled, or stubbed/short-circuited to make a test pass?
 - [ ] **Unlisted unhappy paths.** Empty/missing/null input, boundary and off-by-one values, concurrent access, ordering assumptions, partial failure and rollback, duplicate/retry.

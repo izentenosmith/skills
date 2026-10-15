@@ -1,6 +1,6 @@
 ---
 name: agent-brief
-description: Turn resolved design decisions into the pure-text build plan TDD executes — ordered acceptance criteria, test seams, prior art, and scope. Use after architect-deep-dive and before tdd, when a feature or fix needs a detailed spec to build against.
+description: Turn resolved design decisions into the pure-text build plan TDD executes — ordered acceptance criteria, test seams, prior art, and scope. Use after architect-deep-dive and before acceptance-tests and tdd, when a feature or fix needs a detailed spec to build against.
 ---
 
 # Agent Brief — the plan TDD builds from
@@ -27,14 +27,15 @@ Three rules make them trustworthy:
 
 They are working artifacts, not deliverables — gitignore them, or commit them as the change's design record.
 
-This skill is **stage 2 of a six-stage workflow**:
+This skill is **stage 2 of a seven-stage workflow**:
 
 1. [architect-deep-dive](../architect-deep-dive/SKILL.md) — resolves the design tree, scope, and edge cases
-2. **agent-brief** (this skill) — turns those decisions into the plan TDD builds from
-3. [tdd](../tdd/SKILL.md) — executes that plan red-green
-4. [refactor-review](../refactor-review/SKILL.md) — cleans the structure once behavior is verified
-5. [devils-advocate](../devils-advocate/SKILL.md) — assumes the result is wrong and hunts evidence for every defect
-6. [tyr-verdict](../tyr-verdict/SKILL.md) — adjudicates the findings, cuts false claims, and enforces the fixes
+2. **agent-brief** (this skill) — turns those decisions into the pure-text plan the rest builds from
+3. [acceptance-tests](../acceptance-tests/SKILL.md) — turns the plan's acceptance criteria into failing black-box tests, before any code
+4. [tdd](../tdd/SKILL.md) — builds it red-green until the acceptance tests pass
+5. [refactor-review](../refactor-review/SKILL.md) — cleans the structure once behavior is verified
+6. [devils-advocate](../devils-advocate/SKILL.md) — assumes the result is wrong and hunts evidence for every defect
+7. [tyr-verdict](../tyr-verdict/SKILL.md) — adjudicates the findings, cuts false claims, and enforces the fixes
 
 **Upstream (from architect-deep-dive):** every dimension the architect resolved is your raw material — pull directly from it. Its **charter** (what we're solving, why now, what done looks like) becomes your **Summary** and **Desired behavior**; carry the *why now* rather than dropping it, because it is what tells TDD which criterion matters when two conflict. Its interface decisions become your **Key interfaces**; its resolved failure modes and edge cases become your **edge-case criteria**; its user-facing behaviors become your **happy-path criteria**; its scope boundaries become your **Out of scope**. If a dimension was left implicit, you are missing input — go back to architect-deep-dive rather than guessing.
 
@@ -122,6 +123,9 @@ Be specific about edge cases and error conditions.
 - Thing that should NOT be changed or addressed here
 - Adjacent feature that might seem related but is separate
 
+**Acceptance tests** (filled in by stage 3, acceptance-tests — leave empty here):
+- **Command:** —
+
 ## Revisions
 - (empty at creation; TDD's feedback edge appends here)
 ```
@@ -130,7 +134,7 @@ Be specific about edge cases and error conditions.
 
 After writing the plan to `.workflow/brief.md`, prompt the user:
 
-> The build plan is written to `.workflow/brief.md`. Run the **[tdd](../tdd/SKILL.md)** skill next — its acceptance criteria are ordered as a red→green build order, with the first as the tracer bullet.
+> The build plan is written to `.workflow/brief.md`. Run **[acceptance-tests](../acceptance-tests/SKILL.md)** next to turn its acceptance criteria into failing black-box tests, then **[tdd](../tdd/SKILL.md)** — its criteria are ordered as a red→green build order, with the first as the tracer bullet. (Trivial tier: go straight to tdd.)
 
 ## Examples
 

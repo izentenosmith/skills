@@ -133,7 +133,7 @@ VERDICT_SCHEMA = _obj({
 
 HEADER = """HARNESS-STAGE: {stage} · HARNESS-ITERATION: {n}
 
-You are one step of an automated harness running the closing loop of a six-stage \
+You are one step of an automated harness running the closing loop of a seven-stage \
 development workflow (iteration {n} of at most {cap}). The user is not available: do not \
 ask questions — finish the job and return your structured result. The harness owns \
 `.workflow/ledger.md`: read it when your skill says to, but never edit it; the harness \
@@ -148,7 +148,7 @@ the open remediation slices below red→green, one at a time, in the order given
 
 The build plan is `.workflow/brief.md`; the feedback edge still applies — if a slice \
 contradicts the brief, revise the brief in place and log it under Revisions. The test \
-command is `{test_cmd}`, and the full suite must be green when you finish.
+command is `{test_cmd}`, and the full suite must be green when you finish{acceptance}.
 
 Return, for every slice you got to green, the finding id and the exact name of the test \
 that verifies it. For any slice you could not close, return why.
@@ -284,16 +284,20 @@ class Ctx:
     dry: bool
     run_dir: pathlib.Path
     claude_bin: str
+    acceptance_cmd: str | None = None
+    skip_refactor: str | None = None        # a lane without refactor-review says why, and it's recorded
+    ledger_path: pathlib.Path | None = None  # other harnesses keep their own ledger beside the pipeline's
+    brief_path: pathlib.Path | None = None
     cost: float = 0.0
     lock: threading.Lock = dc.field(default_factory=threading.Lock)
 
     @property
     def ledger(self):
-        return self.repo / ".workflow" / "ledger.md"
+        return self.ledger_path or self.repo / ".workflow" / "ledger.md"
 
     @property
     def brief(self):
-        return self.repo / ".workflow" / "brief.md"
+        return self.brief_path or self.repo / ".workflow" / "brief.md"
 
 
 def log(msg):
@@ -381,20 +385,37 @@ def sh(ctx, *args, check=True):
     return r.stdout
 
 
-def run_tests(ctx, where=None):
-    r = subprocess.run(ctx.test_cmd, shell=True, cwd=where or ctx.repo, capture_output=True,
-                       text=True, timeout=ctx.timeout)
+def run_tests(ctx, where=None, cmd=None):
+    r = subprocess.run(cmd or ctx.test_cmd, shell=True, cwd=where or ctx.repo, capture_output=True,
+                       text=True, stdin=subprocess.DEVNULL, timeout=ctx.timeout)
     tail = (r.stdout + r.stderr).strip().splitlines()[-1:] or [""]
     return r.returncode == 0, tail[0][:200]
 
 
 def gate(ctx, when):
+    """The suite, then the acceptance tests stage 3 wrote: both green, or the loop stops."""
     if ctx.dry:
         return
     ok, tail = run_tests(ctx)
     log(f"gate {when}: {'GREEN' if ok else 'RED'} — {tail}")
     if not ok:
         raise GateFailed(f"suite is red {when}: {tail}")
+    if ctx.acceptance_cmd:
+        ok, tail = run_tests(ctx, cmd=ctx.acceptance_cmd)
+        log(f"gate {when}: acceptance {'GREEN' if ok else 'RED'} — {tail}")
+        if not ok:
+            raise GateFailed(f"acceptance tests are red {when}: {tail} — tdd isn't done until they pass")
+
+
+ACCEPTANCE_RE = re.compile(r"\*\*Acceptance tests\*\*.*?^- \*\*Command:\*\*\s*`([^`]+)`", re.S | re.M)
+
+
+def acceptance_from_brief(brief):
+    """The command stage 3 recorded in the brief's Acceptance tests section, if any."""
+    if not brief.exists():
+        return None
+    m = ACCEPTANCE_RE.search(brief.read_text())
+    return m.group(1).strip() if m else None
 
 
 def diff_text(ctx):
@@ -479,6 +500,8 @@ def stage_fix(ctx, n, st):
     log(f"iteration {n} · tdd on {len(slices)} remediation slice(s)")
     prompt = HEADER.format(stage="fix", n=n, cap=ctx.cap) + FIX_PROMPT.format(
         skill=skill_path(ctx, "tdd"), test_cmd=ctx.test_cmd,
+        acceptance=(f" — and so must the acceptance tests (`{ctx.acceptance_cmd}`), which you never edit to "
+                    "make pass" if ctx.acceptance_cmd else ""),
         slices=bullet(slices, lambda s: f"- [{s['severity']}] {s['id']} — {s['behavior']}"))
     open_ids = {s["id"] for s in slices}
 
@@ -753,6 +776,42 @@ def scratch_copy(ctx):
 STAGES = {"fix": stage_fix, "refactor": stage_refactor, "teardown": stage_teardown, "verdict": stage_verdict}
 
 
+def skip_refactor(ctx, n, st):
+    """A lane that doesn't run refactor-review still writes the section, so the ledger shows it was skipped."""
+    log(f"iteration {n} · refactor-review skipped — {ctx.skip_refactor}")
+    gate(ctx, "before the teardown")
+    actions = [{"id": s["id"], "action": "left", "reason": f"not re-examined: {ctx.skip_refactor}"}
+               for s in st["carried_smells"]]
+    append(ctx, n, L.render_smells([], actions))
+
+
+def run_loop(ctx, once=False, max_iterations=None):
+    """Drive stages from wherever the ledger says, until GO, ESCALATED, a stop, or `max_iterations`.
+    Returns (exit code, last status). Raises GateFailed / HarnessError for the caller to report."""
+    while True:
+        st = status(ctx)
+        if st["errors"]:
+            raise HarnessError("the ledger does not check:\n  " + "\n  ".join(st["errors"]))
+        n, stage = st["iteration"], st["next_stage"]
+        if stage == "done":
+            log(f"GO — {st['computed']['reason']}")
+            return EXIT_GO, st
+        if stage == "escalated":
+            log(f"ESCALATED — {st['computed']['reason']}")
+            return EXIT_ESCALATED, st
+        if n > ctx.cap:
+            raise HarnessError(f"iteration {n} would exceed the cap of {ctx.cap}")
+        if max_iterations and n > max_iterations:
+            return EXIT_GO, st
+        run = skip_refactor if (stage == "refactor" and ctx.skip_refactor) else STAGES[stage]
+        run(ctx, n, st)
+        if ctx.dry:
+            log(f"dry run: prompts for '{stage}' (iteration {n}) are in {ctx.run_dir / 'calls'}")
+            return EXIT_GO, status(ctx)
+        if once:
+            return EXIT_GO, status(ctx)
+
+
 # ------------------------------------------------------------------ main
 
 def resolve_base(repo, given):
@@ -773,6 +832,8 @@ def main(argv=None):
     ap.add_argument("--repo", required=True, help="the repository under review (a git work tree)")
     ap.add_argument("--test-cmd", help="the full suite, run from the repo root (remembered after the first run)")
     ap.add_argument("--base", help="the ref the change is measured against (default: merge-base with main; remembered)")
+    ap.add_argument("--acceptance-cmd", help="runs only the acceptance tests (default: the command stage 3 recorded "
+                                             "in the brief; remembered)")
     ap.add_argument("--skills", default=str(HERE.parent / "skills"), help="where the SKILL.md folders live")
     ap.add_argument("--cap", type=int, default=L.CAP, help="maximum iterations (default 3)")
     ap.add_argument("--model", help="model for the stages that judge or write code")
@@ -795,47 +856,32 @@ def main(argv=None):
         print("--test-cmd is required on the first run", file=sys.stderr)
         return EXIT_ERROR
     base = a.base or cfg.get("base") or resolve_base(repo, None)
+    acceptance = a.acceptance_cmd or cfg.get("acceptance_cmd") or acceptance_from_brief(repo / ".workflow" / "brief.md")
     if not a.dry_run:
         cfg_path.parent.mkdir(parents=True, exist_ok=True)
-        cfg_path.write_text(json.dumps({"test_cmd": test_cmd, "base": base}, indent=2) + "\n")
+        saved = {"test_cmd": test_cmd, "base": base}
+        if a.acceptance_cmd or cfg.get("acceptance_cmd"):
+            saved["acceptance_cmd"] = a.acceptance_cmd or cfg["acceptance_cmd"]
+        cfg_path.write_text(json.dumps(saved, indent=2) + "\n")
 
     run_dir = repo / ".workflow" / "runs" / dt.datetime.now().strftime("%Y%m%d-%H%M%S")
     run_dir.mkdir(parents=True, exist_ok=True)
     ctx = Ctx(repo=repo, skills=pathlib.Path(a.skills).resolve(), test_cmd=test_cmd, base=base, cap=a.cap,
               model=a.model, delegate_model=a.delegate_model, concurrency=a.concurrency,
               budget=a.budget_usd, timeout=a.timeout, dry=a.dry_run, run_dir=run_dir,
-              claude_bin=os.environ.get("HARNESS_CLAUDE", "claude"))
+              claude_bin=os.environ.get("HARNESS_CLAUDE", "claude"), acceptance_cmd=acceptance)
     log(f"repo {repo} · base {base} · run artifacts in {run_dir.relative_to(repo)}")
+    log(f"acceptance tests: `{acceptance}`" if acceptance else
+        "no acceptance tests recorded — the gates run the suite only")
     if not ctx.brief.exists():
         log("no .workflow/brief.md — the teardown will derive its claims from the diff")
 
     code = EXIT_ERROR
     try:
-        while True:
-            st = status(ctx)
-            if st["errors"]:
-                raise HarnessError("the ledger does not check:\n  " + "\n  ".join(st["errors"]))
-            n, stage = st["iteration"], st["next_stage"]
-            if stage == "done":
-                log(f"GO — {st['computed']['reason']}")
-                code = EXIT_GO
-                break
-            if stage == "escalated":
-                log(f"ESCALATED — {st['computed']['reason']}")
-                log("your call: accept the risk and waive (### Decisions), fix by hand, "
-                    "or take it back to agent-brief / architect-deep-dive")
-                code = EXIT_ESCALATED
-                break
-            if n > ctx.cap:
-                raise HarnessError(f"iteration {n} would exceed the cap of {ctx.cap}")
-            STAGES[stage](ctx, n, st)
-            if ctx.dry:
-                log(f"dry run: prompts for '{stage}' (iteration {n}) are in {(run_dir / 'calls').relative_to(repo)}")
-                code = EXIT_GO
-                break
-            if a.once:
-                code = EXIT_GO
-                break
+        code, _ = run_loop(ctx, once=a.once)
+        if code == EXIT_ESCALATED:
+            log("your call: accept the risk and waive (### Decisions), fix by hand, "
+                "or take it back to agent-brief / architect-deep-dive")
     except GateFailed as e:
         log(f"stopped: {e}")
         code = EXIT_GATE

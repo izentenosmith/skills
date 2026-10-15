@@ -65,3 +65,7 @@ alone. Edit them together.
 ## Not measured
 
 Neither skill has an eval fixture yet.
+
+## Run as a harness
+
+[`harness/dbreview.py`](../../harness/README.md) runs both: DDL files or a read-only connection in, scored audit out — the scoring formula applied in code, not by the model — then a per-database gate: a database scoring 9.0 or more with no Critical or High finding, in use, and not riding on 🔬 flags gets **no proposal**, and the gate says why. dbpropose runs only for the rest, or for everything with `--intent migration`.
