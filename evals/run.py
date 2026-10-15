@@ -72,9 +72,17 @@ def fixture_built(d):
     return True
 
 
-# Never searched for skills: the harness itself, agent state (which holds
-# whole worktrees of this repo), and build output.
-SKIP_DIRS = {"evals", ".claude", ".git", ".venv", "node_modules"}
+# Never searched for skills: the eval and loop harnesses, agent state (which
+# holds whole worktrees of this repo), and build output.
+SKIP_DIRS = {"evals", "harness", ".claude", ".git", ".venv", "node_modules"}
+
+# `claude -p` waits for its own background shells before it exits, so one
+# that hangs (on input, say) holds the run until --timeout while the work
+# itself finished long before, and the run still reports success. Same
+# settings as harness/loop.py.
+RUN_ENV = {"CLAUDE_CODE_DISABLE_BACKGROUND_TASKS": "1",
+           "BASH_DEFAULT_TIMEOUT_MS": "120000",
+           "BASH_MAX_TIMEOUT_MS": "300000"}
 
 
 def find_skill(root, skill):
@@ -204,7 +212,8 @@ def execute(r, timeout):
            "cmd": r["cmd"][:-1] + ["<prompt>"], "prompt": r["prompt"]}
     try:
         # Own process group, so a timeout also kills whatever the run spawned.
-        p = subprocess.Popen(r["cmd"], cwd=run / "repo", stdin=subprocess.DEVNULL,
+        p = subprocess.Popen(r["cmd"], cwd=run / "repo", env=os.environ | RUN_ENV,
+                             stdin=subprocess.DEVNULL,
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
                              start_new_session=True)
         try:
@@ -252,6 +261,7 @@ def print_plan(runs, ws_iter, baseline):
         print(f"   mkdir    {r['run'] / 'outputs'}")
         print(f"   skill    {r['skill_md'] or '(none: skill absent at baseline ref)'}")
         print(f"   cwd      {r['run'] / 'repo'}")
+        print(f"   env      {' '.join(f'{k}={v}' for k, v in RUN_ENV.items())}")
         print(f"   command  {shlex.join(r['cmd'][:-1])} <prompt>")
         print("   prompt   | " + r["prompt"].replace("\n", "\n            | "))
         print()
