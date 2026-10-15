@@ -17,7 +17,10 @@ there (it must fail), then runs it in your working tree (it must pass).
 --tests    the test files to carry over; default: every changed file that looks like a test.
 --cmd      run from the repo root; `{tests}` is replaced with the test paths, shell-quoted.
 --expect   a regex the *before* output must contain, so a failure for the wrong reason
-           (an import error, a typo) doesn't count as red.
+           (an import error, a typo) doesn't count as red. Without it, a before-run that only
+           failed to load — a collection or import error, a compile error, a missing module or
+           symbol — is `wrong-reason`: a test that imports what the fix adds fails before the
+           fix whether or not the behavior was ever broken. When --expect matches, it decides.
 
 Exit status: 0 red→green · 1 anything else (not red, not green, no tests) · 2 usage error.
 """
@@ -43,6 +46,27 @@ TEST_RE = re.compile(
     r"|(Test|Tests|Spec|IT)\.[^/.]+$"
 )
 HEAVY_DIRS = (".venv", "venv", "node_modules", "vendor", ".gradle", "target", ".tox")
+
+# Output lines that mean the tests never ran: the before-tree failed to collect, import,
+# compile or link them. Red for that reason proves nothing about the behavior. (Syntax errors
+# are left out: JSON.parse throws one at runtime, and one in a test file fails after the fix too.)
+LOAD_ERROR_RE = re.compile("|".join([
+    # Python / pytest
+    r"\bModuleNotFoundError\b", r"\bImportError\b", r"cannot import name",
+    r"AttributeError: module \S+ has no attribute", r"\berrors? collecting\b",
+    r"\berrors? during collection\b", r"\bno tests ran\b", r"\bcollected 0 items\b",
+    # JVM: javac, Maven, Gradle, Kotlin
+    r"cannot find symbol", r"error: package \S+ does not exist", r"COMPILATION ERROR", r"Compilation failure",
+    r"compile\w*Java FAILED", r"compile\w*Kotlin FAILED", r"Unresolved reference",
+    # Node / TypeScript
+    r"Cannot find module", r"ERR_MODULE_NOT_FOUND", r"does not provide an export named",
+    r"is not exported by", r"\berror TS\d+", r"Test suite failed to run",
+    # Go, Rust, .NET, Ruby, and anything that says so
+    r"^\s*\S+\.go:\d+:\d+: undefined: ", r"\[(build|setup) failed\]", r"\berror\[E\d{4}\]", r"could not compile",
+    r"\berror CS\d{4}\b", r"\bLoadError\b", r"cannot load such file", r"uninitialized constant",
+    r"\b(compilation|compile|build) (failed|error)", r"\bfailed to compile\b",
+]), re.IGNORECASE | re.MULTILINE)
+PYTEST_RE = re.compile(r"=+ test session starts =+|^Interrupted: ", re.MULTILINE)
 
 
 class Usage(Exception):
@@ -94,6 +118,18 @@ def run(cmd, cwd, tests, timeout):
         return {"code": None, "tail": [f"timed out after {timeout}s"], "output": ""}
 
 
+def load_errors(before, after, wt, repo):
+    """Lines saying the pre-fix run never got to execute the tests, unless the same line
+    also shows up in the post-fix run (then it is noise the suite always prints)."""
+    out = before["output"].replace(str(wt.resolve()), str(repo)).replace(str(wt), str(repo))
+    seen_after = {ln.strip() for ln in after["output"].splitlines()}
+    hits = [ln.strip() for ln in out.splitlines() if LOAD_ERROR_RE.search(ln) and ln.strip() not in seen_after]
+    # pytest: 2 = interrupted (collection errors), 4 = usage error, 5 = nothing collected.
+    if before["code"] in (2, 4, 5) and PYTEST_RE.search(out):
+        hits.append(f"pytest exit {before['code']}: the tests were not run")
+    return hits[:5]
+
+
 def check(repo, cmd, base="HEAD", tests=None, expect=None, timeout=600):
     repo = pathlib.Path(repo).resolve()
     base = git(repo, "rev-parse", "--verify", f"{base}^{{commit}}")
@@ -126,7 +162,11 @@ def check(repo, cmd, base="HEAD", tests=None, expect=None, timeout=600):
 
     before, after = result["before"], result["after"]
     red = before["code"] not in (0, None)
-    right_reason = not expect or bool(re.search(expect, before["output"]))
+    if expect:
+        right_reason, unloaded = bool(re.search(expect, before["output"])), []
+    else:
+        unloaded = load_errors(before, after, wt, repo) if red else []
+        right_reason = not unloaded
     green = after["code"] == 0
     if red and right_reason and green:
         result["verdict"], result["reason"] = "red-green", "the tests fail on the pre-fix code and pass with the fix"
@@ -134,6 +174,10 @@ def check(repo, cmd, base="HEAD", tests=None, expect=None, timeout=600):
         result["verdict"] = "not-red"
         result["reason"] = ("the tests pass on the pre-fix code — they don't capture the defect"
                             if before["code"] == 0 else "the pre-fix run timed out, which proves nothing")
+    elif not right_reason and unloaded:
+        result["verdict"], result["load_errors"] = "wrong-reason", unloaded
+        result["reason"] = ("the pre-fix run failed before the tests ran (it could not load, import or compile "
+                            f"them: {unloaded[0][:160]}) — that proves nothing about the behavior")
     elif not right_reason:
         result["verdict"] = "wrong-reason"
         result["reason"] = f"the pre-fix run failed, but its output doesn't match {expect!r} — likely not the bug"
