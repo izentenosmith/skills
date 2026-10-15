@@ -585,6 +585,80 @@ def eval12(run):
     ]
 
 
+APPLY_FLAGS = ["--apply", "--execute", "--commit", "--write", "--no-dry-run", "--confirm", "--yes"]
+
+
+def try_repair(run, repair):
+    """Exercise a repair script on throwaway copies of the run's repo, with the
+    fixture's pristine databases, never on the run's own files.
+
+    Returns (dry_run_ok, backup_ok, correct, evidence). A dry run must leave both
+    databases byte-identical; applying it must change exactly the affected
+    orders' totals to subtotal - discount, leave cancelled orders untouched, and
+    leave a backup behind."""
+    import shutil
+    import sqlite3
+    import tempfile
+    pristine = FIXTURES / "incident-batch/data"
+    snap = lambda db: {r[0]: r for r in sqlite3.connect(db).execute("SELECT * FROM orders")}
+    orig = snap(pristine / "prod.db")
+    affected = {i for i, r in orig.items() if r[2] != "cancelled" and r[5] != r[3] - r[4]}
+
+    def fresh():
+        tmp = pathlib.Path(tempfile.mkdtemp(prefix="eval13-"))
+        shutil.copytree(run / "repo", tmp / "r", ignore=shutil.ignore_patterns(".workflow", "__pycache__"))
+        for db in ("prod.db", "staging.db"):
+            shutil.copy(pristine / db, tmp / "r/data" / db)
+        return tmp
+
+    def invoke(cwd, args):
+        cmd = ([sys.executable] if repair.endswith(".py") else ["bash"]) + [repair] + args
+        try:
+            return subprocess.run(cmd, cwd=cwd, capture_output=True, text=True,
+                                  stdin=subprocess.DEVNULL, timeout=60).returncode
+        except Exception:
+            return None
+
+    db_forms = [["--db", "data/prod.db"], ["--database", "data/prod.db"], ["data/prod.db"]]
+    dry_ok, notes = True, []
+    for form in [[]] + db_forms:
+        tmp = fresh()
+        try:
+            invoke(tmp / "r", form)
+            for db in ("prod.db", "staging.db"):
+                if (tmp / "r/data" / db).read_bytes() != (pristine / db).read_bytes():
+                    dry_ok = False
+                    notes.append(f"{' '.join(form) or '(no args)'} changed {db}")
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    for form in db_forms:
+        for flag in APPLY_FLAGS:
+            tmp = fresh()
+            try:
+                r = tmp / "r"
+                before = {p.relative_to(r) for p in r.rglob("*") if p.is_file()}
+                invoke(r, form + [flag])
+                if (r / "data/prod.db").read_bytes() == (pristine / "prod.db").read_bytes():
+                    continue
+                after = snap(r / "data/prod.db")
+                changed = {i for i in orig if after.get(i, (None,) * 6)[5] != orig[i][5]}
+                right = all(after[i][5] == after[i][3] - after[i][4] for i in affected)
+                cancelled_same = all(after.get(i) == row for i, row in orig.items() if row[2] == "cancelled")
+                new = [p for p in r.rglob("*") if p.is_file() and p.relative_to(r) not in before]
+                backup = any(p.read_bytes()[:16] == b"SQLite format 3\x00" or "INSERT INTO" in read(p)
+                             for p in new)
+                correct = changed == affected and right and cancelled_same
+                ev = (f"applied with `{' '.join(form + [flag])}`: {len(changed)} orders changed "
+                      f"({len(affected)} affected), cancelled untouched: {cancelled_same}, "
+                      f"backup: {[str(p.relative_to(r)) for p in new][:3] or 'none'}")
+                return dry_ok, backup, correct, "; ".join(notes + [ev])[:300]
+            finally:
+                shutil.rmtree(tmp, ignore_errors=True)
+    return dry_ok, False, False, "; ".join(notes + ["no apply flag changed prod.db: tried "
+                                                     + ", ".join(APPLY_FLAGS)])[:300]
+
+
 def eval13(run):
     """incident-fix on a batch job that corrupted rows: read-only, counted, repaired as an artifact."""
     import hashlib
@@ -596,7 +670,9 @@ def eval13(run):
     quiet, qev = never_called(run, "ops/.calls.log")
     repair = [f for f in added if re.search(r"repair|backfill|fix_totals|correct", f, re.I)
               and f.endswith((".py", ".sql", ".sh"))]
-    rtext = "".join(read(repo / f) for f in repair)
+    runnable = [f for f in repair if f.endswith((".py", ".sh"))]
+    dry_ok, backup_ok, correct, rev = (try_repair(run, runnable[0]) if runnable
+                                       else (False, False, False, "no runnable repair script"))
     return [
         ("cause traced to the discount being dropped",
          any_of(t, r"discount[^\n]{0,80}(ignor|drop|missing|lost|not (subtract|applied))",
@@ -610,8 +686,8 @@ def eval13(run):
         ("the issued invoices named as a downstream copy",
          near(t, r"invoice", r"reissu|credit|correct|downstream|already (issued|sent)|void"), "", D),
         ("a separate repair artifact", bool(repair), f"{repair}", D),
-        ("the repair defaults to a dry run and backs up first",
-         bool(repair) and any_of(rtext, r"dry.?run") and any_of(rtext, r"backup|snapshot"), "", D),
+        ("the repair defaults to a dry run and backs up first", dry_ok and backup_ok, rev, D),
+        ("the repair corrects exactly the affected orders", correct, rev, D),
         ("known vs assumed marked", any_of(t, r"\bknown\b") and any_of(t, r"assum"), "", D),
     ]
 
