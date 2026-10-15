@@ -12,6 +12,7 @@ The headline result is in [benchmark.md](benchmark.md). The short version: on th
 evals/
 ├── setup.sh        build fixture venvs + the incident git history (run once)
 ├── evals.json      eight prompts, one per skill under test
+├── run.py          dispatch the runs headless, then grade + aggregate
 ├── grade.py        assertions → grading.json per run
 ├── aggregate.py    grading.json → benchmark.md/json
 ├── benchmark.md    the recorded result
@@ -61,20 +62,48 @@ The repository is built by `make-history.sh` rather than committed, because a ne
 ./setup.sh
 ```
 
-**2. Dispatch the runs.** This step is **not automated** — you launch the subagents yourself, one per run. For each eval in `evals.json`, give a subagent: a copy of the fixture in its own run directory, the path to the skill's `SKILL.md`, the eval prompt, and an instruction to save its final response to `outputs/response.md`. Tell it the user is unavailable, so it produces the deliverable rather than waiting on a question.
+**2. Run it:**
 
-Repeat each run 3× for variance, and run one baseline against an older snapshot of the skill (`git archive <ref> | tar -x -C <snapshot-dir>`). Expected layout:
+```bash
+python3 run.py --dry-run            # print every directory, command and prompt; touch nothing
+python3 run.py --evals 5 --reps 1 --baseline-ref none   # one cheap run, end to end
+python3 run.py                      # the full benchmark: 8 evals × (3 reps + 1 baseline)
+```
+
+`run.py` does what used to be done by hand. For each selected eval it copies the fixture into its own `repo/`, then launches one headless `claude -p` per run with that `repo/` as its working directory. The prompt names the skill's `SKILL.md`, gives the eval prompt, says the user is unavailable so the run produces the deliverable instead of asking, and asks for the final response in `outputs/response.md`. Runs go in parallel up to `--concurrency` (default 4), each capped at `--timeout` seconds (default 1800). A run that fails or times out is recorded in its `run.json` and the batch carries on. When every run has finished, it calls `grade.py` on the new iteration and `aggregate.py` on every iteration in the workspace, oldest first.
+
+| Flag | Default | |
+|---|---|---|
+| `--evals 0,5` | all | eval ids from `evals.json` |
+| `--reps` | 3 | with-skill repetitions per eval |
+| `--baseline-ref` | `3b71f54^` | git ref for the `old_skill` run, or `none` |
+| `--workspace` | `../skills-workspace` next to the main checkout | |
+| `--iteration` | next unused | naming an existing one replaces the selected evals' runs in it |
+| `--concurrency`, `--timeout`, `--model` | 4, 1800 s, CLI default | `--model` is passed to `claude` |
+
+The layout it builds is the one `grade.py` reads:
 
 ```
 <workspace>/iteration-N/
+├── dispatch.json                       batch summary: baseline, CLI version, models, failures, cost
 └── eval-3-refactor-promotes-noted-smell/
-    ├── with_skill/rep1/{repo,outputs}/
+    ├── with_skill/rep1/{repo,outputs}/  + run.json, claude.json
     ├── with_skill/rep2/{repo,outputs}/
     ├── with_skill/rep3/{repo,outputs}/
     └── old_skill/{repo,outputs}/
 ```
 
-**3. Grade and aggregate:**
+What it keeps out of a run's reach:
+
+- **Your setup.** Every run uses `--safe-mode`, so no CLAUDE.md, installed skills, plugins, hooks or MCP servers load. The only skill a run sees is the one its prompt names.
+- **The answer key.** Both skill versions are copied to a temp directory: the current one out of this checkout, the baseline with `git archive <ref>` and `evals/` deleted from it. A run is never one `..` away from `grade.py`. `incident/README.md`, which lists every planted defect, is not copied into the run's repo. Neither is `make-history.sh`.
+- **The fixture names.** `evals.json` still uses the original workspace names (`fixture`, `fixture-tdd`, …); `fixture_dir()` in `run.py` maps them to the folders here (`base`, `tdd`, …).
+
+A skill that did not exist at `--baseline-ref` gets a no-skill baseline, and the plan says so. At the default ref, that applies to `docker-compose` and `post-mortem`.
+
+Runs execute with `--permission-mode bypassPermissions` inside their throwaway `repo/` copy. That is what lets them work unattended, so only run fixtures you trust. If a run answers but never writes `outputs/response.md`, its final message is saved there instead, and `run.json` records `"response": "fallback: …"`.
+
+**3. Grade and aggregate by hand**, if you want to re-score without re-running:
 
 ```bash
 python3 grade.py <workspace>/iteration-2
@@ -110,5 +139,5 @@ Eval 7's two spurious delta passes are honest: the incident report happens to na
 - **n=3, one fixture, one language, one defect class** for the pipeline evals. Low variance in the recorded run, but this is not broad coverage.
 - **Evals 6 and 7 are unrun.** Fixtures and assertions exist and discriminate against a negative control; no with-skill run has been scored, so nothing in `benchmark.md` covers `docker-compose` or `post-mortem`.
 - **Eval 6 is graded from files, never executed.** It checks that the right compose file was written, not that the stack comes up — which is precisely the claim the skill's own Step 6 makes and this harness does not verify.
-- **Manual dispatch** is the weakest link — it is the step most likely to drift between runs.
+- **Dispatch is automated, the run itself is not pinned.** `run.py` keeps the layout, the prompt and the isolation identical between runs, which manual dispatch could not. It does not pin the model or the Claude Code version, it only records them in `dispatch.json`. Two iterations run months apart can differ for reasons that have nothing to do with the skill. Check those fields before you compare them.
 - **The transcripts are not committed.** `benchmark.md` is the recorded result; the 36 run transcripts behind it were evidence for one run, not something a future run needs.
