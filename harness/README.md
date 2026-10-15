@@ -36,7 +36,7 @@ Stdlib Python 3.10+, no dependencies. The skills don't need any of this — ever
 | The suite is green before and after refactor-review, and after tdd | `--test-cmd` is run as a gate; red stops the loop (exit 4) |
 | The ledger is append-only and only the running stage writes it | Agents never write it. The harness snapshots it, restores it if an agent edits it anyway, and appends through `ledger.render_*` |
 | Every CONFIRMED gets a slice; REFUTED carries *Reopens only if*; INCONCLUSIVE carries what settles it | Validated on tyr's answer; one correction round, then the harness stops |
-| A slice closes when its test exists | The tests tdd added are run against a snapshot of the pre-fix code (`redgreen.py`): if they pass there, they don't capture the defect and **no slice closes**. Each test name tdd reports must also be found in the repo |
+| A slice closes when its test exists | The tests tdd added are run against a snapshot of the pre-fix code (`redgreen.py`): if they pass there, or fail only because they can't load (an import or compile error), they don't capture the defect and **no slice closes**. Each test name tdd reports must also be found in the repo |
 | Every carried smell is re-examined each pass | Missing decisions are recorded as "left, not re-examined" and logged |
 | GO / NO-GO / ESCALATED, the three-iteration cap, the stall rule, one re-run per INCONCLUSIVE | `ledger.judge()` computes it. tyr states a verdict too; if they disagree the ledger records both and the computed one stands |
 
@@ -100,7 +100,7 @@ python3 harness/redgreen.py snapshot --repo .                                # p
 python3 harness/redgreen.py check --repo . --cmd "pytest {tests}" --expect "AssertionError"   # focused, and failing for the right reason
 ```
 
-It checks out the base in a temporary worktree, copies in only the test files that changed (found by path shape across ecosystems, or given with `--tests`), runs the command there — it must **fail** — and runs it again in your tree, where it must **pass**. Your index and working tree are never touched. Verdicts: `red-green`, `not-red` (the test passes without the fix), `not-green`, `wrong-reason` (failed, but not matching `--expect`), `no-tests`.
+It checks out the base in a temporary worktree, copies in only the test files that changed (found by path shape across ecosystems, or given with `--tests`), runs the command there — it must **fail** — and runs it again in your tree, where it must **pass**. Your index and working tree are never touched. Verdicts: `red-green`, `not-red` (the test passes without the fix), `not-green`, `wrong-reason`, `no-tests`. `wrong-reason` means the before-run failed without testing the behavior: it doesn't match `--expect`, or — with no `--expect`, which is how `loop.py` calls it — the tests never ran because they couldn't be collected, imported, compiled or linked (pytest collection errors, `ImportError`, javac `cannot find symbol`, Node `Cannot find module`, `error TS…`, Go `[build failed]`, and so on). A test that imports a symbol the fix adds is red before the fix whether or not the behavior was ever broken; reach the new code through something that already exists, or pass `--expect` when the missing import *is* the bug.
 
 ### Keeping the incident log — `incident.py`
 
