@@ -24,12 +24,12 @@ The conceptual ER model uses Barker notation throughout; the relational model re
 
 ## Companion references
 
-The skills use focused copies of shared references so each folder can be installed independently. Keep duplicate theory/modeling copies synchronized when changing them.
+Shared companion references use relative symlinks to one canonical copy in this skill tree. When installing a single skill folder outside this repository, dereference its links during copy (for example, `cp -RL skills/database/dbdesign /target/skills/`).
 
 | Reference | Home / use |
 |---|---|
-| Theory and ER modeling | `dbaudit/` and `dbdesign/`; an ER-modeling copy also ships in `dbdiagram/`. Used for evaluation and conceptual/logical design. |
+| Theory and ER modeling | Canonical files in `dbaudit/`; `dbdesign/`, `dbdiagram/`, and `dbpropose/` link to them. Used for evaluation and conceptual/logical design. |
 | Scoring, audit lenses, object rubrics, detection signals | `dbaudit/`; audit-only guidance. |
-| Physical design | `dbdesign/`; engine-specific implementation choices. |
+| Physical design | Canonical file in `dbdesign/`; `dbpropose/` links to it for proposal decisions. |
 | Diagram conventions | `dbdiagram/`; notation, provenance, and XML validation. |
 | Proposal rules and templates | `dbpropose/`; recommendations and implementation planning. |

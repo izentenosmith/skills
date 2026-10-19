@@ -250,16 +250,16 @@ Assertions are split: **capability** (does the stage do its job at all) from **d
    ```bash
    cp -r skills/skills/containers/dockerfile   my-project/.claude/skills/
    cp -r skills/skills/operations/post-mortem  my-project/.claude/skills/
-   cp -r skills/skills/database/dbaudit        my-project/.claude/skills/
-   cp -r skills/skills/database/dbdesign       my-project/.claude/skills/
-   cp -r skills/skills/database/dbdiagram      my-project/.claude/skills/
-   cp -r skills/skills/database/dbpropose      my-project/.claude/skills/
-   cp -r skills/skills/database/dbbuild        my-project/.claude/skills/
+   cp -RL skills/skills/database/dbaudit        my-project/.claude/skills/
+   cp -RL skills/skills/database/dbdesign       my-project/.claude/skills/
+   cp -RL skills/skills/database/dbdiagram      my-project/.claude/skills/
+   cp -RL skills/skills/database/dbpropose      my-project/.claude/skills/
+   cp -RL skills/skills/database/dbbuild        my-project/.claude/skills/
    ```
 
    **Copy the skill folder, not the category folder.** `development/`, `containers/`, `operations/` and `database/` are scaffolding for reading this repo — the agent never sees them, and copying one wholesale just nests your skills a level too deep.
 
-   Each skill folder is self-contained: `SKILL.md` plus every reference doc it needs, with no file outside its own directory. That is the point of the layout, and it is what makes copy-paste a complete install.
+   Skill folders are self-contained when installed. The database skill tree shares companion docs through relative symlinks; use `cp -RL` for those folders so each installed skill contains the referenced files.
 
 3. **Invoke a skill** — either let the agent trigger it when your request matches its `description`, or call it explicitly:
 
