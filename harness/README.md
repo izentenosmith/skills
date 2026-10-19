@@ -7,7 +7,7 @@ Four harnesses and the tools they share. Each one runs a skill's judgment throug
 | [`loop.py`](loop.py) | development stages 5–7 and the fix loop | a GO / NO-GO / ESCALATED ledger |
 | [`fix.py`](fix.py) | the hotfix lane, or incident-fix's fix phase | a committed branch and, with `--open-pr`, a draft PR |
 | [`postmortem.py`](postmortem.py) | incident-fix's Phase 4 | a linted, blameless post-mortem and an owned follow-through |
-| [`dbworkflow.py`](dbworkflow.py) | coordinates existing/new database workflows across the database skills | audit gate, design, editable ER/relational diagrams, proposal, and acceptance-gated DDL artifacts |
+| [`dbworkflow.py`](dbworkflow.py) | coordinates existing/new database workflows across the database skills | audit gate, design, Barker ER and relational diagrams, proposal, and acceptance-gated DDL artifacts |
 | [`dbreview.py`](dbreview.py) | dbaudit's read-only audit and score gate | scored audit files, synthesis, and gate decision; usable directly |
 
 ## The closing loop — `loop.py`
@@ -186,9 +186,9 @@ python3 harness/dbworkflow.py --mode new --stages build \
   --design-input design-review/design/design.md --out design-review/
 ```
 
-Stages are `audit,design,diagram,propose,build`. A new database skips audit. An existing database runs the read-only `dbreview.py` audit first; a passing gate ends the default workflow without redesign artifacts, while an open gate routes the database into design, diagrams, and proposal. The harness never builds DDL in the same run that creates a proposal: proposal review and acceptance happen first, then a separate `build` run requires both `--proposal-input` and `--proposal-accepted`. An explicit `--stages` list supports partial work, and stages that need prior artifacts stop with a clear missing-input message. Use `--audit-input`, `--design-input`, and `--proposal-input` to continue from artifacts produced elsewhere.
+Stages are `audit,design,diagram,propose,build`. A new database skips audit. An existing database runs the read-only `dbreview.py` audit first; a passing gate ends the default workflow without redesign artifacts, while an open gate routes the database into design, diagrams, and proposal. The harness never builds DDL in the same run that creates a proposal: proposal review and acceptance happen first, then a separate `build` run requires `--proposal-input`, `--proposal-accepted`, and the approved diagram pair. An explicit `--stages` list supports partial work, and stages that need prior artifacts stop with a clear missing-input message. Use `--audit-input`, `--design-input`, `--proposal-input`, and repeat `--diagram-input` once for each approved diagram to continue from artifacts produced elsewhere.
 
-Outputs are written under `--out`: `audit/`, `design/`, `diagrams/` (two `.drawio` files), `proposal/`, `ddl/` (ordered `.sql` files), plus `gate.md` and `workflow.json` as applicable. Structural iteration goes back through design, diagrams, and proposal; the revised proposal must be accepted before its DDL is generated. Formatting or naming-only DDL changes can be iterated without changing the approved structure.
+Outputs are written under `--out`: `audit/`, `design/`, `diagrams/` (Barker ER and relational `.drawio` files), `proposal/`, `ddl/` (ordered `.sql` files), plus `gate.md` and `workflow.json` as applicable. The harness requires canonical `er-model.drawio` and `relational-model.drawio` files and checks that the ER page is identified as Barker and includes a visible notation legend before proposal/build. Structural iteration goes back through design, diagrams, and proposal; the revised proposal must be accepted before its DDL is generated. Formatting or naming-only DDL changes can be iterated without changing the approved structure.
 
 ### Audit-only scoring and gate — `dbreview.py`
 

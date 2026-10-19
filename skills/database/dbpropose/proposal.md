@@ -4,13 +4,17 @@ This reference governs the recommendation stage. It consumes an audit and a sepa
 when those artifacts apply. **Do not perform the audit, redesign the model, or redraw diagrams here.**
 The companion stages are [dbaudit](../dbaudit/SKILL.md), [dbdesign](../dbdesign/SKILL.md), and
 [dbdiagram](../dbdiagram/SKILL.md); their outputs remain independently reviewable.
+The conceptual ER diagram must use Barker notation as defined in
+[er-modeling.md](../dbaudit/er-modeling.md) and [dbdiagram](../dbdiagram/SKILL.md); keep the relational
+diagram in table/key notation. Do not call a proposal complete if its ER diagram uses another notation
+or is absent. Identify the mismatch and route it back through `dbdiagram`.
 
 ## Inputs and limits
 
 For an existing database, use the per-file evaluations, per-database summary, estate synthesis when
 available, `scores.json`, and `gate.md`. For a redesign or migration, also use the design document,
 the **modelo entidad relación** draw.io file, and the **modelo relacional** draw.io file. For a new
-database, use the requirements, design, and both diagrams. If a needed artifact is absent, identify the
+database, use the requirements, design, and both diagrams. The ER diagram must use Barker notation. If a needed artifact is absent, identify the
 gap and scope the proposal accordingly; never imply a missing design or diagram exists.
 
 Treat audit findings and scores as evidence, not as a substitute for judgment. Read the score cap and

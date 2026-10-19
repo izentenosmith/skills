@@ -144,8 +144,8 @@ It needs inputs you supply: a **date range for the git history** and whatever **
 Five independent skills, coordinated by [`harness/dbworkflow.py`](harness/dbworkflow.py) when the user wants a full or partial workflow.
 
 ```
-Existing database: dbaudit → dbdesign → dbdiagram → dbpropose
-New database:                 dbdesign → dbdiagram → dbpropose
+Existing database: dbaudit → dbdesign → dbdiagram (Barker ER + relational) → dbpropose
+New database:                 dbdesign → dbdiagram (Barker ER + relational) → dbpropose
 Accepted proposal:                                       dbbuild
 ```
 
@@ -157,7 +157,7 @@ Accepted proposal:                                       dbbuild
 | [dbpropose](skills/database/dbpropose/SKILL.md) | Assembles the recommendation from available audit, design, and diagram artifacts. |
 | [dbbuild](skills/database/dbbuild/SKILL.md) | Generates reviewable DDL from an explicitly accepted proposal and its design. |
 
-**The audit doesn't prescribe; design owns the model; proposal assembles the recommendation; dbbuild generates DDL only after proposal acceptance.** The harness applies the 9.0 score threshold plus Critical/High, unused/copy, and unresolved needs-data ratio conditions. Structural iterations return through design, diagrams, and proposal before a revised proposal can be accepted for DDL generation. Skills remain independently usable outside the harness.
+**The audit doesn't prescribe; design owns the model; proposal assembles the recommendation; dbbuild generates DDL only after proposal acceptance.** Conceptual ER diagrams use Barker notation throughout; relational diagrams keep table/key notation. The harness checks the required Barker page name/legend and diagram pair. The harness applies the 9.0 score threshold plus Critical/High, unused/copy, and unresolved needs-data ratio conditions. Structural iterations return through design, diagrams, and proposal before a revised proposal can be accepted for DDL generation. Skills remain independently usable outside the harness.
 
 ---
 

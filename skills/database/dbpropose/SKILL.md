@@ -22,6 +22,10 @@ Read [proposal.md](proposal.md) for the detailed decision rules and output struc
 
 Keep facts, inferences, and decisions distinct. Treat unresolved runtime questions as open questions. A proposal is not authorization to change a database; never apply DDL or migrations as part of this skill.
 
+The ER diagram must use Barker notation; the relational diagram uses table/key notation. Confirm that both
+diagrams correspond to the supplied design and describe any mismatch. Do not redraw or silently repair
+either artifact in the proposal.
+
 ## Handoff
 
 For an existing database, the usual sequence is [dbaudit](../dbaudit/SKILL.md) → [dbdesign](../dbdesign/SKILL.md) → [dbdiagram](../dbdiagram/SKILL.md) → this proposal. For a new database, start at `dbdesign`. Each stage may also be run alone when its inputs are available.

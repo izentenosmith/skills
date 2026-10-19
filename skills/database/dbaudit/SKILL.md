@@ -50,6 +50,11 @@ Pick one up front and say which:
 | **Estate audit** | Several databases | Steps 0–4 (adds the synthesis) |
 | **Model audit** | An ER model or schema proposal, no DDL dumps | Grade it against [er-modeling.md](er-modeling.md) — its checklists and the CAP4 drills — and report gaps with severity; skip the scoring formula, which is built for DDL files |
 
+For model audits, identify the source notation before reading its marks. Assess conceptual content against
+the Barker convention in [er-modeling.md](er-modeling.md); accurately interpret another source notation,
+report material notation deviations, and express any recovered ER model in Barker notation. Never
+silently reinterpret glyphs from another convention.
+
 Also state the **source engine**, inferred from the syntax (`IDENTITY`/`dbo`/`INSERTED` → SQL Server;
 `:NEW`/`VARCHAR2` → Oracle; `AUTO_INCREMENT` → MySQL). The signals are written for T-SQL;
 [detection-signals.md](detection-signals.md) says how each translates.

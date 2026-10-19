@@ -21,6 +21,7 @@ import pathlib
 import re
 import subprocess
 import sys
+import xml.etree.ElementTree as ET
 
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -71,6 +72,41 @@ def read_text(path: pathlib.Path, label: str) -> str:
     return path.read_text(errors="replace")
 
 
+def validate_diagram_pair(paths, *, error_type=loop.HarnessError):
+    """Require both canonical editable views and check Barker identification on the ER page."""
+    if len(paths) != 2:
+        raise error_type(f"expected exactly two draw.io diagrams (ER and relational); found {len(paths)}")
+    by_kind = {}
+    for path in paths:
+        filename = path.name.casefold()
+        if filename == "er-model.drawio":
+            kind = "er"
+        elif filename == "relational-model.drawio":
+            kind = "relational"
+        else:
+            raise error_type(f"diagram must be named er-model.drawio or relational-model.drawio: {path.name}")
+        if kind in by_kind:
+            raise error_type(f"duplicate {kind} diagram: {path.name}")
+        try:
+            root = ET.fromstring(path.read_text(errors="replace"))
+        except (ET.ParseError, OSError) as exc:
+            raise error_type(f"invalid draw.io XML in {path}: {exc}")
+        if root.tag.rsplit("}", 1)[-1] != "mxfile":
+            raise error_type(f"{path.name} must have an mxfile root element")
+        pages = [node for node in root.iter() if node.tag.rsplit("}", 1)[-1] == "diagram"]
+        if not pages:
+            raise error_type(f"{path.name} contains no draw.io diagram page")
+        if kind == "er":
+            named_barker = [page for page in pages if "barker" in page.attrib.get("name", "").casefold()]
+            if not named_barker:
+                raise error_type("ER diagram page must identify Barker notation in its page name")
+            labels = [node.attrib.get("value", "") for page in named_barker for node in page.iter()]
+            if not any("barker notation" in label.casefold() for label in labels):
+                raise error_type("Barker ER diagram must include a visible 'Barker notation' legend")
+        by_kind[kind] = path
+    return [by_kind["er"], by_kind["relational"]]
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0], formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--mode", choices=("existing", "new"), required=True)
@@ -81,6 +117,7 @@ def main(argv=None):
     ap.add_argument("--audit-input", help="existing audit report to resume from")
     ap.add_argument("--design-input", help="design document to resume from")
     ap.add_argument("--proposal-input", help="proposal document to build from")
+    ap.add_argument("--diagram-input", action="append", help="draw.io diagram input; pass both ER and relational files")
     ap.add_argument("--proposal-accepted", action="store_true", help="confirm that the supplied proposal was accepted")
     ap.add_argument("--stages", help="comma-separated ordered subset of: audit,design,diagram,propose,build")
     ap.add_argument("--intent", choices=("remediation", "migration"), default="remediation")
@@ -201,7 +238,7 @@ def main(argv=None):
         requirements = read_text(pathlib.Path(a.requirements).resolve(), "requirements") if a.requirements else ""
         if "design" in stages:
             source_inputs = "\n".join(f"- {pathlib.Path(spec.split('=', 1)[-1]).resolve()}" for spec in (a.ddl or []))
-            prompt = (f"Run dbdesign (`{loop.skill_path(ctx, 'dbdesign')}`). Mode: {'new database' if a.mode == 'new' else 'audited redesign'}. Target engine: {target}.\n"
+            prompt = (f"Run dbdesign (`{loop.skill_path(ctx, 'dbdesign')}`). Mode: {'new database' if a.mode == 'new' else 'audited redesign'}. Target engine: {target}. Use Barker notation for the conceptual ER model, following the linked/local companion docs.\n"
                       f"Requirements/context:\n{requirements or '(see source files in the working directory)'}\n\nAudit evidence:\n{audit_text or '(none; new database)'}\n\n"
                       f"Existing source DDL paths (read as needed):\n{source_inputs or '(none)'}\n\n"
                       "Return a complete reviewable design as one Markdown file named design.md. Keep assumptions and unresolved questions explicit.")
@@ -212,15 +249,17 @@ def main(argv=None):
         elif not design_text and any(s in stages for s in ("diagram", "propose", "build")):
             raise Usage("diagram/propose/build requires a prior design artifact, --design-input, or the design stage")
 
-        diagram_paths = sorted((out / "diagrams").glob("*.drawio"))
+        diagram_paths = ([pathlib.Path(p).resolve() for p in a.diagram_input]
+                         if a.diagram_input else sorted((out / "diagrams").glob("*.drawio")))
         if "diagram" in stages:
-            prompt = (f"Run dbdiagram (`{loop.skill_path(ctx, 'dbdiagram')}`). Create both the modelo entidad relación and modelo relacional as native editable draw.io XML.\n"
+            prompt = (f"Run dbdiagram (`{loop.skill_path(ctx, 'dbdiagram')}`). Create both the modelo entidad relación and modelo relacional as native editable draw.io XML. The ER page must be named 'Barker ER Model' and contain a visible 'Barker notation' legend. Use uncompressed, well-formed mxfile XML so the harness can verify it.\n"
                       f"Design:\n{design_text}\n\nAudit/source context:\n{audit_text or '(new database)'}\n\n"
                       "Return exactly two files, er-model.drawio and relational-model.drawio, each containing a complete mxfile XML document.")
             cwd = pathlib.Path(a.design_input).resolve().parent if a.design_input else out
             diagram_paths = skill_call(ctx, "diagram", "dbdiagram", prompt, out / "diagrams", cwd)
-        elif "propose" in stages and not diagram_paths:
-            raise Usage("proposal requires diagram artifacts; include the diagram stage or provide .drawio files in --out/diagrams")
+            diagram_paths = validate_diagram_pair(diagram_paths)
+        elif "propose" in stages or "build" in stages:
+            diagram_paths = validate_diagram_pair(diagram_paths, error_type=Usage)
 
         if "propose" in stages:
             diagrams = "\n".join(f"- {p.name}: {p}" for p in diagram_paths)
@@ -230,7 +269,7 @@ def main(argv=None):
                       f"Audit summary:\n{audit_text or '(new database; no audit)'}\n\nDesign:\n{design_text}\n\n"
                       f"Design artifact paths (include these in the proposal):\n{design_sources}\n\n"
                       f"Diagrams (include paths and explain views):\n{diagrams}\n\n"
-                      "Read the relevant per-file audit evaluations as needed and cite their finding IDs and file:line evidence. Check that design and diagrams agree.\n"
+                      "Read the relevant per-file audit evaluations as needed and cite their finding IDs and file:line evidence. Verify that the ER diagram uses Barker notation and that both diagrams agree with the design; keep Barker ER notation separate from relational table/key notation. Route any mismatch back to dbdesign/dbdiagram rather than silently correcting it.\n"
                       "Return a proposal.md with priorities, rationale, risks, sequencing, validation, and unresolved questions. Do not apply changes.")
             skill_call(ctx, "propose", "dbpropose", prompt, out / "proposal", out)
         if "build" in stages:
@@ -239,8 +278,8 @@ def main(argv=None):
             prompt = (f"Run dbbuild (`{loop.skill_path(ctx, 'dbbuild')}`). The user explicitly confirms acceptance of proposal `{proposal_path}`. "
                       f"Generate reviewable DDL for {target}. The accepted proposal and design are authoritative; if their engine or structure conflicts, stop and report it.\n\nAccepted proposal:\n{proposal_text}\n\n"
                       f"Approved design source: {design_files[0] if design_files else a.design_input}\n\nDesign:\n{design_text}\n\n"
-                      f"Related diagram artifacts:\n{chr(10).join(str(p) for p in diagram_paths) or '(not supplied in this run)'}\n\n"
-                      "Generate ordered .sql files only. Validate syntax and consistency against the design. Do not connect to or modify a database.")
+                      f"Related diagram artifacts:\n{chr(10).join(str(p) for p in diagram_paths)}\n\n"
+                      "Confirm the supplied ER diagram is Barker and use the approved Barker ER and relational diagrams to cross-check the accepted design. Generate ordered .sql files only. Validate syntax and consistency against the design. Do not connect to or modify a database.")
             skill_call(ctx, "build", "dbbuild", prompt, out / "ddl", out)
         (out / "workflow.json").write_text(json.dumps({"mode": a.mode, "stages_requested": stages,
                                                         "stages_completed": stages, "finished_at": dt.datetime.now(dt.timezone.utc).isoformat()}, indent=2) + "\n")

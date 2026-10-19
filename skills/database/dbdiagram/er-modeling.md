@@ -10,6 +10,8 @@
 > (tables → recovered model → what the legacy got wrong, §A0). Engine-specific choices — types,
 > indexes, collation — are not here; they belong to the physical design, made only after the model
 > stands.
+>
+> Barker notation reference: [Redgate, “Barker’s Notation”](https://www.red-gate.com/blog/barkers-erd-notation/).
 
 ## A. Model in three phases (Connolly & Begg; CASE\*METHOD)
 
@@ -85,8 +87,10 @@ Tests for a candidate entity:
 - It can be tangible (building, employee), intangible (department, account) or semi-tangible (order,
   invoice).
 
-**Notation:** a soft-cornered box of any size; name **singular**, **unique**, in **UPPERCASE**;
-an optional synonym in parentheses when two user groups name the same thing differently.
+**Barker notation:** draw the entity as a soft-cornered rectangle; use a **singular, unique,
+UPPERCASE** name, with an optional synonym in parentheses when different user groups use different
+names. Use the same form in every ER diagram; do not substitute UML classes, Chen diamonds, or an
+unqualified crow's-foot ERD. A Barker ER diagram has a page title/legend that names the notation.
 
 **Extracting entities from interview notes:**
 
@@ -113,9 +117,14 @@ itself) are related, which the system must hold and show.
 *"Each CHEQUE **must be** for **one and only one** EMPLOYEE. Each EMPLOYEE **may be** the recipient of
 **one or more** CHEQUEs."*
 
-**Notation:** a line between the boxes; relationship names in lowercase at each end; **solid** half =
-*must be* (mandatory), **dashed** half = *may be* (optional); **crow's foot** = *one or more*, plain end
-= *one and only one*.
+**Barker relationship notation:** draw only **binary** relationships, as a line between two entity
+boxes. Give each end a lowercase relationship name so the line can be read in both directions. At each
+end, a **solid** line segment means *must be* (mandatory) and a **dashed** segment means *may be*
+(optional); a **crow's foot** means *one or more*, and a plain/bar end means *one and only one*. Mark
+the two ends independently to express min/max participation. Do not use optionality circles from other
+crow's-foot variants. Add a UID bar across the relationship at the identified entity end when that
+relationship participates in the entity's UID. Use the Barker diamond on a non-transferable
+relationship. Add a legend that explains these marks.
 
 | Degree | Frequency | Heuristic |
 |---|---|---|
@@ -163,11 +172,15 @@ by hand.
 **`o` optional**. Validate the marks with an **entity instance diagram** — a few rows of real sample
 data under the attribute names; a mandatory attribute with blanks in the sample is mis-marked.
 
+These are Barker attribute marks: `#` identifies UID attributes, `*` marks mandatory attributes, and
+`o` marks optional attributes. Display the mark with every attribute in the ER entity box; do not
+substitute SQL `NOT NULL` or nullable-column conventions for these conceptual markers.
+
 ### A1.5 Unique identifiers (UID)
 
 A **UID** is any combination of attributes and/or relationships that uniquely identifies each instance.
-Every instance must be identifiable. Notation: `#` before each UID attribute; a **bar** across a
-relationship line marks that relationship as part of the UID.
+Every instance must be identifiable. In Barker notation prefix every UID attribute with `#`; a **UID
+bar** across the relationship at the identified entity end marks that relationship as part of the UID.
 
 **Criteria for a good UID** — the same criteria that justify surrogate keys in physical design:
 
@@ -305,11 +318,13 @@ Patterns:
 
 Be wary of a **ring of M:M relationships** (PERSON–JOB–COMPANY, EMPLOYEE–PROJECT–TASK). Resolve each
 M:M and then ask *which intersection entity the attribute actually belongs to* (do the job dates
-belong to person–job, job–company, or the triple?). Often one **ternary intersection entity**
-replaces several binaries, and business rules are enforced by making an intersection reference
-**other intersections** instead of base entities — e.g. an employee's task assignment references
-*(employee, task) ∈ SKILL* and *(project, task) ∈ PROJECT TASK*, so nobody is assigned a task they
-can't do or that the project doesn't contain. Then remove intersections the result makes redundant.
+belong to person–job, job–company, or the triple?). Often one **intersection entity whose UID includes
+three participants** replaces several binaries. Keep the Barker diagram binary: represent that
+intersection as an entity with separate binary relationships to each participant; never draw a ternary
+relationship connector. Business rules can be enforced by making an intersection reference **other
+intersections** instead of base entities — e.g. an employee's task assignment references *(employee,
+task) ∈ SKILL* and *(project, task) ∈ PROJECT TASK*, so nobody is assigned a task they can't do or that
+the project doesn't contain. Then remove intersections the result makes redundant.
 
 ## CAP3 — Database design: mapping the ER model to relations
 

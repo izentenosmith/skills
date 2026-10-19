@@ -84,6 +84,10 @@ Audit the **{db}** database with the dbaudit skill (`{skill}`) and its reference
 (scoring.md, theory.md, er-modeling.md, the per-object rubrics, detection-signals.md). Read-only: you \
 never connect to anything and never change a file. The user is not available.
 
+When describing or reconstructing conceptual relationships, follow Barker notation in er-modeling.md.
+If supplied material uses another notation, identify it and interpret its marks on their own terms; never
+silently relabel them as Barker. Any recovered ER model must be expressed in Barker notation.
+
 The final assessment must state what is good, what is bad, and what could be improved. If the score is \
 at least 9.0, say that it meets the score threshold, then separately report whether open Critical/High \
 findings, unused/copy usage, or the needs-data flag ratio prevent it from passing the overall gate.
@@ -120,7 +124,7 @@ PROPOSE_PROMPT = """HARNESS-STAGE: db-propose · HARNESS-ITERATION: 1
 Run dbpropose (`{skill}`, with proposal.md, er-modeling.md, physical-design.md) for **{dbs}** only — \
 the gate found the other databases good enough to leave alone ({skipped}). Intent: **{intent}**{target}. \
 The audit is in `{audit}`: every verdict cites the score and the finding that set it, and findings beat \
-scores. Return the proposal as files (name + markdown): the reuse/rework register and, where the mode \
+scores. Any conceptual ER view must use Barker notation; keep relational table notation separate. If the Barker ER and relational diagrams are not supplied, say they are missing and do not claim diagram review or provide diagram paths. Return the proposal as files (name + markdown): the reuse/rework register and, where the mode \
 calls for it, the target schema or the in-place remediation register. The user is not available.
 """
 

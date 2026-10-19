@@ -11,13 +11,14 @@ Generate DDL as a reviewable artifact from an accepted proposal and its correspo
 
 - An explicitly accepted proposal.
 - The design artifact that the proposal refers to, including target engine/version.
+- The proposal's Barker ER diagram and relational diagram, for cross-checking the approved structure.
 - The requested output location and any naming or migration-script conventions.
 
 If the proposal and design disagree, stop and describe the mismatch. If the target engine or required design details are missing, ask for the missing decision or mark the DDL as incomplete; never fill a structural gap silently.
 
 ## Generate and iterate
 
-1. Confirm that the accepted proposal and design are the same versions being used. Treat the proposal's decisions and the design's logical/physical structure as authoritative.
+1. Confirm that the accepted proposal, design, Barker ER diagram, and relational diagram are the same versions being used. Treat the proposal's decisions and the design's logical/physical structure as authoritative.
 2. Generate readable, ordered `.sql` files for the target engine: schemas/namespaces, types or lookup structures, tables, keys and constraints, indexes, views/functions/triggers when included, and any explicitly requested migration or seed scripts. Keep object dependencies executable in order and annotate non-obvious constraints briefly.
 3. Include a header with the proposal/design source paths, target engine/version, generation date, and whether the script creates a new schema or migrates an existing one. Do not include credentials or environment-specific secrets.
 4. Check internal consistency: referenced tables and columns exist; keys and foreign keys agree with the model; nullability, uniqueness, checks, and relationship cardinalities match the design; engine syntax is appropriate; and scripts are ordered coherently. State any items that could not be verified.

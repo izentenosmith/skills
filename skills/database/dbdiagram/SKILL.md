@@ -5,7 +5,7 @@ description: Generate editable draw.io entity-relationship and relational-model 
 
 # dbdiagram
 
-Create two clear, editable draw.io diagrams: the **modelo entidad relación** (conceptual entities, attributes, identifiers, and relationships) and the **modelo relacional** (tables, columns, keys, constraints, and foreign-key links). This skill can run independently from a supplied design or database structure, or consume the output of `dbdesign`.
+Create two clear, editable draw.io diagrams: the **modelo entidad relación**, always in **Barker / Oracle CASE*METHOD notation**, and the **modelo relacional**, using table, column, key, constraint, and foreign-key notation. This skill can run independently from a supplied design or database structure, or consume the output of `dbdesign`. Barker rules apply to the ER view; do not force ER symbols onto the relational view.
 
 ## Inputs and evidence
 
@@ -16,7 +16,16 @@ Create two clear, editable draw.io diagrams: the **modelo entidad relación** (c
 
 ## Diagram content
 
-**ER model:** entities and meaningful attributes; primary/candidate identifiers; named relationships with cardinality and optionality at both ends; associative entities for resolved many-to-many relationships; and explicit subtype, recursive, or exclusive-arc structures where present.
+**Barker ER model:**
+
+- Singular, unique, **UPPERCASE** entity names in soft-cornered rectangles.
+- Attribute names in lowercase; prefix UID attributes with `#`, mandatory attributes with `*`, and optional attributes with `o`.
+- Binary relationships only, with reciprocal lowercase role names at both ends. A solid segment at an end means mandatory (*must be*); a dashed segment means optional (*may be*). Use a plain/bar end for one and a crow's foot for one or more. Show each end's optionality and cardinality independently.
+- Use a UID bar across a relationship at the identified entity end when that relationship participates in its UID. Mark non-transferable relationships with the Barker diamond; represent subtypes and arcs explicitly, with a legend.
+- Resolve a three-part association as an intersection entity with binary relationships to each participant. Never draw a ternary relationship connector.
+- Title the page **Barker ER Model** and include a visible legend identifying Barker notation and explaining its glyphs. Do not mix in Chen diamonds, UML class boxes, or optionality circles from other crow's-foot variants.
+
+These conventions follow [Redgate’s Barker notation guide](https://www.red-gate.com/blog/barkers-erd-notation/); see [er-modeling.md](er-modeling.md) for modelling rules and edge cases.
 
 **Relational model:** one table per relation; columns and useful data types; PK, FK, alternate/unique keys, nullability, and checks where known; labeled FK paths; and schema boundaries when they aid comprehension. Use consistent identifiers across both views so a reader can trace each entity into its table mapping.
 
