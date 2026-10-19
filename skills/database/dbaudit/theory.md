@@ -14,6 +14,28 @@ physically stored*. When we grade a schema, we are ultimately asking how faithfu
 model: are facts represented as well-formed relations, or has physical/ad-hoc structure leaked into
 the logical design?
 
+### Codd's rules
+
+Use Codd's rules as a design and review lens for relational behavior, not as a claim that every SQL
+product implements every ideal perfectly. Check applicability and evidence; distinguish a logical
+design defect from an engine limitation.
+
+| Rule | Principle |
+|---|---|
+| 0 — Foundation | A system presented as relational manages data through relational capabilities. |
+| 1 — Information | All information is represented as values in relations. |
+| 2 — Guaranteed access | Each atomic value is reachable by relation, key, and attribute. |
+| 3 — Systematic treatment of nulls | Missing or inapplicable information has a consistent, context-independent treatment. |
+| 4 — Dynamic catalog | Metadata is represented relationally and queryable through the data language. |
+| 5 — Comprehensive language | One relational language supports definition, views, manipulation, integrity, authorization, and transactions. |
+| 6 — View updating | All theoretically updatable views are updatable. |
+| 7 — High-level insert, update, delete | Set-level operations work on relations, not only one row at a time. |
+| 8 — Physical independence | Storage changes do not require application changes. |
+| 9 — Logical independence | Certain logical schema changes do not force application changes. |
+| 10 — Integrity independence | Integrity constraints are declarative and stored in the catalog, not hidden only in applications. |
+| 11 — Distribution independence | Data distribution does not require application changes. |
+| 12 — Nonsubversion | Lower-level access cannot bypass relational integrity rules. |
+
 ## 2. Functional dependencies (FDs)
 
 A **functional dependency** `X → Y` holds in a relation `R` when every value of `X` is associated

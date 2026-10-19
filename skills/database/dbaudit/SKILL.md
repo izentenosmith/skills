@@ -1,17 +1,17 @@
 ---
 name: dbaudit
-description: Audit a relational database from its DDL — tables, indexes, views, stored procedures, triggers — against relational theory, ER-modelling rules and a scored rubric. Produces per-file findings with severity, confidence and line evidence, a repeatable 0–10 score, per-database summaries and an estate-wide synthesis. Use when grading a legacy schema or DDL dump, assessing database quality or risk, or before planning a database migration or redesign. It evaluates only; dbpropose turns its results into changes.
+description: Audit a relational database, legacy or current, from its DDL or supplied structure against relational theory, ER-modelling rules and a scored rubric. Reports strengths, weaknesses, improvement opportunities, evidence-backed findings, and a repeatable 0–10 score. Use when assessing database quality or risk, or before planning a redesign. It evaluates only; dbdesign and dbpropose handle changes.
 ---
 
 # 🔎 dbaudit
 
+Give a balanced assessment: what is working well, what is deficient, and what could improve. A score of 9.0 or more is the score threshold for “good,” but do not call a database unconditionally good when the workflow gate finds open Critical/High findings, unused/copy status, or an excessive unresolved needs-data flag ratio. State the score-based result and those risk conditions separately.
+
 ## Where this fits
 
-Two database skills, in order:
-
-1. **dbaudit** (this skill) — grade the DDL: findings, scores, summaries, synthesis
-2. [dbpropose](../dbpropose/SKILL.md) — turn those results into verdicts and a target design or
-   remediation plan
+This skill evaluates and stops. For a redesign, continue with [dbdesign](../dbdesign/SKILL.md), then
+[dbdiagram](../dbdiagram/SKILL.md) and [dbpropose](../dbpropose/SKILL.md) when a complete recommendation
+is wanted. The workflow coordinator is [dbworkflow.py](../../../harness/dbworkflow.py).
 
 This skill **evaluates and stops**. It does not recommend a redesign, write target DDL or decide what
 to drop — an audit that also prescribes has an incentive to shape its findings toward the prescription.
@@ -89,7 +89,7 @@ One file, one rubric, one evaluation file. For each:
   phrase each FK as a two-way relationship sentence, test each PK against the UID criteria (including
   intelligent keys), and look for what was never modelled — repeating groups, unresolved M:M, arcs and
   subtypes hiding in type columns, stored derived totals, history overwritten in place. Record the
-  recovered model in the evaluation's notes; dbpropose starts from it.
+  recovered model in the evaluation's notes; dbdesign can use it as redesign evidence.
 - [ ] **Cross-file criteria** need both inputs open: FK columns vs. index keys; collation across
   catalogs; a trigger's writes vs. the tables that have triggers. Record them in the file where the
   defect lives.
@@ -165,7 +165,7 @@ not file excerpts."* Delegates **never score** and **never write** outside their
    object and the line.
 4. **Score by formula, not by feel.** Show the arithmetic.
 5. **Evaluate, don't prescribe.** A fix hint in a finding is fine ("set-based rewrite over the
-   pseudo-tables"); a redesign is dbpropose's job.
+   pseudo-tables"); a redesign is dbdesign's job.
 6. **Read-only.** Never alter a database, a dump or a live instance.
 7. **Record the rubric version** (`v1.1`) and the source version in every output.
 
@@ -175,6 +175,7 @@ not file excerpts."* Delegates **never score** and **never write** outside their
 > `<x.x>` — `<band>`, capped by `<finding>`. `<c>` Critical · `<h>` High · `<m>` Medium · `<l>` Low;
 > `<k>` 🔬 flags open. Outputs: `<paths>`.
 
-Run **[dbpropose](../dbpropose/SKILL.md)** next to turn this into verdicts and a target schema or a
-remediation plan. State the score, the capping finding and the open-flag count out loud — they are
-what the next stage needs to trust the audit, or not.
+For a full recommendation, hand this audit to **[dbdesign](../dbdesign/SKILL.md)**, then
+**[dbdiagram](../dbdiagram/SKILL.md)** and **[dbpropose](../dbpropose/SKILL.md)**. State the score,
+capping finding, gate conditions, and open-flag count — they determine whether the database passes the
+quality gate and what the next stage needs to know.

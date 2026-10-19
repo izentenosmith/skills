@@ -84,6 +84,10 @@ Audit the **{db}** database with the dbaudit skill (`{skill}`) and its reference
 (scoring.md, theory.md, er-modeling.md, the per-object rubrics, detection-signals.md). Read-only: you \
 never connect to anything and never change a file. The user is not available.
 
+The final assessment must state what is good, what is bad, and what could be improved. If the score is \
+at least 9.0, say that it meets the score threshold, then separately report whether open Critical/High \
+findings, unused/copy usage, or the needs-data flag ratio prevent it from passing the overall gate.
+
 DDL files for {db}:
 {files}
 Object counts the harness found: {counts}

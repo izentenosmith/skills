@@ -17,7 +17,7 @@ skills/
   development/      build the change      seven stages, design → adversarial close
   containers/       package it to run     dockerfile → docker-compose
   operations/       live with it          hotfix → incident-fix → post-mortem · release-notes
-  database/         grade, then redesign  dbaudit → dbpropose
+  database/         audit, design, diagram, propose
 harness/            the skills' rules as code: the closing loop, bug → PR, incident → post-mortem, DB audit → proposal
 evals/              seeded fixtures, scored assertions, the recorded benchmark
 ```
@@ -27,9 +27,9 @@ evals/              seeded fixtures, scored assertions, the recorded benchmark
 | **[development/](skills/development/README.md)** | [architect-deep-dive](skills/development/architect-deep-dive/SKILL.md) · [agent-brief](skills/development/agent-brief/SKILL.md) · [tdd](skills/development/tdd/SKILL.md) · [refactor-review](skills/development/refactor-review/SKILL.md) · [devils-advocate](skills/development/devils-advocate/SKILL.md) · [tyr-verdict](skills/development/tyr-verdict/SKILL.md) |
 | **[containers/](skills/containers/README.md)** | [dockerfile](skills/containers/dockerfile/SKILL.md) · [docker-compose](skills/containers/docker-compose/SKILL.md) |
 | **[operations/](skills/operations/README.md)** | [hotfix](skills/operations/hotfix/SKILL.md) · [incident-fix](skills/operations/incident-fix/SKILL.md) · [post-mortem](skills/operations/post-mortem/SKILL.md) · [release-notes](skills/operations/release-notes/SKILL.md) |
-| **[database/](skills/database/README.md)** | [dbaudit](skills/database/dbaudit/SKILL.md) · [dbpropose](skills/database/dbpropose/SKILL.md) |
+| **[database/](skills/database/README.md)** | [dbaudit](skills/database/dbaudit/SKILL.md) · [dbdesign](skills/database/dbdesign/SKILL.md) · [dbdiagram](skills/database/dbdiagram/SKILL.md) · [dbpropose](skills/database/dbpropose/SKILL.md) · [dbbuild](skills/database/dbbuild/SKILL.md) |
 
-The families are loosely coupled by design. `development` is a genuine pipeline where each stage checks the one before it; `containers` is an ordered pair; `operations` is a response chain — hotfix escalates to incident-fix, which hands its record to post-mortem — plus release-notes, which stands alone; `database` is an ordered pair whose second skill can feed `development` when its proposal is built. Every skill also works entirely on its own.
+The families are loosely coupled by design. `development` is a genuine pipeline where each stage checks the one before it; `containers` is an ordered pair; `operations` is a response chain — hotfix escalates to incident-fix, which hands its record to post-mortem — plus release-notes, which stands alone; `database` has five independent skills coordinated by an optional harness. Every skill also works entirely on its own.
 
 **The family directories are scaffolding for reading this repo, nothing more.** The agent never sees them — it selects on each `SKILL.md`'s frontmatter `description`. When you take a skill, you take the skill folder; see [How to use](#how-to-use).
 
@@ -93,7 +93,7 @@ The loop's rules — read-only teardown, one verifier per finding, sticky refuta
 python3 harness/loop.py --repo ../my-service --test-cmd ".venv/bin/python -m pytest -q"
 ```
 
-The same folder holds three more: `fix.py` takes a bug report to a draft PR (the hotfix lane, or incident-fix's fix phase), `postmortem.py` turns a resolved incident log into a linted post-mortem with an owned follow-through, and `dbreview.py` audits a database from DDL or a read-only connection and proposes changes only where its gate says they're owed. It's optional and Claude Code only; the skills don't depend on it.
+The same folder holds three more: `fix.py` takes a bug report to a draft PR (the hotfix lane, or incident-fix's fix phase), `postmortem.py` turns a resolved incident log into a linted post-mortem with an owned follow-through, and the database workflow harness coordinates audit, design, diagram, and proposal stages. It's optional and Claude Code only; the skills don't depend on it.
 
 ---
 
@@ -141,19 +141,23 @@ It needs inputs you supply: a **date range for the git history** and whatever **
 
 ## database
 
-Ordered: grade the database, then decide what to do with it.
+Five independent skills, coordinated by [`harness/dbworkflow.py`](harness/dbworkflow.py) when the user wants a full or partial workflow.
 
 ```
-dbaudit  →  dbpropose
- (grade)    (decide + design)
+Existing database: dbaudit → dbdesign → dbdiagram → dbpropose
+New database:                 dbdesign → dbdiagram → dbpropose
+Accepted proposal:                                       dbbuild
 ```
 
 | Skill | What it does |
 |-------|--------------|
-| [dbaudit](skills/database/dbaudit/SKILL.md) | Grades DDL — tables, indexes, views, procedures, triggers — against relational theory and ER-modelling rules with a repeatable 0–10 formula, severity caps and ✅/⚠️/🔬 confidence tags; per-file evaluations, per-database summaries, an estate synthesis with a coupling edge list. Evaluates and stops. |
-| [dbpropose](skills/database/dbpropose/SKILL.md) | Turns the audit into a reuse / refactor / rework / rebuild / drop verdict per object, a topology derived from real coupling, and either a modelled target schema (ER model → Table Instance Diagrams → PostgreSQL 18 DDL) with a migration plan or an in-place remediation register. Also designs or reviews a model from requirements. |
+| [dbaudit](skills/database/dbaudit/SKILL.md) | Audits existing databases with a repeatable score and evidence-backed strengths, weaknesses, and improvement opportunities. |
+| [dbdesign](skills/database/dbdesign/SKILL.md) | Designs a new database or revises an audited design using relational theory, Codd's rules, normal forms, and physical-design guidance. |
+| [dbdiagram](skills/database/dbdiagram/SKILL.md) | Produces editable draw.io ER and relational model diagrams from a design or database structure. |
+| [dbpropose](skills/database/dbpropose/SKILL.md) | Assembles the recommendation from available audit, design, and diagram artifacts. |
+| [dbbuild](skills/database/dbbuild/SKILL.md) | Generates reviewable DDL from an explicitly accepted proposal and its design. |
 
-**The audit doesn't prescribe and the proposal doesn't run ahead of the audit.** Every verdict cites the score and the finding that set it, every runtime claim stays a 🔬 flag rather than a graded defect, and every target table is modelled — entity, relationships, identifier, via `er-modeling.md`'s CAP1–CAP4 — before it gets DDL. `dbpropose`'s handoff feeds `architect-deep-dive` and `agent-brief` when the proposal is going to be built.
+**The audit doesn't prescribe; design owns the model; proposal assembles the recommendation; dbbuild generates DDL only after proposal acceptance.** The harness applies the 9.0 score threshold plus Critical/High, unused/copy, and unresolved needs-data ratio conditions. Structural iterations return through design, diagrams, and proposal before a revised proposal can be accepted for DDL generation. Skills remain independently usable outside the harness.
 
 ---
 
@@ -180,14 +184,14 @@ These carry no workflow of their own — the skill in the same folder links into
 | [blameless-culture](skills/operations/post-mortem/blameless-culture.md) | post-mortem — why blameless is a data-collection strategy (Google SRE; Dekker) |
 | [contributing-factors](skills/operations/post-mortem/contributing-factors.md) | post-mortem — past single-root-cause; the categories to sweep and where to stop |
 | [evidence-sources](skills/operations/post-mortem/evidence-sources.md) | post-mortem — reading a git range, incident PDFs, chat exports and monitoring into a sourced timeline |
-| [theory](skills/database/dbaudit/theory.md) | dbaudit, dbpropose (identical copies) — integrity, functional dependencies, normal forms, ACID, SSOT, ER vocabulary |
-| [er-modeling](skills/database/dbaudit/er-modeling.md) | dbaudit, dbpropose (identical copies) — CAP1–CAP4 pure modelling, reverse-engineering, 25 drills |
+| [theory](skills/database/dbaudit/theory.md) | dbaudit and dbdesign — relational principles including Codd's rules, FDs, normal forms, ACID, SSOT |
+| [er-modeling](skills/database/dbaudit/er-modeling.md) | dbaudit and dbdesign; copied in dbdiagram — CAP1–CAP4 pure modelling, reverse-engineering, 25 drills |
 | [scoring](skills/database/dbaudit/scoring.md) | dbaudit — severity, confidence tags, the 0–10 formula, triage, output templates |
 | [audit-lenses](skills/database/dbaudit/audit-lenses.md) | dbaudit — dead/copy schemas, coupling, dark data, security |
 | [tables](skills/database/dbaudit/tables.md) · [indexes](skills/database/dbaudit/indexes.md) · [views](skills/database/dbaudit/views.md) · [procedures](skills/database/dbaudit/procedures.md) · [triggers](skills/database/dbaudit/triggers.md) | dbaudit — the per-object-type rubrics |
 | [detection-signals](skills/database/dbaudit/detection-signals.md) | dbaudit — grep/regex per anti-pattern, with engine notes |
 | [proposal](skills/database/dbpropose/proposal.md) | dbpropose — input contract, verdicts, topology, translation, target-schema and remediation skeletons |
-| [physical-design](skills/database/dbpropose/physical-design.md) | dbpropose — the PostgreSQL 18 physical standard |
+| [physical-design](skills/database/dbdesign/physical-design.md) | dbdesign — the PostgreSQL 18 physical standard |
 
 Each doc lives in the folder of the skill that uses it, and nothing reaches across folders.
 
@@ -211,7 +215,9 @@ Any stage can optionally hand its **read-only or fresh-context** work to a subag
 | incident-fix | evidence gathering in diagnosis, one delegate per source | **containment, every production action, and the fix decisions** |
 | post-mortem | gathering and timeline reconstruction, split by source | the factors and the blamelessness pass |
 | dbaudit | per-database evaluation of each DDL file | **scoring and the synthesis** |
-| dbpropose | coupling collection; per-domain model recovery | **the verdicts, the topology, the modelling decisions and the DDL** |
+| dbdesign | requirements mapping and model review | **the modeling decisions and target structure** |
+| dbdiagram | source-backed ER and relational views | **diagram semantics and layout** |
+| dbpropose | audit/design/diagram inputs | **the recommendation and prioritization** |
 
 Each skill carries its own copy of the dispatch contract it needs, so the folders stay independently copyable — see [Conventions](#conventions).
 
@@ -227,7 +233,7 @@ Assertions are split: **capability** (does the stage do its job at all) from **d
 
 **Also not yet run:** `hotfix` (evals 8–11 — a Node service, a JVM service with no build tool, a Python script with no tests, and an outage it must route out) and `incident-fix` (evals 12–14 — a web app with feature flags, a batch job that corrupted rows, a library with no deploy step). Every production lever in those fixtures is a stub that records its calls, so "took no action without confirmation" is checked, not inferred.
 
-`acceptance-tests`, `dockerfile`, `release-notes`, `dbaudit` and `dbpropose` have no eval.
+`acceptance-tests`, `dockerfile`, `release-notes`, `dbaudit`, `dbdesign`, `dbdiagram`, `dbpropose` and `dbbuild` have no eval.
 
 ## How to use
 
@@ -245,6 +251,10 @@ Assertions are split: **capability** (does the stage do its job at all) from **d
    cp -r skills/skills/containers/dockerfile   my-project/.claude/skills/
    cp -r skills/skills/operations/post-mortem  my-project/.claude/skills/
    cp -r skills/skills/database/dbaudit        my-project/.claude/skills/
+   cp -r skills/skills/database/dbdesign       my-project/.claude/skills/
+   cp -r skills/skills/database/dbdiagram      my-project/.claude/skills/
+   cp -r skills/skills/database/dbpropose      my-project/.claude/skills/
+   cp -r skills/skills/database/dbbuild        my-project/.claude/skills/
    ```
 
    **Copy the skill folder, not the category folder.** `development/`, `containers/`, `operations/` and `database/` are scaffolding for reading this repo — the agent never sees them, and copying one wholesale just nests your skills a level too deep.
@@ -259,10 +269,10 @@ Assertions are split: **capability** (does the stage do its job at all) from **d
    /dockerfile            /docker-compose
    /hotfix                /incident-fix
    /release-notes         /post-mortem
-   /dbaudit               /dbpropose
+   /dbaudit       /dbdesign       /dbdiagram       /dbpropose       /dbbuild
    ```
 
-Take one skill, take a family, take all fifteen. Every skill works on its own — `tdd` plans from scratch when there's no brief, `refactor-review` reviews any diff, `devils-advocate` tears down a change it didn't build, `post-mortem` reconstructs an incident in a system it has never seen. Where skills cross-link and the other one isn't installed, the prompt still names it, so you know what would have run.
+Take one skill, take a family, or take them all. Every skill works on its own — `tdd` plans from scratch when there's no brief, `refactor-review` reviews any diff, `devils-advocate` tears down a change it didn't build, `post-mortem` reconstructs an incident in a system it has never seen. Where skills cross-link and the other one isn't installed, the prompt still names it, so you know what would have run.
 
 Each family has its own README with more detail: [development](skills/development/README.md) · [containers](skills/containers/README.md) · [operations](skills/operations/README.md) · [database](skills/database/README.md).
 

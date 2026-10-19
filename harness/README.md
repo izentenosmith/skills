@@ -7,7 +7,8 @@ Four harnesses and the tools they share. Each one runs a skill's judgment throug
 | [`loop.py`](loop.py) | development stages 5–7 and the fix loop | a GO / NO-GO / ESCALATED ledger |
 | [`fix.py`](fix.py) | the hotfix lane, or incident-fix's fix phase | a committed branch and, with `--open-pr`, a draft PR |
 | [`postmortem.py`](postmortem.py) | incident-fix's Phase 4 | a linted, blameless post-mortem and an owned follow-through |
-| [`dbreview.py`](dbreview.py) | dbaudit, then dbpropose where it's owed | scored audit files, the gate's decision, and a proposal |
+| [`dbworkflow.py`](dbworkflow.py) | coordinates existing/new database workflows across the database skills | audit gate, design, editable ER/relational diagrams, proposal, and acceptance-gated DDL artifacts |
+| [`dbreview.py`](dbreview.py) | dbaudit's read-only audit and score gate | scored audit files, synthesis, and gate decision; usable directly |
 
 ## The closing loop — `loop.py`
 
@@ -33,7 +34,8 @@ This folder makes the referee a program. The model still does every judgment; th
 | [`incident.py`](incident.py) | The incident-fix log: entries stamped from the system clock, production actions refused without their own confirmation, a closing gate on contributing factors, and a timeline for the post-mortem. |
 | [`fix.py`](fix.py) | Bug report → pull request. Discover, triage, root cause, red, fix, review, ship, each gated; `--profile incident` runs the full loop capped at two and adds a data-repair artifact. |
 | [`postmortem.py`](postmortem.py) | Resolved incident log → post-mortem. Widens the git range, lints for blame and prescription, drafts the follow-through and waits for owners. |
-| [`dbreview.py`](dbreview.py) | DDL or a read-only connection → audit, scored by formula in code → a per-database gate → dbpropose only where the gate says so. |
+| [`dbworkflow.py`](dbworkflow.py) | existing database → audit and gate → design → diagrams → proposal; new database → design → diagrams → proposal; accepted proposal → DDL in a separate run. |
+| [`dbreview.py`](dbreview.py) | DDL or a read-only connection → audit, scored by formula in code → a per-database gate. |
 | [`tests/`](tests) | `python3 -m unittest discover harness/tests` — the grammar, the rules, and the whole loop against a stub `claude`. |
 
 Stdlib Python 3.10+, no dependencies. The skills don't need any of this — every skill folder still works copied on its own, in Cursor or Claude Code. The harness is an optional layer that enforces what they ask for when you want it enforced.
@@ -171,18 +173,34 @@ python3 harness/postmortem.py --repo . --log docs/incidents/2026-10-15-checkout.
 5. The follow-through is drafted as proposed outcomes with the exact `incident.py factor` command for each — **owners and dates are never invented**. Until every factor is recorded, exit 5.
 6. `--close` logs `closed` through `incident.py` (which re-checks every closing rule); `--create-items` opens one tracker item per follow-up with the remote's CLI.
 
-## Database → audit + proposal — `dbreview.py`
+## Database workflow — `dbworkflow.py`
+
+The coordinator lives here in `harness/`; the five independently usable skills and their references live in `skills/database/`.
 
 ```bash
-python3 harness/dbreview.py --ddl sales=db/sales/ --ddl hr=db/hr.sql --out review/
-SALES_DB_URL=postgresql://reader@db/sales python3 harness/dbreview.py --dsn-env SALES_DB_URL --out review/
-python3 harness/dbreview.py --ddl … --out review/ --intent migration --target "PostgreSQL 18"
+python3 harness/dbworkflow.py --mode existing --ddl sales=db/sales/ --ddl hr=db/hr.sql --out review/
+python3 harness/dbworkflow.py --mode new --requirements docs/order-domain.md --out design-review/
+python3 harness/dbworkflow.py --mode new --requirements docs/order-domain.md --stages design,diagram --out design-review/
+python3 harness/dbworkflow.py --mode new --stages build \
+  --proposal-input design-review/proposal/proposal.md --proposal-accepted \
+  --design-input design-review/design/design.md --out design-review/
+```
+
+Stages are `audit,design,diagram,propose,build`. A new database skips audit. An existing database runs the read-only `dbreview.py` audit first; a passing gate ends the default workflow without redesign artifacts, while an open gate routes the database into design, diagrams, and proposal. The harness never builds DDL in the same run that creates a proposal: proposal review and acceptance happen first, then a separate `build` run requires both `--proposal-input` and `--proposal-accepted`. An explicit `--stages` list supports partial work, and stages that need prior artifacts stop with a clear missing-input message. Use `--audit-input`, `--design-input`, and `--proposal-input` to continue from artifacts produced elsewhere.
+
+Outputs are written under `--out`: `audit/`, `design/`, `diagrams/` (two `.drawio` files), `proposal/`, `ddl/` (ordered `.sql` files), plus `gate.md` and `workflow.json` as applicable. Structural iteration goes back through design, diagrams, and proposal; the revised proposal must be accepted before its DDL is generated. Formatting or naming-only DDL changes can be iterated without changing the approved structure.
+
+### Audit-only scoring and gate — `dbreview.py`
+
+```bash
+python3 harness/dbreview.py --ddl sales=db/sales/ --ddl hr=db/hr.sql --out audit-review/ --audit-only
+SALES_DB_URL=postgresql://reader@db/sales python3 harness/dbreview.py --dsn-env SALES_DB_URL --out audit-review/ --audit-only
 ```
 
 - **Acquisition is read-only.** A connection string is read from the environment variable you name — never from the command line — and used only to dump the schema: `pg_dump --schema-only` in a read-only transaction, `mysqldump --no-data` with the password in the environment, SQLite opened `mode=ro`. SQL Server: export the DDL and pass `--ddl`. The connection string appears in no log or output file.
 - **One read-only audit agent per database** reports, per criterion, how many in-scope objects satisfy it, plus findings with severity and confidence. **The harness computes the score** — p per criterion, 🟢2 / 🟡1 / 🔴0, the base, the Critical (2.0) and High (6.0) caps, object-weighted database and estate means — and writes the arithmetic into every evaluation. 🔬 needs-data never moves a score; a ⚠️ proxy alone never grades 🔴.
-- **The gate, per database.** No proposal when the capped score is ≥ `--good-enough` (9.0, the Exemplary band, where dbpropose's default verdict is *reuse*), no Critical or High is open, the schema isn't unused or a copy, and its 🔬 flags are at most `--max-flag-ratio` (10%) of its objects. `--intent migration` proposes everything. `gate.md` records the decision and its reasons either way.
-- **dbpropose runs once**, for the databases the gate didn't pass, with the audit as its evidence. `--audit-only` stops at the gate.
+- **The gate, per database.** Passing requires a capped score ≥ `--good-enough` (9.0 by default), no open Critical or High finding, usage other than unused/copy, and 🔬 flags no more than `--max-flag-ratio` (10%) of objects. The coordinator records the reasons either way. Migration intent routes every database to design/proposal.
+- **dbreview.py** is the audit-stage harness. `dbworkflow.py` invokes it with `--audit-only`, then runs `dbdesign`, `dbdiagram`, and `dbpropose` only where the gate/workflow calls for them. The separate `build` stage calls `dbbuild` only after explicit proposal acceptance; it creates SQL files and never applies them.
 
 ## Trade-offs worth knowing
 
