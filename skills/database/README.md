@@ -16,6 +16,26 @@ Accepted proposal:                                      dbbuild
 | [dbpropose](dbpropose/SKILL.md) | Assemble the recommendation, incorporating audit evidence, design decisions, and diagrams. |
 | [dbbuild](dbbuild/SKILL.md) | After explicit proposal acceptance, generate reviewable DDL from the approved design. |
 
+## Install
+
+All five, from the root of the repo you're working in:
+
+```bash
+npx skills add izentenosmith/skills --skill dbaudit dbdesign dbdiagram dbpropose dbbuild
+```
+
+Or one at a time:
+
+| Skill | Install |
+|---|---|
+| dbaudit | `npx skills add izentenosmith/skills --skill dbaudit` |
+| dbdesign | `npx skills add izentenosmith/skills --skill dbdesign` |
+| dbdiagram | `npx skills add izentenosmith/skills --skill dbdiagram` |
+| dbpropose | `npx skills add izentenosmith/skills --skill dbpropose` |
+| dbbuild | `npx skills add izentenosmith/skills --skill dbbuild` |
+
+The installer dereferences the companion-reference symlinks, so each installed folder is self-contained. It installs the skills only — `harness/dbworkflow.py` needs a clone. Flags (`-a`, `-g`, `-y`) are in the [root README](../../README.md#install-with-npx).
+
 ## Coordinated workflow
 
 Run `python3 harness/dbworkflow.py --help` for the harness interface. It supports existing-database and new-database runs, plus partial runs when prerequisite artifacts are available. Existing-database runs use the audit gate: a score at or above 9.0 is necessary for a good-enough result, but open Critical or High findings, unused/copy status, or too many unresolved needs-data flags still route the database to design, diagrams, and proposal. The gate and reasons are recorded.

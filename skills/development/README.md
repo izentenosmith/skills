@@ -21,7 +21,27 @@ architect-deep-dive → agent-brief → acceptance-tests → tdd → refactor-re
 
 ## How to use them
 
-**Copy the folders you want into the repo you're working in**, alongside wherever that repo keeps its agent skills. Each folder is self-contained — `SKILL.md` plus every reference doc it needs — so one folder is a complete install of one skill. Nothing here reads a file outside its own directory.
+Install the whole pipeline from the root of the repo you're working in:
+
+```bash
+npx skills add izentenosmith/skills --skill architect-deep-dive agent-brief acceptance-tests tdd refactor-review devils-advocate tyr-verdict
+```
+
+Or one stage at a time:
+
+| Skill | Install |
+|---|---|
+| architect-deep-dive | `npx skills add izentenosmith/skills --skill architect-deep-dive` |
+| agent-brief | `npx skills add izentenosmith/skills --skill agent-brief` |
+| acceptance-tests | `npx skills add izentenosmith/skills --skill acceptance-tests` |
+| tdd | `npx skills add izentenosmith/skills --skill tdd` |
+| refactor-review | `npx skills add izentenosmith/skills --skill refactor-review` |
+| devils-advocate | `npx skills add izentenosmith/skills --skill devils-advocate` |
+| tyr-verdict | `npx skills add izentenosmith/skills --skill tyr-verdict` |
+
+The Trivial tier below needs only `--skill tdd refactor-review`. Flags (`-a`, `-g`, `-y`) are in the [root README](../../README.md#install-with-npx).
+
+Or **copy the folders you want into the repo you're working in**, alongside wherever that repo keeps its agent skills. Each folder is self-contained — `SKILL.md` plus every reference doc it needs — so one folder is a complete install of one skill. Nothing here reads a file outside its own directory.
 
 Then either let the agent trigger a skill when your request matches its `description`, or call it by name:
 

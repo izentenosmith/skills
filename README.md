@@ -237,7 +237,71 @@ Assertions are split: **capability** (does the stage do its job at all) from **d
 
 ## How to use
 
-**There is no installer, and nothing here auto-installs.** Skills are meant to be copied, one at a time, into the repo you're working in.
+### Install with `npx`
+
+Every skill installs by name through the [`skills` CLI](https://github.com/vercel-labs/skills) — nothing to clone. The CLI finds each `SKILL.md` in this repo by its frontmatter `name`, so commands name skills, never family folders. Run them from the root of the repo you want the skills in.
+
+**A whole workflow** — one command per family:
+
+```bash
+# development — the seven-stage pipeline
+npx skills add izentenosmith/skills --skill architect-deep-dive agent-brief acceptance-tests tdd refactor-review devils-advocate tyr-verdict
+
+# containers — image, then stack
+npx skills add izentenosmith/skills --skill dockerfile docker-compose
+
+# operations — the response chain plus release-notes
+npx skills add izentenosmith/skills --skill hotfix incident-fix post-mortem release-notes
+
+# database — audit, design, diagram, propose, build
+npx skills add izentenosmith/skills --skill dbaudit dbdesign dbdiagram dbpropose dbbuild
+```
+
+**Everything:**
+
+```bash
+npx skills add izentenosmith/skills --skill '*'
+```
+
+**One skill:**
+
+| Family | Command |
+|---|---|
+| development | `npx skills add izentenosmith/skills --skill architect-deep-dive` |
+| | `npx skills add izentenosmith/skills --skill agent-brief` |
+| | `npx skills add izentenosmith/skills --skill acceptance-tests` |
+| | `npx skills add izentenosmith/skills --skill tdd` |
+| | `npx skills add izentenosmith/skills --skill refactor-review` |
+| | `npx skills add izentenosmith/skills --skill devils-advocate` |
+| | `npx skills add izentenosmith/skills --skill tyr-verdict` |
+| containers | `npx skills add izentenosmith/skills --skill dockerfile` |
+| | `npx skills add izentenosmith/skills --skill docker-compose` |
+| operations | `npx skills add izentenosmith/skills --skill hotfix` |
+| | `npx skills add izentenosmith/skills --skill incident-fix` |
+| | `npx skills add izentenosmith/skills --skill post-mortem` |
+| | `npx skills add izentenosmith/skills --skill release-notes` |
+| database | `npx skills add izentenosmith/skills --skill dbaudit` |
+| | `npx skills add izentenosmith/skills --skill dbdesign` |
+| | `npx skills add izentenosmith/skills --skill dbdiagram` |
+| | `npx skills add izentenosmith/skills --skill dbpropose` |
+| | `npx skills add izentenosmith/skills --skill dbbuild` |
+
+Any mix works too — `--skill` takes as many names as you give it.
+
+Useful flags:
+
+| Flag | Effect |
+|---|---|
+| `-a claude-code` · `-a cursor` | Install for that agent only, instead of being asked. Takes several: `-a claude-code cursor`. |
+| `-g` | Install at user level (every project) instead of into the current repo. |
+| `-y` | Skip the confirmation prompts. |
+| `--list` | Show every skill in this repo without installing. |
+
+`npx skills update` pulls newer versions of what you installed; `npx skills remove <name>` takes one out.
+
+The installer copies each skill folder whole, dereferencing the database skills' shared-doc symlinks, so every installed folder is self-contained. **It installs skills, not the [harness](harness/README.md)** — the Python orchestration in `harness/` (including `dbworkflow.py`) needs a clone.
+
+### Or copy by hand
 
 1. **Clone or browse the repo.**
 
@@ -279,9 +343,9 @@ Each family has its own README with more detail: [development](skills/developmen
 ## Conventions
 
 - **One skill per folder, and the folder stands alone.** Each folder contains a `SKILL.md` (the workflow) plus every reference doc it needs. **Copy any one folder into any project and it works** — no shared root docs, no reference doc outside its own folder. The only cross-folder links are the stage list and the handoff, which name the next skill; if it isn't installed, the prompt still tells you which one to run.
-- **Families are scaffolding, not structure.** The family directories under `skills/` exist to make this repo readable; the agent selects on the frontmatter `description` and never sees a folder name. Nothing installs a family, and no skill depends on its family's path — so families are free to reorganize, and skills are free to cross-link between them.
+- **Families are scaffolding, not structure.** The family directories under `skills/` exist to make this repo readable; the agent selects on the frontmatter `description` and never sees a folder name. A family install is just a list of skill names, and no skill depends on its family's path — so families are free to reorganize, and skills are free to cross-link between them.
 - **The harness is a layer, not a dependency.** `harness/` enforces the development pipeline's rules when you run it, and nothing in a skill folder refers to it. Its ledger grammar is the same one the skills write by hand — so a skill folder copied alone still produces a ledger the harness can check and resume.
-- **No installer, by design.** Skills are copied into a target repo one folder at a time. An install script implies a managed set that stays in sync; this is a shelf you take things off.
+- **No installer of its own.** Skills go into a target repo one folder at a time — by name through the external `skills` CLI, or by copying. A family command is a list of names, not a managed set that stays in sync; this is still a shelf you take things off.
 - **Self-containment beats DRY here.** The dispatch contract, the `.workflow/` file rules and the seven-stage list are repeated across folders on purpose. That is real duplication with a real cost — change the pipeline's shape and you edit six files — and it buys the thing that matters more: a folder you can paste anywhere.
 - **Every `SKILL.md` carries frontmatter** (`name`, `description`) so the agent can decide relevance.
 - **Every skill carries a calibration tier and a stopping rule.** The tier says how much of the skill to run before starting; the stopping rule says when to stop, so a workflow with an open-ended quality goal terminates instead of iterating on taste.

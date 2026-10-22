@@ -18,7 +18,30 @@ hotfix ──escalates──► incident-fix ──hands its log to──► pos
 
 ## How to use them
 
-**Copy the folder you want into the repo you're working in**, alongside wherever that repo keeps its agent skills. Each folder is self-contained — `SKILL.md` plus its reference docs — so one folder is a complete install of one skill.
+Install all four from the root of the repo you're working in:
+
+```bash
+npx skills add izentenosmith/skills --skill hotfix incident-fix post-mortem release-notes
+```
+
+Just the response chain:
+
+```bash
+npx skills add izentenosmith/skills --skill hotfix incident-fix post-mortem
+```
+
+Or one at a time:
+
+| Skill | Install |
+|---|---|
+| hotfix | `npx skills add izentenosmith/skills --skill hotfix` |
+| incident-fix | `npx skills add izentenosmith/skills --skill incident-fix` |
+| post-mortem | `npx skills add izentenosmith/skills --skill post-mortem` |
+| release-notes | `npx skills add izentenosmith/skills --skill release-notes` |
+
+Flags (`-a`, `-g`, `-y`) are in the [root README](../../README.md#install-with-npx). The harnesses below are not skills and need a clone.
+
+Or **copy the folder you want into the repo you're working in**, alongside wherever that repo keeps its agent skills. Each folder is self-contained — `SKILL.md` plus its reference docs — so one folder is a complete install of one skill.
 
 Then either let the agent trigger the skill when your request matches its `description`, or call it by name:
 

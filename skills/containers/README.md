@@ -16,7 +16,22 @@ dockerfile → docker-compose
 
 ## How to use them
 
-**Copy the folders you want into the repo you're working in**, alongside wherever that repo keeps its agent skills. Each folder is self-contained — `SKILL.md` plus its reference docs — so one folder is a complete install of one skill.
+Install both from the root of the repo you're working in:
+
+```bash
+npx skills add izentenosmith/skills --skill dockerfile docker-compose
+```
+
+Or one at a time:
+
+| Skill | Install |
+|---|---|
+| dockerfile | `npx skills add izentenosmith/skills --skill dockerfile` |
+| docker-compose | `npx skills add izentenosmith/skills --skill docker-compose` |
+
+Flags (`-a`, `-g`, `-y`) are in the [root README](../../README.md#install-with-npx).
+
+Or **copy the folders you want into the repo you're working in**, alongside wherever that repo keeps its agent skills. Each folder is self-contained — `SKILL.md` plus its reference docs — so one folder is a complete install of one skill.
 
 Then either let the agent trigger the skill when your request matches its `description`, or call it by name:
 
