@@ -1,6 +1,6 @@
 # harness — the rules the skills state, run by code
 
-Four harnesses and the tools they share. Each one runs a skill's judgment through headless `claude -p` calls and enforces in code everything that isn't judgment.
+Six harnesses and the tools they share. Each one runs a skill's judgment through headless `claude -p` calls and enforces in code everything that isn't judgment.
 
 | Harness | Runs | Returns |
 |---|---|---|
@@ -9,6 +9,8 @@ Four harnesses and the tools they share. Each one runs a skill's judgment throug
 | [`postmortem.py`](postmortem.py) | incident-fix's Phase 4 | a linted, blameless post-mortem and an owned follow-through |
 | [`dbworkflow.py`](dbworkflow.py) | coordinates existing/new database workflows across the database skills | audit gate, design, Barker ER and relational diagrams, proposal, and acceptance-gated DDL artifacts |
 | [`dbreview.py`](dbreview.py) | dbaudit's read-only audit and score gate | scored audit files, synthesis, and gate decision; usable directly |
+| [`networkflow.py`](networkflow.py) | coordinates existing/new network workflows across the networking skills | audit gate, design + target topology, canonical draw.io views, proposal, and an acceptance-gated blueprint |
+| [`netreview.py`](netreview.py) | netaudit's read-only audit, graph analysis and gate | redacted evidence, recovered topology, graph results, scored domains, synthesis, gate decision |
 
 ## The closing loop — `loop.py`
 
@@ -36,6 +38,9 @@ This folder makes the referee a program. The model still does every judgment; th
 | [`postmortem.py`](postmortem.py) | Resolved incident log → post-mortem. Widens the git range, lints for blame and prescription, drafts the follow-through and waits for owners. |
 | [`dbworkflow.py`](dbworkflow.py) | existing database → audit and gate → design → diagrams → proposal; new database → design → diagrams → proposal; accepted proposal → DDL in a separate run. |
 | [`dbreview.py`](dbreview.py) | DDL or a read-only connection → audit, scored by formula in code → a per-database gate. |
+| [`networkflow.py`](networkflow.py) | existing network → audit and gate → design → diagrams → proposal; new network → design → diagrams → proposal; accepted proposal → blueprint in a separate run. |
+| [`netreview.py`](netreview.py) | network evidence → redaction → audit and recovered `topology.json` → graph metrics, scored by formula in code → a per-network gate. |
+| [`netgraph.py`](netgraph.py) | `topology.json` → components, articulation points, bridges, Menger connectivity per critical pair, betweenness, robustness curves, CIDR overlap and flow exposure. Pure stdlib; usable on its own. |
 | [`tests/`](tests) | `python3 -m unittest discover harness/tests` — the grammar, the rules, and the whole loop against a stub `claude`. |
 
 Stdlib Python 3.10+, no dependencies. The skills don't need any of this — every skill folder still works copied on its own, in Cursor or Claude Code. The harness is an optional layer that enforces what they ask for when you want it enforced.
@@ -201,6 +206,57 @@ SALES_DB_URL=postgresql://reader@db/sales python3 harness/dbreview.py --dsn-env 
 - **One read-only audit agent per database** reports, per criterion, how many in-scope objects satisfy it, plus findings with severity and confidence. **The harness computes the score** — p per criterion, 🟢2 / 🟡1 / 🔴0, the base, the Critical (2.0) and High (6.0) caps, object-weighted database and estate means — and writes the arithmetic into every evaluation. 🔬 needs-data never moves a score; a ⚠️ proxy alone never grades 🔴.
 - **The gate, per database.** Passing requires a capped score ≥ `--good-enough` (9.0 by default), no open Critical or High finding, usage other than unused/copy, and 🔬 flags no more than `--max-flag-ratio` (10%) of objects. The coordinator records the reasons either way. Migration intent routes every database to design/proposal.
 - **dbreview.py** is the audit-stage harness. `dbworkflow.py` invokes it with `--audit-only`, then runs `dbdesign`, `dbdiagram`, and `dbpropose` only where the gate/workflow calls for them. The separate `build` stage calls `dbbuild` only after explicit proposal acceptance; it creates SQL files and never applies them.
+
+## Network workflow — `networkflow.py`
+
+The coordinator lives here in `harness/`. The five independently usable skills and their references live in `skills/networking/`.
+
+```bash
+python3 harness/networkflow.py --mode existing --evidence prod=infra/ --evidence branch=configs/branch/ --out review/
+python3 harness/networkflow.py --mode new --requirements docs/landing-zone.md --out design-review/
+python3 harness/networkflow.py --mode new --requirements docs/landing-zone.md --stages design,diagram --out design-review/
+python3 harness/networkflow.py --mode new --stages blueprint \
+  --proposal-input design-review/proposal/proposal.md --proposal-accepted \
+  --design-input design-review/design/ --out design-review/
+python3 harness/networkflow.py --mode new --requirements docs/landing-zone.md --out x/ --dry-run   # prompts only
+```
+
+**Stages** are `audit,design,diagram,propose,blueprint`. A new network skips audit. An existing network runs the read-only `netreview.py` audit first. A passing gate ends the default workflow, and an open gate routes the network into design, diagrams and proposal.
+
+**Design** returns `design.md` and a target `topology.json`. It is validated, and `netgraph.py` runs on it (`design/graph.json`).
+
+**Diagram** must return `logical-topology.drawio` and `segmentation.drawio`, plus `physical-topology.drawio` when the model has L2 links. `validate_diagram_set()` checks each one in code:
+- the exact page names;
+- an uncompressed `mxfile`;
+- a visible legend naming *Network diagram conventions*;
+- every network cell labelled with the model's CIDR;
+- every non-`deco-` cell ID a `topology.json` ID;
+- every zone and critical-pair endpoint drawn.
+
+**Blueprint** never shares a run with the proposal. It requires `--proposal-input`, `--proposal-accepted` and `--design-input`, and must return `network-design.md`, an accepted `topology.json` and conforming diagrams. No stage writes IaC or touches a network.
+
+Outputs under `--out`: `audit/`, `design/`, `diagrams/`, `proposal/`, `blueprint/`, plus `gate.md`, `gate-status.json` and `workflow.json` as applicable.
+
+### Audit, graph and gate — `netreview.py` and `netgraph.py`
+
+```bash
+python3 harness/netreview.py --evidence prod=infra/ --evidence dc1=configs/dc1/ --out audit-review/ --audit-only
+python3 harness/netgraph.py analyze audit-review/audit/prod/topology.json --md
+```
+
+- **Evidence is files you name.** Nothing connects to a device, controller or cloud API.
+- **Secrets never reach a model.** Every file is copied into `--out/evidence/` with enable secrets, type-7 and cleartext passwords, SNMP communities, PSKs, key strings, private keys and secret-looking IaC values masked in place. Line numbers are preserved, so `file:line` evidence stays exact. Audit agents run inside the redacted copy. Each masked secret becomes a High finding that names its kind and weakness, never its value.
+- **One read-only `netaudit` agent per network** returns per-criterion counts, findings and the recovered `topology.json`. The model must validate, with one correction round.
+- **`netgraph.py` computes the structure.** It finds articulation points and bridges (with `shared_fate` groups contracted and `managed_ha` platform constructs never cut), node and edge connectivity per critical pair by unit-capacity max-flow, Brandes betweenness, hub concentration, and seeded robustness curves under random vs degree- vs betweenness-targeted removal. It checks CIDR overlap between reachable networks, subnet containment and duplicates. Its flow checks are any-any allows, internet → management ports, and zones with no default-deny. Its findings join the agent's.
+- **The harness computes the score** by `dbreview.py`'s formula, per domain (addressing, segmentation, routing, services, resilience, security), then object-weighted network and estate means with the Critical (2.0) and High (6.0) caps.
+- **The gate, per network.** It passes only when all of these hold:
+  - the capped score is ≥ `--good-enough` (9.0);
+  - no Critical or High finding is open;
+  - every declared critical pair has node connectivity ≥ `--min-connectivity` (2), and a network with none declared fails;
+  - 🔬 flags are ≤ `--max-flag-ratio` (10%);
+  - usage is neither decommissioned nor duplicate.
+
+  Migration intent routes every network to a proposal.
 
 ## Trade-offs worth knowing
 
