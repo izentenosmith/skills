@@ -80,10 +80,17 @@ class Graphs(unittest.TestCase):
 
     def test_hub_concentration_and_degree_distribution(self):
         nodes, edges = graph([("hub", s) for s in "abcdefghi"])
-        deg = NG.graph_metrics(nodes, edges, runs=2)["degree"]
-        self.assertEqual(deg["distribution"], {"1": 9, "9": 1})
-        self.assertEqual(deg["hub_nodes"], ["hub"])
-        self.assertEqual(deg["hub_concentration"], 0.5)                # 9 of 18 endpoints
+        m = NG.graph_metrics(nodes, edges, runs=2)
+        self.assertEqual(m["degree"]["distribution"], {"1": 9, "9": 1})
+        self.assertEqual(m["degree"]["hub_nodes"], ["hub"])
+        self.assertEqual(m["hub_concentration"], 0.5)                  # 9 of 18 endpoints
+
+    def test_a_minimum_cut_has_as_many_members_as_the_connectivity(self):
+        nodes, edges = graph([("s", "a"), ("a", "t"), ("s", "b"), ("b", "t")])
+        self.assertEqual(NG.min_cut(nodes, edges, {"s"}, {"t"}), ["a", "b"])
+        nodes, edges = graph([("s", "m"), ("m", "t"), ("s", "t")])     # the direct edge has no node to cut
+        self.assertEqual(NG.min_cut(nodes, edges, {"s"}, {"t"}), ["e2", "m"])
+        self.assertEqual(NG.min_cut(["s", "t"], [], {"s"}, {"t"}), [])
 
     def test_targeted_attack_breaks_a_star_that_random_failure_barely_dents(self):
         nodes, edges = graph([("hub", s) for s in "abcdefghi"])
@@ -126,6 +133,7 @@ class Resilience(unittest.TestCase):
         pair = r["metrics"]["critical_pairs"][0]
         self.assertEqual((pair["node_connectivity"], pair["edge_connectivity"]), (1, 2))
         self.assertEqual(r["metrics"]["shared_fate"], {"edge-pair": ["r1", "r2"]})
+        self.assertEqual(pair["cut_set"], ["shared-fate:edge-pair"])
 
     def test_an_inferred_spof_is_proxy(self):
         t = uplink()
@@ -133,10 +141,23 @@ class Resilience(unittest.TestCase):
         spof = next(f for f in NG.analyze(t)["findings"] if f["id"] == "NG-SPOF-r1")
         self.assertEqual(spof["confidence"], "proxy")
 
+    def test_the_metric_keys_netreview_reads(self):
+        m = NG.analyze(uplink(ha=True))["metrics"]
+        self.assertEqual(m["critical_pairs"][0] | {"why": None, "single_points": None, "bridges": None},
+                         {"from": "users", "to": "internet", "why": None, "node_connectivity": 2,
+                          "edge_connectivity": 2, "cut_set": ["r1", "r2"], "single_points": None, "bridges": None})
+        self.assertEqual((m["articulation_points"], m["bridges"], m["components"]), ([], [], 1))   # a 4-cycle
+        self.assertIsInstance(m["hub_concentration"], float)
+        self.assertEqual(set(m["betweenness"]), {"users", "internet", "r1", "r2"})
+        self.assertLessEqual({"random", "degree", "betweenness"}, set(m["robustness"]))
+
     def test_a_disconnected_pair_and_one_below_target(self):
         t = uplink()
         t["edges"] = t["edges"][:1]
-        self.assertIn("NG-CUT-users-internet", ids(NG.analyze(t)))
+        r = NG.analyze(t)
+        self.assertIn("NG-CUT-users-internet", ids(r))
+        pair = r["metrics"]["critical_pairs"][0]
+        self.assertEqual((pair["node_connectivity"], pair["edge_connectivity"], pair["cut_set"]), (0, 0, []))
         r = NG.analyze(uplink(ha=True), min_connectivity=3)
         self.assertEqual(ids(r, "NG-CONN"), ["NG-CONN-users-internet"])
         self.assertEqual(ids(r, "NG-SPOF"), [])
@@ -291,10 +312,40 @@ class Validate(unittest.TestCase):
                      "unknown node or zone 'nobody'", "unknown zone 'mars'", "unparseable ports 'http'"):
             self.assertIn(want, errs)
 
+    def test_a_pair_whose_ends_meet_is_an_error(self):
+        t = uplink(ha=True, shared_fate=True)
+        t["critical_pairs"] = [{"from": "r1", "to": "r2", "why": "same box"}]
+        self.assertIn("share a node or shared-fate group", "\n".join(NG.validate(t)))
+
     def test_schema_errors_stop_the_analysis(self):
         r = NG.analyze({"meta": {}})
         self.assertTrue(r["errors"])
         self.assertEqual((r["metrics"], r["findings"]), ({}, []))
+
+    def test_analyze_never_raises_on_malformed_input(self):
+        junk = [None, 0, "x", [], [1], {}, {"id": []}, {"id": "n"}, True, -1, "inferred: x", {"a": 1}]
+        base = uplink(ha=True)
+        base.update(zones=[{"id": "internet"}], flows=[flow("f", "internet", "*", "22")],
+                    networks=[{"id": "users", "cidr": "10.0.0.0/24", "evidence": "x:1"}])
+        cases = [None, [], "x", 3, {"meta": None, "nodes": None, "edges": None}]
+        for key in ("meta", "nodes", "edges", "networks", "zones", "flows", "critical_pairs"):
+            for value in junk:
+                cases.append({**base, key: value})
+                section = base[key]
+                if isinstance(section, list):
+                    for field in {f for el in section for f in el}:
+                        for bad in junk:
+                            el = {**section[0], field: bad}
+                            cases.append({**base, key: [el, *section[1:]]})
+                elif isinstance(section, dict):
+                    for field in section:
+                        cases.append({**base, key: {**section, field: [1]}})
+        for case in cases:
+            with self.subTest(case=json.dumps(case, default=str)[:120]):
+                r = NG.analyze(case)
+                self.assertEqual(set(r), {"metrics", "findings", "errors"})
+                if r["errors"]:
+                    self.assertEqual((r["metrics"], r["findings"]), ({}, []))
 
 
 class CLI(unittest.TestCase):

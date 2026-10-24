@@ -172,17 +172,31 @@ def validate(t):
         if zones_given:
             errs += [f"{where}: {end} names unknown zone '{f[end]}'" for end in ("from_zone", "to_zone")
                      if f[end] != ANY and f[end] not in zone_ids]
-    nodes_in_zone = collections.Counter(n.get("zone") for _, n in ok["nodes"])
+    in_zone = collections.defaultdict(list)
+    for _, n in ok["nodes"]:
+        in_zone[n.get("zone")].append(n["id"])
+    rep = shared_fate_reps(n for _, n in ok["nodes"])
     for where, cp in ok["critical_pairs"]:
+        ends = []
         for end in ("from", "to"):
             v = cp[end]
             if v in node_ids:
-                continue
-            if v not in zone_ids:
+                ends.append({rep.get(v, v)})
+            elif v not in zone_ids:
                 errs.append(f"{where}: {end} names unknown node or zone '{v}'")
-            elif not nodes_in_zone[v]:
+            elif not in_zone[v]:
                 errs.append(f"{where}: {end} names zone '{v}', which has no nodes")
+            else:
+                ends.append({rep.get(x, x) for x in in_zone[v]})
+        if len(ends) == 2 and ends[0] & ends[1]:
+            errs.append(f"{where}: from and to share a node or shared-fate group, so connectivity is undefined")
     return errs
+
+
+def shared_fate_reps(nodes):
+    """node id → its shared-fate group's representative, 'shared-fate:<group>'."""
+    return {n["id"]: f"shared-fate:{n['attrs']['shared_fate']}" for n in nodes
+            if isinstance(n.get("attrs"), dict) and n["attrs"].get("shared_fate")}
 
 
 # ------------------------------------------------------------------ graph
@@ -320,6 +334,37 @@ def _maxflow(cap, s, t):
         flow += push
 
 
+def _flow_network(nodes, edges, S, T, split):
+    """Unit capacities. With `split`, every node but the endpoints is an in→out arc of capacity 1, and
+    an edge is capacity 1 only between two endpoints (a direct path) — elsewhere its node already
+    bounds it, so a minimum cut names nodes. Returns the capacities and, per arc, the edge ids it
+    carries (parallel edges share an arc)."""
+    cap, carries = collections.defaultdict(lambda: collections.defaultdict(int)), collections.defaultdict(list)
+
+    def arc(u, v, c):
+        cap[u][v] += c
+        cap[v][u] += 0
+
+    def end(v, side):
+        return (side, v) if split and v not in S and v not in T else ("node", v)
+
+    if split:
+        for v in nodes:
+            if v not in S and v not in T:
+                arc(("in", v), ("out", v), 1)
+    for e, a, b in edges:
+        if a != b:
+            direct = not split or {a, b} <= S | T
+            for u, v in ((a, b), (b, a)):
+                arc(end(u, "out"), end(v, "in"), 1 if direct else INF)
+                carries[(end(u, "out"), end(v, "in"))].append(e)
+    for v in S:
+        arc(("source",), ("node", v), INF)
+    for v in T:
+        arc(("node", v), ("sink",), INF)
+    return cap, carries
+
+
 def connectivity(nodes, edges, sources, targets):
     """(node, edge) connectivity between two node sets by unit-capacity max-flow (Menger). Node
     connectivity counts paths with no internal node in common; endpoints are never cut. None when
@@ -327,31 +372,36 @@ def connectivity(nodes, edges, sources, targets):
     S, T = set(sources), set(targets)
     if S & T:
         return None, None
-    out = []
-    for split in (True, False):
-        cap = collections.defaultdict(lambda: collections.defaultdict(int))
+    return tuple(_maxflow(_flow_network(nodes, edges, S, T, split)[0], ("source",), ("sink",))
+                 for split in (True, False))
 
-        def arc(u, v, c):
-            cap[u][v] += c
-            cap[v][u] += 0
 
-        def end(v, side):
-            return (side, v) if split and v not in S and v not in T else ("node", v)
-
-        if split:
-            for v in nodes:
-                if v not in S and v not in T:
-                    arc(("in", v), ("out", v), 1)
-        for _, a, b in edges:
-            if a != b:
-                arc(end(a, "out"), end(b, "in"), 1)
-                arc(end(b, "out"), end(a, "in"), 1)
-        for v in S:
-            arc(("source",), ("node", v), INF)
-        for v in T:
-            arc(("node", v), ("sink",), INF)
-        out.append(_maxflow(cap, ("source",), ("sink",)))
-    return tuple(out)
+def min_cut(nodes, edges, sources, targets):
+    """A minimum set of nodes and edges whose loss disconnects the sets: as many as the node
+    connectivity. Edges appear only where no internal node can be cut (a direct source–target edge).
+    Empty when the sets are already disconnected or meet."""
+    S, T = set(sources), set(targets)
+    if S & T:
+        return []
+    cap, carries = _flow_network(nodes, edges, S, T, True)
+    _maxflow(cap, ("source",), ("sink",))
+    side, queue = {("source",)}, collections.deque([("source",)])
+    while queue:
+        u = queue.popleft()
+        for v, c in cap[u].items():
+            if c > 0 and v not in side:
+                side.add(v)
+                queue.append(v)
+    cut = []
+    for u in side:
+        for v in cap[u]:
+            if v in side:
+                continue
+            if u[0] == "in" and v == ("out", u[1]):
+                cut.append(u[1])
+            else:
+                cut += carries.get((u, v), [])
+    return sorted(set(cut))
 
 
 def _reaches(adj, S, T, skip_node=None, skip_edge=None):
@@ -435,15 +485,17 @@ def graph_metrics(nodes, edges, *, seed=0, runs=20):
     n, ends = len(nodes), sum(deg.values())
     top = sorted(nodes, key=lambda v: (-deg[v], v))[:max(1, math.ceil(HUB_SHARE * n))] if n else []
     return {
-        "components": {"count": len(comps), "sizes": [len(c) for c in comps],
-                       "largest_fraction": round(len(comps[0]) / n, 4) if n else 0.0,
-                       "members": comps if len(comps) > 1 else []},
+        "components": len(comps),
+        "component_sizes": [len(c) for c in comps],
+        "largest_component_fraction": round(len(comps[0]) / n, 4) if n else 0.0,
+        "component_members": comps if len(comps) > 1 else [],
         "articulation_points": aps,
         "bridges": bridges,
         "betweenness": {v: round(bc[v], 4) for v in sorted(nodes, key=lambda v: (-bc[v], v))},
         "degree": {"distribution": {str(k): c for k, c in sorted(collections.Counter(deg.values()).items())},
                    "max": max(deg.values(), default=0), "mean": round(ends / n, 4) if n else 0.0,
-                   "hub_nodes": top, "hub_concentration": round(sum(deg[v] for v in top) / ends, 4) if ends else 0.0},
+                   "hub_nodes": top},
+        "hub_concentration": round(sum(deg[v] for v in top) / ends, 4) if ends else 0.0,
         "robustness": robustness(nodes, edges, bc, seed=seed, runs=runs),
     }
 
@@ -469,11 +521,9 @@ def finding(fid, obj, severity, theory, elements, summary, confidence=None):
 
 def resilience(t, nodes, edges, min_k):
     """Connectivity per critical pair on the shared-fate-contracted graph, and the SPOF / bridge findings."""
-    groups = collections.defaultdict(list)
-    for v, n in nodes.items():
-        if (n.get("attrs") or {}).get("shared_fate"):
-            groups[f"shared-fate:{n['attrs']['shared_fate']}"].append(v)
-    rep = {v: g for g, members in groups.items() for v in members}
+    rep, groups = shared_fate_reps(nodes.values()), collections.defaultdict(list)
+    for v, g in rep.items():
+        groups[g].append(v)
     cnodes, cedges = contract(list(nodes), edges, rep)
     in_zone = collections.defaultdict(list)
     for v, n in nodes.items():
@@ -490,9 +540,8 @@ def resilience(t, nodes, edges, min_k):
         k_node, k_edge = connectivity(cnodes, cedges, S, T)
         sep_nodes, sep_edges = separators(cnodes, cedges, S, T) if k_node == 1 else ([], [])
         pairs.append({"from": cp["from"], "to": cp["to"], "why": cp.get("why", ""), "node_connectivity": k_node,
-                      "edge_connectivity": k_edge, "single_points": sep_nodes, "bridges": sep_edges})
-        if k_node is None:
-            continue
+                      "edge_connectivity": k_edge, "cut_set": min_cut(cnodes, cedges, S, T),
+                      "single_points": sep_nodes, "bridges": sep_edges})
         ends = [nodes[v] for v in sorted({v for x in (cp["from"], cp["to"])
                                            for v in ([x] if x in nodes else in_zone[x])})]
         if k_node == 0:
@@ -688,11 +737,11 @@ def render_md(result):
         return "# Network graph analysis — schema errors\n\n" + "\n".join(f"- {e}" for e in result["errors"]) + "\n"
     deg, rob = m["degree"], m["robustness"]
     out = [f"# Network graph analysis — {m['name']}", "",
-           f"{m['nodes']} nodes · {m['edges']} edges · {m['components']['count']} component(s), the largest "
-           f"holding {m['components']['largest_fraction']:.0%} of nodes.", "",
+           f"{m['nodes']} nodes · {m['edges']} edges · {m['components']} component(s), the largest "
+           f"holding {m['largest_component_fraction']:.0%} of nodes.", "",
            f"- **Articulation points (G4):** {', '.join(m['articulation_points']) or 'none'}",
            f"- **Bridges (G4):** {', '.join(m['bridges']) or 'none'}",
-           f"- **Hub concentration:** {deg['hub_concentration']:.0%} of edge endpoints sit on the top "
+           f"- **Hub concentration:** {m['hub_concentration']:.0%} of edge endpoints sit on the top "
            f"{len(deg['hub_nodes'])} node(s) ({', '.join(deg['hub_nodes'])}); max degree {deg['max']}, "
            f"mean {deg['mean']}",
            f"- **Highest betweenness (G6):** " + (", ".join(f"{v} {b}" for v, b in list(m['betweenness'].items())[:5])
@@ -700,9 +749,11 @@ def render_md(result):
            f"- **Shared-fate groups:** " + ("; ".join(f"{g} ({', '.join(ms)})" for g, ms in m["shared_fate"].items())
                                             or "none"), "", "## Critical pairs (G5)", ""]
     if m["critical_pairs"]:
-        out += ["| Pair | Why | Node conn. | Edge conn. | Single points | Bridges |", "|---|---|---|---|---|---|"]
+        out += ["| Pair | Why | Node conn. | Edge conn. | Minimum cut | Single points | Bridges |",
+                "|---|---|---|---|---|---|---|"]
         out += [f"| {_cell(p['from'])} → {_cell(p['to'])} | {_cell(p['why'])} | {p['node_connectivity']} | "
-                f"{p['edge_connectivity']} | {', '.join(p['single_points']) or '—'} | {', '.join(p['bridges']) or '—'} |"
+                f"{p['edge_connectivity']} | {', '.join(p['cut_set']) or '—'} | {', '.join(p['single_points']) or '—'} | "
+                f"{', '.join(p['bridges']) or '—'} |"
                 for p in m["critical_pairs"]]
     else:
         out.append("No critical pairs are declared, so resilience cannot be graded.")
