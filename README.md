@@ -1,6 +1,6 @@
 # Skills
 
-A collection of repo-agnostic AI coding agent skills — taking a feature from a vague idea to reviewed, tested code, packaging it to run, dealing with it once it's live, and grading the database underneath it. Each skill lives in its own folder as a `SKILL.md` file with YAML frontmatter (`name` + `description`) that the agent loads on demand when the work matches.
+A collection of repo-agnostic AI coding agent skills — taking a feature from a vague idea to reviewed, tested code, packaging it to run, dealing with it once it's live, and grading the database and the network underneath it. Each skill lives in its own folder as a `SKILL.md` file with YAML frontmatter (`name` + `description`) that the agent loads on demand when the work matches.
 
 Works with [Cursor](https://www.cursor.com/) and [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
 
@@ -10,7 +10,7 @@ Inspired by [mattpocock/skills](https://github.com/mattpocock/skills).
 
 ## What's in here
 
-Four families of skills under `skills/` — the first three in the order work actually moves through them, the fourth for the database underneath — plus a harness that runs the development pipeline's closing loop as code, and the evals that measure the skills.
+Five families of skills under `skills/` — the first three in the order work actually moves through them, the last two for the database and the network underneath — plus a harness that runs the development pipeline's closing loop as code, and the evals that measure the skills.
 
 ```
 skills/
@@ -18,7 +18,8 @@ skills/
   containers/       package it to run     dockerfile → docker-compose
   operations/       live with it          hotfix → incident-fix → post-mortem · release-notes
   database/         audit, design, diagram, propose
-harness/            the skills' rules as code: the closing loop, bug → PR, incident → post-mortem, DB audit → proposal
+  networking/       audit, design, diagram, propose, blueprint
+harness/            the skills' rules as code: the closing loop, bug → PR, incident → post-mortem, DB and network audit → proposal
 evals/              seeded fixtures, scored assertions, the recorded benchmark
 ```
 
@@ -28,8 +29,9 @@ evals/              seeded fixtures, scored assertions, the recorded benchmark
 | **[containers/](skills/containers/README.md)** | [dockerfile](skills/containers/dockerfile/SKILL.md) · [docker-compose](skills/containers/docker-compose/SKILL.md) |
 | **[operations/](skills/operations/README.md)** | [hotfix](skills/operations/hotfix/SKILL.md) · [incident-fix](skills/operations/incident-fix/SKILL.md) · [post-mortem](skills/operations/post-mortem/SKILL.md) · [release-notes](skills/operations/release-notes/SKILL.md) |
 | **[database/](skills/database/README.md)** | [dbaudit](skills/database/dbaudit/SKILL.md) · [dbdesign](skills/database/dbdesign/SKILL.md) · [dbdiagram](skills/database/dbdiagram/SKILL.md) · [dbpropose](skills/database/dbpropose/SKILL.md) · [dbbuild](skills/database/dbbuild/SKILL.md) |
+| **[networking/](skills/networking/README.md)** | [netaudit](skills/networking/netaudit/SKILL.md) · [netdesign](skills/networking/netdesign/SKILL.md) · [netdiagram](skills/networking/netdiagram/SKILL.md) · [netpropose](skills/networking/netpropose/SKILL.md) · [netblueprint](skills/networking/netblueprint/SKILL.md) |
 
-The families are loosely coupled by design. `development` is a genuine pipeline where each stage checks the one before it; `containers` is an ordered pair; `operations` is a response chain — hotfix escalates to incident-fix, which hands its record to post-mortem — plus release-notes, which stands alone; `database` has five independent skills coordinated by an optional harness. Every skill also works entirely on its own.
+The families are loosely coupled by design. `development` is a genuine pipeline where each stage checks the one before it; `containers` is an ordered pair; `operations` is a response chain — hotfix escalates to incident-fix, which hands its record to post-mortem — plus release-notes, which stands alone; `database` and `networking` each have five independent skills coordinated by an optional harness. Every skill also works entirely on its own.
 
 **The family directories are scaffolding for reading this repo, nothing more.** The agent never sees them — it selects on each `SKILL.md`'s frontmatter `description`. When you take a skill, you take the skill folder; see [How to use](#how-to-use).
 
@@ -93,7 +95,7 @@ The loop's rules — read-only teardown, one verifier per finding, sticky refuta
 python3 harness/loop.py --repo ../my-service --test-cmd ".venv/bin/python -m pytest -q"
 ```
 
-The same folder holds three more: `fix.py` takes a bug report to a draft PR (the hotfix lane, or incident-fix's fix phase), `postmortem.py` turns a resolved incident log into a linted post-mortem with an owned follow-through, and the database workflow harness coordinates audit, design, diagram, and proposal stages. It's optional and Claude Code only; the skills don't depend on it.
+The same folder holds three more: `fix.py` takes a bug report to a draft PR (the hotfix lane, or incident-fix's fix phase), `postmortem.py` turns a resolved incident log into a linted post-mortem with an owned follow-through, and the database and network workflow harnesses coordinate audit, design, diagram, and proposal stages. It's optional and Claude Code only; the skills don't depend on it.
 
 ---
 
@@ -161,6 +163,28 @@ Accepted proposal:                                       dbbuild
 
 ---
 
+## networking
+
+Five independent skills, coordinated by [`harness/networkflow.py`](harness/networkflow.py) when the user wants a full or partial workflow.
+
+```
+Existing network: netaudit → netdesign → netdiagram (L3 + zones/flows [+ L1/L2]) → netpropose
+New network:                 netdesign → netdiagram (L3 + zones/flows [+ L1/L2]) → netpropose
+Accepted proposal:                                                    netblueprint
+```
+
+| Skill | What it does |
+|-------|--------------|
+| [netaudit](skills/networking/netaudit/SKILL.md) | Audits existing networks — IaC, device configs, k8s/compose networking, IP plans — recovering a `topology.json`, with a repeatable score and evidence-backed findings. |
+| [netdesign](skills/networking/netdesign/SKILL.md) | Designs a new network or revises an audited one: zones and flows, addressing plan, routing, services, failure domains. |
+| [netdiagram](skills/networking/netdiagram/SKILL.md) | Produces the canonical editable draw.io views — logical L3, segmentation, and physical L1/L2 when on-prem. |
+| [netpropose](skills/networking/netpropose/SKILL.md) | Assembles the recommendation, with cut-over sequencing, validation and rollback. |
+| [netblueprint](skills/networking/netblueprint/SKILL.md) | After acceptance, produces the final diagrams, a companion `network-design.md`, and the accepted `topology.json` for a separate IaC skill. Writes no IaC. |
+
+**Two lenses carry the theory:** computer networking (Kurose & Ross; Tanenbaum & Wetherall) and network science (Newman; Barabási) — articulation points, Menger connectivity, betweenness and percolation make "single point of failure" and "blast radius" computable. The harness redacts secrets before any model reads evidence, computes the graph metrics and address/flow checks in code (`netgraph.py`), scores by the database family's formula, and gates on score, open Critical/High findings, critical-pair connectivity ≥ 2, the 🔬 ratio, and usage. Blueprints need an explicitly accepted proposal, in a separate run.
+
+---
+
 ## Reference docs
 
 These carry no workflow of their own — the skill in the same folder links into them.
@@ -192,6 +216,15 @@ These carry no workflow of their own — the skill in the same folder links into
 | [detection-signals](skills/database/dbaudit/detection-signals.md) | dbaudit — grep/regex per anti-pattern, with engine notes |
 | [proposal](skills/database/dbpropose/proposal.md) | dbpropose — input contract, verdicts, topology, translation, target-schema and remediation skeletons |
 | [physical-design](skills/database/dbdesign/physical-design.md) | dbdesign — the PostgreSQL 18 physical standard |
+| [theory](skills/networking/netaudit/theory.md) | netaudit, netdesign, netpropose, netblueprint — networking principles §1–§16 (Kurose & Ross; Tanenbaum & Wetherall) |
+| [graph-theory](skills/networking/netaudit/graph-theory.md) | netaudit, netdesign, netpropose, netblueprint — the network-science lens G1–G12 (Newman; Barabási) |
+| [topology-modeling](skills/networking/netaudit/topology-modeling.md) | all five network skills — the `topology.json` contract, reverse-engineering, drills |
+| [scoring](skills/networking/netaudit/scoring.md) · [audit-lenses](skills/networking/netaudit/audit-lenses.md) · [detection-signals](skills/networking/netaudit/detection-signals.md) | netaudit — severity, confidence, formula, gate; cross-cutting lenses; grep per anti-pattern with platform notes |
+| [addressing](skills/networking/netaudit/addressing.md) · [segmentation](skills/networking/netaudit/segmentation.md) · [routing](skills/networking/netaudit/routing.md) · [services](skills/networking/netaudit/services.md) · [resilience](skills/networking/netaudit/resilience.md) · [security](skills/networking/netaudit/security.md) | netaudit — the per-domain rubrics |
+| [design-patterns](skills/networking/netdesign/design-patterns.md) | netdesign, netpropose — topology patterns, the addressing method, segmentation, routing, failure domains |
+| [diagram-conventions](skills/networking/netdiagram/diagram-conventions.md) | netdiagram, netpropose, netblueprint — the canonical views, glyphs, IDs, validation |
+| [proposal](skills/networking/netpropose/proposal.md) | netpropose — decisions by score band, cut-over sequencing |
+| [blueprint](skills/networking/netblueprint/blueprint.md) | netblueprint — package layout, the IaC handoff contract, the `network-design.md` template |
 
 Each doc lives in the folder of the skill that uses it, and nothing reaches across folders.
 
@@ -218,6 +251,10 @@ Any stage can optionally hand its **read-only or fresh-context** work to a subag
 | dbdesign | requirements mapping and model review | **the modeling decisions and target structure** |
 | dbdiagram | source-backed ER and relational views | **diagram semantics and layout** |
 | dbpropose | audit/design/diagram inputs | **the recommendation and prioritization** |
+| netaudit | per-network evidence reading and topology recovery | **scoring, the graph metrics, and the synthesis** |
+| netdesign | requirements and inventory mapping | **zones, addressing, routing and redundancy decisions** |
+| netdiagram | per-view drafting from the model | **view semantics and layout** |
+| netpropose | audit/design/diagram inputs | **the recommendation and cut-over order** |
 
 Each skill carries its own copy of the dispatch contract it needs, so the folders stay independently copyable — see [Conventions](#conventions).
 
@@ -233,7 +270,7 @@ Assertions are split: **capability** (does the stage do its job at all) from **d
 
 **Also not yet run:** `hotfix` (evals 8–11 — a Node service, a JVM service with no build tool, a Python script with no tests, and an outage it must route out) and `incident-fix` (evals 12–14 — a web app with feature flags, a batch job that corrupted rows, a library with no deploy step). Every production lever in those fixtures is a stub that records its calls, so "took no action without confirmation" is checked, not inferred.
 
-`acceptance-tests`, `dockerfile`, `release-notes`, `dbaudit`, `dbdesign`, `dbdiagram`, `dbpropose` and `dbbuild` have no eval.
+`acceptance-tests`, `dockerfile`, `release-notes`, the five database skills and the five networking skills have no eval.
 
 ## How to use
 
@@ -255,6 +292,9 @@ npx skills add izentenosmith/skills --skill hotfix incident-fix post-mortem rele
 
 # database — audit, design, diagram, propose, build
 npx skills add izentenosmith/skills --skill dbaudit dbdesign dbdiagram dbpropose dbbuild
+
+# networking — audit, design, diagram, propose, blueprint
+npx skills add izentenosmith/skills --skill netaudit netdesign netdiagram netpropose netblueprint
 ```
 
 **Everything:**
@@ -285,6 +325,11 @@ npx skills add izentenosmith/skills --skill '*'
 | | `npx skills add izentenosmith/skills --skill dbdiagram` |
 | | `npx skills add izentenosmith/skills --skill dbpropose` |
 | | `npx skills add izentenosmith/skills --skill dbbuild` |
+| networking | `npx skills add izentenosmith/skills --skill netaudit` |
+| | `npx skills add izentenosmith/skills --skill netdesign` |
+| | `npx skills add izentenosmith/skills --skill netdiagram` |
+| | `npx skills add izentenosmith/skills --skill netpropose` |
+| | `npx skills add izentenosmith/skills --skill netblueprint` |
 
 Any mix works too — `--skill` takes as many names as you give it.
 
@@ -299,7 +344,7 @@ Useful flags:
 
 `npx skills update` pulls newer versions of what you installed; `npx skills remove <name>` takes one out.
 
-The installer copies each skill folder whole, dereferencing the database skills' shared-doc symlinks, so every installed folder is self-contained. **It installs skills, not the [harness](harness/README.md)** — the Python orchestration in `harness/` (including `dbworkflow.py`) needs a clone.
+The installer copies each skill folder whole, dereferencing the database and networking skills' shared-doc symlinks, so every installed folder is self-contained. **It installs skills, not the [harness](harness/README.md)** — the Python orchestration in `harness/` (including `dbworkflow.py` and `networkflow.py`) needs a clone.
 
 ### Or copy by hand
 
@@ -319,11 +364,16 @@ The installer copies each skill folder whole, dereferencing the database skills'
    cp -RL skills/skills/database/dbdiagram      my-project/.claude/skills/
    cp -RL skills/skills/database/dbpropose      my-project/.claude/skills/
    cp -RL skills/skills/database/dbbuild        my-project/.claude/skills/
+   cp -RL skills/skills/networking/netaudit     my-project/.claude/skills/
+   cp -RL skills/skills/networking/netdesign    my-project/.claude/skills/
+   cp -RL skills/skills/networking/netdiagram   my-project/.claude/skills/
+   cp -RL skills/skills/networking/netpropose   my-project/.claude/skills/
+   cp -RL skills/skills/networking/netblueprint my-project/.claude/skills/
    ```
 
-   **Copy the skill folder, not the category folder.** `development/`, `containers/`, `operations/` and `database/` are scaffolding for reading this repo — the agent never sees them, and copying one wholesale just nests your skills a level too deep.
+   **Copy the skill folder, not the category folder.** `development/`, `containers/`, `operations/`, `database/` and `networking/` are scaffolding for reading this repo — the agent never sees them, and copying one wholesale just nests your skills a level too deep.
 
-   Skill folders are self-contained when installed. The database skill tree shares companion docs through relative symlinks; use `cp -RL` for those folders so each installed skill contains the referenced files.
+   Skill folders are self-contained when installed. The database and networking skill trees share companion docs through relative symlinks; use `cp -RL` for those folders so each installed skill contains the referenced files.
 
 3. **Invoke a skill** — either let the agent trigger it when your request matches its `description`, or call it explicitly:
 
@@ -334,11 +384,12 @@ The installer copies each skill folder whole, dereferencing the database skills'
    /hotfix                /incident-fix
    /release-notes         /post-mortem
    /dbaudit       /dbdesign       /dbdiagram       /dbpropose       /dbbuild
+   /netaudit      /netdesign      /netdiagram      /netpropose      /netblueprint
    ```
 
 Take one skill, take a family, or take them all. Every skill works on its own — `tdd` plans from scratch when there's no brief, `refactor-review` reviews any diff, `devils-advocate` tears down a change it didn't build, `post-mortem` reconstructs an incident in a system it has never seen. Where skills cross-link and the other one isn't installed, the prompt still names it, so you know what would have run.
 
-Each family has its own README with more detail: [development](skills/development/README.md) · [containers](skills/containers/README.md) · [operations](skills/operations/README.md) · [database](skills/database/README.md).
+Each family has its own README with more detail: [development](skills/development/README.md) · [containers](skills/containers/README.md) · [operations](skills/operations/README.md) · [database](skills/database/README.md) · [networking](skills/networking/README.md).
 
 ## Conventions
 

@@ -33,6 +33,20 @@ dbreview.py's stages (FAKE_DB):
   flags          good scores, but every object carries a 🔬 needs-data flag
   dead           good scores, but usage is unused
 
+netreview.py's stages (FAKE_NET):
+  good (default) two redundant firewalls in front of a managed VNet; every criterion satisfied
+  mixed          the network named `legacy` has a High finding and a weak criterion
+  spof           one firewall only, so the critical pair has node connectivity 1
+  nopairs        no critical pairs declared
+  flags          every object carries a 🔬 flag
+  dead           usage is decommissioned
+  badtopo        topology_json is not JSON (twice, so the correction round fails)
+
+networkflow.py's stages (FAKE_NF):
+  ok (default)   design → diagrams → proposal → blueprint, all in convention
+  badcidr        the diagram labels the networks with the wrong CIDR
+  nolegend       the diagram has no 'Network diagram conventions' legend
+
 Every call is appended to FAKE_CLAUDE_LOG as one JSON line: stage, iteration, argv, cwd.
 """
 import json
@@ -236,6 +250,90 @@ elif stage == "db-synthesis":
 elif stage == "db-propose":
     dbs = re.search(r"for \*\*(.+?)\*\* only", prompt).group(1)
     out = {"files": [{"name": "reuse-rework-register.md", "markdown": f"# Register\n\nProposed for: {dbs}\n"}]}
+
+elif stage.startswith(("net-", "nf-")):
+    def topology(redundant=True, pairs=True, status="recovered"):
+        ev = "main.tf"
+        nodes = [{"id": "internet", "kind": "internet", "zone": "internet", "site": "global", "attrs": {}, "evidence": f"{ev}:1"},
+                 {"id": "fw-a", "kind": "firewall", "zone": "edge", "site": "r1", "attrs": {}, "evidence": f"{ev}:10"},
+                 {"id": "vnet-hub", "kind": "vnet", "zone": "app", "site": "r1", "attrs": {"managed_ha": True}, "evidence": f"{ev}:2"},
+                 {"id": "snet-app", "kind": "subnet", "zone": "app", "site": "r1", "attrs": {}, "evidence": f"{ev}:5"}]
+        edges = [{"id": "e-inet-fwa", "a": "internet", "b": "fw-a", "kind": "l3-adjacency", "redundancy_group": None, "attrs": {}, "evidence": f"{ev}:11"},
+                 {"id": "e-fwa-hub", "a": "fw-a", "b": "vnet-hub", "kind": "l3-adjacency", "redundancy_group": None, "attrs": {}, "evidence": f"{ev}:12"},
+                 {"id": "e-hub-app", "a": "vnet-hub", "b": "snet-app", "kind": "l3-adjacency", "redundancy_group": None,
+                  "attrs": {"managed_ha": True}, "evidence": f"{ev}:5"}]
+        if redundant:
+            nodes.append({"id": "fw-b", "kind": "firewall", "zone": "edge", "site": "r1", "attrs": {}, "evidence": f"{ev}:20"})
+            edges += [{"id": "e-inet-fwb", "a": "internet", "b": "fw-b", "kind": "l3-adjacency", "redundancy_group": None, "attrs": {}, "evidence": f"{ev}:21"},
+                      {"id": "e-fwb-hub", "a": "fw-b", "b": "vnet-hub", "kind": "l3-adjacency", "redundancy_group": None, "attrs": {}, "evidence": f"{ev}:22"}]
+        return {"meta": {"name": "demo", "source_version": "test", "rubric": "v1.0", "stage": "audit", "status": status},
+                "nodes": nodes, "edges": edges,
+                "networks": [{"id": "vnet-hub", "cidr": "10.0.0.0/16", "parent": None, "purpose": "hub", "evidence": f"{ev}:2"},
+                             {"id": "snet-app", "cidr": "10.0.1.0/24", "parent": "vnet-hub", "purpose": "app", "evidence": f"{ev}:5"}],
+                "zones": [{"id": "internet", "trust": 0, "purpose": "untrusted"}, {"id": "edge", "trust": 1, "purpose": "edge"},
+                          {"id": "app", "trust": 2, "purpose": "app"}],
+                "flows": [{"id": "f-web", "from_zone": "internet", "to_zone": "edge", "proto": "tcp", "ports": "443", "action": "allow", "priority": 100, "evidence": f"{ev}:30"},
+                          {"id": "f-app", "from_zone": "edge", "to_zone": "app", "proto": "tcp", "ports": "8443", "action": "allow", "priority": 100, "evidence": f"{ev}:31"},
+                          {"id": "f-deny-edge", "from_zone": "*", "to_zone": "edge", "proto": "any", "ports": "*", "action": "deny", "priority": 4096, "evidence": f"{ev}:32"},
+                          {"id": "f-deny-app", "from_zone": "*", "to_zone": "app", "proto": "any", "ports": "*", "action": "deny", "priority": 4096, "evidence": f"{ev}:33"}],
+                "critical_pairs": [{"from": "internet", "to": "snet-app", "why": "storefront"}] if pairs else []}
+
+    def drawio(topo, cidr_ok=True, legend=True):
+        leg = '<mxCell id="deco-legend" value="Network diagram conventions — legend" vertex="1" parent="1"/>' if legend else ""
+        cidr = {n["id"]: n["cidr"] for n in topo["networks"]}
+        cells = []
+        for n in topo["nodes"]:
+            label = f"{n['id']}&lt;br&gt;{cidr[n['id']] if cidr_ok else '192.0.2.0/24'}" if n["id"] in cidr else n["id"]
+            cells.append(f'<mxCell id="{n["id"]}" value="{label}" vertex="1" parent="1"/>')
+        cells += [f'<mxCell id="{e["id"]}" edge="1" source="{e["a"]}" target="{e["b"]}" parent="1"/>' for e in topo["edges"]]
+        zones = [f'<mxCell id="{z["id"]}" value="{z["id"]} — trust {z["trust"]}" vertex="1" parent="1"/>' for z in topo["zones"]]
+        flows = [f'<mxCell id="{f["id"]}" value="{f["proto"]}/{f["ports"]}" edge="1" parent="1"/>'
+                 for f in topo["flows"] if f["action"] == "allow"]
+
+        def page(name, body):
+            return (f'<mxfile><diagram name="{name}"><mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/>'
+                    f'{leg}{"".join(body)}</root></mxGraphModel></diagram></mxfile>')
+        return {"logical-topology.drawio": page("Logical topology (L3)", cells),
+                "segmentation.drawio": page("Segmentation (zones and flows)", zones + flows)}
+
+    NET = os.environ.get("FAKE_NET", "good")
+    NF = os.environ.get("FAKE_NF", "ok")
+    if stage == "net-audit":
+        net = re.search(r"Audit the \*\*(.+?)\*\* network", prompt).group(1)
+        bad = NET == "mixed" and net == "legacy"
+        crit = [{"rubric": "segmentation", "criterion": "2 Not an any-any allow", "in_scope": 10,
+                 "satisfied": 4 if bad else 10, "proxy_only": False}]
+        findings = [{"id": "S-1", "object": "nsg-legacy", "severity": "High", "confidence": "decidable",
+                     "theory": "theory §11", "evidence": "main.tf:40", "summary": "broad source"}] if bad else []
+        if NET == "flags":
+            findings += [{"id": f"F-{i}", "object": f"r{i}", "severity": "Medium", "confidence": "needs-data",
+                          "theory": "§2", "evidence": "-", "summary": "utilization unknown"} for i in range(10)]
+        topo = topology(redundant=NET != "spof", pairs=NET != "nopairs")
+        out = {"usage_status": "decommissioned" if NET == "dead" else "in-use", "summary_md": f"# {net}\n\nSummary.",
+               "topology_json": json.dumps(topo) if NET != "badtopo" else "{not json",
+               "domains": [{"domain": "segmentation", "coverage": "all rules", "objects": 10,
+                            "evaluation_md": "# segmentation\n\nFindings.", "criteria": crit, "findings": findings}]}
+    elif stage == "net-synthesis":
+        out = {"markdown": "# Estate analysis\n\nPatterns.",
+               "coupling": [{"from": "legacy", "to": "prod", "via": "peering", "count": 1}]}
+    elif stage == "net-propose":
+        nets = re.search(r"for \*\*(.+?)\*\* only", prompt).group(1)
+        out = {"files": [{"name": "proposal.md", "markdown": f"# Proposal\n\nProposed for: {nets}\n"}]}
+    elif stage == "nf-design":
+        out = {"files": [{"name": "design.md", "content": "# Design\n\nHub with two firewalls."},
+                         {"name": "topology.json", "content": json.dumps(topology(status="proposed"))}]}
+    elif stage == "nf-diagram":
+        views = drawio(topology(status="proposed"), cidr_ok=NF != "badcidr", legend=NF != "nolegend")
+        out = {"files": [{"name": k, "content": v} for k, v in views.items()]}
+    elif stage == "nf-propose":
+        out = {"files": [{"name": "proposal.md", "content": "# Proposal\n\nAcceptance is required before netblueprint."}]}
+    elif stage == "nf-blueprint":
+        final = topology(status="accepted")
+        out = {"files": [{"name": "network-design.md", "content": "# Network design (accepted)\n"},
+                         {"name": "topology.json", "content": json.dumps(final)},
+                         *({"name": k, "content": v} for k, v in drawio(final).items())]}
+    else:
+        sys.exit(f"fake_claude: unknown stage {stage}")
 
 else:
     sys.exit(f"fake_claude: unknown stage {stage}")
