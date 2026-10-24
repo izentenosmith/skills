@@ -16,7 +16,9 @@ The contract is skills/networking/netaudit/topology-modeling.md. Computed here, 
   bridges;
 - **Menger connectivity** (G5) of each critical pair by unit-capacity max-flow, with every
   `attrs.shared_fate` group contracted to one node: an HA pair that fails together counts once. A pair
-  below --min-connectivity names the nodes and edges whose loss alone disconnects it;
+  below --min-connectivity names the nodes and edges whose loss alone disconnects it. An element with
+  `attrs.managed_ha: true` (a VNet's implicit router, a subnet attachment, a zone-redundant managed
+  gateway) is platform-redundant: never cut, never a finding — unless its evidence is `inferred:`;
 - **betweenness** (Brandes, G6), the degree distribution and hub concentration, and **robustness curves**
   (G9): the largest-component fraction as 0–50% of nodes are removed at random (seeded, averaged over
   --runs) or by attack (highest degree / highest betweenness first, ranked once on the intact graph);
@@ -130,6 +132,8 @@ def validate(t):
             if "attrs" in el and not isinstance(el["attrs"], dict):
                 errs.append(f"{where}: attrs must be an object")
                 continue
+            if not isinstance((el.get("attrs") or {}).get("managed_ha", False), bool):
+                errs.append(f"{where}: attrs.managed_ha must be true or false")
             if "id" in fields and el.get("id") in ids[key]:
                 errs.append(f"{where}: duplicate id")
             elif isinstance(el.get("id"), str):
@@ -334,11 +338,11 @@ def _maxflow(cap, s, t):
         flow += push
 
 
-def _flow_network(nodes, edges, S, T, split):
+def _flow_network(nodes, edges, S, T, split, managed_nodes=(), managed_edges=()):
     """Unit capacities. With `split`, every node but the endpoints is an in→out arc of capacity 1, and
     an edge is capacity 1 only between two endpoints (a direct path) — elsewhere its node already
-    bounds it, so a minimum cut names nodes. Returns the capacities and, per arc, the edge ids it
-    carries (parallel edges share an arc)."""
+    bounds it, so a minimum cut names nodes. A managed-HA node or edge is uncuttable (capacity INF).
+    Returns the capacities and, per arc, the edge ids it carries (parallel edges share an arc)."""
     cap, carries = collections.defaultdict(lambda: collections.defaultdict(int)), collections.defaultdict(list)
 
     def arc(u, v, c):
@@ -351,12 +355,12 @@ def _flow_network(nodes, edges, S, T, split):
     if split:
         for v in nodes:
             if v not in S and v not in T:
-                arc(("in", v), ("out", v), 1)
+                arc(("in", v), ("out", v), INF if v in managed_nodes else 1)
     for e, a, b in edges:
         if a != b:
-            direct = not split or {a, b} <= S | T
+            cuttable = e not in managed_edges and (not split or {a, b} <= S | T)
             for u, v in ((a, b), (b, a)):
-                arc(end(u, "out"), end(v, "in"), 1 if direct else INF)
+                arc(end(u, "out"), end(v, "in"), 1 if cuttable else INF)
                 carries[(end(u, "out"), end(v, "in"))].append(e)
     for v in S:
         arc(("source",), ("node", v), INF)
@@ -365,26 +369,28 @@ def _flow_network(nodes, edges, S, T, split):
     return cap, carries
 
 
-def connectivity(nodes, edges, sources, targets):
+def connectivity(nodes, edges, sources, targets, managed_nodes=(), managed_edges=()):
     """(node, edge) connectivity between two node sets by unit-capacity max-flow (Menger). Node
-    connectivity counts paths with no internal node in common; endpoints are never cut. None when
-    the sets meet."""
+    connectivity counts paths with no internal node in common; endpoints and managed-HA elements are
+    never cut, and a value ≥ INF means no finite cut exists. None when the sets meet."""
     S, T = set(sources), set(targets)
     if S & T:
         return None, None
-    return tuple(_maxflow(_flow_network(nodes, edges, S, T, split)[0], ("source",), ("sink",))
-                 for split in (True, False))
+    return tuple(_maxflow(_flow_network(nodes, edges, S, T, split, managed_nodes, managed_edges)[0],
+                          ("source",), ("sink",)) for split in (True, False))
 
 
-def min_cut(nodes, edges, sources, targets):
+def min_cut(nodes, edges, sources, targets, managed_nodes=(), managed_edges=()):
     """A minimum set of nodes and edges whose loss disconnects the sets: as many as the node
-    connectivity. Edges appear only where no internal node can be cut (a direct source–target edge).
-    Empty when the sets are already disconnected or meet."""
+    connectivity. Edges appear only where no internal node can be cut (a direct source–target edge);
+    managed-HA elements never appear. Empty when the sets are already disconnected, meet, or have
+    no finite cut."""
     S, T = set(sources), set(targets)
     if S & T:
         return []
-    cap, carries = _flow_network(nodes, edges, S, T, True)
-    _maxflow(cap, ("source",), ("sink",))
+    cap, carries = _flow_network(nodes, edges, S, T, True, managed_nodes, managed_edges)
+    if _maxflow(cap, ("source",), ("sink",)) >= INF:
+        return []
     side, queue = {("source",)}, collections.deque([("source",)])
     while queue:
         u = queue.popleft()
@@ -418,14 +424,15 @@ def _reaches(adj, S, T, skip_node=None, skip_edge=None):
     return False
 
 
-def separators(nodes, edges, sources, targets):
+def separators(nodes, edges, sources, targets, managed_nodes=(), managed_edges=()):
     """The nodes and edges whose loss alone disconnects every source from every target. Each one
-    must be a cut vertex or a bridge of the whole graph, so only those are tried."""
+    must be a cut vertex or a bridge of the whole graph, so only those are tried; managed-HA ones
+    are never single points."""
     S, T = set(sources), set(targets)
     aps, bridges = cut_structure(nodes, edges)
     adj = _adjacency(nodes, edges)
-    return ([v for v in aps if v not in S and v not in T and not _reaches(adj, S, T, skip_node=v)],
-            [e for e in bridges if not _reaches(adj, S, T, skip_edge=e)])
+    return ([v for v in aps if v not in S | T | set(managed_nodes) and not _reaches(adj, S, T, skip_node=v)],
+            [e for e in bridges if e not in managed_edges and not _reaches(adj, S, T, skip_edge=e)])
 
 
 def giant_curve(nodes, adj, order, fractions=FRACTIONS):
@@ -478,7 +485,9 @@ def _r(xs, nd=4):
     return [round(x, nd) for x in xs]
 
 
-def graph_metrics(nodes, edges, *, seed=0, runs=20):
+def graph_metrics(nodes, edges, *, seed=0, runs=20, managed_nodes=(), managed_edges=()):
+    """Robustness may still remove managed-HA nodes (platforms fail too) and ranks them normally; only
+    the cut-vertex and bridge lists set them apart."""
     comps = components(nodes, edges)
     aps, bridges = cut_structure(nodes, edges)
     bc, deg = betweenness(nodes, edges), degrees(nodes, edges)
@@ -489,8 +498,10 @@ def graph_metrics(nodes, edges, *, seed=0, runs=20):
         "component_sizes": [len(c) for c in comps],
         "largest_component_fraction": round(len(comps[0]) / n, 4) if n else 0.0,
         "component_members": comps if len(comps) > 1 else [],
-        "articulation_points": aps,
-        "bridges": bridges,
+        "articulation_points": [v for v in aps if v not in managed_nodes],
+        "managed_ha_cut_vertices": [v for v in aps if v in managed_nodes],
+        "bridges": [e for e in bridges if e not in managed_edges],
+        "managed_ha_bridges": [e for e in bridges if e in managed_edges],
         "betweenness": {v: round(bc[v], 4) for v in sorted(nodes, key=lambda v: (-bc[v], v))},
         "degree": {"distribution": {str(k): c for k, c in sorted(collections.Counter(deg.values()).items())},
                    "max": max(deg.values(), default=0), "mean": round(ends / n, 4) if n else 0.0,
@@ -504,6 +515,12 @@ def graph_metrics(nodes, edges, *, seed=0, runs=20):
 
 def _inferred(evidence):
     return str(evidence or "").strip().lower().startswith("inferred")
+
+
+def managed_ha(el):
+    """A provider-managed redundant construct. The claim must rest on evidence: inferred is not managed."""
+    return isinstance(el.get("attrs"), dict) and el["attrs"].get("managed_ha") is True and \
+        not _inferred(el.get("evidence"))
 
 
 def _slug(s):
@@ -525,6 +542,11 @@ def resilience(t, nodes, edges, min_k):
     for v, g in rep.items():
         groups[g].append(v)
     cnodes, cedges = contract(list(nodes), edges, rep)
+    # a shared-fate group is managed only when every member is
+    managed_nodes = {v for v in nodes if v not in rep and managed_ha(nodes[v])} | \
+        {g for g, members in groups.items() if all(managed_ha(nodes[m]) for m in members)}
+    managed_edges = {e["id"] for e in t["edges"] if managed_ha(e)}
+    floor = max(min_k, 2)          # what an uncuttable pair reports: at least the target, never below 2
     in_zone = collections.defaultdict(list)
     for v, n in nodes.items():
         in_zone[n.get("zone")].append(v)
@@ -537,10 +559,16 @@ def resilience(t, nodes, edges, min_k):
     for cp in _items(t, "critical_pairs"):
         S, T = resolve(cp["from"]), resolve(cp["to"])
         label = f"{cp['from']} → {cp['to']}"
-        k_node, k_edge = connectivity(cnodes, cedges, S, T)
-        sep_nodes, sep_edges = separators(cnodes, cedges, S, T) if k_node == 1 else ([], [])
+        k_node, k_edge = connectivity(cnodes, cedges, S, T, managed_nodes, managed_edges)
+        uncuttable = k_node >= INF
+        k_node, k_edge = (floor if k >= INF else k for k in (k_node, k_edge))
+        # with managed-HA elements uncuttable, edge connectivity can fall below node connectivity
+        sep_nodes, sep_edges = separators(cnodes, cedges, S, T, managed_nodes, managed_edges) \
+            if 1 in (k_node, k_edge) else ([], [])
+        sep_nodes, sep_edges = (sep_nodes if k_node == 1 else []), (sep_edges if k_edge == 1 else [])
         pairs.append({"from": cp["from"], "to": cp["to"], "why": cp.get("why", ""), "node_connectivity": k_node,
-                      "edge_connectivity": k_edge, "cut_set": min_cut(cnodes, cedges, S, T),
+                      "edge_connectivity": k_edge, "uncuttable": uncuttable,
+                      "cut_set": min_cut(cnodes, cedges, S, T, managed_nodes, managed_edges),
                       "single_points": sep_nodes, "bridges": sep_edges})
         ends = [nodes[v] for v in sorted({v for x in (cp["from"], cp["to"])
                                            for v in ([x] if x in nodes else in_zone[x])})]
@@ -548,12 +576,12 @@ def resilience(t, nodes, edges, min_k):
             out.append(finding(f"NG-CUT-{_slug(cp['from'])}-{_slug(cp['to'])}", f"critical pair {label}", "High",
                                "cut", ends, f"No path joins {label} in the model ({cp.get('why') or 'critical pair'}): "
                                "either the evidence is missing a link or the service has none.", confidence="proxy"))
-        elif k_node == 1 and min_k > 1:
-            for v in sep_nodes:
+        elif 1 in (k_node, k_edge):
+            for v in sep_nodes if min_k > 1 else []:
                 spof[v].append(label)
-            for e in sep_edges:
+            for e in sep_edges if min_k > 1 else []:
                 cut_edges[e].append(label)
-        elif k_node < min_k:
+        elif min(k_node, k_edge) < min_k:
             out.append(finding(f"NG-CONN-{_slug(cp['from'])}-{_slug(cp['to'])}", f"critical pair {label}", "Medium",
                                "conn", ends, f"{label} has node connectivity {k_node} and edge connectivity "
                                f"{k_edge}, below the target of {min_k}."))
@@ -713,7 +741,9 @@ def analyze(topology, *, seed=0, runs=20, min_connectivity=2):
     edges = [(e["id"], e["a"], e["b"]) for e in t["edges"]]
     ids = list(nodes)
     metrics = {"name": t["meta"]["name"], "nodes": len(ids), "edges": sum(a != b for _, a, b in edges)}
-    metrics.update(graph_metrics(ids, edges, seed=seed, runs=runs))
+    metrics.update(graph_metrics(ids, edges, seed=seed, runs=runs,
+                                 managed_nodes={v for v, n in nodes.items() if managed_ha(n)},
+                                 managed_edges={e["id"] for e in t["edges"] if managed_ha(e)}))
     component_of = {v: i for i, comp in enumerate(components(ids, edges)) for v in comp}
     pairs, shared_fate, findings = resilience(t, nodes, edges, min_connectivity)
     metrics["shared_fate"] = shared_fate
@@ -741,6 +771,8 @@ def render_md(result):
            f"holding {m['largest_component_fraction']:.0%} of nodes.", "",
            f"- **Articulation points (G4):** {', '.join(m['articulation_points']) or 'none'}",
            f"- **Bridges (G4):** {', '.join(m['bridges']) or 'none'}",
+           f"- **Managed-HA (platform-redundant, never a finding):** cut vertices "
+           f"{', '.join(m['managed_ha_cut_vertices']) or 'none'}; bridges {', '.join(m['managed_ha_bridges']) or 'none'}",
            f"- **Hub concentration:** {m['hub_concentration']:.0%} of edge endpoints sit on the top "
            f"{len(deg['hub_nodes'])} node(s) ({', '.join(deg['hub_nodes'])}); max degree {deg['max']}, "
            f"mean {deg['mean']}",
@@ -752,7 +784,7 @@ def render_md(result):
         out += ["| Pair | Why | Node conn. | Edge conn. | Minimum cut | Single points | Bridges |",
                 "|---|---|---|---|---|---|---|"]
         out += [f"| {_cell(p['from'])} → {_cell(p['to'])} | {_cell(p['why'])} | {p['node_connectivity']} | "
-                f"{p['edge_connectivity']} | {', '.join(p['cut_set']) or '—'} | {', '.join(p['single_points']) or '—'} | "
+                f"{p['edge_connectivity']} | {', '.join(p['cut_set']) or ('uncuttable' if p['uncuttable'] else '—')} | {', '.join(p['single_points']) or '—'} | "
                 f"{', '.join(p['bridges']) or '—'} |"
                 for p in m["critical_pairs"]]
     else:

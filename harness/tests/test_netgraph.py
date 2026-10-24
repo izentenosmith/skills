@@ -145,7 +145,8 @@ class Resilience(unittest.TestCase):
         m = NG.analyze(uplink(ha=True))["metrics"]
         self.assertEqual(m["critical_pairs"][0] | {"why": None, "single_points": None, "bridges": None},
                          {"from": "users", "to": "internet", "why": None, "node_connectivity": 2,
-                          "edge_connectivity": 2, "cut_set": ["r1", "r2"], "single_points": None, "bridges": None})
+                          "edge_connectivity": 2, "uncuttable": False, "cut_set": ["r1", "r2"],
+                          "single_points": None, "bridges": None})
         self.assertEqual((m["articulation_points"], m["bridges"], m["components"]), ([], [], 1))   # a 4-cycle
         self.assertIsInstance(m["hub_concentration"], float)
         self.assertEqual(set(m["betweenness"]), {"users", "internet", "r1", "r2"})
@@ -171,6 +172,64 @@ class Resilience(unittest.TestCase):
         r = NG.analyze(t)
         self.assertEqual(ids(r, "NG-SPOF"), ["NG-SPOF-r1"])
         self.assertEqual(ids(r, "NG-BRIDGE"), ["NG-BRIDGE-e-r1-isp"])  # users–r1 alone doesn't cut the zone
+
+
+def hub(vnet_managed=True, attach_managed=True, vnet_evidence=None):
+    """internet — fw-a, fw-b — vnet-hub — snet-app, the attachment and the VNet router platform-managed."""
+    nodes = [node("internet", "internet", zone="internet"), node("fw-a", "firewall"), node("fw-b", "firewall"),
+             node("vnet-hub", "vnet", vnet_evidence, managed_ha=vnet_managed), node("snet-app", "subnet")]
+    edges = [edge("i-a", "internet", "fw-a"), edge("i-b", "internet", "fw-b"),
+             edge("a-hub", "fw-a", "vnet-hub", "l3-adjacency"), edge("b-hub", "fw-b", "vnet-hub", "l3-adjacency"),
+             edge("attach", "vnet-hub", "snet-app", "l3-adjacency")]
+    edges[-1]["attrs"]["managed_ha"] = attach_managed
+    return topo(nodes, edges, critical_pairs=[{"from": "internet", "to": "snet-app", "why": "customers"}])
+
+
+class ManagedHA(unittest.TestCase):
+    def pair(self, r):
+        p = r["metrics"]["critical_pairs"][0]
+        return p["node_connectivity"], p["edge_connectivity"]
+
+    def test_a_managed_vnet_and_attachment_are_not_spofs(self):
+        r = NG.analyze(hub())
+        self.assertEqual(self.pair(r), (2, 2))
+        self.assertEqual(r["findings"], [])
+        m = r["metrics"]
+        self.assertEqual((m["articulation_points"], m["managed_ha_cut_vertices"]), ([], ["vnet-hub"]))
+        self.assertEqual((m["bridges"], m["managed_ha_bridges"]), ([], ["attach"]))
+        self.assertEqual(m["critical_pairs"][0]["cut_set"], ["fw-a", "fw-b"])
+
+    def test_an_unmanaged_vnet_is_a_spof_again(self):
+        r = NG.analyze(hub(vnet_managed=False))
+        self.assertEqual(self.pair(r), (1, 2))
+        self.assertEqual([(f["id"], f["severity"]) for f in r["findings"]], [("NG-SPOF-vnet-hub", "High")])
+        self.assertEqual(r["metrics"]["articulation_points"], ["vnet-hub"])
+
+    def test_an_unmanaged_attachment_is_a_bridge(self):
+        r = NG.analyze(hub(attach_managed=False))
+        self.assertEqual(self.pair(r), (2, 1))
+        self.assertEqual(ids(r), ["NG-BRIDGE-attach"])
+
+    def test_an_inferred_managed_claim_is_ignored(self):
+        r = NG.analyze(hub(vnet_evidence="inferred: Azure VNets are redundant"))
+        self.assertEqual(ids(r), ["NG-SPOF-vnet-hub"])
+        self.assertEqual(r["metrics"]["managed_ha_cut_vertices"], [])
+
+    def test_an_all_managed_path_is_uncuttable_and_reports_the_target(self):
+        t = hub()
+        t["critical_pairs"] = [{"from": "vnet-hub", "to": "snet-app", "why": "attachment only"}]
+        p = NG.analyze(t, min_connectivity=3)["metrics"]["critical_pairs"][0]
+        self.assertEqual((p["node_connectivity"], p["edge_connectivity"], p["uncuttable"], p["cut_set"]),
+                         (3, 3, True, []))
+
+    def test_robustness_still_removes_managed_nodes(self):
+        self.assertEqual(NG.analyze(hub())["metrics"]["robustness"],
+                         NG.analyze(hub(vnet_managed=False))["metrics"]["robustness"])
+
+    def test_managed_ha_must_be_a_boolean(self):
+        t = hub()
+        t["nodes"][3]["attrs"]["managed_ha"] = "yes"
+        self.assertIn("managed_ha must be true or false", "\n".join(NG.validate(t)))
 
 
 def two_spokes(peered):
