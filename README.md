@@ -1,6 +1,6 @@
 # Skills
 
-A collection of repo-agnostic AI coding agent skills — taking a feature from a vague idea to reviewed, tested code, packaging it to run, dealing with it once it's live, and grading the database and the network underneath it. Each skill lives in its own folder as a `SKILL.md` file with YAML frontmatter (`name` + `description`) that the agent loads on demand when the work matches.
+A collection of repo-agnostic AI coding agent skills — taking a feature from a vague idea to reviewed, tested code, packaging it to run, dealing with it once it's live, grading the database and the network underneath it, and reviewing the infrastructure code and pipelines that ship it. Each skill lives in its own folder as a `SKILL.md` file with YAML frontmatter (`name` + `description`) that the agent loads on demand when the work matches.
 
 Works with [Cursor](https://www.cursor.com/) and [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
 
@@ -10,7 +10,7 @@ Inspired by [mattpocock/skills](https://github.com/mattpocock/skills).
 
 ## What's in here
 
-Five families of skills under `skills/` — the first three in the order work actually moves through them, the last two for the database and the network underneath — plus a harness that runs the development pipeline's closing loop as code, and the evals that measure the skills.
+Six families of skills under `skills/` — the first three in the order work actually moves through them, then the database, the network, and the infrastructure code and pipelines underneath — plus a harness that runs the development pipeline's closing loop as code, and the evals that measure the skills.
 
 ```
 skills/
@@ -19,6 +19,7 @@ skills/
   operations/       live with it          hotfix → incident-fix → post-mortem · release-notes
   database/         audit, design, diagram, propose
   networking/       audit, design, diagram, propose, blueprint
+  infrastructure/   review, design, propose   terraform · pipelines
 harness/            the skills' rules as code: the closing loop, bug → PR, incident → post-mortem, DB and network audit → proposal
 evals/              seeded fixtures, scored assertions, the recorded benchmark
 ```
@@ -30,8 +31,9 @@ evals/              seeded fixtures, scored assertions, the recorded benchmark
 | **[operations/](skills/operations/README.md)** | [hotfix](skills/operations/hotfix/SKILL.md) · [incident-fix](skills/operations/incident-fix/SKILL.md) · [post-mortem](skills/operations/post-mortem/SKILL.md) · [release-notes](skills/operations/release-notes/SKILL.md) |
 | **[database/](skills/database/README.md)** | [dbaudit](skills/database/dbaudit/SKILL.md) · [dbdesign](skills/database/dbdesign/SKILL.md) · [dbdiagram](skills/database/dbdiagram/SKILL.md) · [dbpropose](skills/database/dbpropose/SKILL.md) · [dbbuild](skills/database/dbbuild/SKILL.md) |
 | **[networking/](skills/networking/README.md)** | [netaudit](skills/networking/netaudit/SKILL.md) · [netdesign](skills/networking/netdesign/SKILL.md) · [netdiagram](skills/networking/netdiagram/SKILL.md) · [netpropose](skills/networking/netpropose/SKILL.md) · [netblueprint](skills/networking/netblueprint/SKILL.md) |
+| **[infrastructure/](skills/infrastructure/README.md)** | [terraform](skills/infrastructure/terraform/SKILL.md) · [pipelines](skills/infrastructure/pipelines/SKILL.md) |
 
-The families are loosely coupled by design. `development` is a genuine pipeline where each stage checks the one before it; `containers` is an ordered pair; `operations` is a response chain — hotfix escalates to incident-fix, which hands its record to post-mortem — plus release-notes, which stands alone; `database` and `networking` each have five independent skills coordinated by an optional harness. Every skill also works entirely on its own.
+The families are loosely coupled by design. `development` is a genuine pipeline where each stage checks the one before it; `containers` is an ordered pair; `operations` is a response chain — hotfix escalates to incident-fix, which hands its record to post-mortem — plus release-notes, which stands alone; `database` and `networking` each have five independent skills coordinated by an optional harness; `infrastructure` has two skills that each run review → design → propose as modes of one skill. Every skill also works entirely on its own.
 
 **The family directories are scaffolding for reading this repo, nothing more.** The agent never sees them — it selects on each `SKILL.md`'s frontmatter `description`. When you take a skill, you take the skill folder; see [How to use](#how-to-use).
 
@@ -185,6 +187,24 @@ Accepted proposal:                                                    netbluepri
 
 ---
 
+## infrastructure
+
+Two skills, each with three modes — **Review** (findings, a 0–10 score and a gate), **Design** (the target), **Propose** (a sequenced migration).
+
+```
+terraform   code · state · modules · versions · security · change safety · apply path
+pipelines   flow · feedback · release · security & supply chain · environments · IaC delivery
+```
+
+| Skill | What it does |
+|-------|--------------|
+| [terraform](skills/infrastructure/terraform/SKILL.md) | Reviews Terraform/OpenTofu codebases across six domains, recovering a state map and module graph; designs layouts, state boundaries, module interfaces and environment models; proposes migrations where no resource is recreated by accident (`moved`/`import`/`removed`, expected plan of zero adds and destroys). Never touches a real backend. |
+| [pipelines](skills/infrastructure/pipelines/SKILL.md) | Reviews CI/CD across flow, feedback, release, security, environments and IaC delivery, recovering the value stream from commit to production; designs the deployment pipeline (stage contracts, build-once promotion, release strategy, security model); proposes changes in an order that never takes the path to production down. Never triggers or approves a real CI run. |
+
+**The theory comes from six books:** *Continuous Delivery*, *The DevOps Handbook*, *Site Reliability Engineering*, *Infrastructure as Code*, *The Terraform Book* and the AWS Terraform provider best practices — distilled into T1–T22 and P1–P22, and every finding cites one. Scoring uses the database and networking formula. The two skills meet at the apply path: terraform grades *whether* each root has a safe path to apply; pipelines designs it.
+
+---
+
 ## Reference docs
 
 These carry no workflow of their own — the skill in the same folder links into them.
@@ -225,6 +245,12 @@ These carry no workflow of their own — the skill in the same folder links into
 | [diagram-conventions](skills/networking/netdiagram/diagram-conventions.md) | netdiagram, netpropose, netblueprint — the canonical views, glyphs, IDs, validation |
 | [proposal](skills/networking/netpropose/proposal.md) | netpropose — decisions by score band, cut-over sequencing |
 | [blueprint](skills/networking/netblueprint/blueprint.md) | netblueprint — package layout, the IaC handoff contract, the `network-design.md` template |
+| [theory](skills/infrastructure/terraform/theory.md) · [theory](skills/infrastructure/pipelines/theory.md) | terraform (T1–T22) and pipelines (P1–P22) — IaC, Continuous Delivery, DevOps Handbook and SRE principles |
+| [review-rubric](skills/infrastructure/terraform/review-rubric.md) · [review-rubric](skills/infrastructure/pipelines/review-rubric.md) | terraform and pipelines — the six domains each: 🟢, 🔴 anti-patterns, checklists |
+| [detection-signals](skills/infrastructure/terraform/detection-signals.md) · [detection-signals](skills/infrastructure/pipelines/detection-signals.md) | terraform (AWS/azurerm/google) and pipelines (GHA/GitLab/Azure/Jenkins/CircleCI) — grep per anti-pattern |
+| [scoring](skills/infrastructure/terraform/scoring.md) · [scoring](skills/infrastructure/pipelines/scoring.md) | terraform and pipelines — severity, confidence, formula, gate, templates |
+| [design-patterns](skills/infrastructure/terraform/design-patterns.md) · [design-patterns](skills/infrastructure/pipelines/design-patterns.md) | terraform (layouts, state, modules, environments) and pipelines (reference pipeline, release strategies, security model, IaC delivery) |
+| [proposal](skills/infrastructure/terraform/proposal.md) · [proposal](skills/infrastructure/pipelines/proposal.md) | terraform (no-recreate rule) and pipelines (keep-prod-up sequencing) — decisions and migration order |
 
 Each doc lives in the folder of the skill that uses it, and nothing reaches across folders.
 
@@ -255,6 +281,8 @@ Any stage can optionally hand its **read-only or fresh-context** work to a subag
 | netdesign | requirements and inventory mapping | **zones, addressing, routing and redundancy decisions** |
 | netdiagram | per-view drafting from the model | **view semantics and layout** |
 | netpropose | audit/design/diagram inputs | **the recommendation and cut-over order** |
+| terraform | per-codebase inventory and evaluation in an estate review | **scoring, the gate, state boundaries and the migration sequence** |
+| pipelines | per-repo inventory and evaluation in an estate review | **scoring, the gate, the stage chain and the migration sequence** |
 
 Each skill carries its own copy of the dispatch contract it needs, so the folders stay independently copyable — see [Conventions](#conventions).
 
@@ -270,7 +298,7 @@ Assertions are split: **capability** (does the stage do its job at all) from **d
 
 **Also not yet run:** `hotfix` (evals 8–11 — a Node service, a JVM service with no build tool, a Python script with no tests, and an outage it must route out) and `incident-fix` (evals 12–14 — a web app with feature flags, a batch job that corrupted rows, a library with no deploy step). Every production lever in those fixtures is a stub that records its calls, so "took no action without confirmation" is checked, not inferred.
 
-`acceptance-tests`, `dockerfile`, `release-notes`, the five database skills and the five networking skills have no eval.
+`acceptance-tests`, `dockerfile`, `release-notes`, the five database skills, the five networking skills, `terraform` and `pipelines` have no eval.
 
 ## How to use
 
@@ -295,6 +323,9 @@ npx skills add izentenosmith/skills --skill dbaudit dbdesign dbdiagram dbpropose
 
 # networking — audit, design, diagram, propose, blueprint
 npx skills add izentenosmith/skills --skill netaudit netdesign netdiagram netpropose netblueprint
+
+# infrastructure — terraform and pipelines (review, design, propose)
+npx skills add izentenosmith/skills --skill terraform pipelines
 ```
 
 **Everything:**
@@ -330,6 +361,8 @@ npx skills add izentenosmith/skills --skill '*'
 | | `npx skills add izentenosmith/skills --skill netdiagram` |
 | | `npx skills add izentenosmith/skills --skill netpropose` |
 | | `npx skills add izentenosmith/skills --skill netblueprint` |
+| infrastructure | `npx skills add izentenosmith/skills --skill terraform` |
+| | `npx skills add izentenosmith/skills --skill pipelines` |
 
 Any mix works too — `--skill` takes as many names as you give it.
 
@@ -369,9 +402,11 @@ The installer copies each skill folder whole, dereferencing the database and net
    cp -RL skills/skills/networking/netdiagram   my-project/.claude/skills/
    cp -RL skills/skills/networking/netpropose   my-project/.claude/skills/
    cp -RL skills/skills/networking/netblueprint my-project/.claude/skills/
+   cp -r  skills/skills/infrastructure/terraform my-project/.claude/skills/
+   cp -r  skills/skills/infrastructure/pipelines my-project/.claude/skills/
    ```
 
-   **Copy the skill folder, not the category folder.** `development/`, `containers/`, `operations/`, `database/` and `networking/` are scaffolding for reading this repo — the agent never sees them, and copying one wholesale just nests your skills a level too deep.
+   **Copy the skill folder, not the category folder.** `development/`, `containers/`, `operations/`, `database/`, `networking/` and `infrastructure/` are scaffolding for reading this repo — the agent never sees them, and copying one wholesale just nests your skills a level too deep.
 
    Skill folders are self-contained when installed. The database and networking skill trees share companion docs through relative symlinks; use `cp -RL` for those folders so each installed skill contains the referenced files.
 
@@ -385,11 +420,12 @@ The installer copies each skill folder whole, dereferencing the database and net
    /release-notes         /post-mortem
    /dbaudit       /dbdesign       /dbdiagram       /dbpropose       /dbbuild
    /netaudit      /netdesign      /netdiagram      /netpropose      /netblueprint
+   /terraform     /pipelines
    ```
 
 Take one skill, take a family, or take them all. Every skill works on its own — `tdd` plans from scratch when there's no brief, `refactor-review` reviews any diff, `devils-advocate` tears down a change it didn't build, `post-mortem` reconstructs an incident in a system it has never seen. Where skills cross-link and the other one isn't installed, the prompt still names it, so you know what would have run.
 
-Each family has its own README with more detail: [development](skills/development/README.md) · [containers](skills/containers/README.md) · [operations](skills/operations/README.md) · [database](skills/database/README.md) · [networking](skills/networking/README.md).
+Each family has its own README with more detail: [development](skills/development/README.md) · [containers](skills/containers/README.md) · [operations](skills/operations/README.md) · [database](skills/database/README.md) · [networking](skills/networking/README.md) · [infrastructure](skills/infrastructure/README.md).
 
 ## Conventions
 
