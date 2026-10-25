@@ -1,0 +1,13 @@
+{
+  "name": "storefront-api",
+  "version": "3.4.0",
+  "private": true,
+  "scripts": {
+    "start": "node src/server.js",
+    "lint": "eslint src test",
+    "test": "node --test test/unit",
+    "test:e2e": "node --test test/e2e",
+    "build": "echo 'no build step: plain JS'"
+  },
+  "engines": { "node": ">=22" }
+}

@@ -1,0 +1,47 @@
+<mxfile host="app.diagrams.net">
+  <diagram id="logical" name="Logical topology (L3)">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" page="1">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="deco-title" value="contoso-prod — Logical topology (L3) — proposed" style="text;fontSize=16;" vertex="1" parent="1"><mxGeometry x="20" y="10" width="600" height="30" as="geometry"/></mxCell>
+        <mxCell id="deco-legend" value="Network diagram conventions: container = network (name + CIDR); solid double arrow = peering; dashed = VPN; dotted = route steering; dashed outline = inferred" style="text;whiteSpace=wrap;fontSize=11;" vertex="1" parent="1"><mxGeometry x="20" y="700" width="600" height="60" as="geometry"/></mxCell>
+        <mxCell id="deco-provenance" value="Source: topology.json (design 2026-10-22 (rev 3))" style="text;fontSize=11;" vertex="1" parent="1"><mxGeometry x="640" y="700" width="300" height="30" as="geometry"/></mxCell>
+        <mxCell id="vnet-hub" value="vnet-hub&#xa;10.0.0.0/16" style="rounded=1;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="20" y="80" width="140" height="60" as="geometry"/></mxCell>
+        <mxCell id="snet-fw" value="snet-fw&#xa;10.0.1.0/26" style="rounded=1;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="170" y="80" width="140" height="60" as="geometry"/></mxCell>
+        <mxCell id="snet-gw" value="snet-gw&#xa;10.0.2.0/27" style="rounded=1;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="320" y="80" width="140" height="60" as="geometry"/></mxCell>
+        <mxCell id="snet-bastion" value="snet-bastion&#xa;10.0.3.0/26" style="rounded=1;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="470" y="80" width="140" height="60" as="geometry"/></mxCell>
+        <mxCell id="vnet-prod" value="vnet-prod&#xa;10.1.0.0/16" style="rounded=1;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="620" y="80" width="140" height="60" as="geometry"/></mxCell>
+        <mxCell id="snet-web" value="snet-web&#xa;10.1.1.0/24" style="rounded=1;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="770" y="80" width="140" height="60" as="geometry"/></mxCell>
+        <mxCell id="snet-app" value="snet-app&#xa;10.1.2.0/24" style="rounded=1;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="920" y="80" width="140" height="60" as="geometry"/></mxCell>
+        <mxCell id="snet-data" value="snet-data&#xa;10.1.3.0/24" style="rounded=1;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="1070" y="80" width="140" height="60" as="geometry"/></mxCell>
+        <mxCell id="vnet-analytics" value="vnet-analytics&#xa;10.3.0.0/16" style="rounded=1;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="1220" y="80" width="140" height="60" as="geometry"/></mxCell>
+        <mxCell id="snet-analytics" value="snet-analytics&#xa;10.3.1.0/24" style="rounded=1;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="1370" y="80" width="140" height="60" as="geometry"/></mxCell>
+        <mxCell id="lan-onprem" value="lan-onprem&#xa;10.20.0.0/16" style="rounded=1;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="1520" y="80" width="140" height="60" as="geometry"/></mxCell>
+        <mxCell id="internet" value="internet" style="shape=mxgraph.azure.firewall;dashed=1;" vertex="1" parent="1"><mxGeometry x="20" y="300" width="80" height="60" as="geometry"/></mxCell>
+        <mxCell id="afw-hub" value="afw-hub" style="shape=mxgraph.azure.firewall;" vertex="1" parent="1"><mxGeometry x="140" y="300" width="80" height="60" as="geometry"/></mxCell>
+        <mxCell id="vgw-hub" value="vgw-hub" style="shape=mxgraph.azure.firewall;" vertex="1" parent="1"><mxGeometry x="260" y="300" width="80" height="60" as="geometry"/></mxCell>
+        <mxCell id="agw-web" value="agw-web" style="shape=mxgraph.azure.firewall;" vertex="1" parent="1"><mxGeometry x="380" y="300" width="80" height="60" as="geometry"/></mxCell>
+        <mxCell id="onprem-dc" value="onprem-dc" style="shape=mxgraph.azure.firewall;dashed=1;" vertex="1" parent="1"><mxGeometry x="500" y="300" width="80" height="60" as="geometry"/></mxCell>
+        <mxCell id="e-internet-agw" value="l3-adjacency" style="endArrow=none;" edge="1" parent="1" source="internet" target="agw-web"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e-agw-web" value="l3-adjacency" style="endArrow=none;" edge="1" parent="1" source="agw-web" target="snet-web"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e-fw-snetfw" value="l3-adjacency" style="endArrow=none;" edge="1" parent="1" source="afw-hub" target="snet-fw"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e-vgw-snetgw" value="l3-adjacency" style="endArrow=none;" edge="1" parent="1" source="vgw-hub" target="snet-gw"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e-peer-hub-prod" value="peering" style="endArrow=none;" edge="1" parent="1" source="vnet-hub" target="vnet-prod"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e-peer-hub-analytics" value="peering" style="endArrow=none;" edge="1" parent="1" source="vnet-hub" target="vnet-analytics"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e-vpn-onprem-1" value="vpn" style="endArrow=none;" edge="1" parent="1" source="vgw-hub" target="onprem-dc"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e-vpn-onprem-2" value="vpn" style="endArrow=none;" edge="1" parent="1" source="vgw-hub" target="onprem-dc"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e-onprem-lan" value="l3-adjacency" style="endArrow=none;" edge="1" parent="1" source="onprem-dc" target="lan-onprem"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e-rt-app-fw" value="route" style="endArrow=none;" edge="1" parent="1" source="snet-app" target="afw-hub"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e-rt-analytics-fw" value="route" style="endArrow=none;" edge="1" parent="1" source="snet-analytics" target="afw-hub"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e-vnet-hub-snet-fw" value="l3-adjacency" style="endArrow=none;" edge="1" parent="1" source="vnet-hub" target="snet-fw"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e-vnet-hub-snet-gw" value="l3-adjacency" style="endArrow=none;" edge="1" parent="1" source="vnet-hub" target="snet-gw"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e-vnet-hub-snet-bastion" value="l3-adjacency" style="endArrow=none;" edge="1" parent="1" source="vnet-hub" target="snet-bastion"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e-vnet-prod-snet-web" value="l3-adjacency" style="endArrow=none;" edge="1" parent="1" source="vnet-prod" target="snet-web"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e-vnet-prod-snet-app" value="l3-adjacency" style="endArrow=none;" edge="1" parent="1" source="vnet-prod" target="snet-app"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e-vnet-prod-snet-data" value="l3-adjacency" style="endArrow=none;" edge="1" parent="1" source="vnet-prod" target="snet-data"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e-vnet-analytics-snet-analytics" value="l3-adjacency" style="endArrow=none;" edge="1" parent="1" source="vnet-analytics" target="snet-analytics"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

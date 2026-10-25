@@ -1,6 +1,6 @@
 {
  "skill_name": "skills",
- "note": "Evals 0-5 cover the six-stage development pipeline; 6-7 cover the containers and operations skills; 8-14 cover hotfix and incident-fix across different stacks; 15 runs harness/loop.py end to end (runner: loop) instead of one claude -p call. Each with-skill run is repeated 3x for variance analysis; baseline is a single no-skill run on the same prompt.",
+ "note": "Evals 0-5 cover the six-stage development pipeline; 6-7 cover the containers and operations skills; 8-14 cover hotfix and incident-fix across different stacks; 15 runs harness/loop.py end to end (runner: loop) instead of one claude -p call; 16-20 cover the five networking skills; 21-26 cover terraform and pipelines, one eval per mode (review, design, propose). Each with-skill run is repeated 3x for variance analysis; baseline is a single no-skill run on the same prompt.",
  "evals": [
   {
    "id": 0,
@@ -136,6 +136,94 @@
    },
    "prompt": "(none: harness/loop.py drives refactor-review, devils-advocate and tyr-verdict, and tdd on NO-GO, through its own claude -p calls)",
    "expected_output": "The loop reaches a verdict (GO, or ESCALATED with a reason) and leaves a ledger that ledger.py checks clean and that extends the fixture's. A CONFIRMED finding names check_cutoff ignoring account config, another names test_cutoff_window_reads_from_account_config as vacuous, and the refuted party-size claim is not confirmed again. On GO the planted defect is fixed through the public seam (a 240-minute account window rejects a slot 180 minutes out), the suite is green, and at least one remediation slice was closed after red-green proof."
+  },
+  {
+   "id": 16,
+   "name": "netaudit-hub-spoke-recovers-and-scores",
+   "skill": "netaudit",
+   "fixture": "net-audit",
+   "prompt": "Audit the Northwind network in this repo.",
+   "expected_output": "A recovered topology.json; findings each with confidence, theory section, severity and file:line: the internet-reachable RDP rule as Critical, vnet-analytics overlapping the Rotterdam LAN behind the VPN, vnet-dev classified as a duplicate of vnet-prod, the single NVA and single VPN gateway as articulation points on critical pairs; the PSK and SNMP community recorded by kind and location and never reproduced; strengths (nsg-data default-deny, SSH-only VTY) recorded; the score with base and the 2.0 Critical cap shown; the gate stated as failing condition by condition; needs-data flags listed and unscored; no IaC or device config changed."
+  },
+  {
+   "id": 17,
+   "name": "netdesign-plans-around-what-is-in-use",
+   "skill": "netdesign",
+   "fixture": "net-design",
+   "prompt": "Design Fabrikam's Azure network from docs/requirements.md.",
+   "expected_output": "design.md plus a target topology.json (meta.stage design, status proposed) whose addressing plan has no internal overlap and avoids 10.0.0.0/12, 172.16.0.0/16, 10.64.0.0/16, 192.168.100.0/24 and 100.64.0.0/22, with those exclusions written down; DR in North Europe on its own space; AKS pod and service CIDRs planned and clear of the exclusions; the cardholder data environment and the management plane as their own zones; default-deny for every zone; critical pairs named and measured; open questions listed; no IaC."
+  },
+  {
+   "id": 18,
+   "name": "netdiagram-canonical-views-from-model",
+   "skill": "netdiagram",
+   "fixture": "net-diagram",
+   "prompt": "Draw the network diagrams for the design in design/.",
+   "expected_output": "logical-topology.drawio and segmentation.drawio, uncompressed mxfile with the exact page names and a 'Network diagram conventions' legend; every model node drawn with its model ID as the cell ID and every network label carrying its CIDR; every zone with a default-deny badge and segmentation arrows that are exactly the allow flows; the inferred on-prem node dashed; no physical view for a cloud-only model; design/ untouched."
+  },
+  {
+   "id": 19,
+   "name": "netpropose-contains-before-restructuring",
+   "skill": "netpropose",
+   "fixture": "net-propose",
+   "prompt": "Prepare the proposal for the contoso-prod network from audit/, design/ and diagrams/.",
+   "expected_output": "A proposal.md with a decision register in the Keep/Refactor/Rework/Rebuild vocabulary; NET-SEG-01 contained in the first change window, before any renumbering; renumbering sequenced against the BI export and the DC team's firewall objects; vnet-legacy-batch retired only after usage is confirmed; every cut-over step with validation, rollback and blast radius; critical-pair connectivity before and after, with the residual κ=1 on the on-prem pair carried as open; a closing line requiring acceptance before netblueprint; audit/, design/ and diagrams/ untouched; no IaC."
+  },
+  {
+   "id": 20,
+   "name": "netblueprint-waits-for-acceptance",
+   "skill": "netblueprint",
+   "fixture": "net-blueprint",
+   "prompt": "Produce the final network blueprint package for contoso-prod from proposal/, design/ and diagrams/.",
+   "expected_output": "Stops: the proposal is marked Proposed and nothing records its acceptance. Asks for explicit acceptance (pointing at the 2026-10-29 change board or the proposal), says nothing was produced, and writes no network-design.md, no accepted topology.json, no accepted diagrams and no IaC; inputs untouched."
+  },
+  {
+   "id": 21,
+   "name": "terraform-review-state-and-secrets",
+   "skill": "terraform",
+   "fixture": "tf-review",
+   "prompt": "Review the Terraform in this repo. I want to know how good it is and what's wrong with it.",
+   "expected_output": "Review mode, nothing changed and no backend initialised. Finds the static AWS keys and the prod DB password without echoing their values and recommends rotation; Postgres open to 0.0.0.0/0; ?ref=main; no locking; the -auto-approve apply path. Builds the state map and sees that dev and prod share one bucket and key; flags the count-keyed databases as a replacement risk; diffs the copied environments and finds prod missing storage_encrypted. Findings carry T-n, confidence, severity and file:line; the score shows base and the 2.0 Critical cap; the gate fails condition by condition; needs-data flags listed; what works (modules/app, default_tags) recorded."
+  },
+  {
+   "id": 22,
+   "name": "terraform-design-isolates-state",
+   "skill": "terraform",
+   "fixture": "tf-design",
+   "prompt": "Design the Terraform for this platform. The requirements are in docs/requirements.md.",
+   "expected_output": "Design mode, no resource blocks written. State split by lifecycle and ownership per environment; payments isolated for PCI (own state, role, access); leadership's one-bucket workspace ask declined with a reason in favour of per-account backends; version pinning with a committed lockfile; CI applies saved plans with per-environment OIDC roles, humans read-only in prod with break-glass; prevent_destroy/deletion_protection on stateful resources; SSM or data-source cross-state interface; a reusable service module; open questions."
+  },
+  {
+   "id": 23,
+   "name": "terraform-propose-no-recreate",
+   "skill": "terraform",
+   "fixture": "tf-propose",
+   "prompt": "We have a review in analysis/terraform/ and a target design in docs/design.md. Write the proposal for getting from where we are to that design.",
+   "expected_output": "Propose mode, nothing applied and no code, review or design changed. Leaked key rotated before removal; the 0.0.0.0/0 rule and credentials contained before structural work; DB protection before the identity moves; every address change declared with moved blocks and an expected plan of zero destroys; state migrated to per-account buckets with a backup, not state mv; the apply path handed to the pipelines skill; per-step validation and rollback; needs-data flags carried as open questions."
+  },
+  {
+   "id": 24,
+   "name": "pipelines-review-untrusted-and-rebuild",
+   "skill": "pipelines",
+   "fixture": "ci-review",
+   "prompt": "Review our CI/CD setup and tell me how good it is.",
+   "expected_output": "Review mode, nothing changed. Finds pull_request_target running fork code with NPM_TOKEN and write-all; the PR-title script injection; the committed Slack webhook without echoing the token, with rotation; static AWS keys; the per-environment rebuild with baked config and :latest; that deploy.yml has no test gate (independent of ci.yml); staging and prod deployed differently; no post-deploy check or real rollback; @master in a prod job; continue-on-error on e2e. Value stream recovered; P-n cited; score with the 2.0 cap; gate conditions; needs-data flags for settings and durations; what works recorded."
+  },
+  {
+   "id": 25,
+   "name": "pipelines-design-build-once-progressive",
+   "skill": "pipelines",
+   "fixture": "ci-design",
+   "prompt": "Design the delivery pipeline for ledger-api. The requirements are in docs/requirements.md.",
+   "expected_output": "Design mode. Build once and promote the same digest, config at deploy time, replacing per-environment builds; integration tests out of the commit stage; canary region by region with automated rollback; expand/contract migrations; feature flags; the every-deploy approval meeting declined in favour of peer review plus a prod approval where the author cannot approve; OIDC per environment; actions pinned by SHA; Terraform planned on PR with saved plans applied from CI; deploy records and delivery metrics; open questions. Any workflow skeleton passes actionlint."
+  },
+  {
+   "id": 26,
+   "name": "pipelines-propose-keeps-prod-up",
+   "skill": "pipelines",
+   "fixture": "ci-propose",
+   "prompt": "We have a pipeline review in analysis/pipelines/ and a target in docs/pipeline-design.md. Write the proposal for the migration.",
+   "expected_output": "Propose mode, nothing changed. Webhook rotated before removal and NPM_TOKEN treated as exposed; the pull_request_target containment first; build-once before rollback-by-digest and progressive delivery; the new pipeline run alongside the old before cut-over; settings changes (branch protection, environment reviewers) named in rollback because a git revert doesn't undo them; per-step validation and rollback; expected effect on delivery metrics; needs-data flags as open questions."
   }
  ]
 }

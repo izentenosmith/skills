@@ -1,0 +1,26 @@
+<mxfile host="app.diagrams.net">
+  <diagram id="segmentation" name="Segmentation (zones and flows)">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" page="1">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="deco-title" value="contoso-prod — Segmentation (zones and flows) — proposed" style="text;fontSize=16;" vertex="1" parent="1"><mxGeometry x="20" y="10" width="600" height="30" as="geometry"/></mxCell>
+        <mxCell id="deco-legend" value="Network diagram conventions: container = network (name + CIDR); solid double arrow = peering; dashed = VPN; dotted = route steering; dashed outline = inferred" style="text;whiteSpace=wrap;fontSize=11;" vertex="1" parent="1"><mxGeometry x="20" y="700" width="600" height="60" as="geometry"/></mxCell>
+        <mxCell id="deco-provenance" value="Source: topology.json (design 2026-10-22 (rev 3))" style="text;fontSize=11;" vertex="1" parent="1"><mxGeometry x="640" y="700" width="300" height="30" as="geometry"/></mxCell>
+        <mxCell id="internet" value="internet — trust 0 — untrusted&#xa;default: deny in (NSG DenyAllInBound)" style="rounded=1;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="20" y="80" width="140" height="120" as="geometry"/></mxCell>
+        <mxCell id="edge" value="edge — trust 1 — published web tier&#xa;default: deny in (NSG DenyAllInBound)" style="rounded=1;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="170" y="80" width="140" height="120" as="geometry"/></mxCell>
+        <mxCell id="onprem" value="onprem — trust 2 — Contoso Amsterdam data centre&#xa;default: deny in (NSG DenyAllInBound)" style="rounded=1;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="320" y="80" width="140" height="120" as="geometry"/></mxCell>
+        <mxCell id="transit" value="transit — trust 2 — hub inspection and hybrid gateway&#xa;default: deny in (NSG DenyAllInBound)" style="rounded=1;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="470" y="80" width="140" height="120" as="geometry"/></mxCell>
+        <mxCell id="app" value="app — trust 2 — application and analytics tiers&#xa;default: deny in (NSG DenyAllInBound)" style="rounded=1;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="620" y="80" width="140" height="120" as="geometry"/></mxCell>
+        <mxCell id="data" value="data — trust 3 — databases&#xa;default: deny in (NSG DenyAllInBound)" style="rounded=1;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="770" y="80" width="140" height="120" as="geometry"/></mxCell>
+        <mxCell id="mgmt" value="mgmt — trust 3 — management plane (Bastion)&#xa;default: deny in (NSG DenyAllInBound)" style="rounded=1;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="920" y="80" width="140" height="120" as="geometry"/></mxCell>
+        <mxCell id="fl-internet-edge-443" value="tcp/443" style="endArrow=classic;" edge="1" parent="1" source="internet" target="edge"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="fl-edge-app-8443" value="tcp/8443" style="endArrow=classic;" edge="1" parent="1" source="edge" target="app"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="fl-app-data-5432" value="tcp/5432" style="endArrow=classic;" edge="1" parent="1" source="app" target="data"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="fl-mgmt-app-22" value="tcp/22" style="endArrow=classic;" edge="1" parent="1" source="mgmt" target="app"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="fl-onprem-mgmt-443" value="tcp/443" style="endArrow=classic;" edge="1" parent="1" source="onprem" target="mgmt"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="fl-onprem-app-443" value="tcp/443" style="endArrow=classic;" edge="1" parent="1" source="onprem" target="app"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
