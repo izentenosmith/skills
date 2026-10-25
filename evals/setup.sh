@@ -11,7 +11,10 @@ for f in base tdd refactor teardown verdict; do
   [ -d "$f/.venv" ] || python3 -m venv "$f/.venv"
   "$f/.venv/bin/pip" -q install pytest
   printf '%-10s ' "$f"
-  (cd "$f" && .venv/bin/python -m pytest tests/ -q 2>&1 | tail -1)
+  # A report, not a gate: the teardown and verdict fixtures carry planted defects,
+  # one of which fails outside roughly 06:00-18:00 local time. Setup builds the venvs;
+  # a red fixture suite is expected and must not stop it.
+  (cd "$f" && .venv/bin/python -m pytest tests/ -q 2>&1 | tail -1) || true
 done
 
 echo
