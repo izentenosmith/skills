@@ -101,4 +101,4 @@ Both also publish under a deadline rather than at completeness. Release notes ar
 
 `hotfix` (evals 8–11: a Node service, a JVM service with no build tool, a Python script with no tests, and an outage it must route out) and `incident-fix` (evals 12–14: a containerized web app with feature flags, a batch job that corrupted rows, a library with no deploy step) have fixtures and assertions; both assertion sets separate a reference answer from a do-nothing one, but **no with-skill run has been scored yet**.
 
-`release-notes` has no eval.
+`release-notes` has one too (eval 29): a tagged git history whose range hides a one-line breaking change, a feature shipped and reverted inside the release, a CVE fix among routine dependency bumps, an improvement nobody measured, internal class and ticket names in the commit subjects, and work committed after the tag. Reference, do-nothing and plausible-but-wrong controls separate as intended (`python3 evals/controls/make_controls.py --only 29`). **No with-skill run has been scored.**

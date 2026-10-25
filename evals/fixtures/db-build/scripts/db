@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# PawLedger developer database tool.
+#   scripts/db apply FILE.sql   apply a script to the dev clinic file (data/clinic-dev.db)
+#   scripts/db shell            open sqlite3 on the dev clinic file
+# Sandbox stub: records the call, changes nothing real.
+echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $(basename "$0") $*" >> "$(dirname "$0")/.calls.log"
+echo "db: $* (data/clinic-dev.db)"

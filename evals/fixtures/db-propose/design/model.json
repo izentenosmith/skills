@@ -1,0 +1,134 @@
+{
+  "meta": {
+    "system": "PawLedger clinic database",
+    "document": "design/design.md",
+    "rev": 3,
+    "date": "2026-10-16",
+    "status": "approved for diagrams and proposal",
+    "engine": "SQLite 3.45 (bundled with the desktop app through better-sqlite3)",
+    "mode": "audited redesign of the v1 clinic database"
+  },
+  "entities": [
+    {"name": "OWNER", "table": "owner",
+     "description": "A person or organisation responsible for one or more pets and their bills.",
+     "attributes": [["#", "id"], ["*", "first name"], ["*", "last name"], ["*", "phone"], ["o", "email"]]},
+    {"name": "PET", "table": "pet",
+     "description": "An animal registered with the practice.",
+     "attributes": [["#", "id"], ["*", "name"], ["*", "species"], ["o", "date of birth"], ["o", "microchip"]]},
+    {"name": "VET", "table": "vet",
+     "description": "A veterinary surgeon licensed to treat and vaccinate.",
+     "attributes": [["#", "licence number"], ["*", "name"]]},
+    {"name": "VACCINE", "table": "vaccine",
+     "description": "A vaccine product the practice stocks.",
+     "attributes": [["#", "code"], ["*", "name"]]},
+    {"name": "APPOINTMENT", "table": "appointment",
+     "description": "A booked consultation slot for one pet with one vet.",
+     "attributes": [["#", "id"], ["*", "starts at"], ["*", "duration minutes"], ["*", "reason"], ["o", "notes"]]},
+    {"name": "REMINDER", "table": "reminder",
+     "description": "A notice that a pet's next dose of a vaccine is due.",
+     "uid": "PET + VACCINE + due on",
+     "attributes": [["#", "due on"], ["o", "sent at"]]}
+  ],
+  "associations": [
+    {"name": "VACCINATION", "table": "vaccination", "kind": "three-way",
+     "participants": ["PET", "VACCINE", "VET"],
+     "reading": "A VET gives a dose of a VACCINE to a PET on a date.",
+     "uid": "PET + VACCINE + given on",
+     "attributes": [["#", "given on"], ["*", "lot number"]],
+     "participation": "every vaccination involves exactly one pet, one vaccine and one vet; a pet, a vaccine or a vet may be involved in none or many"}
+  ],
+  "relationships": [
+    {"id": "pet-owner", "a": "PET", "b": "OWNER", "a_opt": "must", "a_role": "owned by", "a_card": "one",
+     "b_opt": "may", "b_role": "owner of", "b_card": "many", "evidence": "requirements R-1; v1 pet.owner_id"},
+    {"id": "pet-vet", "a": "PET", "b": "VET", "a_opt": "may", "a_role": "registered with", "a_card": "one",
+     "b_opt": "may", "b_role": "primary vet of", "b_card": "many",
+     "evidence": "inferred: v1 column pet.primary_vet_id has no FK and no documentation; the meaning 'primary vet' is read from the column name and has not been confirmed by the practice (open question Q4)"},
+    {"id": "appointment-pet", "a": "APPOINTMENT", "b": "PET", "a_opt": "must", "a_role": "booked for", "a_card": "one",
+     "b_opt": "may", "b_role": "subject of", "b_card": "many", "evidence": "requirements R-2"},
+    {"id": "appointment-vet", "a": "APPOINTMENT", "b": "VET", "a_opt": "must", "a_role": "attended by", "a_card": "one",
+     "b_opt": "may", "b_role": "attending vet for", "b_card": "many", "evidence": "requirements R-2"},
+    {"id": "reminder-pet", "a": "REMINDER", "b": "PET", "a_opt": "must", "a_role": "issued for", "a_card": "one",
+     "b_opt": "may", "b_role": "reminded by", "b_card": "many", "uid": true, "evidence": "requirements R-4"},
+    {"id": "reminder-vaccine", "a": "REMINDER", "b": "VACCINE", "a_opt": "must", "a_role": "prompt for", "a_card": "one",
+     "b_opt": "may", "b_role": "prompted by", "b_card": "many", "uid": true, "evidence": "requirements R-4"}
+  ],
+  "tables": [
+    {"name": "owner", "pk": ["id"], "columns": [
+      {"name": "id", "type": "INTEGER", "null": false},
+      {"name": "first_name", "type": "TEXT", "null": false},
+      {"name": "last_name", "type": "TEXT", "null": false},
+      {"name": "phone", "type": "TEXT", "null": false},
+      {"name": "email", "type": "TEXT", "null": true}]},
+    {"name": "vet", "pk": ["id"], "columns": [
+      {"name": "id", "type": "INTEGER", "null": false},
+      {"name": "licence_no", "type": "TEXT", "null": false},
+      {"name": "name", "type": "TEXT", "null": false}]},
+    {"name": "vaccine", "pk": ["id"], "columns": [
+      {"name": "id", "type": "INTEGER", "null": false},
+      {"name": "code", "type": "TEXT", "null": false},
+      {"name": "name", "type": "TEXT", "null": false}]},
+    {"name": "pet", "pk": ["id"], "columns": [
+      {"name": "id", "type": "INTEGER", "null": false},
+      {"name": "owner_id", "type": "INTEGER", "null": false},
+      {"name": "primary_vet_id", "type": "INTEGER", "null": true},
+      {"name": "name", "type": "TEXT", "null": false},
+      {"name": "species", "type": "TEXT", "null": false},
+      {"name": "date_of_birth", "type": "TEXT", "null": true},
+      {"name": "microchip", "type": "TEXT", "null": true}]},
+    {"name": "vaccination", "pk": ["id"], "columns": [
+      {"name": "id", "type": "INTEGER", "null": false},
+      {"name": "pet_id", "type": "INTEGER", "null": false},
+      {"name": "vaccine_id", "type": "INTEGER", "null": false},
+      {"name": "vet_id", "type": "INTEGER", "null": false},
+      {"name": "given_on", "type": "TEXT", "null": false},
+      {"name": "lot_no", "type": "TEXT", "null": false}]},
+    {"name": "appointment", "pk": ["id"], "columns": [
+      {"name": "id", "type": "INTEGER", "null": false},
+      {"name": "pet_id", "type": "INTEGER", "null": false},
+      {"name": "vet_id", "type": "INTEGER", "null": false},
+      {"name": "starts_at", "type": "TEXT", "null": false},
+      {"name": "duration_min", "type": "INTEGER", "null": false},
+      {"name": "reason", "type": "TEXT", "null": false},
+      {"name": "notes", "type": "TEXT", "null": true}]},
+    {"name": "reminder", "pk": ["id"], "columns": [
+      {"name": "id", "type": "INTEGER", "null": false},
+      {"name": "pet_id", "type": "INTEGER", "null": false},
+      {"name": "vaccine_id", "type": "INTEGER", "null": false},
+      {"name": "due_on", "type": "TEXT", "null": false},
+      {"name": "sent_at", "type": "TEXT", "null": true}]}
+  ],
+  "foreign_keys": [
+    {"table": "pet", "column": "owner_id", "ref": "owner", "on_delete": "RESTRICT"},
+    {"table": "pet", "column": "primary_vet_id", "ref": "vet", "on_delete": "SET NULL"},
+    {"table": "vaccination", "column": "pet_id", "ref": "pet", "on_delete": "RESTRICT"},
+    {"table": "vaccination", "column": "vaccine_id", "ref": "vaccine", "on_delete": "RESTRICT"},
+    {"table": "vaccination", "column": "vet_id", "ref": "vet", "on_delete": "RESTRICT"},
+    {"table": "appointment", "column": "pet_id", "ref": "pet", "on_delete": "CASCADE"},
+    {"table": "appointment", "column": "vet_id", "ref": "vet", "on_delete": "RESTRICT"},
+    {"table": "reminder", "column": "pet_id", "ref": "pet", "on_delete": "CASCADE"},
+    {"table": "reminder", "column": "vaccine_id", "ref": "vaccine", "on_delete": "RESTRICT"}
+  ],
+  "unique": [
+    {"table": "vet", "columns": ["licence_no"]},
+    {"table": "vaccine", "columns": ["code"]},
+    {"table": "vaccination", "columns": ["pet_id", "vaccine_id", "given_on"]},
+    {"table": "reminder", "columns": ["pet_id", "vaccine_id", "due_on"]}
+  ],
+  "checks": [
+    {"table": "pet", "column": "species", "rule": "species IN ('dog', 'cat', 'rabbit', 'bird', 'other')"},
+    {"table": "appointment", "column": "duration_min", "rule": "duration_min > 0"}
+  ],
+  "indexes": [
+    {"table": "pet", "columns": ["owner_id"]},
+    {"table": "pet", "columns": ["primary_vet_id"]},
+    {"table": "vaccination", "columns": ["vaccine_id"]},
+    {"table": "vaccination", "columns": ["vet_id"]},
+    {"table": "appointment", "columns": ["pet_id"]},
+    {"table": "appointment", "columns": ["vet_id", "starts_at"]},
+    {"table": "reminder", "columns": ["vaccine_id"]}
+  ],
+  "undecided": [
+    {"table": "pet", "column": "microchip", "question": "Q3",
+     "detail": "whether microchip is an alternate key (UNIQUE) is not decided: v1 holds 4 chip numbers shared by two pets each, and the practice has not said whether that is re-chipping or data-entry error"}
+  ]
+}

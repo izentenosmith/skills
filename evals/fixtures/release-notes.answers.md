@@ -1,0 +1,27 @@
+Answer key for `release-notes/`. It lives **outside** the fixture folder on purpose: everything inside the folder is copied into the run, and a run that can read the answer key measures nothing.
+
+
+# release-notes — `release-notes` on a tagged SaaS release (eval 29)
+
+Beacon is an uptime-monitoring SaaS (web app and REST API). `make-history.sh` builds `repo/`. The history is squash-merged, so each PR is one commit with the PR body as the commit body. It has tags `v2.2.0`, `v2.3.0` (2026-09-02) and `v2.4.0` (annotated, 2026-10-14), plus three commits after the last tag. `issues/` holds the tracker issues the commits link to. `repo/CHANGELOG.md` is written in commit-subject style. It tempts the run to transcribe, and does not show the style the run should use.
+
+`v2.3.0..v2.4.0` is **18 commits**. `HEAD` is three past the tag and its `package.json` says `2.5.0-dev`.
+
+| # | Commit | Planted | A correct run… | Catches a run that… |
+|---|---|---|---|---|
+| 1 | #251 `feat: MaintenanceWindowScheduler + maint_windows_v2 flag [PLAT-412]` | a user-facing feature whose subject is a class name, a flag and a ticket. The body says the flag is on for everyone, and `web/src/i18n/en.json` has the product's words ("Maintenance windows", "Schedule maintenance", "Under maintenance") | announces **Maintenance windows**: what you can do, and where to find it (monitor → Settings → Schedule maintenance) | lets `PLAT-412`, `MaintenanceWindowScheduler` or `maint_windows_v2` into the notes |
+| 2 | #252, reverted by #265 | Slack thread replies, shipped and reverted inside the range | drops both commits | announces a feature that did not ship |
+| 3 | #253 `perf: covering index for IncidentTimelineQuery` | an improvement with **no measurement**. The body says "Feels a lot snappier… I haven't benchmarked it", and issue #309 has no number either | "the incident timeline opens faster in large workspaces", with no figure; the handoff names it as the improvement that needs a measurement | invents "40% faster" or "up to 2×" |
+| 4 | #256 `perf(export): stream CSV export rows` | an improvement with a **measured** number: staging, 1.2M results, 90-day export, p50 of 10 runs, 48 s → 11 s | uses the figure (about 4×, or 48 s → 11 s), and the handoff names PR #256 / the staging run as its source | leaves out a real number, or uses it without naming the source |
+| 5 | #254 `fix: guard null tz in DigestMailer.render` · #257 `fix: off-by-one in SlaCalculator month window` | fixes written as their causes. Issues #318 and #322 state the symptoms | "The weekly uptime report email never arrived for workspaces set up through single sign-on" and "downtime on the last day of the month was left out of the uptime percentage" | writes "fixed a null pointer" or "fixed an off-by-one" |
+| 6 | #259 `chore(api): lower DEFAULT_PAGE_SIZE to 50` | a **one-line breaking change** filed as a chore: list endpoints return 50 items, not 500, when no `limit` is passed | sets the tier to **Major**, and puts it in Action required **above** the features with the action (follow `next_cursor` or pass `limit`) | files it under fixes or at the bottom, calls the release Minor, or drops it as a chore |
+| 7 | #255 `feat(api): deprecate /v1/webhooks` | a deprecation with a date (2027-03-31) and a replacement (`/v2/hooks`, migration guide URL in the body) | states the date, the replacement and the guide link | gives a deprecation with no date or no replacement |
+| 8 | #261 `chore(deps): bump saml-verify from 3.1.2 to 3.1.4` | a bump that patches **CVE-2026-41207**: anyone could sign in as another member of a SAML SSO workspace. The body confirms Beacon is exposed | publishes the **effect**, a fixed SSO sign-in vulnerability, without "bumped saml-verify" | lists it as a bump, or drops it with the other bumps |
+| 9 | #260, #262–#264, #266–#268, the release commit | eslint and vitest bumps, CI caching, tests, a refactor (`AlertRouter`, `PLAT-433`), a CONTRIBUTING typo, lint autofixes, the 2.4.0 version commit | drops them all and **states the dropped count** in the handoff (10, or 9 without the release commit, or 8 if the reverted pair counts once) | lists them, or drops them silently |
+| 10 | #270, #271, `chore: start 2.5.0-dev` | **after** the `v2.4.0` tag: SMS alerts, a favicon fix, the next version | ranges to the tag, and takes the version and the date (14 October 2026) from it | ranges to `HEAD`, announces SMS alerts, or dates the release 2026-10-21 or today |
+
+The help link comes from `repo/README.md`: docs, support and community forum URLs.
+
+**What the notes look like.** The header reads *Beacon 2.4.0 — 14 October 2026*. Then come a summary that sends API users to Action required, the Action required section (page size, then the `/v1/webhooks` deprecation), Security, New (Maintenance windows), Improved (export, timeline), Fixed (the report email, the month-end uptime) and the help line. A screenshot of the maintenance dialog belongs with a Major release. The run cannot capture one, so the handoff should say it is missing. No assertion checks for it.
+
+**How it is graded.** "The notes" are the markdown file the run wrote: a new file, the lines it added to an existing one such as `repo/CHANGELOG.md`, or a non-response file in `outputs/`. When there is no such file, they are the part of the response from its 2.4.0 heading to its help line. Identifiers, numbers, ordering and omissions are judged on the notes only. The handoff may name commits, PRs and the dropped changes.

@@ -4,7 +4,7 @@ These skills are prompts, and a prompt's claims about its own behavior are hypot
 
 The headline result is in [benchmark.md](benchmark.md). The short version: on the assertions that test what the skills instruct, the six-stage pipeline scores **0.98** against **0.22** for the pre-session baseline; on core capability, **0.96** against **0.92**.
 
-**Evals 6, 7 and 16–26 have fixtures and assertions but no scored run yet.** Their assertions are verified to *discriminate* — see [Negative controls](#negative-controls) — but nobody has dispatched the with-skill runs, so there is no number for `docker-compose` or `post-mortem` and `benchmark.md` does not report one.
+**Evals 6, 7 and 16–34 have fixtures and assertions but no scored run yet.** Their assertions are verified to *discriminate* — see [Negative controls](#negative-controls) — but nobody has dispatched the with-skill runs, so there is no number for `docker-compose`, `post-mortem`, the networking, infrastructure and database skills, `acceptance-tests`, `dockerfile` or `release-notes`, and `benchmark.md` does not report one.
 
 ## Layout
 
@@ -16,7 +16,7 @@ evals/
 ├── grade.py        assertions → grading.json per run
 ├── aggregate.py    grading.json → benchmark.md/json
 ├── benchmark.md    the recorded result
-├── controls/       reproducible controls (make_controls.py: evals 8-14 and 16-26; eval15.py: the loop)
+├── controls/       reproducible controls (make_controls.py: evals 8-14 and 16-34; eval15.py: the loop)
 └── fixtures/       the seeded repos and documents the skills work against
 ```
 
@@ -29,7 +29,7 @@ A small Python reservations service. Bookings go through `BookingService.submit`
 | Fixture | Seeded with | Used by |
 |---|---|---|
 | `base` | clean service, green suite | architect-deep-dive, agent-brief |
-| `tdd` | `+ .workflow/brief.md` | tdd |
+| `tdd` | `+ .workflow/brief.md` | tdd, acceptance-tests (eval 27) |
 | `refactor` | `+` a sloppy cutoff rule, `+` a prior-pass ledger | refactor-review |
 | `teardown` | `+` a cutoff rule that **ignores account config**, `+` a **vacuous test** that hides it | devils-advocate |
 | `verdict` | `+` four unadjudicated findings: two provable, one a re-report of an already-refuted claim, one unprovable | tyr-verdict |
@@ -162,6 +162,209 @@ Grading is from files and the response; nothing is executed against a cloud or a
 
 Building these controls caught four of my own assertions being too loose before any run was spent. The proposal-sequence check matched the word "order" in a heading, so a findings table at the top decided the order. A prod-isolation check was satisfied by payments' own state. Any mention of Helm values counted as "config not baked in". A rotate-before-remove check accepted a rotation of a *different* token on a neighbouring line. **No with-skill run has been scored.**
 
+### `acceptance-tests` on the `tdd` fixture (eval 27)
+
+Stage 3 of the pipeline. It reuses the `tdd` fixture unchanged: the reservations service and its brief, whose five acceptance criteria describe a cutoff that does not exist yet. The prompt is "Write the acceptance tests for the build plan in .workflow/brief.md." The answer key is [fixtures/acceptance-tests.answers.md](fixtures/acceptance-tests.answers.md).
+
+| Trap | Catches a run that… |
+|---|---|
+| Criteria 2 and 4 (outside the window accepted; the edge accepted) already hold, because nothing is rejected for timing | writes acceptance-only tests: green now, green with the feature deleted |
+| The default window is 120 minutes; a 240-minute config test with a slot 30 minutes out passes either way (the test `teardown` plants) | proves the config criterion with a slot inside both windows |
+| No clock seam: the edge can only be approached to within the call's microseconds | gives the edge a minute of slack, so it tests criterion 2 again |
+| Key interfaces name `reservations.rules` and `ACTIVE_RULES` | unit-tests `check_cutoff` or `Booking.validate` instead of going through `submit` |
+| `submit` and `Rejected` already exist; nothing needs declaring | invents a public name and is red on `ImportError` |
+| Opening hours 11:00–23:00 against slots built from `datetime.now()` | is red for `VENUE_CLOSED` at night. **Not graded**: the grader pins local noon |
+
+**Graded by running the tests.** The tests the run added are found by comparing pytest's collection with the fixture's, then run three ways:
+
+- On the run's own code, every new test must be red, and red on behavior: an assertion, `DID NOT RAISE` or `Rejected`. A collection, import or attribute error does not count.
+- With a correct cutoff rule laid over the run's `reservations/`, every new test must pass. The rule reads `cutoff_minutes` (default 120), has an exclusive boundary and reads `now` to the second. It is appended to `ACTIVE_RULES`, or put first if the tests expect that order.
+- With each of three mutants laid over the repo, a test that passed on the reference must fail. The mutants are a hard-coded 120-minute window, a whole-minute inclusive boundary, and a `validate` that keeps only the first violation.
+
+The recorded **Command:** is executed too and must collect exactly the new tests. Static checks: no import of `reservations.rules` or `reservations.booking` (AST, not grep); the doubles are reused; each of the five criteria is mapped once, by a test id the run added or as not acceptance-testable with a reason; a Revisions entry; Standard tier; handoff to tdd. A probe through `submit`, with every hour open, confirms no cutoff was implemented. That is the one safety invariant.
+
+Every pytest the grader starts runs with `TZ` set so that local time is noon (the same computation as eval 15's CI step), so the result does not depend on the hour. Checked by grading at forced local hours 0–23. The controls score the same at every hour. A variant whose tests don't open the venue's hours changes score at 14 of the 24 hours unpinned (20:00 to 09:59), and passes everything when pinned. When a run has no `.venv` (the controls), the grader falls back to `fixtures/tdd/.venv`, so `setup.sh` must have run.
+
+**Controls** (`make_controls.py --only 27`):
+
+| Control | All | Delta | Fails |
+|---|---:|---:|---|
+| reference | 18/18 | 12/12 | — |
+| do-nothing | 2/18 | 1/12 | everything but "pre-existing tests green" (capability) and "no implementation" (the safety invariant) |
+| `wrong-implements-it`: the same tests, then `check_cutoff` written to make them pass | 16/18 | 10/12 | every new test red; no implementation |
+| `wrong-green-guards`: criteria 2 and 4 tested by acceptance alone | 17/18 | 11/12 | every new test red (two pass now) |
+| `wrong-vacuous-config`: 240-minute window, slot 30 minutes out | 17/18 | 11/12 | the config test kills the hard-coded mutant |
+| `wrong-import-error`: imports an invented `CUTOFF_WINDOW` from `reservations.api` | 13/18 | 10/12 | red for the right reason; green on the reference; all three mutants, because a test that cannot load kills nothing |
+| `wrong-reaches-internals`: the both-codes test calls `Booking.validate` directly | 17/18 | 11/12 | no internals |
+| `wrong-three-of-five`: five tests, but only three criteria mapped in the brief | 17/18 | 11/12 | each criterion mapped exactly once |
+
+`wrong-implements-it` writes the usual exclusive comparison against `datetime.now()`. Its edge test is then red even with the rule in place, because the slot is a few microseconds inside the window by the time the rule runs. A test built at exactly `now + 120 min` therefore depends on how the implementation reads the clock, which is why the grader's reference reads it to the second. **No with-skill run has been scored.**
+
+### `dockerfile` (eval 28)
+
+`invoicer`, a small Express + TypeScript service (pnpm, better-sqlite3, Handlebars, SQL migrations run at startup) with a Dockerfile that ships but is badly built. The prompt is the user's complaint, not a checklist: *"Our Docker image for this service is over 1 GB and every commit rebuilds everything from scratch. Fix it."* The skill runs in **Repair** mode. Its answer key is [fixtures/dockerfile.answers.md](fixtures/dockerfile.answers.md), outside the folder.
+
+| Planted | Catches a run that… |
+|---|---|
+| `.nvmrc` 20.11.1 and `packageManager: pnpm@9.12.3`, under `FROM node:latest` and `npm install -g pnpm` | pins to habit (`node:20-slim`, `lts`) rather than to what the repo declares |
+| `COPY . .` before an unfrozen install | copies source first, or installs without `--frozen-lockfile` and a cache mount |
+| better-sqlite3, a native module | installs `node_modules` in a `$BUILDPLATFORM` stage (or on alpine) and copies it into the amd64 slim runtime |
+| `migrations/` and `templates/` read relative to `dist/` | ships `dist` and `node_modules` only, so the image crashes at startup |
+| The source listens on `PORT ?? 8080` and serves `/healthz`; the Dockerfile exposes 3000 and checks `/health`; the README says 3000 | trusts the old file or the README, or curls from a slim image that has no curl |
+| Runs as root; the app writes `data/` | adds `USER` but leaves the data directory root-owned |
+| `ENV PDF_RENDER_API_KEY=eval-fake-…` | moves it to `ARG`, or quotes it |
+| k8s `nodeSelector: amd64`; the team runs `make push` on M-series Macs | never states the mismatch, or never puts `--platform` where `make push` will use it |
+| A curated, incomplete `.dockerignore` | replaces it from a template and drops `loadtest/`, `deploy/`, `Makefile` |
+| A local `.env` with two fake secrets that today's `COPY . .` bakes in; `.env.example` must stay | writes `.env*` and excludes the template |
+
+**Graded from files, never built.** The Dockerfile is parsed stage by stage (global `ARG`s substituted into `FROM`, `FROM <stage>` chains followed), and the `.dockerignore` is evaluated with Docker's matching rule (the last pattern matching a path or one of its parents decides, `!` re-includes) on probe paths, before and after. Both files are evaluated only at the context root, where Docker's real semantics and the skill's dockerignore.md agree. Step 4 is checked for the commands and for honesty: either raw output (`uid=…(`, `transferring context:`, `=> CACHED [`, a `docker images` row, a bare `linux/amd64` line) or a plain statement that docker was unavailable, never both, and never "should work". **Safety invariant**, which the do-nothing control passes by doing nothing: no planted secret value in the response or any written file.
+
+**Controls** (`--only 28`): every wrong control scores 19/20 and fails only the assertion it was built to fail.
+
+| Control | All | Delta | Fails |
+|---|---:|---:|---|
+| reference | 20/20 | 14/14 | — |
+| do-nothing | 3/20 | 1/14 | everything but "never echoed" and two capability checks it already meets (pnpm; build inputs in the context) |
+| `wrong-runs-as-root` — no `USER` | 19/20 | 13/14 | non-root user owning its data directory |
+| `wrong-source-before-install` — `COPY . .` before the frozen install | 19/20 | 14/14 | dependencies before source *(capability)* |
+| `wrong-replaces-dockerignore` — a good template, curated entries dropped | 19/20 | 13/14 | .dockerignore extended, curated entries kept |
+| `wrong-bakes-key` — `ARG` + `ENV PDF_RENDER_API_KEY=$…` | 19/20 | 13/14 | no secret in ENV, ARG or a copied env file |
+| `wrong-port-and-health` — `EXPOSE 3000`, healthcheck on `:3000/health` | 19/20 | 13/14 | port and health from the source |
+| `wrong-curl-on-slim` — right port and route, `curl` on a slim image | 19/20 | 13/14 | port and health from the source |
+| `wrong-uses-latest` — `node:lts-slim` | 19/20 | 13/14 | pinned to what the repo declares |
+| `wrong-dist-only` — no `migrations/`, `templates/` | 19/20 | 13/14 | runtime ships only dist, prod deps and runtime assets |
+| `wrong-buildplatform-deps` — deps stage on `$BUILDPLATFORM` | 19/20 | 13/14 | better-sqlite3 installed on the target platform |
+| `wrong-claims-verified` — "All checks pass; it should work" | 19/20 | 13/14 | Step 4 with commands, observed or docker's absence stated |
+| `wrong-rewrite-unnamed` — new file first, defects never listed | 19/20 | 13/14 | defects named before the fix |
+| `wrong-env-star` — `.env*`, no re-include | 19/20 | 13/14 | .env out, .env.example in |
+| `wrong-echoes-secret` — quotes the key in the defect list | 19/20 | 13/14 | never echoed |
+
+Building the controls tightened four assertions before any run. Do-nothing passed "production dependencies" because the old file sets `ENV NODE_ENV=production`, though only *after* its install. Paired defect markers (`/health` vs `/healthz`) missed when a sentence wrapped. "No Docker HEALTHCHECK" read as "no docker". And the platform check rejected a correct `PLATFORM ?= linux/amd64` + `--platform $(PLATFORM)` in the Makefile. Alternative correct shapes are probed too, and all pass: alpine in every stage with `pnpm fetch`, tini and a `wget` healthcheck; a `$BUILDPLATFORM` stage that only runs `tsc`. Known strictness: a distroless `nodejs20` runtime fails the 20.11 pin, because its tag cannot carry the minor. **No with-skill run has been scored.**
+
+### `release-notes` (eval 29)
+
+Beacon is an uptime-monitoring SaaS. The fixture is a git repository with squash-merged history and tags `v2.2.0`, `v2.3.0` and `v2.4.0`, plus three unreleased commits after the last tag. Next to it is `issues/`, an export of the tracker issues the commits link to. As with `incident`, `make-history.sh` builds the repo rather than committing it, and `setup.sh` runs the script. The answer key is [fixtures/release-notes.answers.md](fixtures/release-notes.answers.md). `repo/CHANGELOG.md` is written in commit-subject style. It is a lure toward transcription, not an example of the right style.
+
+| Planted (v2.3.0..v2.4.0, 18 commits) | Catches a run that… |
+|---|---|
+| a feature whose subject is `MaintenanceWindowScheduler + maint_windows_v2 flag [PLAT-412]` | copies the class, the flag or the ticket into the notes |
+| a perf PR whose body says "I haven't benchmarked it" | invents a percentage or an "up to" |
+| a perf PR whose body has a staging measurement (48 s → 11 s) | leaves out a measured figure, or uses it without naming its source |
+| two fixes written as causes (`guard null tz`, `off-by-one`); their issues state the symptoms | describes the cause instead of what the user saw |
+| a one-line `chore(api)` that drops the list endpoints' default page size from 500 to 50 | misses that it is breaking, calls the release Minor, or lists it below the features |
+| `/v1/webhooks` deprecated, removed 2027-03-31, replaced by `/v2/hooks` | gives the deprecation with no date or no replacement |
+| Slack thread replies shipped in #252 and reverted in #265, both inside the range | announces a feature that did not ship |
+| a `saml-verify` bump that patches an SSO sign-in CVE, next to eslint/vitest bumps, CI, tests, docs, lint and a refactor | writes "bumped saml-verify" instead of the effect, or lists the noise |
+| SMS alerts, a favicon fix and `2.5.0-dev` after the `v2.4.0` tag | ranges to `HEAD`, or takes the date from anything but the tag |
+
+The grader separates **the notes** from **the handoff**. The notes are the markdown the run wrote: a new file, the lines it added to an existing one such as `CHANGELOG.md`, or a non-response file in `outputs/`. When there is no such file, they are the part of the response from its 2.4.0 heading to its help link. Identifiers, numbers, ordering and omissions are judged on the notes only, because the handoff is expected to name PRs, the dropped commits and the source of each figure. Capability (7): notes written, maintenance windows and the page-size change announced, a summary, the deprecation with date and replacement, a help link, nothing after the tag. Delta (13): the range and count confirmed, the tier stated as Major, a header with the exact version and the tag's date, breaking above the features with the action, no internal identifiers, no number on the unmeasured improvement, the measured figure used with its source named, fixes as symptoms, the reverted feature absent, the CVE as its effect, the noise dropped, the dropped count stated, and the unquantified improvement named.
+
+**Controls** (`--only 29`):
+
+| Control | All | Delta | Fails |
+|---|---:|---:|---|
+| reference | 20/20 | 13/13 | — |
+| do-nothing | 0/20 | 0/13 | everything; nothing is free, since every omission check needs notes to exist |
+| `wrong-commit-transcript`: the 18 commit subjects under `## v2.4.0 (2026-10-14)`, with the range and count stated | 6/20 | 3/13 | identifiers, symptoms, reverted feature, CVE effect, noise, breaking-first, tier, measured figure, dropped count, unquantified list (plus four capability checks). It passes range, header and "no number on the timeline", which a transcript gets right |
+| `wrong-invented-number`: the reference, with the timeline "up to 40% faster" and "every improvement carries a figure" in the handoff | 18/20 | 11/13 | no number on the unmeasured improvement; the unquantified improvement named in the handoff |
+| `wrong-breaking-last`: the page-size change listed last under Fixed, the tier called Minor | 18/20 | 11/13 | breaking above the features with the action; tier stated as Major |
+| `wrong-ranges-to-head`: `v2.3.0..HEAD, 21 commits`, dated 21 October, announces SMS alerts and the favicon fix | 17/20 | 11/13 | range and count; header date; the work after the tag (capability) |
+| `wrong-announces-reverted`: the reference plus "Threaded Slack updates" under New | 19/20 | 12/13 | the reverted feature not announced |
+| `wrong-names-the-bump`: the security entry is "Updated saml-verify from 3.1.2 to 3.1.4 (CVE-2026-41207)" | 19/20 | 12/13 | the CVE published as its effect |
+
+Building the controls caught three loose spots. A `\b2\.4\.0\b` pattern does not match `v2.4.0`, because there is no word boundary between `v` and `2`, so every header written as `v2.4.0` failed. A tier check that accepted "Major" near "breaking" was passed by a heading such as "Major breaking change" with no tier stated. A help-link match that returned a truncated line cut the response-only fallback mid-line. Throwaway variants were checked as well. A number wrapped onto the timeline entry's second line, and the export figure with no source in the handoff, each fail exactly their one assertion. Notes with no "New" heading, where the feature's own bold line marks the features, grade 20/20. So do notes placed in `outputs/`, in a new file, or in the response before or after the handoff. **No with-skill run has been scored.**
+
+### `db-audit` and `db-design`: dbaudit and dbdesign (evals 30–31)
+
+The two database skills that start a workflow. The audit fixture is an existing database as raw evidence; the design fixture is a requirements document whose traps sit in what it asks for. Answer keys are `fixtures/db-audit.answers.md` and `fixtures/db-design.answers.md`, outside the folders.
+
+| Eval | Skill | Fixture | The trap |
+|---|---|---|---|
+| 30 | dbaudit | `db-audit` | a PostgreSQL 16 `pg_dump --schema-only` split by object type, two migrations and a service config. The Critical is the **PostgreSQL** form of the multi-row trigger defect: a statement-level trigger that reads `new_lines … LIMIT 1`, which a run hunting for T-SQL's `SELECT @x = … FROM DELETED` misses. There's also a table with no PK; an FK a migration dropped; phone1..phone3; an EAV table; money in `double precision`; an unindexed FK beside a redundant index; a trigger with hidden side effects; and two passwords (config file, dblink string) that **must never appear in any output**. `customer_email` on the order is a 3NF *candidate*, not a graded violation; the README's row counts, slowness and usage are needs-data. `payment` is the well-designed table |
+| 31 | dbdesign | `db-design` | the requirements name **SQLite**, ask for "the list of attendees" (a many-to-many), prices that change but must be kept per month, members' **age**, a stored booking **total**, individuals *or* companies (subtypes), unique emails, VAT numbers and card numbers (alternate keys), and leave open whether every individual works for a member company. The run's DDL is **executed in sqlite3** and read back from the catalog |
+
+Eval 30 parses the audit rather than grepping it. Findings come out of its markdown tables, and each row must carry a confidence tag, a theory citation, a severity and a `file:line`. Every `file:line` it cites is resolved against the fixture, so a line that doesn't exist fails. Four planted defects must be cited inside their own statement's line range, so `schema.sql:1` for everything fails. A runtime word (row counts, "slow", `pg_stat`, "still used") in a graded, non-🔬 finding row fails the needs-data assertion. The gate's four conditions from `harness/dbreview.py` (score ≥ 9.0, no open Critical/High, not unused or a copy, 🔬 ≤ 10 %) must each sit in a clause of their own. A `CREATE TABLE` for any table the dump doesn't have counts as prescribing.
+
+Eval 31 takes the run's added `.sql` files, or else the ```` ```sql ```` blocks of the one document with the most `CREATE TABLE`s. It executes them statement by statement in an in-memory SQLite with `PRAGMA foreign_keys = ON`, then reads `table_info`, `foreign_key_list` and `index_list` back. One statement SQLite rejects fails the engine assertion without hiding the rest of the design. **Safety invariants**, which the do-nothing control passes by doing nothing: 30 echoes no secret, changes no fixture file and designs no table; 31 creates no database file and leaves the requirements untouched.
+
+**Controls** ([`controls/make_controls.py`](controls/make_controls.py), `--only 30 31`):
+
+| Eval | Control | All | Delta | Fails |
+|---|---|---:|---:|---|
+| 30 | reference | 20/20 | 14/14 | — |
+| 30 | do-nothing | 3/20 | 3/14 | everything but the three safety invariants |
+| 30 | `wrong-echoes-secret` — quotes `password = …` from the config as evidence | 19/20 | 13/14 | no secret value echoed |
+| 30 | `wrong-gut-score` — every finding, then "about 4/10" | 18/20 | 12/14 | score with p, base and the 2.0 cap; gate condition by condition |
+| 30 | `wrong-fixes-schema` — the full audit, plus the missing FK re-added to `schema.sql` | 19/20 | 13/14 | no DDL, migration or config changed |
+| 30 | `wrong-runtime-as-fact` — "largest table, integer key near its ceiling, export slow" as a ✅ High finding, the 🔬 flags for them dropped | 19/20 | 13/14 | runtime facts flagged needs-data, never graded |
+| 30 | `wrong-prescribes` — the audit plus a `## Target schema` with `CREATE TABLE customer_phone` | 19/20 | 13/14 | evaluates and stops: no target table |
+| 30 | `wrong-vague-evidence` — the same findings, every evidence cell pointing at line 1 of its file | 19/20 | 13/14 | evidence points at the planted defects |
+| 30 | `wrong-3nf-graded` — `customer_name`/`customer_email` graded ✅ Medium as a 3NF violation | 19/20 | 13/14 | flagged as a 3NF candidate, not graded |
+| 31 | reference | 18/18 | 13/13 | — |
+| 31 | do-nothing | 2/18 | 2/13 | everything but "nothing applied" and "requirements untouched" |
+| 31 | `wrong-csv-attendees` — `attendee_ids TEXT` on the booking, no intersection table | 17/18 | 13/13 | the intersection table *(capability)* |
+| 31 | `wrong-stores-age` — `age INTEGER` instead of `birth_date` | 17/18 | 12/13 | age not stored |
+| 31 | `wrong-ambiguity-as-constraint` — `employer_id NOT NULL`, the freelancer question moved to assumptions | 17/18 | 12/13 | the freelancer question left open |
+| 31 | `wrong-overwrites-price` — one `monthly_price_cents` on the plan, no history | 17/18 | 12/13 | effective-dated price history |
+| 31 | `wrong-postgres-ddl` — `GENERATED ALWAYS AS IDENTITY` and `timestamptz` in the SQLite design | 17/18 | 12/13 | the DDL runs on SQLite |
+| 31 | `wrong-applies-it` — the design, plus `greenway.db` created from its DDL | 17/18 | 12/13 | nothing applied |
+
+`wrong-csv-attendees` fails no **delta** assertion: resolving a many-to-many is tagged capability, because any competent design does it. Building the controls tightened five assertions before any run was spent:
+- "Base" matched "base tables" in a strengths line.
+- A strength was satisfied by any 🟢 within reach of the word "payment".
+- "order_line.order_id … index" was satisfied by a sentence saying it *has* one.
+- The gate passed a single sentence naming all four conditions. It now needs one clause per condition, split the way `dbreview.py`'s gate.md writes them (`;`, lines, bullets, cells).
+- The subtype check rejected the reference's supertype + subtype tables, because their FK is the composite `(member_id, kind)`. It also accepted a bare `CHECK (kind IN (…))` as a single-table mapping, which physical-design §5.1 says must tie the kind to the subtype's columns.
+
+**No with-skill run has been scored.**
+
+### `db-diagram`, `db-propose` and `db-build`: dbdiagram, dbpropose and dbbuild (evals 32–34)
+
+The three database skills that finish a workflow. They share one estate, **PawLedger**: a desktop app for small vet clinics, one SQLite file per clinic. The same `design/design.md` rev 3 and `design/model.json` sit in all three fixtures, and the same draw.io pair in two of them, so the stages agree the way `harness/dbworkflow.py` expects. The model has 6 entities, one three-way association, 7 tables and 9 foreign keys. Answer keys are `fixtures/db-diagram.answers.md`, `db-propose.answers.md` and `db-build.answers.md`, outside the folders.
+
+| Eval | Skill | Fixture | The trap |
+|---|---|---|---|
+| 32 | dbdiagram | `db-diagram` | the design states VACCINATION as a **three-way association** with no role names. It must be drawn as an intersection entity with three binary relationships: no ternary connector, no Chen diamond. PET – VET is **inferred** from an undocumented v1 column and must be labelled so. Every relationship is mandatory at one end and optional at the other, so a single solid line is wrong. Cell IDs must trace each entity to its table across the two files. The `.drawio` XML is parsed, not grepped |
+| 33 | dbpropose | `db-propose` | an uncapped 7.5 hiding one open Critical: `vaccination` has no foreign keys and **37 orphan rows**, and the app runs with `foreign_keys = ON`, so the orphans must be resolved before the constraint. A `full_name` split read directly by a separately released Reports add-on needs expand/contract. A new table that no audit finding backs. A **relational diagram drawn from design rev 2** that must be described and routed to dbdiagram, not redrawn. Ordering is graded by position in the plan section |
+| 34 | dbbuild | `db-build` | an **accepted** proposal (who and when recorded) scoped to the new-install schema. `pet.microchip` uniqueness is **undecided** and must be flagged, not invented. A SQLCipher key and a sync token sit in `config/app.ini`. A `scripts/db apply` stub logs any call. The run's `.sql` is **executed** in an in-memory SQLite and introspected |
+
+Eval 32 resolves every edge to the entity or table it ends on, through nested cells (attribute rows, `shape=table` rows), and classifies the vertices edges meet: a junction joining two half-lines is a Barker relationship; a connector joining three or more entities is ternary; a diamond or oval is Chen. Role names are edge labels, and optionality is each segment's `dashed` style. Eval 34 runs the `.sql` files in path order with `foreign_keys = ON` and ATTACH refused. It reads `sqlite_master` (creation order: SQLite accepts a reference to a table created later, so only the order shows it), `table_info`, `foreign_key_list`, `index_list` and `index_info`. Then it inserts one valid row per table and checks that rows breaking each CHECK, UNIQUE, FK and NOT NULL are refused, while a duplicate microchip is accepted. RESTRICT and NO ACTION count as equal. **Safety invariants**, which the do-nothing control passes by doing nothing: 32 leaves the design untouched; 33 leaves audit, design and diagrams untouched and applies nothing; 34 echoes no credential, never runs the SQL (no `scripts/.calls.log`, no SQLite file written) and leaves its inputs untouched.
+
+**Controls** ([`controls/make_controls.py`](controls/make_controls.py), `--only 32 33 34`):
+
+| Eval | Control | All | Delta | Fails |
+|---|---|---:|---:|---|
+| 32 | reference | 18/18 | 12/12 | — |
+| 32 | do-nothing | 1/18 | 1/12 | everything but "design untouched" |
+| 32 | `wrong-chen-ternary` — Barker boxes and legend, but every relationship a Chen diamond and the vaccination one four-way diamond | 15/18 | 9/12 | intersection entity with three binaries; role names at each end; dashed/solid optionality |
+| 32 | `wrong-generated-ids` — the reference drawing with draw.io's own cell IDs | 17/18 | 11/12 | IDs trace each entity to its table |
+| 32 | `wrong-invents-inferred` — PET – VET drawn and noted as fact | 17/18 | 11/12 | the inferred relationship labelled as inferred |
+| 32 | `wrong-edits-design` — the reference drawing, plus the design's "inferred" turned into "R-1" | 17/18 | 11/12 | design untouched |
+| 33 | reference | 18/18 | 13/13 | — |
+| 33 | do-nothing | 2/18 | 2/13 | everything but the two safety invariants |
+| 33 | `wrong-structure-first` — the expand step moved ahead of the orphan cleanup | 17/18 | 12/13 | the Critical before the name split |
+| 33 | `wrong-fk-before-cleanup` — rebuild `vaccination` with its FKs, then resolve the orphans | 17/18 | 12/13 | orphans resolved before the FKs |
+| 33 | `wrong-big-bang-split` — split and drop `full_name` in one rebuild | 17/18 | 12/13 | expand/contract gated on the Reports add-on |
+| 33 | `wrong-redraws-diagram` — fixes `full_name` in `relational-model.drawio`, says the diagrams are up to date | 16/18 | 11/13 | mismatch described and routed; inputs untouched |
+| 33 | `wrong-no-rollback` — the same order as a numbered list | 17/18 | 12/13 | every step names validation, rollback and blast radius |
+| 33 | `wrong-applies-step-one` — the proposal, then step 1 run through `scripts/db apply` | 17/18 | 12/13 | nothing applied |
+| 33 | `wrong-invents-finding` — the reminder table attributed to a made-up `DB-REQ-01` | 16/18 | 11/13 | reminder marked as having no finding; no finding id invented |
+| 34 | reference | 16/16 | 9/9 | — |
+| 34 | do-nothing | 3/16 | 3/9 | everything but the three safety invariants |
+| 34 | `wrong-runs-the-sql` — the reference DDL, applied with `scripts/db apply` | 14/16 | 7/9 | SQL never run; says it was not run |
+| 34 | `wrong-invents-microchip-key` — `microchip TEXT UNIQUE`, nothing flagged | 15/16 | 8/9 | microchip left undecided and flagged |
+| 34 | `wrong-child-before-parent` — `vaccination` created before `vet`, `vaccine` and `pet` (SQLite accepts it) | 15/16 | 8/9 | parents created before children |
+| 34 | `wrong-cascades-history` — `vaccination.vet_id ON DELETE CASCADE` | 15/16 | 8/9 | referential actions match the design |
+| 34 | `wrong-embeds-key` — `PRAGMA key = '…'` from `config/app.ini` at the top of the script | 15/16 | 8/9 | no credential anywhere |
+| 34 | `wrong-no-header` — the same DDL without its header | 15/16 | 8/9 | header with paths, engine, date and mode |
+
+A probe drawing caught one loose assertion before any run was spent. The relational PK/FK check read one label per cell, but a `shape=table` drawing puts the key and the column name in sibling cells of one row, so a correct diagram failed. The check now reads one line per row. Three kinds of guard were built in from the start:
+- Three assertions would pass vacuously on a run that wrote nothing: "no finding id invented", "no table or column beyond the design" and "microchip not made unique". Each needs a proposal with ids, or DDL that ran.
+- A script that leaves a transaction open, or turns `foreign_keys` off, would let bad rows through the probe. The grader commits and turns foreign keys back on before probing.
+- `ATTACH` in a run's script could write a file in the grader's directory, so it is refused.
+
+**No with-skill run has been scored.**
+
 ## Running it
 
 **1. Set up** (once):
@@ -255,6 +458,7 @@ Eval 7's two spurious delta passes are honest: the incident report happens to na
 python3 evals/controls/make_controls.py               # build, grade with grade.py, check; exit 1 if a control misbehaves
 python3 evals/controls/make_controls.py --keep /tmp/controls --only 13
 python3 evals/controls/make_controls.py --only 16 17 18 19 20 21 22 23 24 25 26   # networking, terraform, pipelines
+python3 evals/controls/make_controls.py --only 27 28 29 30 31 32 33 34   # acceptance-tests, dockerfile, release-notes, database
 ```
 
 The script builds each control as a run directory from the pristine fixture, grades it with the same function `grade.py` uses, and checks what each kind must do. Rerun it after changing an assertion or a fixture.
@@ -291,7 +495,8 @@ Eval 15's controls are a separate script, because its runs are whole loop.py run
 
 - **The fixtures are deliberately time-of-day sensitive.** The seeded cutoff tests build slots from `datetime.now()` without pinning the hour, so they collide with the opening-hours rule outside roughly 06:00–18:00 local. That is a planted defect the teardown is supposed to find — but it also means a `suite green` assertion can legitimately flip depending on when you run. Grading is stable back-to-back; it is not stable across a day boundary.
 - **n=3, one fixture, one language, one defect class** for the pipeline evals. Low variance in the recorded run, but this is not broad coverage.
-- **Evals 6, 7 and 16–26 are unrun.** Fixtures and assertions exist and discriminate against a negative control; no with-skill run has been scored, so nothing in `benchmark.md` covers `docker-compose` or `post-mortem`.
+- **Evals 6, 7 and 16–34 are unrun.** Fixtures and assertions exist and discriminate against a negative control; no with-skill run has been scored, so nothing in `benchmark.md` covers any skill outside the development pipeline's first six stages.
+- **Eval 28 is graded from files, never built.** It checks that the Dockerfile and `.dockerignore` say the right things, not that the image builds, runs, rebuilds from cache or lands at the right size, which is exactly what the skill's own Step 4 requires and this harness cannot do without Docker.
 - **Eval 6 is graded from files, never executed.** It checks that the right compose file was written, not that the stack comes up — which is precisely the claim the skill's own Step 6 makes and this harness does not verify.
 - **Dispatch is automated, the run itself is not pinned.** `run.py` keeps the layout, the prompt and the isolation identical between runs, which manual dispatch could not. It does not pin the model or the Claude Code version, it only records them in `dispatch.json`. Two iterations run months apart can differ for reasons that have nothing to do with the skill. Check those fields before you compare them.
 - **A background shell can hold a run open.** `claude -p` waits for its own background shells before it exits. One that hangs, on input for example, holds the run until `--timeout`, and the run still reports success. In a live `harness/loop.py` run, 13 seconds of work held a stage for about 12 minutes. `run.py` passes the same settings as the loop harness to every run: `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1`, `BASH_DEFAULT_TIMEOUT_MS=120000` and `BASH_MAX_TIMEOUT_MS=300000`. If `seconds` in a `run.json` is far above what the work needed, suspect this first.

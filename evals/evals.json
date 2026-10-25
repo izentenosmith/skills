@@ -1,6 +1,6 @@
 {
  "skill_name": "skills",
- "note": "Evals 0-5 cover the six-stage development pipeline; 6-7 cover the containers and operations skills; 8-14 cover hotfix and incident-fix across different stacks; 15 runs harness/loop.py end to end (runner: loop) instead of one claude -p call; 16-20 cover the five networking skills; 21-26 cover terraform and pipelines, one eval per mode (review, design, propose). Each with-skill run is repeated 3x for variance analysis; baseline is a single no-skill run on the same prompt.",
+ "note": "Evals 0-5 cover the six-stage development pipeline; 6-7 cover the containers and operations skills; 8-14 cover hotfix and incident-fix across different stacks; 15 runs harness/loop.py end to end (runner: loop) instead of one claude -p call; 16-20 cover the five networking skills; 21-26 cover terraform and pipelines, one eval per mode (review, design, propose); 27 covers acceptance-tests on the tdd fixture; 28 covers dockerfile; 29 covers release-notes; 30-34 cover the five database skills. Each with-skill run is repeated 3x for variance analysis; baseline is a single no-skill run on the same prompt.",
  "evals": [
   {
    "id": 0,
@@ -224,6 +224,70 @@
    "fixture": "ci-propose",
    "prompt": "We have a pipeline review in analysis/pipelines/ and a target in docs/pipeline-design.md. Write the proposal for the migration.",
    "expected_output": "Propose mode, nothing changed. Webhook rotated before removal and NPM_TOKEN treated as exposed; the pull_request_target containment first; build-once before rollback-by-digest and progressive delivery; the new pipeline run alongside the old before cut-over; settings changes (branch protection, environment reviewers) named in rollback because a git revert doesn't undo them; per-step validation and rollback; expected effect on delivery metrics; needs-data flags as open questions."
+  },
+  {
+   "id": 27,
+   "name": "acceptance-tests-red-for-the-right-reason",
+   "skill": "acceptance-tests",
+   "fixture": "fixture-tdd",
+   "prompt": "Write the acceptance tests for the build plan in .workflow/brief.md.",
+   "expected_output": "Standard tier stated. One black-box test per acceptance criterion, driven through BookingService.submit with the existing FakeStore/FakeConfig and no import of reservations.rules or reservations.booking. Every new test is red on the unimplemented code and red on behavior (assertion, DID NOT RAISE), none fails to load; criteria 2 and 4, which already hold today, are tested against the rejected side so they are red too. The pre-existing suite stays green and no cutoff rule is written. Executed by the grader: the tests pass once a correct cutoff rule is laid over the repo, and fail on a hard-coded 120-minute window, an inclusive whole-minute boundary and a first-violation-only validate. The brief gains an **Acceptance tests** section whose **Command:** runs exactly the new tests and which maps each of the five criteria exactly once to a test the run added, logged under Revisions. The response hands off to tdd."
+  },
+  {
+   "id": 28,
+   "name": "dockerfile-repair-pins-and-drops-root",
+   "skill": "dockerfile",
+   "fixture": "dockerfile",
+   "prompt": "Our Docker image for this service is over 1 GB and every commit rebuilds everything from scratch. Fix it.",
+   "expected_output": "Repair mode. States the stack inference first (Node 20.11.1 from .nvmrc, pnpm 9.12.3 with pnpm-lock.yaml, TypeScript to dist/, node dist/server.js, PORT default 8080 not the README's 3000, native better-sqlite3, migrations/ and templates/ read at runtime, target linux/amd64 from deploy/k8s while the team builds on Apple Silicon). Names the existing Dockerfile's defects before changing it: node:latest, COPY . . before install, single stage, root, shell-form pnpm start, the PDF_RENDER_API_KEY baked into ENV (value not reproduced, treated as exposed), EXPOSE 3000 and a healthcheck on /health that does not exist, .env and node_modules missing from the .dockerignore. The repaired Dockerfile: node:20.11 in every stage, pnpm pinned, digest pinned or its absence recorded; lockfile copied and installed frozen under a cache mount before the source; TypeScript built in a build stage; a slim runtime with only dist, production node_modules, migrations/ and templates/; better-sqlite3 installed on the target platform (no $BUILDPLATFORM on that stage); a non-root user that owns the data directory; EXPOSE 8080; a HEALTHCHECK on /healthz with a tool the runtime has, or a stated omission because the k8s probes own health; exec-form node dist/server.js; no secret in ENV or ARG. The Makefile builds with --platform linux/amd64. The existing .dockerignore keeps every curated entry and gains .env/.env.* (with !.env.example), node_modules and dist. Step 4 lists each check with its command and either the observed result or a plain statement that docker was not available. No secret value appears in the response or any written file."
+  },
+  {
+   "id": 29,
+   "name": "release-notes-translates-drops-and-leads-with-breaking",
+   "skill": "release-notes",
+   "fixture": "release-notes",
+   "prompt": "Write the release notes for v2.4.0. The product's repository is in repo/ and an export of its issue tracker is in issues/.",
+   "expected_output": "The range confirmed out loud as v2.3.0..v2.4.0, 18 commits, with the version and the 2026-10-14 date taken from the tag (the three commits after it, SMS alerts and a favicon fix, left out). The tier stated as Major because a one-line 'chore' lowers the list endpoints' default page size from 500 to 50, and that change placed in an action-required section above the features with what to do (follow next_cursor or pass limit). A header with the exact version and date, a summary, maintenance windows announced as a capability with no ticket id, class or flag name; the incident-timeline improvement written without a number (no invented percentage, no 'up to') and the CSV export speed-up given its measured figure (48 s to 11 s) with PR #256 named as the source; the two fixes written as the symptoms issues #318 and #322 describe, not as a null guard and an off-by-one; the /v1/webhooks deprecation with its 31 March 2027 date and /v2/hooks as the replacement; the saml-verify bump published as the SSO sign-in vulnerability it closes; the Slack thread replies (shipped and reverted inside the range), the plain bumps, CI, tests, docs, lint and the refactor dropped; a help link. The handoff states the dropped count and names the timeline as the improvement that lacks a figure."
+  },
+  {
+   "id": 30,
+   "name": "dbaudit-postgres-dump-scored-not-fixed",
+   "skill": "dbaudit",
+   "fixture": "db-audit",
+   "prompt": "Audit the database in this repo.",
+   "expected_output": "A Database audit (mode stated, PostgreSQL inferred, rubric v1.1 and the 2026-10-19 dump date recorded, coverage stated) with findings each carrying confidence, theory, severity and a file:line that exists: the statement-level trigger reading one row of the new_lines transition table rated Critical; no PK on inventory_movement; order_line.product_id with no FK (dropped by migration 0012); phone1..phone3 and the product_attribute EAV as 1NF breaks; money in double precision; the unindexed order_line.order_id FK and the redundant ix_product_sku; the stock trigger's hidden side effects; the two passwords recorded by kind and location and never reproduced. The score shows p per criterion, base and the 2.0 cap set by the Critical; the gate fails condition by condition; row counts, the slow export and reporting-database usage are needs-data flags, and customer_name/customer_email on sales_order is a 3NF candidate, not a graded violation; the payment table recorded as a strength; the recovered model written as relationship sentences; no DDL, migration or config changed and no target schema written."
+  },
+  {
+   "id": 31,
+   "name": "dbdesign-sqlite-from-requirements-traps",
+   "skill": "dbdesign",
+   "fixture": "db-design",
+   "prompt": "Design the database for this. The requirements are in docs/requirements.md.",
+   "expected_output": "A new-design document with SQLite DDL (the engine the requirements name) that executes in sqlite3: surrogate primary keys on every table; booking attendees as an intersection table unique per pair, not a list column; plan prices as an effective-dated history unique per plan and date; birth date stored instead of age; the booking total cost declined (computed by a view) or justified as deliberate denormalization; the individual/company subtypes mapped as supertype + subtype tables or one table with kind-tied CHECKs; email, VAT number and member number as UNIQUE alternate keys; the individual-to-company link optional, with the freelancer question listed as open rather than made a constraint. A Barker conceptual model with two-way relationship sentences, functional dependencies with a normal-form rationale, Codd's rules reviewed, assumptions kept apart from open questions; nothing applied and the requirements untouched."
+  },
+  {
+   "id": 32,
+   "name": "dbdiagram-barker-and-relational-from-design",
+   "skill": "dbdiagram",
+   "fixture": "db-diagram",
+   "prompt": "Draw the ER and relational models for the design in design/.",
+   "expected_output": "er-model.drawio and relational-model.drawio, uncompressed mxfile with semantic cell IDs that trace each entity to its table (er-pet / rel-pet). ER page titled Barker ER Model with a legend naming Barker notation and its glyphs; singular UPPERCASE entities in soft-cornered boxes with #/*/o attribute marks; the three-way VACCINATION association drawn as an intersection entity with three binary relationships (no ternary connector, no Chen diamonds); every relationship with a lowercase role name at each end and each end's optionality drawn (dashed may-be, solid must-be); the inferred PET - VET relationship labelled as inferred. Relational page with every table and column, PK/FK labels and exactly one edge per foreign key; a provenance note naming design/design.md on both pages; design/ untouched."
+  },
+  {
+   "id": 33,
+   "name": "dbpropose-orphans-before-constraints",
+   "skill": "dbpropose",
+   "fixture": "db-propose",
+   "prompt": "Prepare the proposal for the PawLedger clinic database from audit/, design/ and diagrams/.",
+   "expected_output": "A proposal.md citing the 2.0 score and its Critical cap, with a decision register that separates structure, data and logic in the Reuse/Refactor/Rework/Rebuild vocabulary and traces every decision to an audit finding id, inventing none; the new reminder table marked as a requirement with no audit finding. In the plan: the 37 orphan vaccination rows resolved before the foreign keys are declared, the Critical before the full_name split, the split done expand/contract with the contract gated on Reports add-on 2.0; every step with validation, rollback and blast radius. The relational diagram's rev-2 mismatch (owner.full_name) described and routed to dbdiagram, not redrawn; design and both diagrams cited by path; the microchip and Reports 1.x needs-data flags carried as open questions; acceptance required before dbbuild; audit/, design/ and diagrams/ untouched; nothing applied."
+  },
+  {
+   "id": 34,
+   "name": "dbbuild-executable-ddl-from-accepted-proposal",
+   "skill": "dbbuild",
+   "fixture": "db-build",
+   "prompt": "The proposal in proposal/ has been accepted (see proposal/acceptance.md). Generate the DDL.",
+   "expected_output": "Ordered .sql files for SQLite 3.45 that run in one pass on an empty database: the seven design tables with their primary keys, parents before children, every foreign key with the design's ON DELETE action, NOT NULL, UNIQUE and CHECK constraints that refuse bad rows, the design's indexes, and nothing beyond the design. pet.microchip left without a UNIQUE and flagged as undecided (Q3) rather than invented. A header naming proposal/proposal.md, design/design.md, the engine, the generation date and that it creates a new schema. No credential from config/app.ini anywhere; the SQL never run (no scripts/db call, no database file); proposal, design, diagrams and config untouched; the response says the SQL was not run and what it could not verify."
   }
  ]
 }

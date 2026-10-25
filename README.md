@@ -300,7 +300,7 @@ Assertions are split: **capability** (does the stage do its job at all) from **d
 
 **Fixtures and assertions, not yet run, for networking and infrastructure:** evals 16–20 give each networking skill one seeded estate (an audit that must not echo a pre-shared key, a design graded by parsing every CIDR against the ranges already in use, diagrams parsed as draw.io XML, a proposal hiding a Critical under a 7.9, a blueprint request on an unaccepted proposal). Evals 21–26 give `terraform` and `pipelines` one eval per mode (Review, Design, Propose). Each has a reference, a do-nothing and plausible-but-wrong controls that separate as designed; no with-skill run has been scored.
 
-`acceptance-tests`, `dockerfile`, `release-notes` and the five database skills have no eval.
+**Also fixtures and assertions, not yet run:** eval 27 runs the acceptance tests `acceptance-tests` writes against the unchanged code, a correct implementation and three mutants; eval 28 repairs a Dockerfile, graded by parsing it per stage; eval 29 writes release notes from a tagged history with a hidden breaking change and a reverted feature; evals 30–34 give each database skill one seeded fixture (an audit that must not echo a password, a design whose DDL is executed in SQLite, diagrams parsed as draw.io XML, a proposal that must clean orphans before adding the constraint, DDL executed and probed with bad rows). Every skill in the repo now has an eval; only the development pipeline's first six stages have a scored result.
 
 ## How to use
 

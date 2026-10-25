@@ -42,6 +42,10 @@ Run `python3 harness/dbworkflow.py --help` for the harness interface. It support
 
 The conceptual ER model uses Barker notation throughout; the relational model remains in table/key notation. The harness prompts for a Barker ER page and legend and checks the canonical editable draw.io pair before proposal and DDL stages. The harness orchestrates; it does not replace skill instructions. The proposal and DDL build are separate runs: DDL generation requires an explicit accepted-proposal input. Structural iteration routes through design, diagrams, and proposal again; the revised proposal needs acceptance before its DDL is generated. A skill invoked directly remains responsible for stating its evidence, assumptions, and missing prerequisites. Diagram outputs are editable `.drawio` files for both the **modelo entidad relación** and **modelo relacional**.
 
+## Evals
+
+Each skill has one eval in [`evals/`](../../evals/README.md) (evals 30–34): a PostgreSQL dump to audit whose Critical is the PostgreSQL form of the multi-row trigger defect and whose config carries a password the audit must never echo; requirements that ask for a stored age and a "list" that is really a many-to-many, graded by executing the design's DDL in SQLite; and one shared estate for the last three — a design to draw (graded by parsing the draw.io XML for Barker notation and an intersection entity), a proposal whose orphan rows must be cleaned before the constraint is added, and an accepted proposal whose DDL is executed and probed with rows that must be refused. Reference, do-nothing and plausible-but-wrong controls separate as intended (`python3 evals/controls/make_controls.py --only 30 31 32 33 34`). **No with-skill run has been scored.**
+
 ## Companion references
 
 Shared companion references use relative symlinks to one canonical copy in this skill tree. When installing a single skill folder outside this repository, dereference its links during copy (for example, `cp -RL skills/database/dbdesign /target/skills/`).

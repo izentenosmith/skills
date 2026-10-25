@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: invoicer
+  namespace: billing
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: invoicer
+  template:
+    metadata:
+      labels:
+        app: invoicer
+    spec:
+      nodeSelector:
+        kubernetes.io/arch: amd64
+      containers:
+        - name: invoicer
+          image: registry.example.com/billing/invoicer:4f2c91a
+          ports:
+            - containerPort: 8080
+          env:
+            - name: PORT
+              value: "8080"
+          envFrom:
+            - secretRef:
+                name: invoicer-secrets
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests: {cpu: 100m, memory: 128Mi}
+            limits: {memory: 256Mi}
