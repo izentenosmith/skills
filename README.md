@@ -440,6 +440,7 @@ Each family has its own README with more detail: [development](skills/developmen
 - **Every skill carries a calibration tier and a stopping rule.** The tier says how much of the skill to run before starting; the stopping rule says when to stop, so a workflow with an open-ended quality goal terminates instead of iterating on taste.
 - **Skills cross-link** with relative Markdown links to compose into pipelines.
 - **Behavioral, not procedural** — skills describe *what* to achieve and let the agent figure out *how* against the live codebase. No hard-coded file paths or line numbers.
+- **CI checks structure, not quality.** [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every PR and push to `main`, and calls no model. It checks every skill's frontmatter, every symlink and relative link, and that `evals.json`, `grade.py` and the controls agree ([`check_repo.py`](.github/scripts/check_repo.py)). It also runs `actionlint`, the harness unit tests on Python 3.13 and 3.14, and every eval control. Whether a skill *works* is still the job of a scored eval run. `main` is protected by the ruleset in [`.github/rulesets/main.json`](.github/rulesets/main.json): changes arrive by pull request with all four CI checks green, and nobody (admins included) can force-push or delete the branch. To re-apply it after editing, update the existing ruleset: `gh api -X PUT repos/izentenosmith/skills/rulesets/<id> --input .github/rulesets/main.json` (`gh api repos/izentenosmith/skills/rulesets` lists the id).
 
 ## License
 

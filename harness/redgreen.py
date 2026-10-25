@@ -90,7 +90,11 @@ def snapshot(repo) -> str:
         git(repo, "read-tree", "HEAD", env=env)
         git(repo, "add", "-A", ".", env=env)
         tree = git(repo, "write-tree", env=env)
-        return git(repo, "commit-tree", tree, "-p", "HEAD", "-m", "redgreen snapshot", env=env)
+        # The snapshot is a dangling commit that never reaches a branch, so it gets its
+        # own identity: a CI runner or container has none, and git refuses to guess one.
+        ident = {f"GIT_{who}_{what}": value for who in ("AUTHOR", "COMMITTER")
+                 for what, value in (("NAME", "redgreen"), ("EMAIL", "redgreen@localhost"))}
+        return git(repo, "commit-tree", tree, "-p", "HEAD", "-m", "redgreen snapshot", env={**env, **ident})
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

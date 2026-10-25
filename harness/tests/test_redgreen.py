@@ -1,10 +1,12 @@
 """redgreen.py against throwaway git repos. Run: python3 -m unittest discover harness/tests"""
+import os
 import pathlib
 import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
@@ -168,6 +170,17 @@ class RedGreen(unittest.TestCase):
         self.fix()
         res = R.check(self.repo, CMD, base=snap)
         self.assertEqual(res["verdict"], "red-green")
+        self.assertIn("notes.txt", git(self.repo, "ls-tree", "-r", "--name-only", snap))
+
+    def test_snapshot_needs_no_git_identity(self):
+        # A fresh CI runner or container has no user.name/user.email, and Linux git
+        # won't guess one. The snapshot is an internal dangling commit, so it carries
+        # its own identity instead of failing with "Author identity unknown".
+        (self.repo / "notes.txt").write_text("wip\n")
+        no_identity = {"GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_COUNT": "1",
+                       "GIT_CONFIG_KEY_0": "user.useConfigOnly", "GIT_CONFIG_VALUE_0": "true"}
+        with mock.patch.dict(os.environ, no_identity):
+            snap = R.snapshot(self.repo)
         self.assertIn("notes.txt", git(self.repo, "ls-tree", "-r", "--name-only", snap))
 
     def test_worktree_is_cleaned_up(self):
