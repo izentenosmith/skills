@@ -18,7 +18,10 @@ Read [proposal.md](proposal.md) for the detailed decision rules and output struc
 - the recommendation and its rationale, including what is already good, what needs attention, and the expected improvement;
 - a prioritized set of decisions or changes, with each major existing-database decision tied to an audit finding;
 - the target design and the included **modelo entidad relación** and **modelo relacional** draw.io artifacts, with their paths;
-- implementation or migration sequencing, dependencies, risks, validation, rollback considerations, and unresolved questions where relevant.
+- implementation or migration sequencing as a step table — each step with its validation, rollback and blast radius; data cleanup before the constraint it would violate; expand/contract for anything an existing consumer reads — plus dependencies, risks and unresolved questions;
+- that the proposal needs explicit acceptance before [dbbuild](../dbbuild/SKILL.md) generates DDL.
+
+Save it as `proposal.md` (location in [proposal.md](proposal.md#deliverable)) and give its path in the response.
 
 Keep facts, inferences, and decisions distinct. Treat unresolved runtime questions as open questions. A proposal is not authorization to change a database; never apply DDL or migrations as part of this skill.
 

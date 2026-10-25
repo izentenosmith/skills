@@ -22,7 +22,8 @@ Follow these strict execution rules:
 2. **Open the session with the charter** (once, before the first question) and **carry the progress line** on every question after it — both formats below.
 3. For each question, format your response into four distinct sections: **[The Question]**, **[Options]**, **[Architect's Recommendation]**, **[Cost of getting this wrong]** — all four specified below.
 4. **Codebase Constraint:** If the answer to a question can be inferred by analyzing the existing codebase, do not ask me. Instead, use your file/search tools to find the answer, state your findings, and present the next logical question based on that data. Mark such answers **[inferred]** — they count as resolved, but I can overturn them. An inferred answer still names what the codebase forced and what that costs; it is a resolved decision, not a free one.
-5. Conclude every response with: "Awaiting your decision or input to proceed."
+5. **Record as you resolve.** When a resolved decision is hard to reverse, surprising without context, and a real trade-off, write it as an ADR; when a question settles what a word means, add it to the glossary. Both happen the moment the question resolves, per [records.md](records.md), and the next question names them in one line.
+6. Conclude every response with: "Awaiting your decision or input to proceed."
 
 ## The charter — open with what we're solving and why
 
@@ -96,6 +97,8 @@ Before the first question, load what the repo already decided for the area you'r
 - **ADRs** covering that area. An ADR is a resolved decision: treat it as **[inferred]** and binding. If the design you are about to recommend contradicts one, say so explicitly and make superseding it its own decision — never route around it silently.
 - **The domain glossary**, so the vocabulary in your questions, the boundaries you name, and the interfaces you propose match the language the project already uses.
 
+Note **where** the ADRs and the glossary live, or that they don't exist yet: rule 5 writes to both, and [records.md](records.md) says where a repo without them gets them.
+
 This matters most *here*, at stage 1. This is where boundaries get placed and dependency directions get fixed, and those are the decisions a project convention is most likely to already govern and most expensive to get wrong. This skill stays repo-agnostic on purpose: the *process* lives here, the *project-specific rules* live in those documents.
 
 ## Calibrate the depth first
@@ -139,7 +142,7 @@ If the effort is large, also resolve **decomposition**: how it splits into indep
 
 The design dialogue stays here: one question at a time, with you as the decision-maker. A subagent cannot ask you anything, so it never runs the conversation.
 
-What it *can* run is the **[inferred]** half of rule 3. When a question is answerable from the codebase, dispatching a read-only subagent to answer it keeps this dialogue clean — you get back the finding, not a hundred lines of file excerpts. On a **large** effort the decomposition survey (which existing areas move together, where the current boundaries actually fall) is the same kind of job.
+What it *can* run is the **[inferred]** half of rule 4. When a question is answerable from the codebase, dispatching a read-only subagent to answer it keeps this dialogue clean — you get back the finding, not a hundred lines of file excerpts. On a **large** effort the decomposition survey (which existing areas move together, where the current boundaries actually fall) is the same kind of job.
 
 Delegate the lookup; state the finding yourself, still marked **[inferred]**, and still overturnable.
 
@@ -150,6 +153,8 @@ Delegate the lookup; state the finding yourself, still marked **[inferred]**, an
 When every dimension in the termination gate has reached one of the three end states, restate the **charter** — unchanged if the design still serves the problem you opened with, and explicitly amended if the questions moved it — then summarize dimension-by-dimension. For each decision, keep the option that was chosen and the one-line reason, so the brief inherits the *why* and not just the *what*; a decision whose rationale is lost gets re-argued the first time someone finds it inconvenient.
 
 Keep the **deferred** decisions in their own section, each with the boundary that protects it and the signal that will force it — agent-brief carries those into the plan as constraints, not as work.
+
+List the **records** written during the session — each ADR's path and one-line decision, each glossary term added or changed — so agent-brief can cite them instead of restating their rationale. None written is a valid answer; say so.
 
 Close with the count: how many questions were asked against the estimate, and where the estimate moved.
 

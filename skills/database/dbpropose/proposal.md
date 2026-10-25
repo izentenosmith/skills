@@ -57,11 +57,31 @@ deduplication, orphan resolution, magic-value handling, repeating-group conversi
 findings where applicable. Keep every unresolved needs-data flag as an open question and say which
 decision it affects.
 
-For in-place remediation, order proposed changes Critical-first and by dependency. Each register row
-names the finding, change, patch or DDL outline, data step, risk/blast radius, validation, and rollback.
-All changes are proposals for review; this skill never applies them.
+Order the work Critical-first and by dependency, and apply three ordering rules:
+
+- **Data before the constraint it would violate.** Orphan resolution, deduplication and magic-value
+  cleanup come before the foreign key, unique or check constraint they would break — as their own
+  earlier step, with a check that zero violating rows remain before the constraint step runs.
+- **Expand/contract for anything an existing consumer reads.** A rename, split, merge, type change or
+  drop of a column, table or view that a known consumer (an app, a report, an add-on, an integration)
+  uses ships in three steps: **expand** (add the new form beside the old and keep both populated),
+  **migrate** the consumers, **contract** (remove the old form). The contract step is gated on the
+  named consumer being confirmed off the old form; if nobody can confirm that, it stays an open question.
+- **Every step is a row in the sequence table**, for migrations and in-place remediation alike:
+
+| # | Change | Finding | Data step | Validation | Rollback | Blast radius |
+|---|---|---|---|---|---|---|
+| 1 | <what changes> | <audit id, or "none: new requirement R-n"> | <cleanup, backfill or "none"> | <the query or check that proves it worked> | <how this step is undone> | <who and what is affected if it goes wrong> |
+
+Put the table first in the sequence section; mechanism notes, risks and dependencies go below it. A
+step with no rollback says why (and what replaces it — a backup restore, a forward fix). All changes are
+proposals for review; this skill never applies them.
 
 ## Deliverable
+
+Write the proposal to a file, `proposal.md`, in the location the user names — otherwise in a
+`proposal/` folder at the root of the database's artifacts, beside `audit/`, `design/` and `diagrams/`.
+The chat response summarizes it and gives its path; the file is the reviewable artifact.
 
 Write a concise proposal that includes:
 
@@ -73,6 +93,9 @@ Write a concise proposal that includes:
    what each diagram communicates and note any known model/diagram discrepancy.
 5. Migration or remediation sequence, dependencies, risks, validation, and rollback.
 6. Open questions, especially unresolved audit flags, with the decision each blocks.
+7. Acceptance: the proposal is a recommendation until someone accepts it explicitly. Name who accepts
+   it and how the acceptance is recorded, and state that [dbbuild](../dbbuild/SKILL.md) generates DDL
+   only from an accepted proposal.
 
 Do not paste large DDL or diagram XML into the proposal when the artifacts can be linked. Keep the
 proposal reviewable and make each referenced artifact path unambiguous.

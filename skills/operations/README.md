@@ -80,6 +80,7 @@ Both also publish under a deadline rather than at completeness. Release notes ar
 |-----|---------|
 | [discovery](hotfix/discovery.md) | hotfix, incident-fix (incident-fix's copy adds levers, observability, data access) — the `.workflow/env.md` profile |
 | [root-cause-note](hotfix/root-cause-note.md) | hotfix — the three-line note and the caller sweep |
+| [diagnosis](hotfix/diagnosis.md) | hotfix, incident-fix (symlinked) — a red loop before any theory, minimise, ranked falsifiable hypotheses, one probe at a time |
 | [review-checklist](hotfix/review-checklist.md) | hotfix — the review pass without a review skill |
 | [follow-up](hotfix/follow-up.md) | hotfix — what a band-aid owes |
 | [final-checklist](hotfix/final-checklist.md) | hotfix — the closing record and what counts as evidence |
@@ -95,10 +96,10 @@ Both also publish under a deadline rather than at completeness. Release notes ar
 | [blameless-culture](post-mortem/blameless-culture.md) | post-mortem — why blameless is a data-collection strategy, and the language patterns that break it |
 | [contributing-factors](post-mortem/contributing-factors.md) | post-mortem — past single-root-cause; the categories to sweep and where to stop descending |
 
-## Measured, partly
+## Measured
 
-`post-mortem` has an eval fixture and a scored assertion set in [`../evals/`](../../evals/README.md): a git repository whose triggering commit sits nine days before the outage window, plus four documents that contradict each other on detection time — one of which blames a named engineer and demands specific remediation. Submitting that incident report verbatim as the answer scores **3/10** on the assertions that test what this skill instructs. **No with-skill run has been scored yet**, so there is no number for the skill itself.
+`post-mortem` has an eval fixture and a scored assertion set in [`../evals/`](../../evals/README.md): a git repository whose triggering commit sits nine days before the outage window, plus four documents that contradict each other on detection time — one of which blames a named engineer and demands specific remediation. Submitting that incident report verbatim as the answer scores **3/10** on the assertions that test what this skill instructs. **First run (n=1): 1.00 against 0.60 for no skill.**
 
-`hotfix` (evals 8–11: a Node service, a JVM service with no build tool, a Python script with no tests, and an outage it must route out) and `incident-fix` (evals 12–14: a containerized web app with feature flags, a batch job that corrupted rows, a library with no deploy step) have fixtures and assertions; both assertion sets separate a reference answer from a do-nothing one, but **no with-skill run has been scored yet**.
+`hotfix` (evals 8–11: a Node service, a JVM service with no build tool, a Python script with no tests, and an outage it must route out) and `incident-fix` (evals 12–14: a containerized web app with feature flags, a batch job that corrupted rows, a library with no deploy step) have fixtures and assertions; both assertion sets separate a reference answer from a do-nothing one. **First runs:** hotfix 1.00, 1.00, 1.00 and 0.83 (n=3) against 0.00–0.71 for no skill; incident-fix 0.95 (n=3), 0.77 (n=3) and 1.00 against 0.43–0.60. Eval 13's two repair misses are the grader: it tries only `--apply`-style flags, and the runs' repair scripts also require `--expect N --backup-dir`.
 
-`release-notes` has one too (eval 29): a tagged git history whose range hides a one-line breaking change, a feature shipped and reverted inside the release, a CVE fix among routine dependency bumps, an improvement nobody measured, internal class and ticket names in the commit subjects, and work committed after the tag. Reference, do-nothing and plausible-but-wrong controls separate as intended (`python3 evals/controls/make_controls.py --only 29`). **No with-skill run has been scored.**
+`release-notes` has one too (eval 29): a tagged git history whose range hides a one-line breaking change, a feature shipped and reverted inside the release, a CVE fix among routine dependency bumps, an improvement nobody measured, internal class and ticket names in the commit subjects, and work committed after the tag. Reference, do-nothing and plausible-but-wrong controls separate as intended (`python3 evals/controls/make_controls.py --only 29`). **First run (n=1): 1.00 against 0.54 for no skill.**

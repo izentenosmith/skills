@@ -2671,7 +2671,11 @@ def db_ddl_script(run, fixture):
         return "\n".join(read(run / "repo" / f) for f in sql), ", ".join(sql)
     docs = {f: read(run / "repo" / f) for f in added + modified if f.endswith(".md")}
     docs.update({f"outputs/{p.name}": read(p) for p in (run / "outputs").glob("*.md")})
-    cands = [("\n".join(re.findall(r"```sql[^\n]*\n(.*?)```", text, re.S | re.I)), name) for name, text in docs.items()]
+    # only blocks that hold DDL: a design may also show an example query (an export with a bind
+    # parameter), which is not part of the script and would not run as one
+    ddl_block = lambda b: re.search(r"\b(CREATE|ALTER|DROP|PRAGMA|INSERT)\b", b, re.I)
+    cands = [("\n".join(b for b in re.findall(r"```sql[^\n]*\n(.*?)```", text, re.S | re.I) if ddl_block(b)), name)
+             for name, text in docs.items()]
     cands = [c for c in cands if c[0].strip()]
     return max(cands, key=lambda c: len(re.findall(r"CREATE\s+TABLE", c[0], re.I)), default=("", "no DDL found"))
 
@@ -2788,9 +2792,11 @@ def eval31(run):
     no_pk = [t_ for t_, d in info.items() if not d["pk"]]
     n_fk = sum(len(d["fks"]) for d in info.values())
     attend = db_link_table(info, r"booking|reservation", r"member|individual|person")
-    listy = db_cols_like(info, r"attendee|participant|member_ids|_list$|_csv$|_json$", r"booking|reservation")
+    listy = [(t_, c) for t_, c in db_cols_like(info, r"attendee|participant|member_ids|_list$|_csv$|_json$", r"booking|reservation")
+             if t_ != attend]  # the intersection table's own attendee column is the fix, not a list
     hist = db_history_table(info, r"plan")
-    age = db_cols_like(info, r"^age$|_age$|^age_|age_years")
+    # a stored age on the person; an age-band lookup's boundaries (min_age) are not one
+    age = db_cols_like(info, r"^age$|_age$|^age_|age_years", r"member|individual|person|customer")
     birth = db_cols_like(info, r"birth|dob")
     sub_ok, sub_ev = db_subtypes_mapped(info)
     keys = {c: db_alternate_key(info, c) for c in (r"^e.?mail", r"vat", r"member_?(number|no|code)|card_?number")}
@@ -2798,8 +2804,9 @@ def eval31(run):
             for f in d["fks"] for c in f["from"] if re.search(r"compan|employ|organi|works_for|billed_to", c, re.I)]
     oq = section(doc, r"open question|unresolved")[:4000]
     stored_total = db_cols_like(info, r"total|cost", r"booking|reservation")
-    barker = len(re.findall(r"\bEach [A-Z][A-Z]+(?: [A-Z][A-Z]+)* (?:must|may) be\b[^\n.;]{0,120}?\b(?:one and only one|one or more)\b", t))
-    fd_sec = section(t, r"functional dependenc|normali[sz]")[:6000]
+    plain = re.sub(r"\*\*|__", "", t)  # sentences are often written with the optionality in bold
+    barker = len(re.findall(r"\bEach [A-Z][A-Z]+(?: [A-Z][A-Z]+)* (?:must|may) be\b[^\n.;]{0,120}?\b(?:one and only one|one or more)\b", plain))
+    fd_sec = section(t, r"functional dependenc|normali[sz]|normal.form")[:6000]
     fds = len(re.findall(r"\w+(?:\s*,\s*\w+)*\s*\}?\s*(?:→|->)\s*\{?\s*\w+", fd_sec))
     codd = set(re.findall(r"\b[Rr]ule\s+(\d{1,2})\b", t)) | {n for n in (
         "information rule", "guaranteed access", "systematic treatment of null", "dynamic catalog", "view updating",
