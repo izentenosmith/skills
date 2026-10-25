@@ -1,0 +1,651 @@
+{
+  "meta": {
+    "name": "contoso-prod",
+    "source_version": "git 9c41e0d / 2026-10-14",
+    "rubric": "v1.0",
+    "stage": "audit",
+    "status": "recovered"
+  },
+  "nodes": [
+    {
+      "id": "internet",
+      "kind": "internet",
+      "zone": "internet",
+      "evidence": "inferred: public endpoint"
+    },
+    {
+      "id": "vnet-hub",
+      "kind": "vnet",
+      "zone": "transit",
+      "site": "weu",
+      "attrs": {
+        "managed_ha": true
+      },
+      "evidence": "design.md \u00a74"
+    },
+    {
+      "id": "snet-fw",
+      "kind": "subnet",
+      "zone": "transit",
+      "site": "weu",
+      "attrs": {
+        "managed_ha": true
+      },
+      "evidence": "design.md \u00a74"
+    },
+    {
+      "id": "snet-gw",
+      "kind": "subnet",
+      "zone": "transit",
+      "site": "weu",
+      "attrs": {
+        "managed_ha": true
+      },
+      "evidence": "design.md \u00a74"
+    },
+    {
+      "id": "snet-bastion",
+      "kind": "subnet",
+      "zone": "mgmt",
+      "site": "weu",
+      "attrs": {},
+      "evidence": "design.md \u00a74"
+    },
+    {
+      "id": "vnet-prod",
+      "kind": "vnet",
+      "zone": "app",
+      "site": "weu",
+      "attrs": {
+        "managed_ha": true
+      },
+      "evidence": "design.md \u00a74"
+    },
+    {
+      "id": "snet-web",
+      "kind": "subnet",
+      "zone": "edge",
+      "site": "weu",
+      "attrs": {},
+      "evidence": "design.md \u00a74"
+    },
+    {
+      "id": "snet-app",
+      "kind": "subnet",
+      "zone": "app",
+      "site": "weu",
+      "attrs": {},
+      "evidence": "design.md \u00a74"
+    },
+    {
+      "id": "snet-data",
+      "kind": "subnet",
+      "zone": "data",
+      "site": "weu",
+      "attrs": {},
+      "evidence": "design.md \u00a74"
+    },
+    {
+      "id": "vnet-analytics",
+      "kind": "vnet",
+      "zone": "app",
+      "site": "weu",
+      "attrs": {
+        "managed_ha": true
+      },
+      "evidence": "design.md \u00a74"
+    },
+    {
+      "id": "snet-analytics",
+      "kind": "subnet",
+      "zone": "app",
+      "site": "weu",
+      "attrs": {},
+      "evidence": "design.md \u00a74"
+    },
+    {
+      "id": "lan-onprem",
+      "kind": "lan",
+      "zone": "onprem",
+      "site": "ams-dc",
+      "attrs": {},
+      "evidence": "inferred: local network gateway address space"
+    },
+    {
+      "id": "afw-hub",
+      "kind": "firewall",
+      "zone": "transit",
+      "site": "weu",
+      "attrs": {
+        "product": "azure-firewall-premium",
+        "zones": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managed_ha": true
+      },
+      "evidence": "design.md \u00a76"
+    },
+    {
+      "id": "vgw-hub",
+      "kind": "gateway",
+      "zone": "transit",
+      "site": "weu",
+      "attrs": {
+        "product": "vpn-gateway-vpngw1",
+        "active_active": false
+      },
+      "evidence": "infra/hub.tf:58"
+    },
+    {
+      "id": "agw-web",
+      "kind": "lb",
+      "zone": "edge",
+      "site": "weu",
+      "attrs": {
+        "product": "app-gateway-waf-v2",
+        "zones": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managed_ha": true
+      },
+      "evidence": "design.md \u00a76"
+    },
+    {
+      "id": "onprem-dc",
+      "kind": "onprem",
+      "zone": "onprem",
+      "site": "ams-dc",
+      "evidence": "inferred: VPN peer; no device evidence in scope"
+    },
+    {
+      "id": "vnet-legacy-batch",
+      "kind": "vnet",
+      "zone": "app",
+      "site": "weu",
+      "attrs": {
+        "managed_ha": true
+      },
+      "evidence": "infra/legacy.tf:2"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-internet-agw",
+      "attrs": {
+        "managed_ha": true
+      },
+      "a": "internet",
+      "b": "agw-web",
+      "kind": "l3-adjacency",
+      "evidence": "design.md \u00a76"
+    },
+    {
+      "id": "e-agw-web",
+      "attrs": {
+        "managed_ha": true
+      },
+      "a": "agw-web",
+      "b": "snet-web",
+      "kind": "l3-adjacency",
+      "evidence": "design.md \u00a76"
+    },
+    {
+      "id": "e-fw-snetfw",
+      "attrs": {
+        "managed_ha": true
+      },
+      "a": "afw-hub",
+      "b": "snet-fw",
+      "kind": "l3-adjacency",
+      "evidence": "design.md \u00a76"
+    },
+    {
+      "id": "e-vgw-snetgw",
+      "attrs": {
+        "managed_ha": true
+      },
+      "a": "vgw-hub",
+      "b": "snet-gw",
+      "kind": "l3-adjacency",
+      "evidence": "design.md \u00a76"
+    },
+    {
+      "id": "e-peer-hub-prod",
+      "a": "vnet-hub",
+      "b": "vnet-prod",
+      "kind": "peering",
+      "attrs": {
+        "use_remote_gateways": true
+      },
+      "evidence": "design.md \u00a75"
+    },
+    {
+      "id": "e-peer-hub-analytics",
+      "a": "vnet-hub",
+      "b": "vnet-analytics",
+      "kind": "peering",
+      "attrs": {
+        "use_remote_gateways": true
+      },
+      "evidence": "design.md \u00a75"
+    },
+    {
+      "id": "e-vpn-onprem-1",
+      "a": "vgw-hub",
+      "b": "onprem-dc",
+      "kind": "vpn",
+      "evidence": "infra/hub.tf:77"
+    },
+    {
+      "id": "e-onprem-lan",
+      "a": "onprem-dc",
+      "b": "lan-onprem",
+      "kind": "l3-adjacency",
+      "evidence": "inferred: VPN peer"
+    },
+    {
+      "id": "e-rt-app-fw",
+      "a": "snet-app",
+      "b": "afw-hub",
+      "kind": "route",
+      "attrs": {
+        "prefix": "0.0.0.0/0"
+      },
+      "evidence": "design.md \u00a75"
+    },
+    {
+      "id": "e-rt-analytics-fw",
+      "a": "snet-analytics",
+      "b": "afw-hub",
+      "kind": "route",
+      "attrs": {
+        "prefix": "0.0.0.0/0"
+      },
+      "evidence": "design.md \u00a75"
+    },
+    {
+      "id": "e-vnet-hub-snet-fw",
+      "a": "vnet-hub",
+      "b": "snet-fw",
+      "kind": "l3-adjacency",
+      "attrs": {
+        "managed_ha": true
+      },
+      "evidence": "design.md \u00a74"
+    },
+    {
+      "id": "e-vnet-hub-snet-gw",
+      "a": "vnet-hub",
+      "b": "snet-gw",
+      "kind": "l3-adjacency",
+      "attrs": {
+        "managed_ha": true
+      },
+      "evidence": "design.md \u00a74"
+    },
+    {
+      "id": "e-vnet-hub-snet-bastion",
+      "a": "vnet-hub",
+      "b": "snet-bastion",
+      "kind": "l3-adjacency",
+      "attrs": {
+        "managed_ha": true
+      },
+      "evidence": "design.md \u00a74"
+    },
+    {
+      "id": "e-vnet-prod-snet-web",
+      "a": "vnet-prod",
+      "b": "snet-web",
+      "kind": "l3-adjacency",
+      "attrs": {
+        "managed_ha": true
+      },
+      "evidence": "design.md \u00a74"
+    },
+    {
+      "id": "e-vnet-prod-snet-app",
+      "a": "vnet-prod",
+      "b": "snet-app",
+      "kind": "l3-adjacency",
+      "attrs": {
+        "managed_ha": true
+      },
+      "evidence": "design.md \u00a74"
+    },
+    {
+      "id": "e-vnet-prod-snet-data",
+      "a": "vnet-prod",
+      "b": "snet-data",
+      "kind": "l3-adjacency",
+      "attrs": {
+        "managed_ha": true
+      },
+      "evidence": "design.md \u00a74"
+    },
+    {
+      "id": "e-vnet-analytics-snet-analytics",
+      "a": "vnet-analytics",
+      "b": "snet-analytics",
+      "kind": "l3-adjacency",
+      "attrs": {
+        "managed_ha": true
+      },
+      "evidence": "design.md \u00a74"
+    },
+    {
+      "id": "e-peer-hub-legacy",
+      "a": "vnet-hub",
+      "b": "vnet-legacy-batch",
+      "kind": "peering",
+      "evidence": "infra/legacy.tf:20"
+    }
+  ],
+  "networks": [
+    {
+      "id": "vnet-hub",
+      "cidr": "10.0.0.0/16",
+      "purpose": "hub",
+      "evidence": "design.md \u00a74"
+    },
+    {
+      "id": "snet-fw",
+      "cidr": "10.0.1.0/26",
+      "parent": "vnet-hub",
+      "purpose": "AzureFirewallSubnet",
+      "evidence": "design.md \u00a74"
+    },
+    {
+      "id": "snet-gw",
+      "cidr": "10.0.2.0/27",
+      "parent": "vnet-hub",
+      "purpose": "GatewaySubnet",
+      "evidence": "design.md \u00a74"
+    },
+    {
+      "id": "snet-bastion",
+      "cidr": "10.0.3.0/26",
+      "parent": "vnet-hub",
+      "purpose": "AzureBastionSubnet",
+      "evidence": "design.md \u00a74"
+    },
+    {
+      "id": "vnet-prod",
+      "cidr": "10.1.0.0/16",
+      "purpose": "storefront production",
+      "evidence": "design.md \u00a74"
+    },
+    {
+      "id": "snet-web",
+      "cidr": "10.1.1.0/24",
+      "parent": "vnet-prod",
+      "purpose": "web tier",
+      "evidence": "design.md \u00a74"
+    },
+    {
+      "id": "snet-app",
+      "cidr": "10.1.2.0/24",
+      "parent": "vnet-prod",
+      "purpose": "app tier",
+      "evidence": "design.md \u00a74"
+    },
+    {
+      "id": "snet-data",
+      "cidr": "10.1.3.0/24",
+      "parent": "vnet-prod",
+      "purpose": "data tier",
+      "evidence": "design.md \u00a74"
+    },
+    {
+      "id": "vnet-analytics",
+      "cidr": "10.20.0.0/16",
+      "purpose": "analytics",
+      "evidence": "infra/analytics.tf:3"
+    },
+    {
+      "id": "snet-analytics",
+      "cidr": "10.20.1.0/24",
+      "parent": "vnet-analytics",
+      "purpose": "analytics workers",
+      "evidence": "infra/analytics.tf:11"
+    },
+    {
+      "id": "lan-onprem",
+      "cidr": "10.20.0.0/16",
+      "purpose": "Amsterdam DC",
+      "evidence": "inferred: local network gateway address space"
+    },
+    {
+      "id": "vnet-legacy-batch",
+      "cidr": "10.9.0.0/16",
+      "purpose": "legacy batch (2019)",
+      "evidence": "infra/legacy.tf:2"
+    }
+  ],
+  "zones": [
+    {
+      "id": "internet",
+      "trust": 0,
+      "purpose": "untrusted"
+    },
+    {
+      "id": "edge",
+      "trust": 1,
+      "purpose": "published web tier"
+    },
+    {
+      "id": "onprem",
+      "trust": 2,
+      "purpose": "Contoso Amsterdam data centre"
+    },
+    {
+      "id": "transit",
+      "trust": 2,
+      "purpose": "hub inspection and hybrid gateway"
+    },
+    {
+      "id": "app",
+      "trust": 2,
+      "purpose": "application and analytics tiers"
+    },
+    {
+      "id": "data",
+      "trust": 3,
+      "purpose": "databases"
+    },
+    {
+      "id": "mgmt",
+      "trust": 3,
+      "purpose": "management plane (Bastion)"
+    }
+  ],
+  "flows": [
+    {
+      "id": "fl-internet-edge-443",
+      "from_zone": "internet",
+      "to_zone": "edge",
+      "proto": "tcp",
+      "ports": "443",
+      "action": "allow",
+      "priority": 100,
+      "attrs": {
+        "reason": "storefront HTTPS"
+      },
+      "evidence": "design.md \u00a73"
+    },
+    {
+      "id": "fl-edge-app-8443",
+      "from_zone": "edge",
+      "to_zone": "app",
+      "proto": "tcp",
+      "ports": "8443",
+      "action": "allow",
+      "priority": 100,
+      "attrs": {
+        "reason": "web to app API"
+      },
+      "evidence": "design.md \u00a73"
+    },
+    {
+      "id": "fl-app-data-5432",
+      "from_zone": "app",
+      "to_zone": "data",
+      "proto": "tcp",
+      "ports": "5432",
+      "action": "allow",
+      "priority": 100,
+      "attrs": {
+        "reason": "app to PostgreSQL"
+      },
+      "evidence": "design.md \u00a73"
+    },
+    {
+      "id": "fl-mgmt-app-22",
+      "from_zone": "mgmt",
+      "to_zone": "app",
+      "proto": "tcp",
+      "ports": "22",
+      "action": "allow",
+      "priority": 110,
+      "attrs": {
+        "reason": "Bastion SSH"
+      },
+      "evidence": "design.md \u00a73"
+    },
+    {
+      "id": "fl-onprem-mgmt-443",
+      "from_zone": "onprem",
+      "to_zone": "mgmt",
+      "proto": "tcp",
+      "ports": "443",
+      "action": "allow",
+      "priority": 100,
+      "attrs": {
+        "reason": "admins reach Bastion"
+      },
+      "evidence": "design.md \u00a73"
+    },
+    {
+      "id": "fl-onprem-app-443",
+      "from_zone": "onprem",
+      "to_zone": "app",
+      "proto": "tcp",
+      "ports": "443",
+      "action": "allow",
+      "priority": 120,
+      "attrs": {
+        "reason": "BI pulls analytics exports"
+      },
+      "evidence": "design.md \u00a73"
+    },
+    {
+      "id": "fl-default-deny-edge",
+      "from_zone": "*",
+      "to_zone": "edge",
+      "proto": "any",
+      "ports": "*",
+      "action": "deny",
+      "priority": 4096,
+      "attrs": {
+        "reason": "default deny (NSG DenyAllInBound 65500)"
+      },
+      "evidence": "design.md \u00a73"
+    },
+    {
+      "id": "fl-default-deny-onprem",
+      "from_zone": "*",
+      "to_zone": "onprem",
+      "proto": "any",
+      "ports": "*",
+      "action": "deny",
+      "priority": 4096,
+      "attrs": {
+        "reason": "default deny (NSG DenyAllInBound 65500)"
+      },
+      "evidence": "design.md \u00a73"
+    },
+    {
+      "id": "fl-default-deny-transit",
+      "from_zone": "*",
+      "to_zone": "transit",
+      "proto": "any",
+      "ports": "*",
+      "action": "deny",
+      "priority": 4096,
+      "attrs": {
+        "reason": "default deny (NSG DenyAllInBound 65500)"
+      },
+      "evidence": "design.md \u00a73"
+    },
+    {
+      "id": "fl-default-deny-app",
+      "from_zone": "*",
+      "to_zone": "app",
+      "proto": "any",
+      "ports": "*",
+      "action": "deny",
+      "priority": 4096,
+      "attrs": {
+        "reason": "default deny (NSG DenyAllInBound 65500)"
+      },
+      "evidence": "design.md \u00a73"
+    },
+    {
+      "id": "fl-default-deny-data",
+      "from_zone": "*",
+      "to_zone": "data",
+      "proto": "any",
+      "ports": "*",
+      "action": "deny",
+      "priority": 4096,
+      "attrs": {
+        "reason": "default deny (NSG DenyAllInBound 65500)"
+      },
+      "evidence": "design.md \u00a73"
+    },
+    {
+      "id": "fl-default-deny-mgmt",
+      "from_zone": "*",
+      "to_zone": "mgmt",
+      "proto": "any",
+      "ports": "*",
+      "action": "deny",
+      "priority": 4096,
+      "attrs": {
+        "reason": "default deny (NSG DenyAllInBound 65500)"
+      },
+      "evidence": "design.md \u00a73"
+    },
+    {
+      "id": "nsg-bastion-ssh-any",
+      "from_zone": "internet",
+      "to_zone": "mgmt",
+      "proto": "tcp",
+      "ports": "22",
+      "action": "allow",
+      "priority": 105,
+      "evidence": "infra/hub.tf:121"
+    }
+  ],
+  "critical_pairs": [
+    {
+      "from": "internet",
+      "to": "snet-web",
+      "why": "customer traffic to the storefront"
+    },
+    {
+      "from": "snet-app",
+      "to": "snet-data",
+      "why": "every order write"
+    },
+    {
+      "from": "lan-onprem",
+      "to": "snet-analytics",
+      "why": "nightly BI export to finance"
+    }
+  ]
+}

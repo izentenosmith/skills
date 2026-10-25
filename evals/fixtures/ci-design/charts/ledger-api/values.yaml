@@ -1,0 +1,4 @@
+image:
+  repository: 333333333333.dkr.ecr.eu-west-1.amazonaws.com/ledger-api
+  tag: latest
+replicaCount: 4

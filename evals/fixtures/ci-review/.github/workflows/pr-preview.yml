@@ -1,0 +1,21 @@
+name: pr-preview
+
+# Runs for PRs from forks too, so external contributors get a preview comment.
+on:
+  pull_request_target:
+    types: [opened, synchronize]
+
+permissions: write-all
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - run: npm ci && npm run build
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Announce
+        run: echo "Preview ready for ${{ github.event.pull_request.title }}"

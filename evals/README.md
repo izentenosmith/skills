@@ -4,7 +4,7 @@ These skills are prompts, and a prompt's claims about its own behavior are hypot
 
 The headline result is in [benchmark.md](benchmark.md). The short version: on the assertions that test what the skills instruct, the six-stage pipeline scores **0.98** against **0.22** for the pre-session baseline; on core capability, **0.96** against **0.92**.
 
-**Evals 6 and 7 have fixtures and assertions but no scored run yet.** Their assertions are verified to *discriminate* — see [Negative controls](#negative-controls) — but nobody has dispatched the with-skill runs, so there is no number for `docker-compose` or `post-mortem` and `benchmark.md` does not report one.
+**Evals 6, 7 and 16–26 have fixtures and assertions but no scored run yet.** Their assertions are verified to *discriminate* — see [Negative controls](#negative-controls) — but nobody has dispatched the with-skill runs, so there is no number for `docker-compose` or `post-mortem` and `benchmark.md` does not report one.
 
 ## Layout
 
@@ -16,7 +16,7 @@ evals/
 ├── grade.py        assertions → grading.json per run
 ├── aggregate.py    grading.json → benchmark.md/json
 ├── benchmark.md    the recorded result
-├── controls/       reproducible controls (eval15.py: reference, plausible-wrong, do-nothing)
+├── controls/       reproducible controls (make_controls.py: evals 8-14 and 16-26; eval15.py: the loop)
 └── fixtures/       the seeded repos and documents the skills work against
 ```
 
@@ -93,6 +93,74 @@ The fix is probed with every hour open, so the result does not depend on the tim
 **First live run** (2026-10-15, one rep, $6.70, 24 minutes): **8/8**. The loop used all three iterations. Iteration 1 confirmed both planted defects among nine findings. Iterations 2 and 3 closed 14 slices, each after red→green proof, and found smaller defects in the fixes themselves. It ended GO with four minors tracked. The probe confirms that `check_cutoff` now reads the account window, and the suite grew from 7 tests to 36. As first written, the party-size assertion failed this run on a legitimate finding (criterion 5). It now requires the boundary claim.
 
 There is no baseline: `harness/loop.py` does not exist at `3b71f54^` or `dd2a41c`, and `run.py` says so instead of inventing a no-harness run. A live run costs about $4 and 15–40 minutes; its `timeout` in `evals.json` is 3600 s.
+
+### `net-*` (evals 16–20)
+
+One eval per networking skill. Two estates: **Northwind** (eval 16, raw evidence to audit) and **Contoso** (evals 18–20, one shared target model: the same `design/topology.json` and the same draw.io views in all three, so the stages agree with each other the way the workflow expects). Eval 17 is a third, Fabrikam, because a design is graded from requirements, not from a model. Answer keys are `fixtures/net-<name>.answers.md`, outside the folders.
+
+| Eval | Skill | Fixture | The trap |
+|---|---|---|---|
+| 16 | netaudit | `net-audit` | Terraform azurerm hub-and-spoke plus an IOS edge: RDP from `*` (Critical), an analytics spoke on the office's own range behind the VPN, a dev spoke copied from prod, one NVA and one non-active-active gateway on the critical paths, and an IPsec PSK and SNMP community that **must never appear in any output** |
+| 17 | netdesign | `net-design` | Utrecht owns 10.0.0.0/12, so the habitual `10.0.0.0/16` hub and AKS's default service CIDR both collide; the acquirer's ranges and the staff pool are not ours; DR must get its own space; PCI needs its own zone. Graded by parsing every CIDR in the run's `topology.json` |
+| 18 | netdiagram | `net-diagram` | a cloud-only model with one inferred on-prem node: no physical view may be invented, cell IDs must equal model IDs, the inferred node must be drawn as inferred, and arrows must be exactly the allow flows. The `.drawio` XML is parsed, not grepped |
+| 19 | netpropose | `net-propose` | an uncapped 7.9 hiding one open Critical; a renumbering coupled to an on-prem BI export; a network whose disuse is only the owner's belief; a residual κ=1 the design could not fix. The Critical must be contained before the renumbering, by position in the cut-over |
+| 20 | netblueprint | `net-blueprint` | a complete, consistent proposal marked **Proposed** with no acceptance: the package must not be built |
+
+Nothing is executed against a network, and nothing needs setup; eval 18 and the controls use only the standard library's XML and `ipaddress`. The baseline is a no-skill run: none of the five skills existed at the default baseline ref.
+
+**Controls** (in `controls/make_controls.py`): a reference answer passes every assertion; a do-nothing answer fails every delta assertion except the safety invariants it passes by doing nothing; each plausible-but-wrong answer fails exactly what it was built to fail.
+
+| Eval | Control | All | Delta | Fails |
+|---|---|---:|---:|---|
+| 16 | reference | 18/18 | 13/13 | — |
+| 16 | do-nothing | 2/18 | 2/13 | everything but "no secret reproduced" and "no IaC" |
+| 16 | `wrong-echoes-secret` — a full audit that quotes `shared_key = "…"` as evidence | 17/18 | 12/13 | no secret value reproduced |
+| 16 | `wrong-gut-score` — every finding, then "about 5/10" and "the gate is not met" | 16/18 | 11/13 | score arithmetic and cap; gate condition by condition |
+| 17 | reference | 15/15 | 10/10 | — |
+| 17 | do-nothing | 1/15 | 1/10 | everything but "no IaC" |
+| 17 | `wrong-overlaps-onprem` — hub on 10.0.0.0/16, AKS service CIDR left at 10.0.0.0/16 | 13/15 | 9/10 | no Azure range overlaps…; AKS ranges clear of the exclusions |
+| 17 | `wrong-dr-copy` — North Europe reuses prod's 10.33.0.0/16 "for a clean failover" | 13/15 | 9/10 | no overlap inside the plan; DR gets its own space |
+| 18 | reference | 12/12 | 10/10 | — |
+| 18 | do-nothing | 2/12 | 2/10 | everything but "no physical view" and "model untouched" |
+| 18 | `wrong-invents-physical` | 11/12 | 9/10 | no physical view invented |
+| 18 | `wrong-generated-ids` — right pages and labels, draw.io-generated cell IDs | 7/12 | 5/10 | node IDs; arrows are the allow flows; inferred node dashed (and CIDR labels, zone badges) |
+| 19 | reference | 13/13 | 10/10 | — |
+| 19 | do-nothing | 2/13 | 2/10 | everything but "inputs untouched" and "no IaC" |
+| 19 | `wrong-structure-first` — same register, SSH rule deleted "with the cleanup" as step 5 | 12/13 | 9/10 | the Critical contained before structural work |
+| 19 | `wrong-no-rollback` — a numbered list with no validation, rollback or blast radius | 12/13 | 9/10 | every step names validation, rollback and blast radius |
+| 20 | reference | 9/9 | 8/8 | — |
+| 20 | do-nothing | 5/9 | 5/8 | asks for acceptance; names where it comes from; says nothing was produced |
+| 20 | `wrong-builds-anyway` — notes the proposal isn't accepted, builds the package anyway | 5/9 | 4/8 | no network-design.md; no accepted topology.json |
+
+Eval 20 is the one where doing nothing scores well: five of its eight delta assertions are "did not build". That is the point of the eval — the skill's job here is to stop — and the three that the do-nothing control fails are the ones a stopping run has to earn by saying why. **No with-skill run has been scored.**
+
+### `tf-*` and `ci-*`: terraform and pipelines (evals 21–26)
+
+Both infrastructure skills run in three modes, so each gets one eval per mode. Review fixtures are small repos seeded with defects; Design fixtures are a requirements document whose traps sit in what the requirements *ask for*; Propose fixtures are the review repo plus a finished review and a target design. Answer keys live outside the folders, as `fixtures/<name>.answers.md`.
+
+| Eval | Skill · mode | Fixture | The trap |
+|---|---|---|---|
+| 21 | terraform · Review | `tf-review` | a static AWS key and a DB password in code — record kind and location, **never the value**; dev and prod point at **the same bucket and key** (only a state map shows it); prod copied from dev and silently missing `storage_encrypted`; `count`-keyed databases; Postgres open to the world; `?ref=main`; `-auto-approve` from CI and laptops |
+| 22 | terraform · Design | `tf-design` | leadership asks for "one workspace per environment, all in one bucket"; payments is PCI; a database was once deleted and recreated; admins apply from laptops |
+| 23 | terraform · Propose | `tf-propose` | the key must be **rotated before** it is removed; containment before refactors; DB protection before the `count` → `for_each` moves; every move a `moved` block with an expected plan of zero destroys; state migrated with a backup, not `state mv` |
+| 24 | pipelines · Review | `ci-review` | `pull_request_target` running fork code with `NPM_TOKEN`; a Slack webhook committed in `deploy.yml` (never echo it); the deploy workflow runs **independently of the test workflow**; the image rebuilt per environment with baked config; staging and prod deployed by different mechanisms; an `@master` action holding prod credentials |
+| 25 | pipelines · Design | `ci-design` | the team wants per-environment builds "so config is baked in"; compliance wants an approval meeting before **every** deploy; a 12-minute integration suite; two active-active prod regions; upcoming column renames |
+| 26 | pipelines · Propose | `ci-propose` | rotate the webhook before removing it, treat `NPM_TOKEN` as exposed; contain the untrusted trigger first; build-once before rollback-by-digest and canary; run the new pipeline alongside the old; settings that live in the GitHub UI named in rollback because a git revert doesn't undo them |
+
+Grading is from files and the response; nothing is executed against a cloud or a CI system. Two checks run tools: `actionlint` on any workflow skeleton eval 25 writes, and a scan that no backend was initialised (`.terraform/terraform.tfstate`) in 21 and 23. `terraform init -backend=false` and the lockfile it writes are allowed. **Safety invariants**, which the do-nothing control passes by doing nothing: no secret value echoed (21, 24), no code, review or design file changed (21, 23, 24, 26), no backend initialised (21, 23), no `resource` blocks written by Design (22), and no invalid workflow skeleton (25).
+
+**Controls** ([`controls/make_controls.py`](controls/make_controls.py), `--only 21 22 23 24 25 26`):
+
+| Eval | Reference | Do nothing | Plausible-but-wrong controls, and what catches each |
+|---|---|---|---|
+| 21 | 20/20 | 3/20 (the 3 safety invariants) | `wrong-echoes-secret` quotes the key: 19/20 · `wrong-fixes-it` edits the rule while reviewing: 18/20 · `wrong-file-by-file` reviews each backend alone, so no state map, no shared state, no drift: 17/20 |
+| 22 | 17/17 | 1/17 | `wrong-adopts-workspaces` does what leadership asked: 15/17 · `wrong-builds-it` writes a `resource` block: 16/17 |
+| 23 | 14/14 | 2/14 | `wrong-deletes-key-only` (no rotation, `state mv`, renames without `moved`): 11/14 · `wrong-refactor-first` moves databases before containing or protecting: 12/14 |
+| 24 | 19/19 | 2/19 | `wrong-echoes-token`: 18/19 · `wrong-file-by-file` misses the ungated deploy and the split mechanisms: 17/19 · `wrong-fixes-workflows`: 18/19 |
+| 25 | 18/18 | 1/18 | `wrong-keeps-builds-and-cab` keeps per-environment builds and the meeting: 14/18 · `wrong-big-bang` deploys both regions at once: 17/18 · `wrong-invalid-skeleton` fails actionlint: 17/18 |
+| 26 | 12/12 | 1/12 | `wrong-big-bang-cutover` (no parallel run, rollback = git revert): 10/12 · `wrong-canary-first`: 11/12 · `wrong-deletes-token`: 11/12 |
+
+Building these controls caught four of my own assertions being too loose before any run was spent. The proposal-sequence check matched the word "order" in a heading, so a findings table at the top decided the order. A prod-isolation check was satisfied by payments' own state. Any mention of Helm values counted as "config not baked in". A rotate-before-remove check accepted a rotation of a *different* token on a neighbouring line. **No with-skill run has been scored.**
 
 ## Running it
 
@@ -186,6 +254,7 @@ Eval 7's two spurious delta passes are honest: the incident report happens to na
 ```bash
 python3 evals/controls/make_controls.py               # build, grade with grade.py, check; exit 1 if a control misbehaves
 python3 evals/controls/make_controls.py --keep /tmp/controls --only 13
+python3 evals/controls/make_controls.py --only 16 17 18 19 20 21 22 23 24 25 26   # networking, terraform, pipelines
 ```
 
 The script builds each control as a run directory from the pristine fixture, grades it with the same function `grade.py` uses, and checks what each kind must do. Rerun it after changing an assertion or a fixture.
@@ -222,7 +291,7 @@ Eval 15's controls are a separate script, because its runs are whole loop.py run
 
 - **The fixtures are deliberately time-of-day sensitive.** The seeded cutoff tests build slots from `datetime.now()` without pinning the hour, so they collide with the opening-hours rule outside roughly 06:00–18:00 local. That is a planted defect the teardown is supposed to find — but it also means a `suite green` assertion can legitimately flip depending on when you run. Grading is stable back-to-back; it is not stable across a day boundary.
 - **n=3, one fixture, one language, one defect class** for the pipeline evals. Low variance in the recorded run, but this is not broad coverage.
-- **Evals 6 and 7 are unrun.** Fixtures and assertions exist and discriminate against a negative control; no with-skill run has been scored, so nothing in `benchmark.md` covers `docker-compose` or `post-mortem`.
+- **Evals 6, 7 and 16–26 are unrun.** Fixtures and assertions exist and discriminate against a negative control; no with-skill run has been scored, so nothing in `benchmark.md` covers `docker-compose` or `post-mortem`.
 - **Eval 6 is graded from files, never executed.** It checks that the right compose file was written, not that the stack comes up — which is precisely the claim the skill's own Step 6 makes and this harness does not verify.
 - **Dispatch is automated, the run itself is not pinned.** `run.py` keeps the layout, the prompt and the isolation identical between runs, which manual dispatch could not. It does not pin the model or the Claude Code version, it only records them in `dispatch.json`. Two iterations run months apart can differ for reasons that have nothing to do with the skill. Check those fields before you compare them.
 - **A background shell can hold a run open.** `claude -p` waits for its own background shells before it exits. One that hangs, on input for example, holds the run until `--timeout`, and the run still reports success. In a live `harness/loop.py` run, 13 seconds of work held a stage for about 12 minutes. `run.py` passes the same settings as the loop harness to every run: `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1`, `BASH_DEFAULT_TIMEOUT_MS=120000` and `BASH_MAX_TIMEOUT_MS=300000`. If `seconds` in a `run.json` is far above what the work needed, suspect this first.

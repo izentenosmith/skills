@@ -298,7 +298,9 @@ Assertions are split: **capability** (does the stage do its job at all) from **d
 
 **Also not yet run:** `hotfix` (evals 8–11 — a Node service, a JVM service with no build tool, a Python script with no tests, and an outage it must route out) and `incident-fix` (evals 12–14 — a web app with feature flags, a batch job that corrupted rows, a library with no deploy step). Every production lever in those fixtures is a stub that records its calls, so "took no action without confirmation" is checked, not inferred.
 
-`acceptance-tests`, `dockerfile`, `release-notes`, the five database skills, the five networking skills, `terraform` and `pipelines` have no eval.
+**Fixtures and assertions, not yet run, for networking and infrastructure:** evals 16–20 give each networking skill one seeded estate (an audit that must not echo a pre-shared key, a design graded by parsing every CIDR against the ranges already in use, diagrams parsed as draw.io XML, a proposal hiding a Critical under a 7.9, a blueprint request on an unaccepted proposal). Evals 21–26 give `terraform` and `pipelines` one eval per mode (Review, Design, Propose). Each has a reference, a do-nothing and plausible-but-wrong controls that separate as designed; no with-skill run has been scored.
+
+`acceptance-tests`, `dockerfile`, `release-notes` and the five database skills have no eval.
 
 ## How to use
 
