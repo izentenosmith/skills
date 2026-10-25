@@ -19,6 +19,9 @@ Evals
   - grade.py has a check for every eval and no check without an eval
   - every control in make_controls.py grades an eval that exists
   - no answer key sits inside a fixture folder (runs copy the folder)
+Branch protection
+  - every status check .github/rulesets/main.json requires is a job name the
+    workflows report — a renamed job would otherwise block every merge
 """
 import json
 import pathlib
@@ -120,6 +123,55 @@ for name in sorted(set(make_controls.CONTROLS) - set(grade.CHECKS)):
 
 for key in tracked("evals/fixtures/*/*.answers.md", "evals/fixtures/*/**/*.answers.md"):
     problem(f"{key.relative_to(ROOT)}: answer key inside a fixture folder — runs copy the folder")
+
+# --------------------------------------------------- ruleset vs workflow
+
+def job_names(workflow):
+    """Display names of the workflow's jobs, matrix values substituted — the
+    names GitHub reports as status checks. Stdlib only, so a line-level read
+    of the block layout this repo's workflows use."""
+    names, job, block = [], None, {}
+
+    def flush():
+        if job is None:
+            return
+        name = block.get("name", job)
+        expanded = [name]
+        for key, values in block.get("matrix", {}).items():
+            expanded = [n.replace(f"${{{{ matrix.{key} }}}}", v) for n in expanded for v in values]
+        names.extend(expanded)
+
+    in_jobs = False
+    for line in workflow.splitlines():
+        if re.match(r"^jobs:\s*$", line):
+            in_jobs = True
+            continue
+        if in_jobs and re.match(r"^\S", line):
+            break
+        if not in_jobs:
+            continue
+        if m := re.match(r"^  ([\w-]+):\s*$", line):
+            flush()
+            job, block = m.group(1), {}
+        elif m := re.match(r"^    name:\s*(.+?)\s*$", line):
+            block["name"] = m.group(1).strip("\"'")
+        elif m := re.match(r"^        ([\w-]+):\s*\[(.*)\]\s*$", line):
+            block.setdefault("matrix", {})[m.group(1)] = [v.strip().strip("\"'") for v in m.group(2).split(",")]
+    flush()
+    return names
+
+
+ruleset_path = ROOT / ".github/rulesets/main.json"
+if ruleset_path.exists():
+    ruleset = json.loads(ruleset_path.read_text())
+    reported = set()
+    for wf in tracked(".github/workflows/*.yml", ".github/workflows/*.yaml"):
+        reported |= set(job_names(wf.read_text()))
+    for rule in ruleset["rules"]:
+        for check in rule.get("parameters", {}).get("required_status_checks", []):
+            if check["context"] not in reported:
+                problem(f".github/rulesets/main.json: required check {check['context']!r} matches no workflow job "
+                        f"— merges into main would wait for it forever (jobs: {sorted(reported)})")
 
 # ---------------------------------------------------------------- report
 
