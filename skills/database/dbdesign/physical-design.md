@@ -3,7 +3,7 @@
 > How a modelled design becomes PostgreSQL 18 DDL: keys, naming, normalization targets, integrity,
 > arcs/subtypes/history in the engine, types, indexes, collation, where logic lives, views and scale.
 > It realizes a model built with [`er-modeling.md`](er-modeling.md) — it never replaces one. Every
-> "rework"/"rebuild" verdict in [`proposal.md`](proposal.md) means "remodel with `er-modeling.md`, then
+> "rework"/"rebuild" verdict in [`proposal.md`](../dbpropose/proposal.md) means "remodel with `er-modeling.md`, then
 > bring it up to this document." For another target engine, keep the model and translate these
 > choices.
 

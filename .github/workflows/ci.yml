@@ -1,0 +1,86 @@
+# Everything here is deterministic and free: no model is called, nothing is
+# deployed, and no secret is used. Each job's commands run the same way locally.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  ACTIONLINT_VERSION: 1.7.12
+  ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+
+jobs:
+  repo:
+    name: skills, links and eval wiring
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+      - name: Check skills, links and eval wiring
+        run: python3 .github/scripts/check_repo.py
+      - name: Install actionlint (pinned, checksum-verified)
+        run: .github/scripts/install_actionlint.sh
+      - name: Lint this repo's workflows
+        run: actionlint -color
+
+  harness:
+    name: harness tests (python ${{ matrix.python }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Run the harness test suite
+        run: python3 -m unittest discover harness/tests
+
+  eval-controls:
+    name: eval controls
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+      # Evals 8 and 11 run the Node fixture; eval 9 compiles the JVM fixture.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: 21
+      # Eval 25 runs actionlint on any workflow a run writes.
+      - name: Install actionlint (pinned, checksum-verified)
+        run: .github/scripts/install_actionlint.sh
+      - name: Build fixture venvs and the incident history
+        run: ./evals/setup.sh
+      - name: Controls for evals 8-14 and 16-26
+        run: python3 evals/controls/make_controls.py
+      # The teardown fixture's tests build slots from datetime.now() and collide
+      # with opening hours outside roughly 06:00-18:00 local. That is a defect
+      # planted for the teardown to find, not something CI should trip over,
+      # so this step runs at local noon whatever hour the runner starts.
+      - name: Controls for eval 15 (harness/loop.py end to end)
+        run: |
+          tz=$(python3 -c "import datetime as d; h = d.datetime.now(d.timezone.utc).hour; o = (12 - h + 12) % 24 - 12; print('UTC' if o == 0 else f'Etc/GMT{-o:+d}')")
+          echo "running at local noon: TZ=$tz"
+          TZ="$tz" python3 evals/controls/eval15.py "$RUNNER_TEMP/eval15"
