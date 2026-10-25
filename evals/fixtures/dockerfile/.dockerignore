@@ -1,0 +1,10 @@
+# Keep the build context small. Ask in #platform before removing an entry.
+.git
+docs/
+loadtest/
+coverage/
+*.md
+!README.md
+.github/
+deploy/
+Makefile

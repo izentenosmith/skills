@@ -1,0 +1,13 @@
+<!doctype html>
+<html>
+  <head><meta charset="utf-8"><title>Invoice {{id}}</title></head>
+  <body>
+    <h1>Invoice {{id}}</h1>
+    <p>Billed to {{customer}}{{#if due_date}} · due {{due_date}}{{/if}}</p>
+    <table>
+      {{#each lines}}<tr><td>{{label}}</td><td>{{cents}}</td></tr>{{/each}}
+    </table>
+    <p><strong>Total {{total}}</strong></p>
+    <p class="verify">Verification code {{sig}}</p>
+  </body>
+</html>

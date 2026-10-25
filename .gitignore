@@ -79,6 +79,8 @@ xcuserdata/
 .env
 .env.local
 .env.*.local
+# the dockerfile fixture's .env is planted: the skill must keep it out of the image
+!evals/fixtures/dockerfile/.env
 
 # --- Node tooling (in case skills grow scripts/tests) ---
 node_modules/
@@ -103,6 +105,7 @@ evals/fixtures/*/.pytest_cache/
 # --- eval fixtures: build output, not fixture content ---
 evals/fixtures/*/.venv/
 evals/fixtures/incident/repo/
+evals/fixtures/release-notes/repo/
 
 # --- harness: run artifacts in a repo under review ---
 .workflow/runs/

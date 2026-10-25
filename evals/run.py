@@ -46,8 +46,10 @@ UNAVAILABLE = "The user is unavailable, so produce the deliverable instead of as
 IGNORE = [".pytest_cache", "__pycache__"]
 
 # Harness files that live in a fixture folder but must not reach the run.
-# incident/README.md lists every planted defect — it is the answer key.
-HARNESS_ONLY = {"incident": ["README.md", "make-history.sh"]}
+# incident/README.md lists every planted defect — it is the answer key, and
+# release-notes/README.md describes the fixture the same way.
+HARNESS_ONLY = {"incident": ["README.md", "make-history.sh"],
+                "release-notes": ["README.md", "make-history.sh"]}
 
 
 def fixture_dir(name):

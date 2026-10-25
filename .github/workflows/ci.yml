@@ -73,7 +73,7 @@ jobs:
         run: .github/scripts/install_actionlint.sh
       - name: Build fixture venvs and the incident history
         run: ./evals/setup.sh
-      - name: Controls for evals 8-14 and 16-26
+      - name: Controls for evals 8-14 and 16-34
         run: python3 evals/controls/make_controls.py
       # The teardown fixture's tests build slots from datetime.now() and collide
       # with opening hours outside roughly 06:00-18:00 local. That is a defect

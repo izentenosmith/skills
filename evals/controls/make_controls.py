@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Build the controls for evals 8-14 and 16-26, grade them with grade.py, and check they separate.
+"""Build the controls for evals 8-14 and 16-34, grade them with grade.py, and check they separate.
 
     python3 evals/controls/make_controls.py               # build in a temp dir, grade, check, clean up
     python3 evals/controls/make_controls.py --keep DIR    # leave the graded runs in DIR to inspect
     python3 evals/controls/make_controls.py --only 8 13   # a subset
     python3 evals/controls/make_controls.py --only 21 22 23 24 25 26   # terraform and pipelines (no Node/JDK needed)
+    python3 evals/controls/make_controls.py --only 27 28 29 30 31 32 33 34   # 27 needs setup.sh's tdd venv
 
 Three kinds of control, each a run directory (repo/ + outputs/response.md) that
 grade.py's eval function reads exactly as it reads a real run:
@@ -16,17 +17,20 @@ grade.py's eval function reads exactly as it reads a real run:
                  gets the substance wrong; must fail the assertions named in `fails`
 
 Exit status: 0 every control behaves as expected · 1 one does not.
-Needs Node 22+ (evals 8, 11) and a JDK (eval 9), as the evals themselves do; actionlint for eval 25.
+Needs Node 22+ (evals 8, 11) and a JDK (eval 9), as the evals themselves do; actionlint for eval 25;
+the tdd fixture's venv from evals/setup.sh for eval 27.
 """
 import argparse
 import json
 import pathlib
+import re
 import shutil
+import sqlite3
 import subprocess
 import sys
 import tempfile
 import textwrap
-from xml.sax.saxutils import escape
+from xml.sax.saxutils import escape, quoteattr
 
 EVALS = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(EVALS))
@@ -1008,6 +1012,1508 @@ CONTROLS_INFRA = {
 }
 
 
+# ------------------------------------------------------------------ eval 27: acceptance-tests
+
+E27_TESTS = '''
+"""Acceptance tests for the cancellation cutoff (.workflow/brief.md), through BookingService.submit only."""
+from datetime import datetime, timedelta
+
+import pytest
+
+from reservations.api import BookingService, Rejected
+from tests.test_booking import FakeConfig, FakeStore
+
+# Every hour open, so the opening-hours rule never decides a cutoff test.
+OPEN = {"opens_at": 0, "closes_at": 24}
+
+
+def service(**cfg):
+    store = FakeStore()
+    return BookingService(store, FakeConfig({**OPEN, **cfg})), store
+
+
+def in_minutes(m):
+    return datetime.now() + timedelta(minutes=m)
+
+
+def test_booking_inside_cutoff_window_is_rejected_with_cutoff_window():
+    svc, store = service()
+    with pytest.raises(Rejected) as e:
+        svc.submit("acct-1", "venue-1", in_minutes(30), 2)
+    assert e.value.codes == ["CUTOFF_WINDOW"]
+    assert store.saved == []
+
+
+def test_booking_outside_window_is_accepted_and_persisted():
+    svc, store = service()
+    with pytest.raises(Rejected):
+        svc.submit("acct-1", "venue-1", in_minutes(119), 2)
+    booking = svc.submit("acct-1", "venue-1", in_minutes(121), 2)
+    assert store.saved == [booking]
+
+
+def test_window_length_reads_from_account_config():
+    longer, _ = service(cutoff_minutes=240)
+    with pytest.raises(Rejected) as e:
+        longer.submit("acct-1", "venue-1", in_minutes(180), 2)
+    assert e.value.codes == ["CUTOFF_WINDOW"]
+    shorter, store = service(cutoff_minutes=60)
+    booking = shorter.submit("acct-1", "venue-1", in_minutes(90), 2)
+    assert store.saved == [booking]
+
+
+def test_slot_exactly_at_window_edge_is_accepted():
+    svc, store = service()
+    with pytest.raises(Rejected):
+        svc.submit("acct-1", "venue-1", in_minutes(119), 2)
+    booking = svc.submit("acct-1", "venue-1", in_minutes(120), 2)
+    assert store.saved == [booking]
+
+
+def test_cutoff_and_party_size_violations_surface_both_codes():
+    svc, store = service()
+    with pytest.raises(Rejected) as e:
+        svc.submit("acct-1", "venue-1", in_minutes(30), 13)
+    assert sorted(e.value.codes) == ["CUTOFF_WINDOW", "PARTY_TOO_LARGE"]
+    assert store.saved == []
+'''
+
+E27_ID = "tests/acceptance/test_cutoff.py::"
+E27_MAP = [
+    "- [ ] Criterion 1 (tracer bullet): a slot inside the cutoff window is rejected with `CUTOFF_WINDOW` → "
+    f"`{E27_ID}test_booking_inside_cutoff_window_is_rejected_with_cutoff_window`",
+    f"- [ ] Criterion 2: a slot outside the window is accepted and persisted → `{E27_ID}test_booking_outside_window_is_accepted_and_persisted`",
+    f"- [ ] Criterion 3: the window length reads from account config → `{E27_ID}test_window_length_reads_from_account_config`",
+    f"- [ ] Edge case: a slot exactly at the window edge is accepted → `{E27_ID}test_slot_exactly_at_window_edge_is_accepted`",
+    "- [ ] Edge case: a booking breaking the cutoff and the party-size rule surfaces both codes → "
+    f"`{E27_ID}test_cutoff_and_party_size_violations_surface_both_codes`",
+]
+E27_SECTION = """**Acceptance tests** (stage 3 — tdd is done when these pass):
+- **Command:** `.venv/bin/python -m pytest tests/acceptance -q`
+{map}
+
+"""
+E27_REVISION = ("- 2026-10-25 — acceptance-tests: added **Acceptance tests** — five criteria mapped to five tests in "
+                "`tests/acceptance/`, all red on behavior (nothing rejected for timing yet).")
+E27_RESPONSE = """
+**Tier: Standard** — one acceptance test per criterion. It is a new rule behind an existing seam, not a
+localized fix, so this stage is not skipped.
+
+**Boundary.** `BookingService.submit` — the seam the brief and `tests/test_booking.py` drive. No acceptance
+suite existed, so the tests live in `tests/acceptance/test_cutoff.py`, run by the same pytest, reusing
+`FakeStore` and `FakeConfig` from `tests/test_booking.py`. Every hour is opened in the account config, so the
+opening-hours rule never decides a cutoff test whatever the time of day.
+
+**Red, for the right reason.** `.venv/bin/python -m pytest tests/acceptance -q` → 5 failed: four
+`DID NOT RAISE Rejected`, one `['PARTY_TOO_LARGE'] != ['CUTOFF_WINDOW', 'PARTY_TOO_LARGE']`. None fails to
+load. The existing suite is still green (4 passed).
+
+Criteria 2 and 4 already hold today — nothing is rejected for timing — so a test that only asserted the
+acceptance would pass now and would still pass with the feature deleted. Each of those tests first shows the
+window in force (a slot a minute inside it is rejected), then the acceptance. The config test uses a window
+longer *and* shorter than the 120-minute default, so a hard-coded window cannot pass it.
+
+The mapping is in `.workflow/brief.md` under **Acceptance tests**, logged under Revisions.
+
+5 acceptance tests written and red for the right reason, 0 criteria marked not acceptance-testable. Run them
+with `.venv/bin/python -m pytest tests/acceptance -q`. Run **tdd** next — it builds until every one of them passes.
+"""
+
+
+def e27_build(tests=E27_TESTS, mapping=E27_MAP, response=E27_RESPONSE):
+    def build(run, repo):
+        w(repo / "tests/acceptance/test_cutoff.py", tests)
+        brief = repo / ".workflow/brief.md"
+        sub(brief, "**Test seams & prior art:**", E27_SECTION.format(map="\n".join(mapping)) + "**Test seams & prior art:**")
+        sub(brief, "- (none yet)", E27_REVISION)
+        w(run / "outputs/response.md", response)
+    return build
+
+
+E27_RULE = """from datetime import datetime, timedelta
+
+DEFAULT_CUTOFF_MINUTES = 120
+
+
+def check_cutoff(booking, config):
+    window = timedelta(minutes=config.get("cutoff_minutes", DEFAULT_CUTOFF_MINUTES))
+    if booking.slot - datetime.now() < window:
+        return "CUTOFF_WINDOW"
+    return None
+
+
+ACTIVE_RULES = [check_party_size, check_venue_open, check_cutoff]"""
+
+
+def e27_implements_it(run, repo):
+    """Writes the same tests, then makes them pass."""
+    e27_build(response=E27_RESPONSE.replace("Run **tdd** next", "I also implemented `check_cutoff` so they pass. Run **tdd** next"))(run, repo)
+    sub(repo / "reservations/rules.py", "ACTIVE_RULES = [check_party_size, check_venue_open]", E27_RULE)
+
+
+E27_VACUOUS = E27_TESTS.replace('''        longer.submit("acct-1", "venue-1", in_minutes(180), 2)
+    assert e.value.codes == ["CUTOFF_WINDOW"]
+    shorter, store = service(cutoff_minutes=60)
+    booking = shorter.submit("acct-1", "venue-1", in_minutes(90), 2)
+    assert store.saved == [booking]
+''', '''        longer.submit("acct-1", "venue-1", in_minutes(30), 2)
+    assert e.value.codes == ["CUTOFF_WINDOW"]
+''')
+E27_GREEN_GUARDS = E27_TESTS.replace('''    svc, store = service()
+    with pytest.raises(Rejected):
+        svc.submit("acct-1", "venue-1", in_minutes(119), 2)
+    booking = svc.submit("acct-1", "venue-1", in_minutes(121), 2)''', '''    svc, store = service()
+    booking = svc.submit("acct-1", "venue-1", in_minutes(121), 2)''').replace('''    svc, store = service()
+    with pytest.raises(Rejected):
+        svc.submit("acct-1", "venue-1", in_minutes(119), 2)
+    booking = svc.submit("acct-1", "venue-1", in_minutes(120), 2)''', '''    svc, store = service()
+    booking = svc.submit("acct-1", "venue-1", in_minutes(120), 2)''')
+E27_IMPORT_ERROR = (E27_TESTS
+                    .replace("from reservations.api import BookingService, Rejected",
+                             "from reservations.api import CUTOFF_WINDOW, BookingService, Rejected")
+                    .replace('["CUTOFF_WINDOW"]', "[CUTOFF_WINDOW]"))
+E27_INTERNALS = (E27_TESTS
+                 .replace("from reservations.api import BookingService, Rejected",
+                          "from reservations.api import BookingService, Rejected\nfrom reservations.booking import Booking")
+                 .replace('''    svc, store = service()
+    with pytest.raises(Rejected) as e:
+        svc.submit("acct-1", "venue-1", in_minutes(30), 13)
+    assert sorted(e.value.codes) == ["CUTOFF_WINDOW", "PARTY_TOO_LARGE"]
+    assert store.saved == []
+''', '''    booking = Booking("acct-1", "venue-1", in_minutes(30), 13)
+    assert sorted(booking.validate(OPEN)) == ["CUTOFF_WINDOW", "PARTY_TOO_LARGE"]
+'''))
+assert E27_INTERNALS.count("Booking(") == 1 and E27_VACUOUS != E27_TESTS and E27_GREEN_GUARDS.count("in_minutes(119)") == 0 and "[CUTOFF_WINDOW]" in E27_IMPORT_ERROR
+
+E27 = "eval-27-acceptance-tests-red-for-the-right-reason"
+
+
+CONTROLS_ACCEPTANCE = {
+    E27: dict(
+        fixture="tdd", reference=e27_build(), free=["no implementation of the cutoff rule"],
+        wrong={
+            "wrong-implements-it": (e27_implements_it, ["every new test is red on the unimplemented code (none passes)",
+                                                        "no implementation of the cutoff rule"]),
+            "wrong-vacuous-config": (e27_build(tests=E27_VACUOUS),
+                                     ["the config test kills a hard-coded-window mutant (not vacuous)"]),
+            "wrong-green-guards": (e27_build(tests=E27_GREEN_GUARDS),
+                                   ["every new test is red on the unimplemented code (none passes)"]),
+            "wrong-import-error": (e27_build(tests=E27_IMPORT_ERROR),
+                                   ["red for the right reason: every failure is on behavior, none fails to load",
+                                    "every new test passes once a correct cutoff rule is laid over the repo",
+                                    # a test that cannot load cannot kill a mutant either
+                                    "the edge test kills an inclusive-boundary mutant",
+                                    "the both-codes test kills a first-violation-only mutant",
+                                    "the config test kills a hard-coded-window mutant (not vacuous)"]),
+            "wrong-reaches-internals": (e27_build(tests=E27_INTERNALS),
+                                        ["no internals: tests import only the public entry point"]),
+            "wrong-three-of-five": (e27_build(mapping=E27_MAP[:3]), ["every one of the 5 criteria mapped exactly once"]),
+        }),
+}
+
+
+# ------------------------------------------------------------------ eval 28: dockerfile repair
+
+E28_DOCKERFILE = r"""
+# syntax=docker/dockerfile:1
+
+# Target: linux/amd64 (deploy/k8s nodeSelector). `make image` passes --platform.
+# better-sqlite3 builds a native binding against the runtime's ABI, so the stages
+# that install dependencies are NOT pinned to $BUILDPLATFORM: they run on the target
+# (emulated on Apple Silicon). Slower, but the binding matches the image.
+
+FROM node:20.11.1-bookworm-slim AS deps
+WORKDIR /app
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends python3 make g++ \
+ && rm -rf /var/lib/apt/lists/*
+RUN corepack enable
+COPY package.json pnpm-lock.yaml ./
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile --store-dir /pnpm/store
+
+FROM deps AS build
+COPY tsconfig.json ./
+COPY src ./src
+RUN pnpm build \
+ && pnpm prune --prod
+
+FROM node:20.11.1-bookworm-slim AS runtime
+ENV NODE_ENV=production
+WORKDIR /app
+RUN groupadd --system --gid 10001 app \
+ && useradd --system --uid 10001 --gid app --home-dir /app app \
+ && mkdir -p /app/data && chown app:app /app/data
+COPY --from=build --chown=app:app /app/node_modules ./node_modules
+COPY --from=build --chown=app:app /app/dist ./dist
+COPY --chown=app:app package.json ./
+COPY --chown=app:app migrations ./migrations
+COPY --chown=app:app templates ./templates
+USER app
+EXPOSE 8080
+CMD ["node", "dist/server.js"]
+"""
+
+E28_IGNORE_ADDED = """
+# Added: secrets — a file in the context can land in a layer, and layers are permanent
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Added: cache busters — host-built and architecture-specific
+node_modules
+dist/
+*.tsbuildinfo
+.pnpm-store/
+
+# Added: Docker's own files
+Dockerfile*
+.dockerignore
+"""
+
+E28_INFER = """
+**Mode: Repair** — a Dockerfile exists and ships; it is too large and never caches. I name each defect first.
+
+> **Stack:** Node 20.11.1 (from `.nvmrc`, `engines` 20.11.x) · pnpm 9.12.3 (`packageManager`), `pnpm-lock.yaml`
+> present · TypeScript build to `dist/` · starts `node dist/server.js` · listens on `PORT`, default 8080
+> (src/server.ts — the README's 3000 is stale) · native: better-sqlite3 · runtime assets: `migrations/` and
+> `templates/`, read relative to `dist/` · writes `data/invoicer.db` · **target linux/amd64** (deploy/k8s
+> nodeSelector), **building on Apple Silicon (arm64)** per the README — cross-platform.
+"""
+
+E28_DEFECTS = """
+## What is wrong with the current Dockerfile
+
+1. `FROM node:latest` — unpinned, and not the runtime the repo declares (20.11.1). The full Debian image alone is
+   about 1.1 GB: that is most of the size.
+2. `COPY . .` before `pnpm install` — every source change invalidates the install layer, so every commit reinstalls
+   everything. This is the "rebuilds from scratch".
+3. Single stage — TypeScript, the devDependencies, the compiler and the source tree all ship.
+4. Runs as root — there is no `USER`.
+5. `CMD pnpm start` — shell form wrapping pnpm: SIGTERM never reaches node, so every stop is a 10-second kill.
+6. `ENV PDF_RENDER_API_KEY=…` on line 11 — a credential baked into the image (value not reproduced). It is visible
+   to `docker inspect` and `docker history`, and it is in git history: treat it as exposed and rotate it.
+7. `EXPOSE 3000` and `HEALTHCHECK … localhost:3000/health` — the server listens on `PORT ?? 8080` and the only
+   health route is `/healthz`. The healthcheck has never passed.
+8. The `.dockerignore` has no `.env` and no `node_modules`, so `COPY . .` puts the local `.env` (two secrets) into a
+   layer, and the host's arm64 `node_modules` into the context.
+9. `npm install -g pnpm` — an unpinned pnpm; the repo pins 9.12.3.
+"""
+
+E28_FIX = f"""
+## The repair
+
+```dockerfile
+{E28_DOCKERFILE.strip()}
+```
+
+- Manifest and lockfile first, frozen install under a cache mount; source after. A source change now rebuilds from
+  `COPY src` down only.
+- The runtime stage gets `dist/`, production `node_modules` (`pnpm prune --prod`), `migrations/` and `templates/` —
+  `db.ts` and `render.ts` read those two relative to `dist/`, so a dist-only copy crashes at startup.
+- User `app` (uid 10001) owns `/app/data`, where the SQLite cache is written.
+- No HEALTHCHECK, deliberately: the cluster's readiness and liveness probes on `/healthz` (deploy/k8s/deployment.yaml)
+  own health, and two health systems is one too many.
+- Base not pinned by digest: no registry access from here. Resolve it with
+  `docker buildx imagetools inspect node:20.11.1-bookworm-slim` and append `@sha256:…` to both FROM lines before
+  this ships.
+- `PDF_RENDER_API_KEY` and `INVOICE_SIGNING_SECRET` come in at run time from the `invoicer-secrets` Secret, as the
+  manifest already does.
+
+## Platform
+
+Target linux/amd64 (`kubernetes.io/arch: amd64`), built on M-series laptops: the Makefile now passes
+`--platform linux/amd64`. better-sqlite3 compiles against the runtime's ABI, so its install runs on the target
+platform (emulated on arm64), never on `$BUILDPLATFORM`.
+
+## .dockerignore
+
+Every existing entry is kept. Added: `.env`, `.env.*` with `!.env.example`, key files, `node_modules`, `dist/`,
+`*.tsbuildinfo`, and the Docker files.
+"""
+
+E28_VERIFY = """
+## Verification (Step 4)
+
+Docker is not available in this environment (`docker version`: command not found), so none of these checks was
+run. Each one, with the command that settles it:
+
+| Check | Command | Expect |
+|---|---|---|
+| builds | `make image` (`docker build --platform linux/amd64 -t invoicer .`) | exit 0 |
+| runs | `docker run -d -p 8080:8080 --env-file .env invoicer && curl -fsS localhost:8080/healthz` | `{"ok":true}` |
+| rebuilds cheaply | `touch src/server.ts && make image` | the install layer reported CACHED |
+| architecture | `docker image inspect invoicer --format '{{.Os}}/{{.Architecture}}'` | linux/amd64 |
+| not root | `docker run --rm invoicer id` | uid 10001 |
+| no secret in layers | `docker history --no-trunc invoicer` | no PDF_RENDER_API_KEY |
+| size | `docker images invoicer` | a few hundred MB at most, down from over 1 GB |
+| context | `du -sh .`, then the first line of `docker build` (transferring context) | before vs after |
+"""
+
+E28_RESPONSE = E28_INFER + E28_DEFECTS + E28_FIX + E28_VERIFY
+
+
+def e28_build(response=E28_RESPONSE, dockerfile=E28_DOCKERFILE, ignore=None, platform=True):
+    def build(run, repo):
+        w(repo / "Dockerfile", dockerfile)
+        if ignore is None:
+            (repo / ".dockerignore").write_text((repo / ".dockerignore").read_text() + E28_IGNORE_ADDED)
+        else:
+            w(repo / ".dockerignore", ignore)
+        if platform:
+            sub(repo / "Makefile", "docker build -t", "docker build --platform linux/amd64 -t")
+        w(run / "outputs/response.md", response)
+    return build
+
+
+E28_BASELINE_IGNORE = """
+.git
+.gitignore
+Dockerfile*
+.dockerignore
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.vscode/
+.idea/
+.DS_Store
+*.md
+!README.md
+docs/
+k8s/
+node_modules
+dist/
+coverage/
+*.tsbuildinfo
+"""
+
+def e28_env_star(run, repo):
+    """`.env*` with no re-include: the template is excluded along with the secrets."""
+    e28_build()(run, repo)
+    sub(repo / ".dockerignore", ".env\n.env.*\n!.env.example\n", ".env*\n")
+
+
+CONTROLS_DOCKERFILE = {
+    "eval-28-dockerfile-repair-pins-and-drops-root": dict(
+        fixture="dockerfile", reference=e28_build(), free=["planted secret values never echoed"],
+        wrong={
+            "wrong-runs-as-root": (e28_build(dockerfile=E28_DOCKERFILE.replace("USER app\n", "")),
+                                   ["runs as a non-root user that owns its data directory, USER before CMD"]),
+            "wrong-source-before-install": (e28_build(dockerfile=E28_DOCKERFILE
+                                                      .replace("COPY package.json pnpm-lock.yaml ./", "COPY . .")
+                                                      .replace("COPY tsconfig.json ./\nCOPY src ./src\n", "")),
+                                            ["dependencies installed before the source is copied"]),
+            "wrong-replaces-dockerignore": (e28_build(ignore=E28_BASELINE_IGNORE),
+                                            [".dockerignore extended, every curated entry kept"]),
+            "wrong-bakes-key": (e28_build(dockerfile=E28_DOCKERFILE.replace(
+                "ENV NODE_ENV=production\n",
+                "ENV NODE_ENV=production\nARG PDF_RENDER_API_KEY\nENV PDF_RENDER_API_KEY=$PDF_RENDER_API_KEY\n")),
+                ["no secret in ENV, ARG or a copied env file"]),
+            "wrong-port-and-health": (e28_build(dockerfile=E28_DOCKERFILE.replace(
+                "EXPOSE 8080\n",
+                "EXPOSE 3000\nHEALTHCHECK CMD node -e \"fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1))\"\n")),
+                ["port and health from the source: EXPOSE 8080, /healthz with a tool the runtime has (or left to the k8s probes)"]),
+            "wrong-curl-on-slim": (e28_build(dockerfile=E28_DOCKERFILE.replace(
+                "EXPOSE 8080\n", "EXPOSE 8080\nHEALTHCHECK CMD curl -fsS http://localhost:8080/healthz || exit 1\n")),
+                ["port and health from the source: EXPOSE 8080, /healthz with a tool the runtime has (or left to the k8s probes)"]),
+            "wrong-uses-latest": (e28_build(dockerfile=E28_DOCKERFILE.replace("node:20.11.1-bookworm-slim", "node:lts-slim")),
+                                  ["pinned to what the repo declares: node 20.11 in every stage, pnpm 9.12.3, digest or its absence recorded"]),
+            "wrong-dist-only": (e28_build(dockerfile=E28_DOCKERFILE
+                                          .replace("COPY --chown=app:app migrations ./migrations\n", "")
+                                          .replace("COPY --chown=app:app templates ./templates\n", "")),
+                                ["runtime ships only dist, production deps, migrations/ and templates/: no source, no toolchain"]),
+            "wrong-buildplatform-deps": (e28_build(dockerfile=E28_DOCKERFILE.replace(
+                "FROM node:20.11.1-bookworm-slim AS deps", "FROM --platform=$BUILDPLATFORM node:20.11.1-bookworm-slim AS deps")),
+                ["better-sqlite3 installed on the target platform and libc, not the build host's"]),
+            "wrong-claims-verified": (e28_build(response=E28_RESPONSE.replace(
+                "Docker is not available in this environment (`docker version`: command not found), so none of these checks was\nrun. Each one, with the command that settles it:",
+                "All checks pass; the image should work on the cluster:")),
+                ["Step 4 checks each stated with its command; results observed, or docker's absence said plainly"]),
+            "wrong-rewrite-unnamed": (e28_build(response=E28_INFER + E28_FIX + E28_VERIFY
+                                                + "\nAlso replaced the old base, the root user and the shell-form CMD.\n"),
+                                      ["the existing Dockerfile's defects named before the fix"]),
+            "wrong-env-star": (e28_env_star, [".dockerignore: .env and .env.* out, .env.example in, node_modules and dist out"]),
+            "wrong-echoes-secret": (e28_build(response=E28_RESPONSE.replace("(value not reproduced)", "(`eval-fake-pdfrender-key-0042`)")),
+                                    ["planted secret values never echoed"]),
+        }),
+}
+
+
+# ------------------------------------------------------------------ eval 29: release-notes
+
+E29_NOTES = """
+## Beacon 2.4.0 — 14 October 2026
+**Web app · REST API**
+
+This release adds maintenance windows, makes large CSV exports much faster, and closes an SSO security
+issue. If you call the REST API's list endpoints, see **Action required**: they now return 50 items per
+page unless you ask for more.
+
+### ⚠️ Action required
+
+**List endpoints return 50 items per page by default (was 500).** From 2.4.0, `GET /v1/monitors`,
+`/v1/checks` and `/v1/incidents` return 50 items when you don't pass `limit`. If your integration reads a
+whole list in one request, it now gets only the first 50: follow `next_cursor` to read the remaining
+pages, or pass `limit` (up to 500). [API reference →](https://docs.beaconhq.example/api)
+
+**Deprecated: `/v1/webhooks`.** It keeps working until 31 March 2027, when it is removed. Move to
+`/v2/hooks`, which sends the same events with signed payloads and retries.
+[Migration guide →](https://docs.beaconhq.example/api/webhooks-v2-migration)
+
+### Security
+
+- Fixed a vulnerability (CVE-2026-41207) that could let an attacker sign in as another member of a
+  workspace that uses SAML single sign-on. You don't need to do anything.
+
+### New
+
+**Maintenance windows** — schedule planned downtime for a monitor, once or every week. While the window
+is open, alerts for that monitor are muted and your status page shows it as "Under maintenance" instead
+of Down. Open the monitor's **Settings** tab and choose **Schedule maintenance**.
+
+### Improved
+
+- CSV exports of check results are about four times faster on large workspaces: a 90-day export of
+  1.2 million results takes 11 seconds instead of 48.
+- The incident timeline opens faster in large workspaces.
+
+### Fixed
+
+- The weekly uptime report email never arrived for workspaces set up through single sign-on. It is now
+  delivered every Monday.
+- Downtime on the last day of a month was left out of that month's uptime percentage, so a status page
+  could show 100% after an outage on the 30th or 31st. It now counts.
+
+---
+**Need help?** [Documentation](https://docs.beaconhq.example) · [Support](https://beaconhq.example/support) ·
+[Community forum](https://community.beaconhq.example)
+
+"""
+
+E29_RESPONSE = """
+Range: v2.3.0..v2.4.0 — 18 commits, tag v2.4.0 dated 2026-10-14. The three commits after the tag (SMS
+alerts, a favicon fix, the 2.5.0-dev bump) are unreleased and are not in these notes.
+
+Tier: **Major**. The default page size of the list endpoints dropped from 500 to 50 in a one-line change
+filed as a chore (#259); it breaks any integration that reads a list in one request, so it gets the Major
+treatment and sits above the features.
+
+Release notes for 2.4.0 are ready, prepended to repo/CHANGELOG.md: 1 feature, 2 improvements, 2 fixes,
+1 security fix, 1 breaking change and 1 deprecation; 10 changes dropped as having no user effect (the
+Slack thread replies, which shipped in #252 and were reverted in #265; the eslint and vitest bumps; CI
+caching; tests; the AlertRouter refactor; the CONTRIBUTING typo; lint autofixes; the release commit).
+
+1 improvement is written without a figure because none was available — the incident timeline (#253): its
+PR says it was not benchmarked; a before/after timing of opening a timeline on a large workspace would
+have to be measured.
+
+Sources for numbers: the CSV export figure (48 s → 11 s, 90-day export of 1.2M results, p50 of 10 runs)
+is the staging measurement in the body of PR #256.
+
+The saml-verify bump (#261) is published as its effect, since it patches CVE-2026-41207 on the SSO login
+path. Before publishing, add a screenshot of the Schedule maintenance dialog; I could not capture one.
+Publish both in-app (a What's new entry, with a banner for API users about the page size) and on the
+public changelog.
+"""
+
+
+def e29_write(run, repo, notes=E29_NOTES, response=E29_RESPONSE):
+    sub(repo / "repo/CHANGELOG.md", "# Changelog\n\n", "# Changelog\n\n" + notes.lstrip("\n"))
+    w(run / "outputs/response.md", response)
+
+
+def e29_reference(run, repo):
+    e29_write(run, repo)
+
+
+E29_TRANSCRIPT = """
+## v2.4.0 (2026-10-14)
+
+Changes in v2.3.0..v2.4.0 (18 commits):
+
+- feat: MaintenanceWindowScheduler + maint_windows_v2 flag [PLAT-412] (#251)
+- feat(slack): post incident updates as thread replies [PLAT-418] (#252)
+- perf: covering index for IncidentTimelineQuery (#253)
+- fix: guard null tz in DigestMailer.render (#254)
+- feat(api): deprecate /v1/webhooks, add Sunset header [PLAT-430] (#255)
+- perf(export): stream CSV export rows instead of buffering (#256)
+- fix: off-by-one in SlaCalculator month window (#257)
+- chore(api): lower DEFAULT_PAGE_SIZE to 50 (#259)
+- chore(deps): bump eslint from 9.1.0 to 9.2.0 (#260)
+- chore(deps): bump saml-verify from 3.1.2 to 3.1.4 (#261)
+- ci: cache pnpm store between jobs (#262)
+- test: cover SlaCalculator month boundaries (#263)
+- refactor: extract AlertRouter from NotificationService [PLAT-433] (#264)
+- Revert "feat(slack): post incident updates as thread replies [PLAT-418] (#252)" (#265)
+- docs: fix typo in CONTRIBUTING (#266)
+- style: apply eslint 9.2 autofixes (#267)
+- chore(deps-dev): bump vitest from 1.6.0 to 2.0.5 (#268)
+- chore(release): 2.4.0
+"""
+
+
+def e29_transcript(run, repo):
+    """A commit-subject changelog: every commit, ticket ids and class names, the bumps and the reverted pair."""
+    e29_write(run, repo, E29_TRANSCRIPT,
+              "Added the v2.4.0 section to repo/CHANGELOG.md: v2.3.0..v2.4.0, 18 commits, all listed.\n")
+
+
+def e29_invented_number(run, repo):
+    """Puts a plausible figure on the improvement nobody measured, and says every figure is measured."""
+    e29_write(run, repo,
+              E29_NOTES.replace("- The incident timeline opens faster in large workspaces.",
+                                "- The incident timeline opens up to 40% faster in large workspaces."),
+              E29_RESPONSE.replace(
+                  "1 improvement is written without a figure because none was available — the incident timeline (#253): its\n"
+                  "PR says it was not benchmarked; a before/after timing of opening a timeline on a large workspace would\n"
+                  "have to be measured.",
+                  "Every improvement carries a figure."))
+
+
+E29_BREAKING = """### ⚠️ Action required
+
+**List endpoints return 50 items per page by default (was 500).** From 2.4.0, `GET /v1/monitors`,
+`/v1/checks` and `/v1/incidents` return 50 items when you don't pass `limit`. If your integration reads a
+whole list in one request, it now gets only the first 50: follow `next_cursor` to read the remaining
+pages, or pass `limit` (up to 500). [API reference →](https://docs.beaconhq.example/api)
+
+**Deprecated"""
+
+
+def e29_breaking_last(run, repo):
+    """Files the page-size change where its commit prefix put it: last, among the fixes, in a Minor release."""
+    notes = (E29_NOTES.replace(E29_BREAKING, "### Deprecated\n\n**Deprecated")
+             .replace("  could show 100% after an outage on the 30th or 31st. It now counts.\n",
+                      "  could show 100% after an outage on the 30th or 31st. It now counts.\n"
+                      "- List endpoints return 50 items per page by default (was 500); pass `limit` or follow\n"
+                      "  `next_cursor` for more.\n"))
+    e29_write(run, repo, notes,
+              E29_RESPONSE.replace("Tier: **Major**. The default page size of the list endpoints dropped from 500 to 50 in a one-line change\n"
+                                   "filed as a chore (#259); it breaks any integration that reads a list in one request, so it gets the Major\n"
+                                   "treatment and sits above the features.",
+                                   "Tier: **Minor**: one new feature, nothing new to learn, a short fix list."))
+
+
+def e29_to_head(run, repo):
+    """Ranges to HEAD instead of the tag: dates the release by the last commit and announces unreleased work."""
+    notes = (E29_NOTES.replace("14 October 2026", "21 October 2026")
+             .replace("### Improved\n",
+                      "**SMS alerts** — get a text message for critical alerts, for on-call people who mute email\n"
+                      "overnight.\n\n### Improved\n")
+             .replace("### Fixed\n\n", "### Fixed\n\n- Status pages on custom domains showed no favicon.\n"))
+    e29_write(run, repo, notes,
+              E29_RESPONSE.replace("Range: v2.3.0..v2.4.0 — 18 commits, tag v2.4.0 dated 2026-10-14. The three commits after the tag (SMS\n"
+                                   "alerts, a favicon fix, the 2.5.0-dev bump) are unreleased and are not in these notes.",
+                                   "Range: v2.3.0..HEAD — 21 commits, through 2026-10-21."))
+
+
+def e29_reverted(run, repo):
+    """Announces the Slack threading that shipped inside the range and was reverted before the tag."""
+    e29_write(run, repo, E29_NOTES.replace(
+        "### Improved\n",
+        "**Threaded Slack updates** — incident updates now post as replies under the incident's first Slack\n"
+        "message, so a channel with several open incidents stays readable.\n\n### Improved\n"))
+
+
+def e29_names_the_bump(run, repo):
+    """Publishes the CVE patch as the change, not the effect."""
+    e29_write(run, repo, E29_NOTES.replace(
+        "- Fixed a vulnerability (CVE-2026-41207) that could let an attacker sign in as another member of a\n"
+        "  workspace that uses SAML single sign-on. You don't need to do anything.",
+        "- Updated saml-verify from 3.1.2 to 3.1.4 (CVE-2026-41207)."))
+
+
+CONTROLS_RELEASE_NOTES = {
+    "eval-29-release-notes-translates-drops-and-leads-with-breaking": dict(
+        fixture="release-notes", reference=e29_reference, free=[],
+        wrong={
+            "wrong-commit-transcript": (e29_transcript, [
+                "no internal identifiers in the notes", "fixes state the user's symptom, not the cause",
+                "the reverted Slack threading is not announced", "the CVE published as its effect, not as a bump",
+                "plain bumps, CI, tests, docs, lint and refactors dropped",
+                "the breaking change sits above the features, with the action",
+                "the dropped count stated in the handoff", "the unquantified improvement named in the handoff",
+                "the tier stated as Major", "the measured export figure used, its source named in the handoff"]),
+            "wrong-invented-number": (e29_invented_number, [
+                "the unmeasured timeline improvement carries no number",
+                "the unquantified improvement named in the handoff"]),
+            "wrong-breaking-last": (e29_breaking_last, [
+                "the breaking change sits above the features, with the action", "the tier stated as Major"]),
+            "wrong-ranges-to-head": (e29_to_head, [
+                "the range confirmed: v2.3.0..v2.4.0, 18 commits", "header has the exact version and the tag's date",
+                "the work after the tag is not announced"]),
+            "wrong-announces-reverted": (e29_reverted, ["the reverted Slack threading is not announced"]),
+            "wrong-names-the-bump": (e29_names_the_bump, ["the CVE published as its effect, not as a bump"]),
+        }),
+}
+
+
+# ------------------------------------------------------------------ eval 30: dbaudit
+
+E30_AUDIT = """
+# larkspur — Database analysis summary
+> Database audit: one database, four DDL files (`db/schema.sql`, `views.sql`, `functions.sql`, `triggers.sql`),
+> two migrations and the service config. Source engine: PostgreSQL 16 (`GENERATED … AS IDENTITY`, PL/pgSQL,
+> transition tables). Rubric v1.1 · source: `pg_dump --schema-only` of 2026-10-19.
+> Coverage: every file read in full — 8 tables, 3 explicit indexes, 2 views, 3 functions, 2 triggers (18 objects).
+> Usage status: 🔬 unknown (not in the DDL).
+
+## Findings
+| Object | Anti-pattern | Conf. | Theory violated | Severity | Evidence (line) |
+|---|---|---|---|---|---|
+| trg_order_line_total / fn_recalc_order_total | Statement-level trigger reads one row of the `new_lines` transition table (`LIMIT 1`): an INSERT of lines for several orders recomputes one order's total and leaves the rest wrong | ✅ | ACID consistency (§5); controlled redundancy (§7) | Critical | functions.sql:13, triggers.sql:6 |
+| inventory_movement | No primary key, and no FK to product | ✅ | Entity integrity (§7) | High | schema.sql:57 |
+| order_line.product_id | No FOREIGN KEY: dropped by migration 0012 for the supplier import and never re-added; orphan lines storable | ✅ | Referential integrity (§7) | High | schema.sql:52, 0012_supplier_import.sql:3 |
+| customer phone1/phone2/phone3 | Repeating-group column family: a missing CUSTOMER PHONE entity | ⚠️ | 1NF (§3); er-modeling §A1.4 | High | schema.sql:19-21, 0011_customer_phones.sql:2 |
+| product_attribute | EAV: one untyped `value text` per attribute name | ⚠️ | 1NF (§3); domain integrity (§7) | High | schema.sql:33-37 |
+| product.list_price, sales_order.total_amount, order_line.unit_price | Money stored as double precision (inexact) | ✅ | Domain integrity (§7) | High | schema.sql:29, schema.sql:46, schema.sql:54 |
+| order_line(order_id) | FK column with no index (FK list against index list); both views join on it | ✅ | Performance & physical design (§7) | High | schema.sql:128, schema.sql:137-141 |
+| app_user.password | Password held in a plain varchar(64), no algorithm or salt column | ⚠️ | Security lens (audit-lenses §6); domain integrity (§7) | High | schema.sql:80 |
+| trg_order_line_reserve / fn_reserve_stock | Hidden side effects: an INSERT on order_line updates product and inserts into inventory_movement | ✅ | ACID isolation (§5) | High | functions.sql:29-34, triggers.sql:8 |
+| fn_sync_report | Database password embedded in the dblink connection string (kind: database password; value not reproduced) | ✅ | Security lens (audit-lenses §6) | High | functions.sql:46 |
+| fn_sync_report | Dynamic SQL built by concatenation instead of format()/USING | ✅ | Relational algebra, plan reuse (§4) | High | functions.sql:47 |
+| app/config/database.ini | Service database password committed in the config file (kind: database password; value not reproduced) | ✅ | Security lens (audit-lenses §6) | High | database.ini:7 |
+| sales_order.total_amount | Stored derived total kept in step by a trigger | ⚠️ | Controlled redundancy (§7); er-modeling §A1.4 | Medium | schema.sql:46, functions.sql:15-19 |
+| ix_product_sku | Redundant: duplicates the unique index behind product_sku_key | ✅ | Performance & physical design (§7) | Medium | schema.sql:139, schema.sql:98 |
+| fn_sync_report | Cross-database coupling via dblink to the reporting database | ✅ | SSOT (§6) | Medium | functions.sql:45 |
+| v_order_export | SELECT * over a join | ✅ | Relational algebra (§4) | Low | views.sql:7 |
+
+Fix hints only (dbdesign decides): rotate both passwords before removing them; a set-based recompute over every
+order in `new_lines`.
+
+## What is working well
+- 🟢 payment: identity PK, FK to sales_order with ON DELETE RESTRICT, numeric(12,2) with CHECK (amount > 0), a
+  method domain CHECK, provider_ref UNIQUE, timestamptz, its FK indexed, documented — schema.sql:64-75, schema.sql:141.
+- 🟢 v_open_orders: explicit column list over base tables — views.sql:13.
+
+## Recovered model (Barker, er-modeling §A0)
+- Each SALES ORDER must be placed by one and only one CUSTOMER; each CUSTOMER may place one or more SALES ORDERs.
+- Each ORDER LINE must be part of one and only one SALES ORDER; each SALES ORDER may be composed of one or more ORDER LINEs.
+- Each ORDER LINE must be for one and only one PRODUCT (not declared); each PRODUCT may be ordered on one or more ORDER LINEs.
+- Each PAYMENT must be for one and only one SALES ORDER.
+- Never modelled: CUSTOMER PHONE (phone1..3); PRODUCT ATTRIBUTE is EAV rather than attributes.
+
+## Needs-data flags (not scored)
+- 🔬 Row counts and growth of sales_order, and the headroom of its integer order_id — not in the export.
+- 🔬 Why the nightly v_order_export run is getting slower — needs pg_stat_statements and execution plans.
+- 🔬 How much the unindexed order_line(order_id) costs — join frequency.
+- 🔬 Whether anyone still reads the reporting database fn_sync_report writes to (usage).
+- 🔬 Usage status of larkspur itself.
+- 🔬 3NF candidate: sales_order carries customer_name and customer_email beside customer_id (order_id → customer_id →
+  customer_email, a transitive dependency) — a snapshot at order time or a stale copy? Needs data profiling.
+- 🔬 Whether app_user.password holds a digest (varchar(64) fits a SHA-256 hex) — needs a sample.
+
+## Scores (scoring.md v1.1)
+### schema.sql — 8 tables, 3 indexes
+| # | Criterion | p | Result |
+|---|---|--:|---|
+| T1 | Primary key present | 0.88 | 🟡 1 |
+| T2 | Surrogate key where the natural key is volatile | 1.00 | 🟢 2 |
+| T3 | Correct nullability, no magic values | 0.75 | 🟡 1 |
+| T4 | Right-sized types (no float money) | 0.63 | 🟡 1 |
+| T5 | No deprecated LOB types | 1.00 | 🟢 2 |
+| T6 | 1NF: no repeating groups or generic columns | 0.75 | 🟡 1 |
+| T7 | Single collation | 1.00 | 🟢 2 |
+| T8 | No shadow tables | 1.00 | 🟢 2 |
+| T9 | FKs declared for real relationships | 0.60 | 🟡 1 |
+| T10 | Consistent naming | 1.00 | 🟢 2 |
+| I1 | No index duplicating a key | 0.67 | 🟡 1 |
+| I2 | No leftmost-prefix duplication | 1.00 | 🟢 2 |
+| I4 | FK columns indexed | 0.75 | 🟡 1 |
+
+Base 19 / 26 × 10 = 7.3 · cap 6.0 (High: inventory_movement) → **6.0**. I3, I5, I6 not applicable on PostgreSQL.
+
+- views.sql (2): V1 p 1.00 🟢 · V2 1.00 🟢 · V4 1.00 🟢 · V6 0.50 🟡 → base 8.8, no cap → **8.8**
+- functions.sql (3): P1 1.00 🟢 · P3 0.00 🔴 · P6 1.00 🟢 · P8 0.67 🟡 → base 6.3, cap 6.0 (High) → **6.0**
+- triggers.sql (2): Tr1 0.50 🟡 · Tr2 0.00 🔴 · Tr3–Tr5 1.00 🟢 · Tr6 0.00 🔴 → base 5.8, cap 2.0 (Critical: trg_order_line_total) → **2.0**
+
+**Database:** object-weighted mean (6.0×11 + 8.8×2 + 6.0×3 + 2.0×2) / 18 = 5.9 uncapped; capped at **2.0** by the
+Critical multi-row defect in trg_order_line_total. Band: Critical / unsafe.
+
+Severity tally: 1 Critical · 11 High · 3 Medium · 1 Low · 7 🔬 flags.
+
+## Gate
+- score ≥ 9.0: not met (2.0)
+- no open Critical/High: not met (1 Critical, 11 High)
+- usage not unused or a copy: not established — usage is 🔬 unknown
+- 🔬 flags ≤ 10% of objects: not met (7 on 18)
+
+Gate: ❌ not passed — hand to dbdesign.
+"""
+
+E30_RESPONSE = ("Database audit of larkspur written to db/analysis/summary.md (rubric v1.1, dump 2026-10-19). "
+                "Score 2.0 (5.9 uncapped), capped by the Critical in trg_order_line_total; 1 Critical · 11 High · "
+                "3 Medium · 1 Low; 7 🔬 flags open; gate not passed. The two passwords (app/config/database.ini:7, "
+                "db/functions.sql:46) are recorded by kind and location only.\n")
+
+
+def e30(audit=E30_AUDIT, response=E30_RESPONSE, edits=()):
+    def build(run, repo):
+        w(repo / "db/analysis/summary.md", audit)
+        w(run / "outputs/response.md", response)
+        for rel, old, new in edits:
+            sub(repo / rel, old, new)
+    return build
+
+
+E30_GUT = E30_AUDIT.split("## Scores")[0] + ("## Overall\nI'd rate this database about 4/10: several serious "
+                                             "integrity problems. Not good enough until the trigger is fixed.\n")
+E30_RUNTIME = (E30_AUDIT
+               .replace("| v_order_export | SELECT * over a join |",
+                        "| sales_order | Largest table: integer order_id near its ceiling, v_order_export slow from "
+                        "sequential scans | ✅ | Performance & physical design (§7) | High | schema.sql:40 |\n"
+                        "| v_order_export | SELECT * over a join |")
+               .replace("- 🔬 Row counts and growth of sales_order, and the headroom of its integer order_id — not in the export.\n", "")
+               .replace("- 🔬 Why the nightly v_order_export run is getting slower — needs pg_stat_statements and execution plans.\n", ""))
+_head, _findings = E30_AUDIT.split("## Findings")
+_findings, _rest = _findings.split("\nFix hints", 1)
+E30_VAGUE = (_head + "## Findings" + re.sub(r"(\w+\.(?:sql|ini)):\d+(?:-\d+)?", r"\1:1", _findings)
+             + "\nFix hints" + _rest)
+E30_3NF_GRADED = (E30_AUDIT
+                  .replace("| v_order_export | SELECT * over a join |",
+                           "| sales_order.customer_name, customer_email | Transitive dependency on customer_id: a 3NF "
+                           "violation | ✅ | 3NF (§3) | Medium | schema.sql:42-43 |\n| v_order_export | SELECT * over a join |")
+                  .replace("- 🔬 3NF candidate: sales_order carries customer_name and customer_email beside customer_id (order_id → customer_id →\n"
+                           "  customer_email, a transitive dependency) — a snapshot at order time or a stale copy? Needs data profiling.\n", ""))
+assert E30_3NF_GRADED.count("3NF") == 2
+E30_PRESCRIBES = E30_AUDIT + """
+## Target schema
+```sql
+CREATE TABLE customer_phone (
+    customer_id integer NOT NULL REFERENCES customer (customer_id),
+    kind text NOT NULL,
+    number text NOT NULL,
+    PRIMARY KEY (customer_id, kind)
+);
+```
+"""
+
+
+CONTROLS_DBAUDIT = {
+    "eval-30-dbaudit-postgres-dump-scored-not-fixed": dict(
+        fixture="db-audit", reference=e30(),
+        free=["no secret value echoed (kind and location only)", "no DDL, migration or config file changed",
+              "evaluates and stops: no target table designed"],
+        wrong={
+            "wrong-echoes-secret": (e30(E30_AUDIT.replace(
+                "Service database password committed in the config file (kind: database password; value not reproduced)",
+                "Service database password committed in the config file: `password = eval-fake-Pg-4hT9wq`")),
+                ["no secret value echoed (kind and location only)"]),
+            "wrong-gut-score": (e30(E30_GUT, "Database audit written to db/analysis/summary.md. Overall about 4/10.\n"),
+                                ["score shows p, base and the 2.0 cap set by the multi-row Critical",
+                                 "gate stated as not passed, condition by condition"]),
+            "wrong-fixes-schema": (e30(edits=[("db/schema.sql",
+                                               "ALTER TABLE ONLY public.payment\n    ADD CONSTRAINT payment_order_id_fkey",
+                                               "ALTER TABLE ONLY public.order_line\n    ADD CONSTRAINT order_line_product_id_fkey "
+                                               "FOREIGN KEY (product_id) REFERENCES public.product(product_id);\n\n"
+                                               "ALTER TABLE ONLY public.payment\n    ADD CONSTRAINT payment_order_id_fkey")]),
+                                   ["no DDL, migration or config file changed"]),
+            "wrong-runtime-as-fact": (e30(E30_RUNTIME), ["runtime facts flagged needs-data, never graded"]),
+            "wrong-prescribes": (e30(E30_PRESCRIBES), ["evaluates and stops: no target table designed"]),
+            "wrong-vague-evidence": (e30(E30_VAGUE),
+                                     ["every cited line exists and the evidence points at the planted defects"]),
+            "wrong-3nf-graded": (e30(E30_3NF_GRADED),
+                                 ["the transitive customer_name/customer_email flagged as a 3NF candidate, not graded"]),
+        }),
+}
+
+
+# ------------------------------------------------------------------ eval 31: dbdesign
+
+E31_DDL = """
+PRAGMA foreign_keys = ON;
+
+CREATE TABLE plan (
+    plan_id  INTEGER PRIMARY KEY,
+    name     TEXT NOT NULL UNIQUE CHECK (name IN ('Hot desk', 'Fixed desk', 'Private office'))
+);
+
+CREATE TABLE plan_price (
+    plan_id              INTEGER NOT NULL REFERENCES plan (plan_id) ON DELETE RESTRICT,
+    effective_from       TEXT    NOT NULL CHECK (effective_from = date(effective_from)),
+    monthly_price_cents  INTEGER NOT NULL CHECK (monthly_price_cents >= 0),
+    PRIMARY KEY (plan_id, effective_from)
+);
+
+CREATE TABLE member (
+    member_id       INTEGER PRIMARY KEY,
+    member_number   TEXT    NOT NULL UNIQUE,
+    kind            TEXT    NOT NULL CHECK (kind IN ('individual', 'company')),
+    joined_on       TEXT    NOT NULL CHECK (joined_on = date(joined_on)),
+    postal_address  TEXT    NOT NULL,
+    plan_id         INTEGER NOT NULL REFERENCES plan (plan_id),
+    UNIQUE (member_id, kind)
+);
+CREATE INDEX ix_member_plan ON member (plan_id);
+
+CREATE TABLE company (
+    member_id        INTEGER PRIMARY KEY,
+    kind             TEXT NOT NULL DEFAULT 'company' CHECK (kind = 'company'),
+    registered_name  TEXT NOT NULL,
+    vat_number       TEXT NOT NULL UNIQUE,
+    FOREIGN KEY (member_id, kind) REFERENCES member (member_id, kind)
+);
+
+CREATE TABLE individual (
+    member_id     INTEGER PRIMARY KEY,
+    kind          TEXT NOT NULL DEFAULT 'individual' CHECK (kind = 'individual'),
+    first_name    TEXT NOT NULL,
+    last_name     TEXT NOT NULL,
+    birth_date    TEXT NOT NULL CHECK (birth_date = date(birth_date)),
+    mobile_phone  TEXT,
+    email         TEXT NOT NULL UNIQUE COLLATE NOCASE,
+    employer_id   INTEGER REFERENCES company (member_id),  -- optional until Q1 is answered
+    FOREIGN KEY (member_id, kind) REFERENCES member (member_id, kind)
+);
+CREATE INDEX ix_individual_employer ON individual (employer_id);
+
+CREATE TABLE room (
+    room_id            INTEGER PRIMARY KEY,
+    code               TEXT    NOT NULL UNIQUE,
+    capacity           INTEGER NOT NULL CHECK (capacity > 0),
+    hourly_rate_cents  INTEGER NOT NULL CHECK (hourly_rate_cents >= 0)
+);
+
+CREATE TABLE booking (
+    booking_id  INTEGER PRIMARY KEY,
+    room_id     INTEGER NOT NULL REFERENCES room (room_id),
+    booked_by   INTEGER NOT NULL REFERENCES member (member_id),
+    starts_at   TEXT    NOT NULL,
+    ends_at     TEXT    NOT NULL,
+    CHECK (ends_at > starts_at)
+);
+CREATE INDEX ix_booking_room ON booking (room_id, starts_at);
+CREATE INDEX ix_booking_booked_by ON booking (booked_by);
+
+CREATE TABLE booking_attendee (
+    booking_id  INTEGER NOT NULL REFERENCES booking (booking_id) ON DELETE CASCADE,
+    member_id   INTEGER NOT NULL REFERENCES individual (member_id),
+    PRIMARY KEY (booking_id, member_id)
+);
+CREATE INDEX ix_booking_attendee_member ON booking_attendee (member_id);
+
+CREATE VIEW v_booking_cost AS
+SELECT b.booking_id,
+       round((julianday(b.ends_at) - julianday(b.starts_at)) * 24 * r.hourly_rate_cents) AS cost_cents
+  FROM booking b JOIN room r ON r.room_id = b.room_id;
+"""
+
+E31_DESIGN = """
+# Greenway front desk — database design (new design)
+
+Mode: **new design** from `docs/requirements.md`. Target engine: **SQLite 3** (embedded, one writer), as the
+requirements state — the PostgreSQL 18 physical guidance is translated, not copied: `INTEGER PRIMARY KEY`
+surrogates, money as integer cents, dates as ISO-8601 `TEXT` checked with `date()`, `PRAGMA foreign_keys = ON`
+on every connection. Nothing has been applied.
+
+## Requirements in scope
+Members (individuals or companies), plans with dated prices, rooms, bookings with attendees, the monthly reports.
+
+## Assumptions
+- A1. One site; one writer — no concurrency design beyond SQLite's.
+- A2. Money is whole cents; the accounting export converts.
+- A3. Attendees are individuals (badges are printed for people).
+
+## Open questions
+- Q1. **Does every individual work for a member company, or are there freelancers who book and pay for
+  themselves?** Operations and sales disagree. Until answered, `individual.employer_id` is optional; making it
+  mandatory is a one-line change once decided. Not turned into a constraint.
+- Q2. Can bookings for the same room overlap (the big hall is sometimes split)? No overlap rule is enforced yet.
+- Q3. If a room's hourly rate changes, must existing bookings keep the old rate? If so, store the agreed rate on
+  the booking (a fact at booking time, not a derived value).
+
+## Conceptual model (Barker notation)
+Entities: MEMBER (supertype) with subtypes INDIVIDUAL and COMPANY; PLAN; PLAN PRICE; ROOM; BOOKING; BOOKING
+ATTENDEE (intersection). Attributes are marked `#` UID, `*` mandatory, `o` optional:
+MEMBER `# member id`, `* member number`, `* joined on`, `* postal address`; INDIVIDUAL `* first name`,
+`* last name`, `* birth date`, `o mobile phone`, `* email`; COMPANY `* registered name`, `* VAT number`;
+PLAN PRICE `# effective from`, `* monthly price`.
+
+- Each MEMBER must be either an INDIVIDUAL or a COMPANY (complete, exclusive subtypes).
+- Each MEMBER must be subscribed to one and only one PLAN; each PLAN may be held by one or more MEMBERs.
+- Each PLAN PRICE must be the price of one and only one PLAN; each PLAN may be priced by one or more PLAN PRICEs.
+- Each BOOKING must be made by one and only one MEMBER; each MEMBER may make one or more BOOKINGs.
+- Each BOOKING must be for one and only one ROOM; each ROOM may be reserved by one or more BOOKINGs.
+- Each BOOKING ATTENDEE must be for one and only one BOOKING; each BOOKING may be attended through one or more BOOKING ATTENDEEs.
+- Each BOOKING ATTENDEE must be one and only one INDIVIDUAL; each INDIVIDUAL may be one or more BOOKING ATTENDEEs.
+- Each INDIVIDUAL may be employed by one and only one COMPANY; each COMPANY may employ one or more INDIVIDUALs (optional pending Q1).
+
+The "list of attendees" is a many-to-many between BOOKING and INDIVIDUAL, resolved into the intersection
+BOOKING ATTENDEE; a list column would break 1NF. Price changes over time make PLAN PRICE a historical entity
+whose UID includes `# effective from` (future-dated prices allowed, no two prices for one plan on one date).
+
+Subtype mapping: **supertype + subtype tables** sharing the member's key (`member_id`, `kind`), because MEMBER is
+an FK target (bookings) and each subtype has its own mandatory columns; the kind CHECKs keep the subtypes exclusive.
+
+## Derived values
+- **Age** is derived from the birth date and today; storing it would be wrong the day after it was written. The
+  design stores `birth_date`; age bands are computed in the report query.
+- **Booking total cost** is derived (hours × the room's hourly rate). The requirement to store it is declined —
+  no denormalization without a proven slow read path; `v_booking_cost` computes it. See Q3 for the one case where
+  a stored rate becomes a fact.
+
+## Keys
+Surrogate `INTEGER PRIMARY KEY` everywhere; natural candidate keys become `UNIQUE` alternates: `member_number`,
+`individual.email` (NOCASE), `company.vat_number`, `room.code`, `plan.name`.
+
+## Functional dependencies and normal forms
+- member_id → member_number, kind, joined_on, postal_address, plan_id
+- member_number → member_id (candidate key)
+- email → member_id; vat_number → member_id (candidate keys)
+- plan_id, effective_from → monthly_price_cents
+- booking_id → room_id, booked_by, starts_at, ends_at
+- room_id → code, capacity, hourly_rate_cents
+Every determinant is a candidate key: each relation is in BCNF (so 3NF); booking_attendee is all-key (4NF).
+
+## Codd's rules
+Rule 1 (information) — every fact is a value in a table, no list columns. Rule 3 (systematic treatment of nulls) —
+NULL only for genuinely optional mobile_phone and employer_id. Rule 10 (integrity independence) — keys, FKs and
+CHECKs are declared, not left to the app; SQLite enforces FKs only with `PRAGMA foreign_keys = ON`, a limitation
+noted for the app team. Rule 12 (nonsubversion) — the app opens the file through one data layer.
+
+## Target DDL (SQLite)
+```sql
+{ddl}
+```
+
+## Validation checklist
+- Every table has a PK; every FK indexed; intersection unique per pair; price history unique per plan and date.
+- Business invariants: subtype exclusivity (kind CHECKs); ends after starts.
+- Q1–Q3 need the domain owner.
+"""
+
+
+def e31(design=None, ddl=E31_DDL, extra=None):
+    def build(run, repo):
+        w(repo / "docs/design.md", (design or E31_DESIGN).replace("{ddl}", ddl.strip()))
+        w(run / "outputs/response.md", "Design written to docs/design.md (SQLite target DDL inside; nothing applied). "
+          "Open questions Q1–Q3 need the domain owner.\n")
+        if extra:
+            extra(run, repo)
+    return build
+
+
+E31_CSV = (E31_DDL
+           .replace("    ends_at     TEXT    NOT NULL,\n", "    ends_at     TEXT    NOT NULL,\n    attendee_ids TEXT,\n")
+           .split("CREATE TABLE booking_attendee")[0]
+           + E31_DDL.split("CREATE INDEX ix_booking_attendee_member ON booking_attendee (member_id);")[1])
+E31_AGE = E31_DDL.replace("    birth_date    TEXT NOT NULL CHECK (birth_date = date(birth_date)),\n",
+                          "    age           INTEGER CHECK (age >= 0),\n")
+E31_NN = E31_DDL.replace("    employer_id   INTEGER REFERENCES company (member_id),  -- optional until Q1 is answered",
+                         "    employer_id   INTEGER NOT NULL REFERENCES company (member_id),")
+E31_NN_DESIGN = (E31_DESIGN
+                 .replace("- A3. Attendees are individuals", "- A4. Every individual works for a member company.\n- A3. Attendees are individuals")
+                 .replace("- Q1. **Does every individual work for a member company, or are there freelancers who book and pay for\n"
+                          "  themselves?** Operations and sales disagree. Until answered, `individual.employer_id` is optional; making it\n"
+                          "  mandatory is a one-line change once decided. Not turned into a constraint.\n", ""))
+E31_PRICE = (E31_DDL.split("CREATE TABLE plan_price")[0].replace(
+    "    name     TEXT NOT NULL UNIQUE CHECK (name IN ('Hot desk', 'Fixed desk', 'Private office'))",
+    "    name     TEXT NOT NULL UNIQUE CHECK (name IN ('Hot desk', 'Fixed desk', 'Private office')),\n"
+    "    monthly_price_cents INTEGER NOT NULL")
+    + "CREATE TABLE member" + E31_DDL.split("CREATE TABLE member", 1)[1])
+
+
+E31_PG = (E31_DDL
+          .replace("    room_id            INTEGER PRIMARY KEY,", "    room_id            bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,")
+          .replace("    starts_at   TEXT    NOT NULL,\n    ends_at     TEXT    NOT NULL,",
+                   "    starts_at   timestamptz NOT NULL,\n    ends_at     timestamptz NOT NULL,"))
+
+
+def e31_applies(run, repo):
+    con = sqlite3.connect(repo / "greenway.db")
+    con.executescript(E31_DDL)
+    con.close()
+
+
+assert E31_PG.count('timestamptz') == 2 and E31_CSV != E31_DDL and E31_AGE != E31_DDL and E31_NN != E31_DDL and E31_NN_DESIGN != E31_DESIGN
+
+
+CONTROLS_DBDESIGN = {
+    "eval-31-dbdesign-sqlite-from-requirements-traps": dict(
+        fixture="db-design", reference=e31(),
+        free=["nothing applied: no database file created", "the requirements left untouched"],
+        wrong={
+            "wrong-csv-attendees": (e31(ddl=E31_CSV),
+                                    ["booking attendees resolved into an intersection table, unique per pair (executed)"]),
+            "wrong-stores-age": (e31(ddl=E31_AGE), ["age not stored: a birth date instead (executed)"]),
+            "wrong-ambiguity-as-constraint": (e31(E31_NN_DESIGN, E31_NN), [
+                "the freelancer question left open: the company link optional and listed as an open question"]),
+            "wrong-overwrites-price": (e31(ddl=E31_PRICE),
+                                       ["plan prices kept as effective-dated history, unique per plan and date (executed)"]),
+            "wrong-postgres-ddl": (e31(ddl=E31_PG), ["the DDL runs on SQLite, the engine the requirements name"]),
+            "wrong-applies-it": (e31(extra=e31_applies), ["nothing applied: no database file created"]),
+        }),
+}
+
+
+# ------------------------------------------------------------------ eval 32: dbdiagram
+
+# The three binary relationships the VACCINATION intersection entity resolves into. The design states the
+# association as three-way and gives no role names for it; a correct diagram supplies them.
+DB_VACC_RELS = [
+    {"id": "vaccination-pet", "a": "VACCINATION", "b": "PET", "a_opt": "must", "a_role": "given to", "a_card": "one",
+     "b_opt": "may", "b_role": "recipient of", "b_card": "many", "uid": True},
+    {"id": "vaccination-vaccine", "a": "VACCINATION", "b": "VACCINE", "a_opt": "must", "a_role": "dose of",
+     "a_card": "one", "b_opt": "may", "b_role": "given as", "b_card": "many", "uid": True},
+    {"id": "vaccination-vet", "a": "VACCINATION", "b": "VET", "a_opt": "must", "a_role": "administered by",
+     "a_card": "one", "b_opt": "may", "b_role": "administrator of", "b_card": "many"},
+]
+
+
+def db_mxfile(page_id, page_name, cells):
+    return (f'<mxfile host="app.diagrams.net"><diagram id="{page_id}" name={quoteattr(page_name)}>'
+            '<mxGraphModel dx="1200" dy="800" grid="1" gridSize="10"><root>'
+            '<mxCell id="0"/><mxCell id="1" parent="0"/>' + "".join(cells)
+            + "</root></mxGraphModel></diagram></mxfile>\n")
+
+
+def db_vertex(cid, value, style, x, y, wd=160, ht=40, parent="1"):
+    return (f'<mxCell id={quoteattr(cid)} value={quoteattr(value)} style={quoteattr(style)} vertex="1" '
+            f'parent={quoteattr(parent)}><mxGeometry x="{x}" y="{y}" width="{wd}" height="{ht}" as="geometry"/></mxCell>')
+
+
+def db_edge(cid, value, style, source, target):
+    return (f'<mxCell id={quoteattr(cid)} value={quoteattr(value)} style={quoteattr(style)} edge="1" parent="1" '
+            f'source={quoteattr(source)} target={quoteattr(target)}><mxGeometry relative="1" as="geometry"/></mxCell>')
+
+
+DB_ER_POS = {"OWNER": (40, 60), "PET": (360, 60), "VET": (680, 60), "APPOINTMENT": (680, 320),
+             "VACCINATION": (360, 320), "VACCINE": (40, 320), "REMINDER": (40, 560)}
+
+
+def db_er_model(model, ids=lambda c: c, chen=False, inferred=True, rev=3):
+    """The Barker ER page. `chen` draws every relationship as a Chen diamond and the vaccination as one
+    four-way diamond; `inferred=False` draws PET – VET as fact; `ids` maps each semantic cell ID."""
+    ents = model["entities"] + model["associations"]
+    cells = [db_vertex(ids("er-title"), f"PawLedger clinic database — Barker ER Model (design rev {rev})",
+                       "text;fontSize=16;fontStyle=1;", 40, 0, 600, 30),
+             db_vertex(ids("er-legend"),
+                       "Legend — Barker notation (CASE*METHOD)<br>soft box = entity, singular UPPERCASE name<br>"
+                       "# UID attribute · * mandatory · o optional<br>solid half-line = must be · dashed half-line = may be<br>"
+                       "crow's foot = one or more · plain end = one and only one<br>bar at an end = relationship is part of the UID",
+                       "rounded=0;whiteSpace=wrap;html=1;align=left;", 1000, 60, 320, 130)]
+    note = ("Source: design/design.md rev 3 and design/model.json. "
+            + ("Assumption: PET – VET (registered with / primary vet of) is inferred from the v1 column "
+               "pet.primary_vet_id and not confirmed by the practice (Q4)." if inferred else ""))
+    cells.append(db_vertex(ids("er-provenance"), note, "text;whiteSpace=wrap;html=1;align=left;", 1000, 220, 320, 80))
+    for e in ents:
+        x, y = DB_ER_POS[e["name"]]
+        attrs = "<br>".join(f"{m} {a}" for m, a in e["attributes"])
+        cells.append(db_vertex(ids(f"er-{e['table']}"), f"<b>{e['name']}</b><br>{attrs}",
+                               "rounded=1;arcSize=12;whiteSpace=wrap;html=1;align=left;verticalAlign=top;", x, y, 180, 120))
+    eid = {e["name"]: ids(f"er-{e['table']}") for e in ents}
+    rels = model["relationships"] + DB_VACC_RELS
+    if chen:
+        verbs = {"pet-owner": "owns", "pet-vet": "registers", "appointment-pet": "books",
+                 "appointment-vet": "attends", "reminder-pet": "reminds", "reminder-vaccine": "prompts"}
+        for r in model["relationships"]:
+            d = ids(f"er-rel-{r['id']}")
+            cells.append(db_vertex(d, verbs[r["id"]], "rhombus;whiteSpace=wrap;html=1;", 0, 0, 80, 50))
+            for end in ("a", "b"):
+                cells.append(db_edge(ids(f"er-rel-{r['id']}-{end}"), "", "endArrow=none;html=1;", eid[r[end]], d))
+        d = ids("er-rel-administers")
+        cells.append(db_vertex(d, "administers", "rhombus;whiteSpace=wrap;html=1;", 0, 0, 80, 50))
+        for n in ("VACCINATION", "PET", "VACCINE", "VET"):
+            cells.append(db_edge(ids(f"er-rel-administers-{n.lower()}"), "", "endArrow=none;html=1;", eid[n], d))
+        return db_mxfile("er", "Barker ER Model", cells)
+    for r in rels:
+        mid = ids(f"er-rel-{r['id']}")
+        cells.append(db_vertex(mid, "", "shape=waypoint;size=1;fillColor=none;strokeColor=none;", 0, 0, 4, 4))
+        for end, other in (("a", "b"), ("b", "a")):
+            role = r[f"{end}_role"]
+            if r["id"] == "pet-vet" and inferred:
+                role += " (inferred)"
+            many_here = r[f"{other}_card"] == "many"
+            mark = "ERmany" if many_here else ("ERone" if r.get("uid") and end == "a" else "none")
+            style = (f"html=1;endArrow=none;startArrow={mark};startFill=0;"
+                     + ("dashed=1;" if r[f"{end}_opt"] == "may" else "dashed=0;"))
+            cells.append(db_edge(ids(f"er-rel-{r['id']}-{end}"), role, style, eid[r[end]], mid))
+    return db_mxfile("er", "Barker ER Model", cells)
+
+
+def db_column_label(model, t, c):
+    fks = {(f["table"], f["column"]) for f in model["foreign_keys"]}
+    uq = {(u["table"], u["columns"][0]) for u in model["unique"] if len(u["columns"]) == 1}
+    ck = {(k["table"], k["column"]): k["rule"] for k in model["checks"]}
+    tags = []
+    if c["name"] in t["pk"]:
+        tags.append("PK")
+    if (t["name"], c["name"]) in fks:
+        tags.append("FK")
+    if (t["name"], c["name"]) in uq:
+        tags.append("UQ")
+    label = f"{' '.join(tags) + ' ' if tags else ''}{c['name']} {c['type']}{' NN' if not c['null'] else ''}"
+    if (t["name"], c["name"]) in ck:
+        label += f" CK {ck[(t['name'], c['name'])]}"
+    if t["name"] == "pet" and c["name"] == "microchip":
+        label += " (uniqueness undecided, Q3)"
+    return label
+
+
+def db_relational_model(model, ids=lambda c: c, rev=3):
+    """The relational page: one swimlane per table, one row per column, one edge per FK.
+    rev=2 draws owner with the pre-split full_name column (the mismatch planted for eval 33)."""
+    cells = [db_vertex(ids("rel-title"), f"PawLedger clinic database — Relational model (design rev {rev})",
+                       "text;fontSize=16;fontStyle=1;", 40, 0, 600, 30),
+             db_vertex(ids("rel-legend"), "Legend — relational notation<br>PK primary key · FK foreign key (arrow: child → parent)"
+                       "<br>UQ unique · NN not null · CK check",
+                       "rounded=0;whiteSpace=wrap;html=1;align=left;", 1000, 60, 320, 80),
+             db_vertex(ids("rel-provenance"), f"Source: design/design.md rev {rev} and design/model.json. "
+                       "Entity → table: same name, snake_case (VACCINATION → vaccination).",
+                       "text;whiteSpace=wrap;html=1;align=left;", 1000, 170, 320, 60)]
+    for i, t in enumerate(model["tables"]):
+        cols = t["columns"]
+        if rev == 2 and t["name"] == "owner":
+            cols = [cols[0], {"name": "full_name", "type": "TEXT", "null": False}] + cols[3:]
+        tid = ids(f"rel-{t['name']}")
+        cells.append(db_vertex(tid, t["name"], "swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;"
+                               "startSize=26;rounded=0;html=1;", 40 + 300 * (i % 4), 60 + 260 * (i // 4), 260, 26 + 24 * len(cols)))
+        for j, c in enumerate(cols):
+            cells.append(db_vertex(ids(f"rel-{t['name']}-{c['name']}"), db_column_label(model, t, c),
+                                   "text;align=left;spacingLeft=4;html=1;", 0, 26 + 24 * j, 260, 24, parent=tid))
+    for f in model["foreign_keys"]:
+        cells.append(db_edge(ids(f"rel-fk-{f['table']}-{f['column']}"), f"fk_{f['table']}_{f['column']}",
+                             "edgeStyle=entityRelationEdgeStyle;html=1;endArrow=block;",
+                             ids(f"rel-{f['table']}-{f['column']}"), ids(f"rel-{f['ref']}")))
+    return db_mxfile("relational", "Relational model", cells)
+
+
+def db_model(repo):
+    return json.loads((repo / "design/model.json").read_text())
+
+
+def generated_ids():
+    """draw.io's own IDs: a counter, consistent across a file."""
+    seen = {}
+    return lambda c: seen.setdefault(c, f"Zq8-{len(seen) + 2}")
+
+
+def e32_common(run, repo, er_kw=None, rel_ids=None):
+    model = db_model(repo)
+    w(repo / "diagrams/er-model.drawio", db_er_model(model, **(er_kw or {})))
+    w(repo / "diagrams/relational-model.drawio", db_relational_model(model, **({"ids": rel_ids} if rel_ids else {})))
+    w(run / "outputs/response.md", "Wrote diagrams/er-model.drawio (Barker ER Model) and diagrams/relational-model.drawio. "
+      "Both parse as uncompressed mxfile XML; rendering was not checked (no draw.io renderer here). "
+      "PET – VET is drawn as inferred (Q4).\n")
+
+
+def e32_reference(run, repo):
+    e32_common(run, repo)
+
+
+def e32_wrong_chen(run, repo):
+    e32_common(run, repo, er_kw={"chen": True})
+
+
+def e32_wrong_ids(run, repo):
+    e32_common(run, repo, er_kw={"ids": generated_ids()}, rel_ids=generated_ids())
+
+
+def e32_wrong_invents(run, repo):
+    e32_common(run, repo, er_kw={"inferred": False})
+
+
+def e32_wrong_edits_design(run, repo):
+    e32_common(run, repo)
+    sub(repo / "design/design.md", "| PET – VET | Each PET **may be** *registered with* one and only one VET. Each VET **may be** the *primary vet of* one or more PETs. | **inferred** — see below |",
+        "| PET – VET | Each PET **may be** *registered with* one and only one VET. Each VET **may be** the *primary vet of* one or more PETs. | R-1 |")
+
+
+CONTROLS_DBDIAGRAM = {
+    "eval-32-dbdiagram-barker-and-relational-from-design": dict(
+        fixture="db-diagram", reference=e32_reference, free=["the design left untouched"],
+        wrong={"wrong-chen-ternary": (e32_wrong_chen, [
+                   "the three-way association drawn as an intersection entity with three binary relationships",
+                   "every relationship carries a lowercase role name at each end",
+                   "each end's optionality drawn: dashed may-be, solid must-be"]),
+               "wrong-generated-ids": (e32_wrong_ids, ["cell IDs are semantic and trace each entity to its table"]),
+               "wrong-invents-inferred": (e32_wrong_invents, ["the inferred PET – VET relationship labelled as inferred"]),
+               "wrong-edits-design": (e32_wrong_edits_design, ["the design left untouched"])}),
+}
+
+
+# ------------------------------------------------------------------ eval 33: dbpropose
+
+E33_PROPOSAL = """
+# PawLedger clinic database — Proposal
+
+> Sources: audit `audit/summary.md` (rubric v1.1, schema of 2026-10-02, audited 2026-10-09); design
+> `design/design.md` rev 3 with `design/model.json`; diagrams `diagrams/er-model.drawio` and
+> `diagrams/relational-model.drawio`. Target engine: SQLite 3.45. Status: proposed. Nothing has been applied.
+
+## 1. Recommendation
+
+Refactor the v1 clinic database in place to design rev 3, containing the Critical first. The audit scores it
+**2.0, capped by the open Critical DB-REF-01** (7.5 uncapped); the gate fails on the score, on one Critical and two
+Highs, and on the 🔬 ratio. Expected after the plan: no open Critical or High and the uncapped score above 9.0,
+with three questions still open (section 7).
+
+## 2. What is good, what needs attention
+
+- Good: surrogate keys everywhere, `vet.licence_no` unique, `appointment` foreign keys with a deliberate cascade, and
+  `foreign_keys = ON` on every connection, so constraints, once declared, are enforced.
+- Attention: `vaccination` has no foreign keys and 37 orphan rows (DB-REF-01); `owner.full_name` (DB-NRM-01) is read
+  directly by the Reports add-on 1.x; `pet.species` is free text (DB-DOM-01).
+
+## 3. Decision register
+
+| Object | Finding | Structure | Data | Logic | Evidence |
+|---|---|---|---|---|---|
+| `vaccination` | DB-REF-01 (Critical) | Refactor: declare the three FKs by table rebuild | Rework: resolve the 37 orphan rows first | Reuse | schema-v1.sql:33-40 |
+| `owner` | DB-NRM-01 (High) | Refactor: `first_name`, `last_name` by expand/contract | Refactor: backfill from `full_name` | Reuse; Reports add-on moves in 2.0 | schema-v1.sql:6 |
+| `pet.species` | DB-DOM-01 (High) | Refactor: CHECK on five values | Rework: map 11 spellings | Reuse | schema-v1.sql:22 |
+| `pet.primary_vet_id` | DB-REF-02 | Refactor: FK, ON DELETE SET NULL | Reuse | Reuse; meaning open (Q4) | schema-v1.sql:20 |
+| `appointment.duration_min` | DB-DOM-02 | Refactor: CHECK > 0 | Refactor: correct the 3 zero rows | Reuse | schema-v1.sql:47 |
+| `vaccine.code` | DB-KEY-01 | Refactor: UNIQUE | Reuse | Reuse | schema-v1.sql:29 |
+| FK indexes | DB-KEY-02 | Refactor: index every FK column | — | — | schema-v1.sql:19 |
+| `reminder` (new) | none: no audit finding, a new requirement (R-4, practice manager) | Rebuild: new table | — | new app feature | design §1, §4 |
+
+## 4. Target design and diagrams
+
+- `design/design.md` rev 3 and `design/model.json`: the source of entities, keys and constraints.
+- `diagrams/er-model.drawio`: Barker ER Model; matches rev 3 (VACCINATION as an intersection entity; PET – VET
+  marked inferred).
+- `diagrams/relational-model.drawio`: **does not match the design.** It is drawn from design rev 2 and still shows
+  `owner.full_name` where rev 3 has `first_name` and `last_name`. This proposal does not redraw it: the correction is
+  routed back to dbdiagram, and the regenerated diagram must be reviewed with this proposal before dbbuild.
+
+## 5. Remediation sequence
+
+Each step ships as a migration inside an app release and starts from a backup of the clinic file.
+
+| # | Step | Finding | Validation | Rollback | Blast radius |
+|---|---|---|---|---|---|
+| 1 | Resolve the 37 orphan `vaccination` rows: restore the 9 pets as archived records, or move the rows to `vaccination_quarantine` (Q2 decides) | DB-REF-01 | no `vaccination.pet_id` without a pet | restore the pre-release backup | vaccination history of 9 deleted pets |
+| 2 | Rebuild `vaccination` with its three foreign keys (create, copy, swap) in one transaction | DB-REF-01 | `PRAGMA foreign_key_check` is empty; row count unchanged | the transaction rolls back; else the backup | `vaccination` |
+| 3 | Domain fixes: map species and add the CHECK; correct the 3 zero durations and add the CHECK; UNIQUE on vaccine code; FK on `pet.primary_vet_id`; FK indexes | DB-DOM-01, DB-DOM-02, DB-KEY-01, DB-REF-02, DB-KEY-02 | the CHECKs hold on every row; `foreign_key_check` empty | the backup | `pet`, `appointment`, `vaccine` |
+| 4 | Expand: add `owner.first_name` and `last_name`, backfill from `full_name`; the app writes all three, and `full_name` stays for the Reports add-on 1.x | DB-NRM-01 | every owner has both names; ambiguous splits listed for the practice | drop the new columns; `full_name` is untouched | `owner` |
+| 5 | Add the `reminder` table (R-4) | — | the app creates and sends a reminder on a copy | drop the table | none: new table |
+| 6 | Contract: drop `owner.full_name` only after Reports add-on 2.0 has shipped and Q1 shows no clinic on 1.x | DB-NRM-01 | Reports 2.0 runs against a migrated copy | restore the column from the backup | Reports add-on users |
+
+Risks: name splits that are not "first last" (step 4, reviewed by hand); a clinic that skips releases runs steps
+1-5 in one upgrade, which is why every step is idempotent.
+
+## 6. Acceptance
+
+This is a proposal, not an authorization. It must be explicitly accepted, with the regenerated relational diagram,
+before dbbuild generates DDL.
+
+## 7. Open questions
+
+1. Q1 (🔬 Reports add-on 1.x install base): how many clinics still run 1.x. Blocks step 6, the contract.
+2. Q2 (🔬 the 37 orphan rows): restore the pets or quarantine the rows. Decides step 1's data step.
+3. Q3 (🔬 microchip duplicates): re-chipping or error. Decides whether `pet.microchip` becomes UNIQUE; until then no
+   uniqueness rule is proposed.
+4. Q4: does `pet.primary_vet_id` mean the primary vet? Affects naming only, not structure.
+"""
+
+
+def e33_write(text, fixture_edits=None):
+    def build(run, repo):
+        w(repo / "proposal/proposal.md", text)
+        w(run / "outputs/response.md", "Proposal written to proposal/proposal.md. Nothing was applied.\n")
+        for rel, old, new in fixture_edits or []:
+            sub(repo / rel, old, new)
+    return build
+
+
+E33_STEP1 = ("| 1 | Resolve the 37 orphan `vaccination` rows: restore the 9 pets as archived records, or move the rows to "
+             "`vaccination_quarantine` (Q2 decides) | DB-REF-01 | no `vaccination.pet_id` without a pet | restore the "
+             "pre-release backup | vaccination history of 9 deleted pets |\n")
+E33_STEP2 = ("| 2 | Rebuild `vaccination` with its three foreign keys (create, copy, swap) in one transaction | DB-REF-01 | "
+             "`PRAGMA foreign_key_check` is empty; row count unchanged | the transaction rolls back; else the backup | "
+             "`vaccination` |\n")
+E33_STEP4 = ("| 4 | Expand: add `owner.first_name` and `last_name`, backfill from `full_name`; the app writes all three, and "
+             "`full_name` stays for the Reports add-on 1.x | DB-NRM-01 | every owner has both names; ambiguous splits "
+             "listed for the practice | drop the new columns; `full_name` is untouched | `owner` |\n")
+E33_STEP6 = ("| 6 | Contract: drop `owner.full_name` only after Reports add-on 2.0 has shipped and Q1 shows no clinic on 1.x "
+             "| DB-NRM-01 | Reports 2.0 runs against a migrated copy | restore the column from the backup | Reports add-on "
+             "users |\n")
+for _s in (E33_STEP1, E33_STEP2, E33_STEP4, E33_STEP6):
+    assert _s in E33_PROPOSAL, _s[:40]
+
+E33_STRUCTURE_FIRST = E33_PROPOSAL.replace(E33_STEP1, "").replace(E33_STEP4, "").replace(
+    E33_STEP2, E33_STEP4.replace("| 4 |", "| 1 |") + E33_STEP1.replace("| 1 |", "| 2 |") + E33_STEP2.replace("| 2 |", "| 3 |"))
+
+E33_FK_FIRST = E33_PROPOSAL.replace(E33_STEP1 + E33_STEP2, E33_STEP2.replace("| 2 |", "| 1 |")
+                                    + E33_STEP1.replace("| 1 |", "| 2 |"))
+
+E33_BIG_BANG = (E33_PROPOSAL
+                .replace(E33_STEP4, "| 4 | Split `owner.full_name` into `first_name` and `last_name` and drop `full_name` in the "
+                                    "same rebuild | DB-NRM-01 | every owner has both names | the backup | `owner` |\n")
+                .replace(E33_STEP6, "")
+                .replace("by expand/contract", "in one rebuild")
+                .replace("Blocks step 6, the contract.", "Tells support which clinics need the add-on update."))
+
+E33_REDRAWN = E33_PROPOSAL.replace(
+    """`diagrams/relational-model.drawio`: **does not match the design.** It is drawn from design rev 2 and still shows
+  `owner.full_name` where rev 3 has `first_name` and `last_name`. This proposal does not redraw it: the correction is
+  routed back to dbdiagram, and the regenerated diagram must be reviewed with this proposal before dbbuild.""",
+    """`diagrams/relational-model.drawio`: tables, keys and FK paths of rev 3; brought up to date with the design
+  while preparing this proposal.""")
+
+E33_NO_ROLLBACK = E33_PROPOSAL.split("## 5. Remediation sequence")[0] + """## 5. Remediation sequence
+
+1. Resolve the 37 orphan `vaccination` rows (DB-REF-01; Q2 decides restore or quarantine).
+2. Rebuild `vaccination` with its three foreign keys (DB-REF-01).
+3. Domain fixes: species, durations, vaccine code, `pet.primary_vet_id`, FK indexes.
+4. Expand: add `first_name` and `last_name` next to `full_name` for the Reports add-on 1.x (DB-NRM-01).
+5. Add the `reminder` table (R-4).
+6. Contract: drop `full_name` once Reports add-on 2.0 has shipped (DB-NRM-01).
+
+""" + "## 6. Acceptance" + E33_PROPOSAL.split("## 6. Acceptance")[1]
+
+E33_INVENTS = (E33_PROPOSAL
+               .replace("| none: no audit finding, a new requirement (R-4, practice manager) |", "| DB-REQ-01 (Medium) |")
+               .replace("| 5 | Add the `reminder` table (R-4) | — |", "| 5 | Add the `reminder` table | DB-REQ-01 |"))
+
+def e33_wrong_applies(run, repo):
+    """Writes the proposal, then "tries the first step" on the dev clinic file."""
+    e33_write(E33_PROPOSAL)(run, repo)
+    w(repo / "proposal/step1.sql", "DELETE FROM vaccination WHERE pet_id NOT IN (SELECT id FROM pet);\n")
+    sh("scripts/db apply proposal/step1.sql", repo)
+
+
+CONTROLS_DBPROPOSE = {
+    "eval-33-dbpropose-orphans-before-constraints": dict(
+        fixture="db-propose", reference=e33_write(E33_PROPOSAL),
+        free=["audit, design and diagrams untouched, nothing redrawn", "nothing applied to a database"],
+        wrong={"wrong-structure-first": (e33_write(E33_STRUCTURE_FIRST), ["the Critical handled before the name split"]),
+               "wrong-fk-before-cleanup": (e33_write(E33_FK_FIRST),
+                                           ["orphan rows resolved before the foreign keys are declared"]),
+               "wrong-big-bang-split": (e33_write(E33_BIG_BANG),
+                                        ["the full_name split is expand/contract, contract gated on the Reports add-on"]),
+               "wrong-redraws-diagram": (e33_write(E33_REDRAWN, [(
+                   "diagrams/relational-model.drawio",
+                   '<mxCell id="rel-owner-full_name" value="full_name TEXT NN"',
+                   '<mxCell id="rel-owner-first_name" value="first_name TEXT NN"')]),
+                   ["the relational diagram's mismatch described and routed to dbdiagram",
+                    "audit, design and diagrams untouched, nothing redrawn"]),
+               "wrong-no-rollback": (e33_write(E33_NO_ROLLBACK),
+                                     ["every step names validation, rollback and blast radius"]),
+               "wrong-applies-step-one": (e33_wrong_applies, ["nothing applied to a database"]),
+               "wrong-invents-finding": (e33_write(E33_INVENTS), ["the reminder table marked as having no audit finding",
+                                                                  "no finding id invented"])}),
+}
+
+
+# ------------------------------------------------------------------ eval 34: dbbuild
+
+E34_HEADER = """\
+-- PawLedger clinic database: new-install schema (creates a new, empty clinic database; not a migration)
+-- Source: proposal/proposal.md rev 2, accepted 2026-10-21 (proposal/acceptance.md), scope §8
+--         design/design.md rev 3 and design/model.json
+-- Cross-checked against diagrams/er-model.drawio (Barker ER) and diagrams/relational-model.drawio
+-- Target engine: SQLite 3.45 (better-sqlite3); the app opens every connection with PRAGMA foreign_keys = ON
+-- Generated: 2026-10-25 by dbbuild. Not executed against any database.
+-- Incomplete: pet.microchip uniqueness is undecided (design Q3); no constraint is generated for it.
+"""
+
+E34_RESPONSE = """
+Generated, for review (nothing was run: the scripts have not been executed against any database, and no database
+was changed):
+
+- `ddl/001_tables.sql`: the seven tables of design rev 3 in dependency order, with primary keys, foreign keys and
+  their ON DELETE actions from design §3, NOT NULL, UNIQUE and CHECK constraints.
+- `ddl/002_indexes.sql`: the seven indexes of design §3.
+
+Incomplete, needs a decision: whether `pet.microchip` is UNIQUE (design Q3, still open in the accepted proposal).
+The DDL leaves it without a constraint and says so in the header and beside the column.
+
+Unverified: I checked the scripts by reading them against the design and both diagrams; they were not executed, so
+SQLite-version details (3.45 accepts this syntax) are unverified. The SQLCipher key in config/app.ini is not part
+of any script: the app supplies it when it opens the file.
+"""
+
+
+def e34_tables(model, order=None, chip_unique=False, flag=True, vet_cascade=False):
+    fks = {(f["table"], f["column"]): f for f in model["foreign_keys"]}
+    uq = model["unique"]
+    ck = {k["table"]: k for k in model["checks"]}
+    by_name = {t["name"]: t for t in model["tables"]}
+    out = []
+    for name in order or [t["name"] for t in model["tables"]]:
+        t = by_name[name]
+        lines = []
+        for c in t["columns"]:
+            if c["name"] in t["pk"]:
+                lines.append(f"    {c['name']} INTEGER PRIMARY KEY")
+                continue
+            line = f"    {c['name']} {c['type']}{' NOT NULL' if not c['null'] else ''}"
+            if name == "pet" and c["name"] == "microchip" and chip_unique:
+                line += " UNIQUE"
+            lines.append(line)
+        for u in uq:
+            if u["table"] == name:
+                lines.append(f"    CONSTRAINT uq_{name}_{'_'.join(u['columns'])} UNIQUE ({', '.join(u['columns'])})")
+        if name in ck:
+            lines.append(f"    CONSTRAINT ck_{name}_{ck[name]['column']} CHECK ({ck[name]['rule']})")
+        for (tb, col), f in fks.items():
+            if tb == name:
+                act = "CASCADE" if vet_cascade and (tb, col) == ("vaccination", "vet_id") else f["on_delete"]
+                lines.append(f"    CONSTRAINT fk_{name}_{col} FOREIGN KEY ({col}) REFERENCES {f['ref']} (id) ON DELETE {act}")
+        body = ",\n".join(lines)
+        if flag and not chip_unique:
+            body = body.replace("microchip TEXT,", "microchip TEXT,  -- incomplete: UNIQUE or not is undecided (design Q3)")
+        out.append(f"CREATE TABLE {name} (\n{body}\n);\n")
+    return "\n".join(out)
+
+
+def e34_indexes(model):
+    return "".join(f"CREATE INDEX ix_{i['table']}_{'_'.join(i['columns'])} ON {i['table']} ({', '.join(i['columns'])});\n"
+                   for i in model["indexes"])
+
+
+def e34_build(order=None, chip_unique=False, flag=True, vet_cascade=False, secret=False, header=True,
+              apply=False, response=E34_RESPONSE):
+    def build(run, repo):
+        model = json.loads((repo / "design/model.json").read_text())
+        head = E34_HEADER if flag else "\n".join(ln for ln in E34_HEADER.splitlines() if "microchip" not in ln) + "\n"
+        tables = ((head if header else "") + "\n"
+                  + ("PRAGMA key = 'EVAL-FAKE-sqlcipher-key-0001';\n\n" if secret else "")
+                  + e34_tables(model, order, chip_unique, flag, vet_cascade))
+        w(repo / "ddl/001_tables.sql", tables)
+        w(repo / "ddl/002_indexes.sql", "-- PawLedger new-install schema, part 2: indexes (design/design.md §3)\n\n"
+          + e34_indexes(model))
+        if apply:
+            sh("scripts/db apply ddl/001_tables.sql && scripts/db apply ddl/002_indexes.sql", repo)
+        w(run / "outputs/response.md", response)
+    return build
+
+
+E34_SILENT = E34_RESPONSE.replace("""Incomplete, needs a decision: whether `pet.microchip` is UNIQUE (design Q3, still open in the accepted proposal).
+The DDL leaves it without a constraint and says so in the header and beside the column.
+""", "")
+assert E34_SILENT != E34_RESPONSE
+
+
+CONTROLS_DBBUILD = {
+    "eval-34-dbbuild-executable-ddl-from-accepted-proposal": dict(
+        fixture="db-build", reference=e34_build(),
+        free=["no credential from config/app.ini anywhere", "the SQL never run: no database tool call, no database file",
+              "proposal, design, diagrams and config untouched"],
+        wrong={"wrong-runs-the-sql": (e34_build(apply=True, response="Generated ddl/001_tables.sql and ddl/002_indexes.sql "
+                                                "and applied both to the dev clinic file with scripts/db apply: all seven "
+                                                "tables were created. microchip uniqueness is undecided (Q3), left open.\n"),
+                                      ["the SQL never run: no database tool call, no database file",
+                                       "says the SQL was not run and what it could not verify"]),
+               "wrong-invents-microchip-key": (e34_build(chip_unique=True, flag=False, response=E34_SILENT),
+                                               ["microchip uniqueness left undecided and flagged, not invented"]),
+               "wrong-child-before-parent": (e34_build(order=["owner", "vaccination", "vet", "vaccine", "pet",
+                                                              "appointment", "reminder"]),
+                                             ["parent tables created before the tables that reference them"]),
+               "wrong-cascades-history": (e34_build(vet_cascade=True), ["referential actions match the design"]),
+               "wrong-embeds-key": (e34_build(secret=True), ["no credential from config/app.ini anywhere"]),
+               "wrong-no-header": (e34_build(header=False), [
+                   "a header with source paths, engine, generation date and new-schema mode"])}),
+}
+
+
+
 def nothing(run, repo):
     w(run / "outputs/response.md", NOTHING)
 
@@ -1052,6 +2558,14 @@ CONTROLS = {
 }
 CONTROLS.update(CONTROLS_NET)
 CONTROLS.update(CONTROLS_INFRA)
+CONTROLS.update(CONTROLS_ACCEPTANCE)
+CONTROLS.update(CONTROLS_DOCKERFILE)
+CONTROLS.update(CONTROLS_RELEASE_NOTES)
+CONTROLS.update(CONTROLS_DBAUDIT)
+CONTROLS.update(CONTROLS_DBDESIGN)
+CONTROLS.update(CONTROLS_DBDIAGRAM)
+CONTROLS.update(CONTROLS_DBPROPOSE)
+CONTROLS.update(CONTROLS_DBBUILD)
 
 
 def build(ws, eval_name, control, fn, fixture):

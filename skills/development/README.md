@@ -104,4 +104,4 @@ Each lives in the folder of the skill that uses it.
 
 ## Measured
 
-These six are the only skills in this repo with a **scored** result behind them — 0.98 vs 0.22 on delta over 36 runs. See [`../evals/`](../../evals/README.md) and [benchmark.md](../../evals/benchmark.md). (`docker-compose` and `post-mortem` have fixtures and assertions but no scored run.)
+These six are the only skills in this repo with a **scored** result behind them — 0.98 vs 0.22 on delta over 36 runs. See [`../evals/`](../../evals/README.md) and [benchmark.md](../../evals/benchmark.md). (`docker-compose` and `post-mortem` have fixtures and assertions but no scored run.) `acceptance-tests` has eval 27, on the `tdd` fixture: the tests it writes are run against the unchanged code, a correct implementation and three mutants, so a test that is red for the wrong reason or cannot fail is caught by execution, not by reading. Its controls separate as intended; **no with-skill run has been scored.**
