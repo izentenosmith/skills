@@ -212,6 +212,7 @@ These carry no workflow of their own — the skill in the same folder links into
 | Doc | Used by |
 |-----|---------|
 | [clean-architecture](skills/development/architect-deep-dive/clean-architecture.md) | architect-deep-dive — dependency direction, policy vs. detail, boundary placement (Martin) |
+| [records](skills/development/architect-deep-dive/records.md) | architect-deep-dive — the ADRs and glossary entries a design leaves behind |
 | [code-smells](skills/development/refactor-review/code-smells.md) | refactor-review — the symptom catalog (Refactoring Guru / Fowler) |
 | [refactoring-techniques](skills/development/refactor-review/refactoring-techniques.md) | refactor-review — the treatment catalog |
 | [comments](skills/development/refactor-review/comments.md) | refactor-review — which comments earn their place (tdd carries the ladder inline) |
@@ -225,6 +226,7 @@ These carry no workflow of their own — the skill in the same folder links into
 | [environments](skills/containers/docker-compose/environments.md) | docker-compose — overrides, merge rules, `.env.example`, secrets |
 | [anatomy](skills/operations/release-notes/anatomy.md) | release-notes — the six elements and the commit→outcome translation rules |
 | [distribution](skills/operations/release-notes/distribution.md) | release-notes — depth to scope, when visuals earn their place, where to publish |
+| [diagnosis](skills/operations/hotfix/diagnosis.md) | hotfix and incident-fix (symlinked) — a red loop before any theory, minimise, ranked hypotheses, one probe at a time |
 | [blameless-culture](skills/operations/post-mortem/blameless-culture.md) | post-mortem — why blameless is a data-collection strategy (Google SRE; Dekker) |
 | [contributing-factors](skills/operations/post-mortem/contributing-factors.md) | post-mortem — past single-root-cause; the categories to sweep and where to stop |
 | [evidence-sources](skills/operations/post-mortem/evidence-sources.md) | post-mortem — reading a git range, incident PDFs, chat exports and monitoring into a sourced timeline |
@@ -292,15 +294,16 @@ Each skill carries its own copy of the dispatch contract it needs, so the folder
 
 Assertions are split: **capability** (does the stage do its job at all) from **delta** (does it do what a change to the skill added). Only the delta column is evidence an edit helped. Against the pre-session baseline over 36 runs: **0.98 vs 0.22** on delta, **0.96 vs 0.92** on capability.
 
-**Scored:** the six `development` stages only.
+**Scored: every skill.** The six `development` stages carry the recorded n=3 result above. The other skills' first run (2026-10-25) is one with-skill run each — three for evals 11–13 — against a baseline with no skill at all, which is the honest comparison for a skill that did not exist at the baseline ref. Across all 35 evals: **0.95 vs 0.49** on delta, **0.99 vs 0.85** on capability. Per eval in [evals/benchmark.md](evals/benchmark.md).
 
-**Fixtures and assertions, not yet run:** `docker-compose` (a service with RQ queues on Redis and a stale `ELASTICSEARCH_URL` for a dependency the code dropped) and `post-mortem` (a git history whose trigger sits nine days before the outage, plus four contradicting documents). Both assertion sets are checked against a naive answer first — a framework-habit compose file scores 6/6 capability and **0/9** delta; the incident report submitted verbatim scores **3/10**. That says the assertions discriminate; it says nothing yet about the skills.
+The fixtures are seeded so a naive answer fails them: a compose fixture with a stale `ELASTICSEARCH_URL`, an incident whose trigger sits nine days before the outage, production levers that are stubs recording their calls (so "took no action without confirmation" is checked, not inferred), networks graded by parsing every CIDR and every draw.io cell, DDL executed in SQLite and probed with rows that must be refused, acceptance tests run against three mutants.
 
-**Also not yet run:** `hotfix` (evals 8–11 — a Node service, a JVM service with no build tool, a Python script with no tests, and an outage it must route out) and `incident-fix` (evals 12–14 — a web app with feature flags, a batch job that corrupted rows, a library with no deploy step). Every production lever in those fixtures is a stub that records its calls, so "took no action without confirmation" is checked, not inferred.
+**Where the first run is weakest** — single runs, so a lone miss is a signal, not a verdict:
 
-**Fixtures and assertions, not yet run, for networking and infrastructure:** evals 16–20 give each networking skill one seeded estate (an audit that must not echo a pre-shared key, a design graded by parsing every CIDR against the ranges already in use, diagrams parsed as draw.io XML, a proposal hiding a Critical under a 7.9, a blueprint request on an unaccepted proposal). Evals 21–26 give `terraform` and `pipelines` one eval per mode (Review, Design, Propose). Each has a reference, a do-nothing and plausible-but-wrong controls that separate as designed; no with-skill run has been scored.
+- `dockerfile` **0.79 vs 0.79**: no better than no skill, and it quoted a planted key in its "rotate this" warning instead of naming the variable. Scored before the skill's upgrade in #9 (never repeat a secret's value, a check/command/observed table); not yet re-run.
+- `netblueprint` scores **1.00 vs 1.00**: its eval checks that it refuses an unaccepted proposal, which a bare agent also does.
 
-**Also fixtures and assertions, not yet run:** eval 27 runs the acceptance tests `acceptance-tests` writes against the unchanged code, a correct implementation and three mutants; eval 28 repairs a Dockerfile, graded by parsing it per stage; eval 29 writes release notes from a tagged history with a hidden breaking change and a reverted feature; evals 30–34 give each database skill one seeded fixture (an audit that must not echo a password, a design whose DDL is executed in SQLite, diagrams parsed as draw.io XML, a proposal that must clean orphans before adding the constraint, DDL executed and probed with bad rows). Every skill in the repo now has an eval; only the development pipeline's first six stages have a scored result.
+Three skills were fixed after their first run and re-run three times each: `acceptance-tests` **0.75 → 1.00** (criteria that already hold are tested with their contrast; edges tested within seconds; one mapping line per criterion), `dbpropose` **0.61 → 0.92** (a `proposal.md` file, a step table with validation, rollback and blast radius, data before constraints, expand/contract, acceptance before dbbuild), and `dbdesign` **0.69 → 0.95** — most of whose first score was four grader false negatives (bold Barker sentences, a "Normal-form" heading, the intersection table's own column, an age-band lookup), fixed in `grade.py` with every control re-checked.
 
 ## How to use
 

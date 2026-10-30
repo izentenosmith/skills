@@ -95,8 +95,8 @@ deduplication, orphan resolution, magic-value handling, repeating-group conversi
 findings where applicable. Keep every unresolved needs-data flag as an open question and say which
 decision it affects.
 
-Write the sequence as a table. Every column is filled for every step; a step whose rollback is "restore the
-backup" says which backup:
+Write the sequence as a table, first in its section: mechanism notes, dependencies and risks go below it.
+Every column is filled for every step; a step whose rollback is "restore the backup" says which backup:
 
 ```markdown
 | Step | Change | Finding | Pre-check | Validation | Rollback | Blast radius |
