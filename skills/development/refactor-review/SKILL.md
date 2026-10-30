@@ -97,6 +97,37 @@ This is what stops the section becoming a graveyard. A noted smell that is never
 - **N<id>** — left: condition not met
 ```
 
+**Writing it.** A script checks this file, so every line you add is a heading, a `- ` entry, or an entry's indented `- **Promote if:**` field. Nothing else:
+
+- **No prose in the ledger.** No intro sentence, no note on how you read the history, no HTML comment. Explanations go in your response to the user.
+- **One entry, one line.** Don't hard-wrap an entry; the parser reads only its first line.
+- **Only noted smells and their re-reads go here.** A smell you fixed this pass isn't a ledger entry, it's in the diff. The exception is a carried smell that this pass promoted or removed.
+- **Opening the iteration.** If the file has no `## Iteration` heading yet, open `## Iteration 1`, even when the preamble describes earlier passes. If the last iteration already ends in `### Verdict:`, open the next one.
+- **Pre-grammar history** (prose above the first `## Iteration`) is left exactly as it is, unannotated. Ids it mentions are reserved. A smell it lists without an id is new to the grammar: give it the next unused id as a `noted` entry, then re-read it in the same section if this pass changes it.
+
+An append to a ledger that starts with prose from before the grammar:
+
+```markdown
+# Review notes — invoice late fees
+
+## Previous pass
+
+Smells deliberately not acted on:
+- Duplicate Code in `apply_percent_fee` and `apply_flat_fee`: both round the same way.
+- Long Parameter List on `issue_invoice`.
+
+## Iteration 1
+
+### Smells
+- **N1** Dispensables / Duplicate Code at `apply_percent_fee` and `apply_flat_fee` — noted: carried from the previous pass; two call sites
+  - **Promote if:** a third fee type repeats the rounding
+- **N1** — promoted: this pass added `apply_capped_fee`, a third copy of the rounding
+- **N2** Bloaters / Long Parameter List at `issue_invoice` — noted: carried from the previous pass; this diff doesn't touch it
+  - **Promote if:** a change adds a parameter to `issue_invoice`
+```
+
+If the repo carries the harness, check your append before handing off: `python3 harness/ledger.py check .workflow/ledger.md --against <copy taken before you wrote>`. It should report no `E04` or other shape errors. Undefined-id errors that come from a prose preamble are expected.
+
 Running standalone on a diff, the file won't exist — review what's in front of you and say the carried smells were unavailable.
 
 ---

@@ -119,6 +119,48 @@ Also record the attack surfaces you swept and found nothing on, and any you neve
 - **Unattacked:** <surface> — <why: budget, a delegate that never returned>
 ```
 
+**Writing it.** A script checks this file, so every line you add is a heading (`## Iteration`, `###`, `####`), a `- ` entry, or a finding's field. Nothing else:
+
+- **No prose in the ledger.** No summary of what you tore down, no note about the history, no HTML comment. The narrative goes in your response to the user.
+- **One field, one line.** Don't hard-wrap a field; the parser reads only its first line.
+- **Bare enumerated values.** `Confidence` is `proven` or `unproven` and `Severity hint` is `blocker`, `major` or `minor`, with nothing after them. A caveat on a value goes in `Evidence` or `Would be settled by`.
+- **Opening the iteration.** If the file has no `## Iteration` heading yet, open `## Iteration 1`, even when the preamble describes earlier passes. Otherwise write under the current iteration, the last one, unless it already ends in `### Verdict:`, in which case open the next.
+- **Pre-grammar history** (prose above the first `## Iteration`) is left exactly as it is, unannotated. Ids it mentions are reserved, so new findings take an id used nowhere in the file. A finding it calls refuted is treated as REFUTED.
+
+An append to a ledger that starts with prose from before the grammar:
+
+```markdown
+# Review notes — invoice late fees
+
+## Previous pass
+
+- F1 refuted: "a fee is charged on the due date itself". The comparison is `>`.
+
+## Iteration 1
+
+### Findings (unadjudicated)
+#### F2
+- **Target:** acceptance criterion 2 — the fee rate reads from the customer's plan
+- **Claim challenged:** the late-fee rate comes from the plan
+- **Evidence:** `late_fee()` multiplies by the module constant `DEFAULT_RATE` and never reads `plan`
+- **Breaking case:** plan rate 5%, invoice 1000 → fee 15 (the 1.5% default); expected 50
+- **Confidence:** proven
+- **Severity hint:** major
+#### F3
+- **Target:** `late_fee()` rounding
+- **Claim challenged:** fees round half up to the cent
+- **Evidence:** `round()` is banker's rounding; no test covers a half-cent fee
+- **Confidence:** unproven
+- **Would be settled by:** running `late_fee` on an invoice whose fee is exactly x.xx5
+- **Severity hint:** minor
+
+### Surfaces
+- **Swept:** permissions — the diff adds no new caller or endpoint
+- **Unattacked:** performance — no volume data in the repo
+```
+
+If the repo carries the harness, check your append before handing off: `python3 harness/ledger.py check .workflow/ledger.md --against <copy taken before you wrote>`. It should report no `E04` or `E1x` shape errors. Undefined-id errors that come from a prose preamble are expected.
+
 ## Handoff
 
 After emitting the findings, prompt the user:

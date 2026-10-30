@@ -94,6 +94,36 @@ The file lives in the repo under review and is an **append-only log** — never 
 
 tdd writes **Closed slices** (on a loop-back pass), refactor-review **Smells**, devils-advocate **Findings** and **Surfaces**, and you the last three. The user may append `### Decisions` with `- **F<id>** — waived: <reason>` to accept a risk; a waived finding stops counting as open. The grammar is strict on purpose — strict enough for a script to check, and for the verdict below to be arithmetic over it.
 
+**Writing it.** A script checks this file, so every line you add is a heading (`###`, `####`), a `- ` entry, or a verdict's field. Nothing else:
+
+- **No prose in the ledger.** No note that earlier entries predate the grammar, no summary, no HTML comment. The narrative goes in your response to the user.
+- **One field, one line.** Don't hard-wrap a field; the parser reads only its first line.
+- **Write under the iteration whose findings you are adjudicating,** the last `## Iteration`. If the findings sit in a prose preamble with no `## Iteration` heading, open `## Iteration 1`.
+- **Pre-grammar history is left as it is, unannotated.** When findings are defined only in prose above the first `## Iteration`, write their verdicts in the grammar anyway. The checker will report them as undefined ids (`E20`), which is expected for that history. Don't add prose to explain it.
+
+The three sections you append, for a finding confirmed, a repeat of an earlier refutation, and one sent back:
+
+```markdown
+### Verdicts
+#### F2 — CONFIRMED major
+- **Reason:** reproduced on a scratch copy: a 5% plan is charged the 1.5% default
+#### F4 — REFUTED
+- **Reason:** repeats F1, refuted in the previous pass on the same evidence
+- **Reopens only if:** a failing test with the invoice paid on its due date
+#### F3 — INCONCLUSIVE
+- **Reason:** rounding of an exact half-cent fee was not exercised
+- **Settled by:** devils-advocate re-run with a half-cent case
+- **Pass:** 1
+
+### Remediation slices
+- [ ] [major] F2 — an overdue invoice on a 5% plan is charged 5%
+
+### Verdict: NO-GO
+- **Reason:** 1 confirmed major open (F2); 1 INCONCLUSIVE open (F3)
+```
+
+If the repo carries the harness, check your append before handing off: `python3 harness/ledger.py check .workflow/ledger.md --against <copy taken before you wrote>`. It should report no `E04` or `E1x` shape errors, and the stated verdict should match the computed one.
+
 Adjudicating a standalone teardown with no ledger is fine: render the verdicts, and say the loop history was unavailable.
 
 Open the iteration by reading the ledger, and state the count: *"Iteration 2. Carrying 1 open blocker; F1 and F4 already refuted."*
