@@ -294,17 +294,16 @@ Each skill carries its own copy of the dispatch contract it needs, so the folder
 
 Assertions are split: **capability** (does the stage do its job at all) from **delta** (does it do what a change to the skill added). Only the delta column is evidence an edit helped. Against the pre-session baseline over 36 runs: **0.98 vs 0.22** on delta, **0.96 vs 0.92** on capability.
 
-**Scored: every skill.** The six `development` stages carry the recorded n=3 result above. The other skills' first run (2026-10-25) is one with-skill run each — three for evals 11–13 — against a baseline with no skill at all, which is the honest comparison for a skill that did not exist at the baseline ref. Across all 35 evals: **0.94 vs 0.49** on delta, **0.99 vs 0.85** on capability. Per eval in [evals/benchmark.md](evals/benchmark.md).
+**Scored: every skill.** The six `development` stages carry the recorded n=3 result above. The other skills' first run (2026-10-25) is one with-skill run each — three for evals 11–13 — against a baseline with no skill at all, which is the honest comparison for a skill that did not exist at the baseline ref. Across all 35 evals: **0.95 vs 0.49** on delta, **0.99 vs 0.85** on capability. Per eval in [evals/benchmark.md](evals/benchmark.md).
 
 The fixtures are seeded so a naive answer fails them: a compose fixture with a stale `ELASTICSEARCH_URL`, an incident whose trigger sits nine days before the outage, production levers that are stubs recording their calls (so "took no action without confirmation" is checked, not inferred), networks graded by parsing every CIDR and every draw.io cell, DDL executed in SQLite and probed with rows that must be refused, acceptance tests run against three mutants.
 
 **Where the first run is weakest** — single runs, so a lone miss is a signal, not a verdict:
 
-- `dockerfile` **0.79 vs 0.79**: no better than no skill, and it quoted a planted key in its "rotate this" warning instead of naming the variable.
-- `incident-fix` eval 13 **0.77**: two of the misses are the grader, which only tries `--apply`-style flags on a repair script these runs made stricter (`--expect N --backup-dir`).
+- `dockerfile` **0.79 vs 0.79**: no better than no skill, and it quoted a planted key in its "rotate this" warning instead of naming the variable. Scored before the skill's upgrade in #9 (never repeat a secret's value, a check/command/observed table); not yet re-run.
 - `netblueprint` scores **1.00 vs 1.00**: its eval checks that it refuses an unaccepted proposal, which a bare agent also does.
 
-Three skills were fixed after their first run and re-run three times each: `acceptance-tests` **0.75 → 1.00** (criteria that already hold are tested with their contrast; edges tested within seconds; one mapping line per criterion), `dbpropose` **0.61 → 0.90** (a `proposal.md` file, a step table with validation, rollback and blast radius, data before constraints, expand/contract, acceptance before dbbuild), and `dbdesign` **0.69 → 0.95** — most of whose first score was four grader false negatives (bold Barker sentences, a "Normal-form" heading, the intersection table's own column, an age-band lookup), fixed in `grade.py` with every control re-checked.
+Three skills were fixed after their first run and re-run three times each: `acceptance-tests` **0.75 → 1.00** (criteria that already hold are tested with their contrast; edges tested within seconds; one mapping line per criterion), `dbpropose` **0.61 → 0.92** (a `proposal.md` file, a step table with validation, rollback and blast radius, data before constraints, expand/contract, acceptance before dbbuild), and `dbdesign` **0.69 → 0.95** — most of whose first score was four grader false negatives (bold Barker sentences, a "Normal-form" heading, the intersection table's own column, an age-band lookup), fixed in `grade.py` with every control re-checked.
 
 ## How to use
 

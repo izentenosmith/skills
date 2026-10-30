@@ -86,10 +86,10 @@ Three jobs, in descending order of what they cost you — see [dockerignore.md](
 Then **measure it**, don't assume it:
 
 ```bash
-du -sh . && docker build -t <image> . 2>&1 | head -1
+du -sh . && docker build --progress=plain -t <image> . 2>&1 | grep 'transferring context'
 ```
 
-The build's first line reports the transferred context. Report it before and after — a repo that goes from 340MB to 2MB of context is the whole justification for the file, and it's a number, not a claim.
+BuildKit reports the transferred context on its `transferring context:` line; with plain progress it's greppable. Report it before and after — a repo that goes from 340MB to 2MB of context is the whole justification for the file, and it's a number, not a claim.
 
 If an existing `.dockerignore` is present, treat it like the Dockerfile in **repair** mode: it is usually incomplete rather than wrong. Add what's missing; don't replace a curated file wholesale.
 
@@ -99,15 +99,26 @@ If an existing `.dockerignore` is present, treat it like the Dockerfile in **rep
 
 Nothing here is optional, and none of it is satisfied by reading the file:
 
-- [ ] **It builds.** `docker build` exits 0.
-- [ ] **It runs.** The container starts, stays up, and answers on its port. A container that builds and immediately exits is the most common false success in this work.
-- [ ] **It rebuilds cheaply.** Touch one source file, rebuild, and confirm the dependency layer is `CACHED`. If it isn't, the layer order is wrong — this is the check that catches it.
+- [ ] **It builds.** `docker build -t <image> .` exits 0.
+- [ ] **It runs.** `docker run -d -p <port>:<port> --name <image>-check <image>`, then `curl -fsS localhost:<port>/<health path>`: the container starts, stays up, and answers on its port. A container that builds and immediately exits is the most common false success in this work. If the app needs env vars or a database just to boot, run it with a stub `.env` and say so.
+- [ ] **It rebuilds cheaply.** `touch <one source file>`, then `docker build --progress=plain -t <image> .` and confirm the dependency layer is `CACHED`. If it isn't, the layer order is wrong — this is the check that catches it.
 - [ ] **It is the right architecture.** `docker image inspect <image> --format '{{.Os}}/{{.Architecture}}'` matches the target, not the build host. This is the check that catches an amd64 deployment silently receiving an arm64 image, which fails at `docker run` on the cluster and nowhere earlier.
 - [ ] **It is not root.** `docker run --rm <image> id` reports a non-zero uid.
-- [ ] **No secret in any layer.** `docker history --no-trunc <image>` shows no credential in an `ENV` or an `ARG`, and the context excluded the env files.
+- [ ] **No secret in any layer.** `docker history --no-trunc <image>` shows no credential in an `ENV` or an `ARG`, and the context excluded the env files. Search for a secret by its **name** (`grep -iE 'API_KEY|SECRET|TOKEN'`), never by printing its value. A command that would print one (`env`, `cat .env`, `docker inspect` on an old image) has its output cut to names (`cut -d= -f1`) before you quote it.
 - [ ] **The size is accounted for.** `docker images <image>` — if it's much larger than the runtime stage should be, something from the build stage came along.
 
-Report each as a fact with the command's output behind it. "Should work" is not a verification.
+Report every check as a row of one table, **the command beside the result**, so anyone can re-run it:
+
+```markdown
+| Check | Command | Observed |
+|---|---|---|
+| Not root | `docker run --rm app:after id` | `uid=10001(app) gid=10001(app)` |
+| Architecture | `docker image inspect app:after --format '{{.Os}}/{{.Architecture}}'` | `linux/amd64` |
+```
+
+"Should work" is not a verification, and neither is a result with no command behind it.
+
+**No Docker where you are working?** Then nothing here was verified, and the report says so in its first line: *"Docker is not available here, so none of these checks were run."* Still write the files, still fill the table with every command, and mark each Observed cell `not run`. Hand the table to the user as the checks to run. Never infer an outcome from reading the file and present it as observed.
 
 ---
 
@@ -115,7 +126,7 @@ Report each as a fact with the command's output behind it. "Should work" is not 
 
 Stop when all four hold:
 
-- [ ] Every Step 4 check passes, each with its observed result stated.
+- [ ] Every Step 4 check passes, each with its command and its observed result stated (or, with no Docker, each command listed as `not run`).
 - [ ] The image carries **nothing it doesn't need at runtime** — no compiler, no dev dependencies, no source tree in a compiled stack.
 - [ ] The `.dockerignore` covers the three categories above, with the measured context size reported.
 - [ ] Any remaining defect is **recorded with its reason for staying** — a base image you can't slim without losing a system library, a root requirement from a runtime you don't control.
@@ -139,7 +150,7 @@ The exception is a **monorepo with several deployable services**. There, Step 1 
 1. **Infer the stack, don't ask for it.** The repo already says what it is. Ask only when the repo genuinely contradicts itself.
 2. **Pin everything.** Base image tag and digest, runtime version, dependencies via lockfile. An unpinned image is a build that produces a different artifact tomorrow.
 3. **Build for the target, not for the laptop.** Where they differ, say so and handle it — an image that runs locally and not on the cluster has failed at the only thing it exists for.
-4. **Never bake a secret.** Not in `ENV`, not in `ARG`, not in a file copied from the context. Layers are permanent and public.
+4. **Never bake a secret, and never repeat one.** Not in `ENV`, not in `ARG`, not in a file copied from the context. Layers are permanent and public. When you find one already baked in, name the variable and where it was (`Dockerfile:12`, the copied `.env`), never its value: not in your response, the fixed files, a check's quoted output or a comment. Then tell the user to **rotate it**, because every image built so far still carries it.
 5. **Verify by running, not by reading.** Every claim in Step 4 has a command behind it.
 6. **In repair mode, name the defect before you fix it.** A rewrite is not a repair, and a Dockerfile that ships today has earned the benefit of the doubt.
 

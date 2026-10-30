@@ -9,7 +9,7 @@
 | 10-hotfix-script-no-tests | i7 | 1 | 1.00 ± 0.00 | 0.20 | +0.80 | 1.00 | 1.00 |
 | 11-hotfix-routes-outage-out | i10 | 3 | 0.83 ± 0.29 | 0.00 | +0.83 | 1.00 | 1.00 |
 | 12-incident-webapp-contain-by-flag | i10 | 3 | 0.95 ± 0.08 | 0.43 | +0.52 | 1.00 | 0.50 |
-| 13-incident-batch-repair-artifact | i10 | 3 | 0.77 ± 0.06 | 0.60 | +0.17 | 1.00 | 1.00 |
+| 13-incident-batch-repair-artifact | i10 | 3 | 0.90 ± 0.17 | 0.60 | +0.30 | 1.00 | 1.00 |
 | 14-incident-library-no-deploy | i7 | 1 | 1.00 ± 0.00 | 0.57 | +0.43 | 1.00 | 1.00 |
 | 15-harness-loop-closes-teardown | i5 | 1 | 1.00 ± 0.00 | — | — | 1.00 | — |
 | 16-netaudit-hub-spoke-recovers-and-scores | i6 | 1 | 1.00 ± 0.00 | 0.23 | +0.77 | 1.00 | 0.60 |
@@ -31,7 +31,7 @@
 | 30-dbaudit-postgres-dump-scored-not-fixed | i6 | 1 | 0.86 ± 0.00 | 0.36 | +0.50 | 1.00 | 0.83 |
 | 31-dbdesign-sqlite-from-requirements-traps | i12 | 3 | 0.95 ± 0.04 | 0.54 | +0.41 | 0.93 | 0.80 |
 | 32-dbdiagram-barker-and-relational-from-design | i6 | 1 | 0.83 ± 0.00 | 0.75 | +0.08 | 0.83 | 0.83 |
-| 33-dbpropose-orphans-before-constraints | i12 | 3 | 0.90 ± 0.04 | 0.46 | +0.43 | 1.00 | 0.80 |
+| 33-dbpropose-orphans-before-constraints | i12 | 3 | 0.92 ± 0.00 | 0.46 | +0.46 | 1.00 | 0.80 |
 | 34-dbbuild-executable-ddl-from-accepted-proposal | i6 | 1 | 1.00 ± 0.00 | 0.78 | +0.22 | 1.00 | 1.00 |
 | 4-teardown-finds-vacuous-test | i2 | 3 | 0.92 ± 0.14 | 0.25 | +0.67 | 1.00 | 1.00 |
 | 5-verdict-cuts-and-slices | i2 | 3 | 1.00 ± 0.00 | 0.40 | +0.60 | 1.00 | 0.83 |
@@ -40,7 +40,7 @@
 | 8-hotfix-node-shared-cause | i7 | 1 | 1.00 ± 0.00 | 0.38 | +0.62 | 1.00 | 1.00 |
 | 9-hotfix-jvm-both-callers | i7 | 1 | 1.00 ± 0.00 | 0.71 | +0.29 | 1.00 | 1.00 |
 
-**Delta — current 0.94 vs baseline 0.49**
+**Delta — current 0.95 vs baseline 0.49**
 **Capability — current 0.99 vs baseline 0.85**
 
 ## Delta assertions the baseline also passed (still non-discriminating)
@@ -283,13 +283,14 @@
 
 **eval-13-incident-batch-repair-artifact**
 - a reproducible COUNT query (2/3)
+- the repair defaults to a dry run and backs up first (2/3)
+- the repair corrects exactly the affected orders (2/3)
 
 **eval-31-dbdesign-sqlite-from-requirements-traps**
 - the member subtypes mapped deliberately, with the choice stated (1/3)
 
 **eval-33-dbpropose-orphans-before-constraints**
 - orphan rows resolved before the foreign keys are declared (2/3)
-- the full_name split is expand/contract, contract gated on the Reports add-on (2/3)
 - the relational diagram's mismatch described and routed to dbdiagram (1/3)
 
 **eval-4-teardown-finds-vacuous-test**

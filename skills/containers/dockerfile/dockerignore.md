@@ -160,11 +160,11 @@ var/log/
 
 ## Testing what you wrote
 
-**Measure the context.** The first line of a build reports it:
+**Measure the context.** BuildKit reports it on the `transferring context:` line:
 
 ```bash
-docker build -t app . 2>&1 | head -1
-# => [internal] load build context ... transferring context: 1.82MB
+docker build --progress=plain -t app . 2>&1 | grep 'transferring context'
+# #4 transferring context: 1.82MB 0.1s done
 ```
 
 Compare against `du -sh .`. A repo where those two numbers are close has an ineffective `.dockerignore`.
