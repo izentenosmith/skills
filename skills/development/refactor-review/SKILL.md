@@ -50,6 +50,7 @@ Where `.workflow/brief.md` exists, read its **Out of scope** and **Deferred by d
 - [ ] **Change Preventers:** (Divergent Change, Shotgun Surgery, Parallel Inheritance Hierarchies)
 - [ ] **Dispensables:** (Comments, Duplicate Code, Data Class, Dead Code, Lazy Class, Speculative Generality)
 - [ ] **Couplers:** (Feature Envy, Inappropriate Intimacy, Message Chains, Middle Man, Incomplete Library Class)
+- [ ] **Security Smells:** (Primitive Obsession on a Security Value, Ambiguous Parameter List, Validity Outside the Type, Partially Constructed Entity, Logging the Whole Object, Echoing Input in Errors, Mixed Trust in One Module, Check Far from Use)
 
 **Location & Observations:**
 > **Type:** [e.g., Dispensables]
@@ -64,6 +65,7 @@ A found smell is not automatically a smell to fix. Rate each one by **what it co
 
 - **blocking** — the smell will make the next change to this code dangerous or wrong. Change Preventers live here almost by definition (Divergent Change, Shotgun Surgery), as does any smell that hides behavior: a Long Method with several exit paths, a Switch Statement that will need a new arm on every extension, duplication that will silently diverge. Fix before handing off.
 - **worthwhile** — a clear, cheap, behavior-preserving improvement with an obvious treatment. Fix while it stays cheap.
+- **Security smells at a trust boundary are blocking, never noted.** A noted smell waits for its promotion condition — someone touching the code — and at a trust boundary the someone is an attacker. Where the fix is behavior-preserving, fix it here; where it changes behavior (a new refusal, a new check), leave the code, rate it blocking, and say in the handoff that it goes to devils-advocate as a finding and to tdd as a slice.
 - **noted** — real but low-value to act on now: a smell in code that is stable and unlikely to be touched, or one whose fix costs more than the smell does. **Record it and leave it** — with the condition that would change the answer (see below).
 
 Order the findings blocking → worthwhile → noted. That is the order Step 2 works them in.

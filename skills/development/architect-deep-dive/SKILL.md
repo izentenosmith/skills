@@ -129,7 +129,13 @@ Surface each dimension as its own one-at-a-time question, interleaved with the r
 - [ ] **Data model.** New/changed entities, relationships, ownership, and invariants. Migration of existing data. Entities carry the rules; they must not depend on the use cases that operate them.
 - [ ] **API / interface contracts.** The seams the feature is exposed through — endpoints, service methods, component contracts, request/response shapes. Prefer existing seams; place any new seam as high as possible, where **highest = farthest from inputs and outputs**, with everything closer to IO plugging into it. Data crossing a boundary is a simple structure owned by the inner side — never a framework type, DB row, or entity passed outward.
 - [ ] **Failure modes & edge cases.** Walk the unhappy paths one at a time: empty/missing inputs, boundary values, concurrent access, partial failures, and any state the happy path doesn't cover. Resolve the expected behavior for each — these become the edge-case acceptance criteria downstream.
-- [ ] **Security & permissions.** Access-control/permission gates required, authorization boundaries, sensitive-data handling.
+- [ ] **Security & permissions.** First decide whether the **security trigger** fires: the change adds or alters an entry point, crosses a trust boundary, changes who may do what, or handles a security-relevant value (identity, money, secrets, personal data, file paths, queries, commands). If it doesn't, mark this dimension **N/A — no trust boundary touched** and move on. If it does, resolve each of these as its own question — see [security.md](security.md):
+  - **Assets and abuse.** What the change exposes or protects, and the abuse we refuse to allow, stated as a sentence a test can check. Ask of every new rule *which other feature defeats it*, and of every new role or delegation *can someone grant it to themselves*.
+  - **Trust boundaries and entry points.** Where untrusted data enters, and which module ends up serving more than one trust domain — that module is where validation goes missing.
+  - **Authorisation decision.** Who may perform each new operation, where the check is enforced (server-side, at the handler or below — never only in the UI), and how ownership/tenancy is checked on every object an ID names.
+  - **Domain primitives and sensitive values.** Which security-relevant values become validated, immutable types instead of raw strings and ints, and which sensitive fields must never reach a log, an exception message or a serialised response.
+  - **Failure and degraded modes.** What happens when a dependency is down — a fallback that skips a control is a vulnerability — and whether any input can make the work grow without bound.
+  - **Hand off when it's big.** A new trust boundary, a new data class, a new kind of user, or anything that moves money, grants identity, holds keys or can't be undone: run [threatmodel](../../security/threatmodel/SKILL.md) on it and carry its security requirements back in as resolved decisions, rather than modelling threats one question at a time here.
 - [ ] **Scale & performance.** Expected volumes, hot paths, query/lookup cost, caching, repeated-work and fan-out risks.
 - [ ] **Backwards-compatibility.** Existing interface contracts callers depend on, data already persisted, isolation/tenancy invariants, and behavior current consumers rely on — what must NOT break.
 - [ ] **Observability.** What needs logging, metrics, or tracing to operate and debug the feature.
@@ -151,6 +157,8 @@ Delegate the lookup; state the finding yourself, still marked **[inferred]**, an
 ## Handoff
 
 When every dimension in the termination gate has reached one of the three end states, restate the **charter** — unchanged if the design still serves the problem you opened with, and explicitly amended if the questions moved it — then summarize dimension-by-dimension. For each decision, keep the option that was chosen and the one-line reason, so the brief inherits the *why* and not just the *what*; a decision whose rationale is lost gets re-argued the first time someone finds it inconvenient.
+
+When the security trigger fired, give the security decisions their own block in the summary — the abuse cases, the authorisation rule per operation and where it is enforced, the domain primitives, the values that must never be logged — because agent-brief turns each one into an acceptance criterion and a test, and a security decision buried in prose is the one that never gets one.
 
 Keep the **deferred** decisions in their own section, each with the boundary that protects it and the signal that will force it — agent-brief carries those into the plan as constraints, not as work.
 

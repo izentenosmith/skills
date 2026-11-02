@@ -152,6 +152,54 @@ A library class lacks a method you need, but you can't (or shouldn't) modify it.
 
 ---
 
+## 6. Security Smells
+
+Structures that work today but make the next security defect likely — usually by letting a raw, attacker-controlled value travel further than it should, or by letting sensitive data leak through a path nobody designed. Sources: Bergh Johnsson & Deogun, *Secure by Design — Ideas and Techniques* (slide deck); Dowd, McDonald & Schuh, *The Art of Software Security Assessment* (TAOSSA, printed pages). They are refined forms of the families above, named separately because their cost is a breach, not a slow change.
+
+**Fixing one may change behavior.** Replacing a raw value with a type that validates *the same way* is a refactoring; adding a check that refuses input the code accepted before is a behavior change. Do the first here; record the second as a **blocking** smell and hand it on — it becomes a devils-advocate finding and a tdd slice with a red test, not a silent edit.
+
+### Primitive Obsession on a Security Value
+An ID, amount, e-mail, path, URL or query fragment passed across layers as a raw `string`/`int`/`float`, validated (or not) at each call site.
+- **Why it hurts:** Every new caller is a new chance to skip the check; the attack surface is every place the raw value is accepted (*Secure by Design*, slides 15–18, 23).
+- **Treatment:** Replace Data Value with Object — a domain primitive that validates in its constructor and is immutable; see tdd's `domain-primitives.md`.
+
+### Ambiguous Parameter List
+Adjacent parameters of the same primitive type (`transfer(from: str, to: str, amount: float)`), or an amount travelling without its currency/unit.
+- **Why it hurts:** Callers swap them and nothing notices; units mix silently (slide 19).
+- **Treatment:** Introduce Parameter Object; Replace Data Value with Object.
+
+### Validity Outside the Type
+An invariant (currencies match, a range is ordered, a status transition is allowed) enforced by callers instead of by the object that owns the data; public setters on a value that was validated at construction.
+- **Why it hurts:** The invariant holds only as long as every caller remembers it; a setter undoes construction-time validation (slides 17, 20).
+- **Treatment:** Move Method into the type; Remove Setting Method; Encapsulate Field.
+
+### Partially Constructed Entity
+An object that can exist, be passed around and be persisted before its required fields are set — a no-arg constructor followed by setters, or a builder that doesn't check.
+- **Why it hurts:** Code that receives it can't tell a valid one from a half-built one; checks get skipped "because it's not finished yet".
+- **Treatment:** Replace Constructor with Factory Method that validates; Introduce Parameter Object.
+
+### Logging the Whole Object
+`log.info(f"saved {entity}")`, logging a request or response body, `toString`/JSON of an entity that holds — or will later hold — a secret or personal field; free-text log lines with user data concatenated in.
+- **Why it hurts:** The leak arrives with the next field someone adds (slides 31–33); concatenated user data forges log entries — a login name with a newline writes a fake line (TAOSSA pp. 40–41).
+- **Treatment:** Log identifiers, not objects; a masked, non-serialisable type for sensitive fields; a typed, domain-named logging API (slides 39–42).
+
+### Echoing Input in Errors
+Exception messages, validation errors or HTTP error bodies that quote the rejected value, a stack trace, or which of two conditions failed (unknown user vs. wrong password).
+- **Why it hurts:** Carries attacker-controlled text into logs and pages, and turns errors into an oracle.
+- **Treatment:** Name the rule that failed, not the value; one response for indistinguishable failures.
+
+### Mixed Trust in One Module
+One class, handler or process serving callers of different trust — public and admin routes in one controller sharing a helper that skips checks for "internal" calls; mutable state shared between them.
+- **Why it hurts:** Trust boundaries tend to be module boundaries; a module straddling one is where the check one caller needs is skipped for the other (TAOSSA pp. 28, 32–34).
+- **Treatment:** Extract Class along the trust line; Move Method; make the boundary explicit at the seam.
+
+### Check Far from Use
+Authorisation or validation performed in one layer (UI, middleware, an early guard) while the operation it protects can be reached by another path that skips it; a "time of check" well before the "time of use".
+- **Why it hurts:** The other path is the vulnerability; a check that the menu hides the button is no check (TAOSSA pp. 38–39; Anderson, *Security Engineering* §6.4.2 on time-of-check/time-of-use).
+- **Treatment:** Move the check into the operation (or the query that fetches the object); Extract Method so every path calls one guard.
+
+---
+
 ## Quick Reference: Smell → Primary Treatment
 
 | Smell | Reach first for |
