@@ -1,0 +1,6 @@
+# /etc/postgresql/15/main/postgresql.conf (relevant lines)
+listen_addresses = '*'
+port = 5432
+ssl = off
+password_encryption = scram-sha-256
+log_connections = off

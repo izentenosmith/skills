@@ -1,0 +1,25 @@
+$ az backup vault show -n rsv-ledgerline-prod -g rg-ledgerline-prod
+{
+  "name": "rsv-ledgerline-prod",
+  "resourceGroup": "rg-ledgerline-prod",
+  "properties": {
+    "securitySettings": {
+      "immutabilitySettings": { "state": "Disabled" },
+      "softDeleteSettings": { "softDeleteState": "Disabled", "softDeleteRetentionPeriodInDays": 0 }
+    }
+  },
+  "tags": { "environment": "prod" }
+}
+$ az backup item list --vault-name rsv-ledgerline-prod -g rg-ledgerline-prod --query "[].{vm:properties.friendlyName, last:properties.lastBackupStatus, policy:properties.policyName}"
+[
+  { "vm": "web-01", "last": "Completed", "policy": "DailyPolicy-30d" },
+  { "vm": "db-01",  "last": "Completed", "policy": "DailyPolicy-30d" }
+]
+$ az backup job list --vault-name rsv-ledgerline-prod -g rg-ledgerline-prod --operation Restore
+[]
+$ az role assignment list --scope /subscriptions/00000000-0000-0000-0000-00000000eval/resourceGroups/rg-ledgerline-prod --query "[].{who:principalName, role:roleDefinitionName}"
+[
+  { "who": "mrojas@ledgerline.example", "role": "Owner" },
+  { "who": "tkhan@ledgerline.example",  "role": "Contributor" },
+  { "who": "sp-ledgerline-deploy",      "role": "Contributor" }
+]

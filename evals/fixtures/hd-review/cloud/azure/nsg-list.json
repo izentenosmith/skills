@@ -1,0 +1,47 @@
+[
+  {
+    "name": "nsg-ledgerline-web",
+    "resourceGroup": "rg-ledgerline-prod",
+    "location": "westeurope",
+    "networkInterfaces": [{ "id": "/subscriptions/00000000-0000-0000-0000-00000000eval/resourceGroups/rg-ledgerline-prod/providers/Microsoft.Network/networkInterfaces/nic-web-01" }],
+    "tags": { "environment": "prod", "product": "ledgerline" },
+    "securityRules": [
+      {
+        "name": "allow-https",
+        "priority": 100, "direction": "Inbound", "access": "Allow", "protocol": "Tcp",
+        "sourceAddressPrefix": "Internet", "sourcePortRange": "*",
+        "destinationAddressPrefix": "10.20.1.4", "destinationPortRanges": ["80", "443"],
+        "description": "Public portal"
+      },
+      {
+        "name": "allow-ssh-temp",
+        "priority": 110, "direction": "Inbound", "access": "Allow", "protocol": "*",
+        "sourceAddressPrefix": "*", "sourcePortRange": "*",
+        "destinationAddressPrefix": "*", "destinationPortRange": "22"
+      }
+    ]
+  },
+  {
+    "name": "nsg-ledgerline-db",
+    "resourceGroup": "rg-ledgerline-prod",
+    "location": "westeurope",
+    "networkInterfaces": [{ "id": "/subscriptions/00000000-0000-0000-0000-00000000eval/resourceGroups/rg-ledgerline-prod/providers/Microsoft.Network/networkInterfaces/nic-db-01" }],
+    "tags": { "environment": "prod", "product": "ledgerline", "owner": "platform-team@ledgerline.example" },
+    "securityRules": [
+      {
+        "name": "allow-pg-from-web",
+        "priority": 100, "direction": "Inbound", "access": "Allow", "protocol": "Tcp",
+        "sourceAddressPrefix": "10.20.1.0/24", "sourcePortRange": "*",
+        "destinationAddressPrefix": "10.20.2.4", "destinationPortRange": "5432",
+        "description": "Portal app to Postgres"
+      },
+      {
+        "name": "allow-ssh-from-web",
+        "priority": 110, "direction": "Inbound", "access": "Allow", "protocol": "Tcp",
+        "sourceAddressPrefix": "10.20.1.0/24", "sourcePortRange": "*",
+        "destinationAddressPrefix": "10.20.2.4", "destinationPortRange": "22",
+        "description": "Admin hop from web-01"
+      }
+    ]
+  }
+]

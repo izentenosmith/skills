@@ -1,6 +1,6 @@
 {
  "skill_name": "skills",
- "note": "Evals 0-5 cover the six-stage development pipeline; 6-7 cover the containers and operations skills; 8-14 cover hotfix and incident-fix across different stacks; 15 runs harness/loop.py end to end (runner: loop) instead of one claude -p call; 16-20 cover the five networking skills; 21-26 cover terraform and pipelines, one eval per mode (review, design, propose); 27 covers acceptance-tests on the tdd fixture; 28 covers dockerfile; 29 covers release-notes; 30-34 cover the five database skills; 35 covers container-hardening; 36 container-debug; 37 docker-swarm. Each with-skill run is repeated 3x for variance analysis; baseline is a single no-skill run on the same prompt.",
+ "note": "Evals 0-5 cover the six-stage development pipeline; 6-7 cover the containers and operations skills; 8-14 cover hotfix and incident-fix across different stacks; 15 runs harness/loop.py end to end (runner: loop) instead of one claude -p call; 16-20 cover the five networking skills; 21-26 cover terraform and pipelines, one eval per mode (review, design, propose); 27 covers acceptance-tests on the tdd fixture; 28 covers dockerfile; 29 covers release-notes; 30-34 cover the five database skills; 35 covers container-hardening; 36 container-debug; 37 docker-swarm. Each with-skill run is repeated 3x for variance analysis; baseline is a single no-skill run on the same prompt. 38-46 cover the three security skills, one eval per mode (threatmodel 38-40, appsec 41-43, hardening 44-46).",
  "evals": [
   {
    "id": 0,
@@ -312,6 +312,78 @@
    "fixture": "swarm-review",
    "prompt": "Review our Swarm setup before we go live next week.",
    "expected_output": "Review mode, nothing changed and no state-changing command run. A fit verdict. Finds two managers and says they tolerate no more failures than one (go to 3); Postgres replicas: 2 on a local volume with no constraint as two diverging databases (replicas 1, pinned); the committed secrets/db_password.txt without echoing it, rotated to a new versioned secret; depends_on and restart ignored by stack deploy though the README relies on the ordering; .env not read by stack deploy and never exported by deploy.sh, so CI deploys an empty image tag; the api with no healthcheck and the default update config (pause, stop-first) with rollback prescribed; the edge's per-client rate limit broken by the routing mesh rewriting source IPs, fixed with mode: host or PROXY protocol; no --with-registry-auth. Findings carry SW IDs, confidence, S-n and severity; the score shows base and the 2.0 Critical cap; the gate fails condition by condition; needs-access flags for autolock, backups, firewall and labels; the worker recorded as the template; drills before go-live; handoffs to container-hardening and dockerfile."
+  },
+  {
+   "id": 38,
+   "name": "threatmodel-review-design-abuse-and-fallback",
+   "skill": "threatmodel",
+   "fixture": "tm-review",
+   "prompt": "Review the security design of the payouts service. The design docs, ADRs, API spec and our existing threat model are in this repo. How good is it, and what's wrong with it?",
+   "expected_output": "Review mode, no document changed. Finds the single approver for irreversible payouts (no separation of duty), SMS OTP for admins, unauthenticated internal service calls, the replayable settlement webhook, and support MFA reset by knowledge questions. Also finds the self-grantable delegation in ADR-0007 (S25), the fail-open fraud-score fallback (S22), and that the threat model predates and omits the partner API (S24/S27). Never echoes the staging key in the runbook. TM- ids, S-n citations, confidence tags, score arithmetic with the Critical cap at 2.0, the gate failing condition by condition (two mechanisms per hazard, authentication per crossing), needs-data flags, and what works (TLS, KMS keys, separate audit account)."
+  },
+  {
+   "id": 39,
+   "name": "threatmodel-design-abusers-and-traps",
+   "skill": "threatmodel",
+   "fixture": "tm-design",
+   "prompt": "Build the threat model for Family Access before we start. The requirements are in docs/requirements.md.",
+   "expected_output": "Design mode, threat-model.md written and nothing built. System definition including support and recovery; adversaries by class and grade including abusers and insiders; DFD with trust boundaries; STRIDE per crossing; a threat tree; a hazard × mechanism matrix; a risk register with owners; requirements traced threat → requirement → test; open questions. Declines hashing the national ID as privacy, guards caregiver delegation against abuse and self-propagation, makes impersonation break-glass, treats the anonymised export as a claim to test, declines SMS-only recovery, and gives the lab webhook authenticity and freshness."
+  },
+  {
+   "id": 40,
+   "name": "threatmodel-propose-contain-then-design-out",
+   "skill": "threatmodel",
+   "fixture": "tm-propose",
+   "prompt": "We have a threat-model review in analysis/threatmodel/summary.md. Write the risk-treatment plan.",
+   "expected_output": "Propose mode, no document or review changed. A decision per finding id (eliminate, mitigate, transfer, accept); acceptances with an owner and an expiry; the live fraud-score fail-open and SMS admin MFA contained before any redesign; the self-delegation eliminated by design rather than monitored; dual control for large payouts; the staging key rotated before removal and never echoed; work routed to appsec, hardening, pipelines or netdesign; rollback and done-when per step; the gate after the plan; needs-data carried as open questions."
+  },
+  {
+   "id": 41,
+   "name": "appsec-review-inventory-and-secrets",
+   "skill": "appsec",
+   "fixture": "as-review",
+   "prompt": "Review this API for security problems. I want to know how good it is and what's wrong with it.",
+   "expected_output": "Review mode, nothing changed. Finds the SQL injection in invoice search, the IDOR on GET /api/v2/invoices/:id, MD5 passwords, the committed .env payment key (kind and location only, rotation recommended), the open redirect, lodash 4.17.15 and the password in the login log. Builds the endpoint inventory and reconciles it against api/openapi.yaml, so it sees /api/v1 as an unauthenticated zombie API and /docs exposed; finds mass assignment of role and CORS reflecting any origin with credentials. Findings carry AS- ids, A-n theory, confidence and file:line; OWASP mapping; the score shows base and the 2.0 Critical cap; the gate fails condition by condition; needs-data flags listed; what works (parameterised orders queries, helmet, generic error handler) recorded."
+  },
+  {
+   "id": 42,
+   "name": "appsec-design-reshapes-the-quick-wins",
+   "skill": "appsec",
+   "fixture": "as-design",
+   "prompt": "Design the security controls for this service. The requirements are in docs/requirements.md.",
+   "expected_output": "Design mode, no code written. controls.md declines JWT in localStorage for an HttpOnly cookie with idle and absolute timeouts; CORS * for an exact allow-list; receipts on the app origin for a sandbox origin/object storage served as attachments, SVG treated as active content; partner keys in the query string for a header, hashed at rest; double-submit CSRF for a session-bound token plus SameSite; tenant checked in the frontend for tenant in every server-side query; GraphQL introspection off in prod; support impersonation audited and time-bound. Adds an authorisation matrix with another tenant and anonymous, rate limits keyed on partner/tenant, version retirement, a header contract, signed webhooks, security events, abuse cases, A-n citations and open questions."
+  },
+  {
+   "id": 43,
+   "name": "appsec-propose-contain-then-fix-the-class",
+   "skill": "appsec",
+   "fixture": "as-propose",
+   "prompt": "We have a security review in analysis/appsec/. Write the remediation proposal.",
+   "expected_output": "Propose mode, nothing changed, the key never echoed. The committed key rotated before removal; SQLi, IDOR and the unauthenticated /api/v1 contained first, v1 retired with 410; then the class fixed — one query layer, one authorisation/tenant-scoping layer, DTOs for writable fields — each fix starting with a red test through tdd; Argon2/bcrypt by rehash on login; CI guardrails handed to the pipelines skill; AS- ids traced; validation and rollback per step; needs-data flags as open questions; the missing controls.md stated."
+  },
+  {
+   "id": 44,
+   "name": "hardening-review-mixed-estate",
+   "skill": "hardening",
+   "fixture": "hd-review",
+   "prompt": "Review the hardening of our production estate. The evidence the platform team collected is in this folder — tell me how locked down it is and what's wrong.",
+   "expected_output": "Review mode, nothing changed, no active probe run. Identifies web-01 as Rocky Linux 9 and db-01 as Debian 12 and reads each with its own tooling (dnf/rpm vs apt). Finds SSH open to the internet with password auth and root login (Critical), a human with NOPASSWD: ALL, an unowned SUID binary, pending security updates on both hosts, Postgres on 0.0.0.0/0 without TLS graded as a service role, a public confidential storage container, a mutable backup vault with no restore ever tested (needs-data), no deletion lock and missing owner tags, auditd off and local-only logs, and a world-readable DB password recorded by kind and location with rotation. Builds the asset register, exposure map and privilege map; findings carry HD- ids, H-n, confidence and host:path evidence; score arithmetic with the 2.0 Critical cap; the gate fails condition by condition; what works recorded, including the correct off-site AWS bucket."
+  },
+  {
+   "id": 45,
+   "name": "hardening-design-tier-aware-baseline",
+   "skill": "hardening",
+   "fixture": "hd-design",
+   "prompt": "Write our hardening baseline. The requirements are in docs/requirements.md.",
+   "expected_output": "Design mode, documents only. A baseline with control IDs by domain, a level per tier where sandboxes are not held to prod rules, a platform mapping for Ubuntu (apt), RHEL (dnf, SELinux), Alpine (apk) and AWS plus on-prem VMware, a read-only verification per control, an exception process approved by the security lead (not the requester) with an expiry, and conventions with placeholders rather than the company's acme-* names. Declines port 2222 and port knocking as controls, keeps SELinux enforcing with a time-boxed permissive domain, declines forced 30-day rotation, isolates immutable backups in another account, replaces developer SSH with a private just-in-time path; open questions listed."
+  },
+  {
+   "id": 46,
+   "name": "hardening-propose-no-lockout",
+   "skill": "hardening",
+   "fixture": "hd-propose",
+   "prompt": "We have a hardening review in analysis/hardening/summary.md and a target baseline in analysis/hardening/baseline.md. Write the rollout proposal.",
+   "expected_output": "Propose mode, nothing changed. Containment first: a private admin path (bastion/VPN) live and tested before the public SSH rule is removed, with a second session and a rollback; the public container closed; the DB password rotated before removal; the critical openssh patch. Every access-reducing step has a lockout guard; blocking controls observed first with an end date; the vault immutability lock flagged as irreversible needing approval; canary then waves; fixes baked into the image or config management; bastion and identity before the hosts that depend on them; verification and rollback per step; decisions trace to HD- ids and H-n."
   }
  ]
 }

@@ -1,0 +1,7 @@
+$ sudo apt update -qq && apt list --upgradable 2>/dev/null
+Listing...
+openssh-server/stable-security 1:9.2p1-2+deb12u7 amd64 [upgradable from: 1:9.2p1-2+deb12u3]
+postgresql-15/stable-security 15.14-0+deb12u1 amd64 [upgradable from: 15.10-0+deb12u1]
+linux-image-amd64/stable-security 6.1.153-1 amd64 [upgradable from: 6.1.119-1]
+$ systemctl is-enabled unattended-upgrades
+disabled

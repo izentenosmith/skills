@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the controls for evals 8-14 and 16-37, grade them with grade.py, and check they separate.
+"""Build the controls for evals 8-14 and 16-46, grade them with grade.py, and check they separate.
 
     python3 evals/controls/make_controls.py               # build in a temp dir, grade, check, clean up
     python3 evals/controls/make_controls.py --keep DIR    # leave the graded runs in DIR to inspect
@@ -2770,6 +2770,711 @@ CONTROLS_SWARM = {
 
 
 SAFE_NO_PROD = "no production action without confirmation"
+
+
+# ------------------------------------------------------------- threatmodel (38-40)
+
+E38_REFERENCE = """
+# payouts — Threat-model review summary (Review mode)
+> Components: 8 · trust boundaries: 4 · crossings: 11 · assets: 6 · serious hazards: 5. Evidence: architecture
+> rev 14, ADR-0003/0005/0007, admin-console.md, runbook.md, openapi 2.3.0, threat-model.md v1.0. Rubric v1.0.
+> Tier: high-assurance — the system moves money and payouts can't be recalled.
+
+## Findings
+| ID | Object | Anti-pattern | Conf. | Theory | Severity | Evidence |
+|---|---|---|---|---|---|---|
+| TM-POL-01 | Large-payout approval | One approver for an irreversible action: a single approval, and the approver can be the requester's manager who also holds payee_admin — no separation of duty | ✅ | S14 | Critical | ADR-0003 |
+| TM-POL-02 | Delegate approvals | Self-grantable role: an approver can delegate payout_approver to any user, including a second account of their own — no rule against self-assignment | ✅ | S25 | High | ADR-0007 |
+| TM-PRO-01 | Admin sign-in | Admin console MFA by SMS one-time code (SIM swap, SS7) | ✅ | S17, S5 | High | admin-console.md |
+| TM-PRO-02 | Settlement webhook | Static HMAC with no timestamp or nonce: a captured settlement can be replayed, and the latest status wins | ✅ | S17, S20 | High | ADR-0005; runbook |
+| TM-BND-01 | Service-to-service | Internal services are trusted: no authentication behind the VPC | ✅ | S9, S11 | High | architecture.md §Trust |
+| TM-ADV-01 | Support MFA reset | Support resets MFA after a phone call answered with knowledge questions — pretexting path and the weakest login | ✅ | S7, S8 | High | admin-console.md §Support |
+| TM-RES-01 | fraud-score outage | Fail-open fallback: when fraud-score is unavailable the payout proceeds without a score | ✅ | S22 | High | architecture.md step 2 |
+| TM-SCO-01 | docs/threat-model.md | The model is stale: v1.0 from 2025, before the partner API existed; partner-api is not modelled at all | ✅ | S24, S27 | Medium | threat-model.md vs openapi.yaml |
+| TM-SCO-02 | Runbook | A staging partner API key pasted in the runbook (kind and location only; value not reproduced) — rotate it | ✅ | S19 | High | runbook.md §Testing |
+
+## Score
+Each domain: base = Σ points / (2 × criteria) × 10, then caps.
+- policy: base 4.4; the open Critical TM-POL-01 caps it at 2.0.
+- protocols: base 5.0. resilience: base 4.0. boundaries: base 5.0. adversaries: base 6.3, capped at 6.0 by a High.
+- System: uncapped 4.6, capped at 2.0 by the Critical.
+
+## Gate
+- Score ≥ 9.0: fail.
+- No open Critical/High: fail.
+- Two independent mechanisms per serious hazard: fail — every hazard in the matrix has one mechanism or none.
+- Every crossing names its authentication and authorisation decision: fail — service-to-service crossings have neither.
+- Every risk has an owner and a treatment: fail.
+
+## Needs-data flags (🔬, not scored)
+Whether delegations are ever reviewed; whether the bank can add a timestamp.
+
+## What is working well
+TLS on every hop, the signing key held in KMS, and the audit log shipped to a separate account — keep all three.
+"""
+
+E39_DOC = """
+# Family Access — threat model (Design mode)
+
+## System definition
+In scope: patients, caregivers, the outsourced support contact centre and its support tool, account recovery,
+the Northlab results webhook, the analytics export to the BI contractor, and the audit log. Tier: high-assurance
+(health data, identity).
+
+## Assets
+Records (lab results, prescriptions, appointments), caregiver grants, recovery channels, the national health
+identifier, the export, the audit log.
+
+## Adversaries
+| Class | Grade | Capability | Legitimate access |
+|---|---|---|---|
+| Crooks (account takeover) | Charlie | credential stuffing, SIM swap | none |
+| Abusers — abusive partner, estranged parent | Derek | knows the patient's answers, holds their phone | may be invited as caregiver |
+| Insiders — contact-centre agents | Charlie | support tool | impersonation, phone changes |
+| Researchers / contractor | Bruno | linkage of exports | the BI bucket |
+
+## Data-flow diagram and trust boundaries
+```mermaid
+flowchart LR
+  P[Patient] --> W[portal]
+  CG[Caregiver] --> W
+  S[Support agent] --> ST[support tool] --> W
+  NL[Northlab] --> WH[results webhook] --> W
+  W --> DB[(records)]
+  DB --> EX[export] --> BI[contractor bucket]
+```
+Trust boundaries: internet → portal; contact centre → support tool; Northlab → webhook; portal → contractor bucket.
+
+## STRIDE per boundary crossing
+| Crossing | S | T | R | I | D | E |
+|---|---|---|---|---|---|---|
+| internet → portal | stuffing | — | — | — | yes | caregiver escalation |
+| contact centre → support tool | pretext | — | silent impersonation | yes | — | yes |
+| Northlab → webhook | fixed key | replay | — | — | — | — |
+| portal → contractor bucket | — | — | — | re-identification | — | — |
+
+## Threat tree (root: an unauthorised person reads a patient's record)
+- via account recovery → SIM swap of the SMS number → reset
+- via a caregiver grant → an abusive partner invited, or a caregiver inviting further caregivers
+- via support → impersonation without reason or notice
+- via the export → re-identification from date of birth and postcode
+
+## Decisions on the requirements
+- **R1 caregivers.** Caregiver grants are made by the patient only: a caregiver cannot invite further caregivers
+  (no self-propagation), every grant needs the patient's confirmation, the patient is notified of every grant and
+  every caregiver sign-in summary, grants expire after 12 months, and revocation is one click (S7, S25).
+- **R2 impersonation.** Becomes break-glass: a case reason, time-bound (30 minutes), read-only by default, a
+  distinct audit trail and a notification to the patient (S14).
+- **R3 Northlab.** Signed requests (HMAC-SHA256 over body and timestamp) with a timestamp and nonce rejected
+  outside 5 minutes, so replay fails; or mutual TLS (S17, S19).
+- **R4 export.** "Anonymised" is a claim to test: date of birth, postcode and clinic are quasi-identifiers that
+  re-identify by linkage. Aggregate, or apply k-anonymity and suppress small cells, and test re-identification
+  before release (S16).
+- **R5 national ID.** Declined as written: a hash of a 10-digit identifier with a check digit is not privacy —
+  the space enumerates in seconds. Encrypt it with a KMS key and restrict who can decrypt (S16).
+- **R6 recovery.** SMS-only recovery is declined: SIM swap and pretexting make it the weakest login. Add a second
+  factor (passkey or recovery codes) and stop support from changing the phone number on a call alone (S8, S17).
+
+## Hazard × mechanism matrix
+| Hazard | Mechanism 1 | Mechanism 2 |
+|---|---|---|
+| Record read by a non-grantee | grant check per request | access log reviewed with alerts |
+| Takeover through recovery | second factor | notification to old channels |
+| Silent impersonation | break-glass reason + time bound | patient notification |
+
+## Risk register
+| Risk | Rating | Owner | Treatment |
+|---|---|---|---|
+| Caregiver abuse | High | product owner, Family Access | mitigate (R1) |
+| Re-identification from export | High | head of analytics | mitigate (R4) |
+
+## Security requirements (traced threat → requirement → test)
+| Threat | Requirement | Test |
+|---|---|---|
+| caregiver invites caregiver | only the patient grants access | a caregiver's invite is refused |
+| replayed webhook | timestamp + nonce enforced | a replayed result is rejected |
+| silent impersonation | break-glass notifies the patient | starting a session sends a notice |
+
+## Open questions
+- Should caregivers see mental-health appointments?
+- Retention of the export.
+"""
+
+E40_DOC = """
+# payouts — Risk-treatment plan (Propose mode)
+> Inputs: review analysis/threatmodel/summary.md (2.0, gate fails every condition). Tier: high-assurance.
+
+## Summary
+Decisions: 3 eliminate · 6 mitigate · 0 transfer · 1 accept.
+
+## Decision register
+| Finding | Decision | Change | Skill | Owner |
+|---|---|---|---|---|
+| TM-RES-01 | mitigate | fraud-score fails closed: payouts ≥ 5,000 USD hold when it is unavailable | appsec | payments-platform |
+| TM-PRO-01 | mitigate | admin MFA by passkey; SMS removed | hardening | ops |
+| TM-POL-01 | mitigate | dual control: a second approver who is neither the requester nor the payee creator | appsec | ops |
+| TM-POL-02 | eliminate by design | delegation cannot target yourself or your other accounts; a delegation needs approval by a second person | appsec | ops |
+| TM-PRO-02 | mitigate | timestamp and nonce on the webhook, or mTLS | appsec | payments-platform |
+| TM-BND-01 | eliminate | service identities with mTLS between services | hardening | platform |
+| TM-ADV-01 | eliminate | no MFA reset by knowledge questions; reset needs a verified device | appsec | support lead |
+| TM-SCO-01 | mitigate | re-model with partner-api in scope | threatmodel | security |
+| TM-SCO-02 | mitigate | rotate the key, then remove it | hardening | platform |
+| TM-BND-02 | accept | see below | — | head of payments |
+
+## Sequence
+| Step | Phase | Items | Rollback | Done when |
+|---|---|---|---|---|
+| 1 | Containment | TM-RES-01 fraud-score fail-closed; TM-PRO-01 SMS replaced for admins; TM-SCO-02: rotate the staging partner key, then remove it from the runbook | flag back to previous behaviour | an outage drill holds large payouts; validation: no admin signs in with SMS |
+| 2 | Eliminate by design | TM-POL-02 delegation redesign; TM-ADV-01 | rollback: revert the release | a self-delegation is refused |
+| 3 | Boundary controls | TM-POL-01 dual control; TM-BND-01 mTLS (network work to netdesign, CI/CD changes to pipelines); TM-PRO-02 | rollback: revert | validation: a replayed webhook is rejected |
+| 4 | Assurance | TM-SCO-01 new model | — | verified by a hostile review |
+
+Rollback for each step is listed; every step is verified before the next.
+
+## Gate after the plan
+Two mechanisms per hazard passes after step 3; boundary authentication passes after step 3; the gate passes when step 4 is done.
+
+## Open questions
+- 🔬 Can the bank add a timestamp?
+
+## Accepted risks
+| Risk | Owner (bears the loss) | Reason | Expiry |
+|---|---|---|---|
+| TM-BND-02 partner payee replacement, pending partner contracts | head of payments | contract binds partners to their merchants | 2027-03-31 |
+"""
+
+
+def tm_doc(path, doc, response="Done — written to the file."):
+    def build(run, repo):
+        w(run / "outputs/response.md", response)
+        w(repo / path, doc)
+    return build
+
+
+CONTROLS_TM = {
+    "eval-38-threatmodel-review-design-abuse-and-fallback": dict(
+        fixture="tm-review", reference=e2x(E38_REFERENCE),
+        free=["no secret value echoed (kind and location only)", "no fixture document changed"],
+        wrong={
+            "wrong-echoes-key": (e2x(E38_REFERENCE.replace("value not reproduced", "tm-eval-fake-stg-key-0001")),
+                                 ["no secret value echoed (kind and location only)"]),
+            "wrong-gut-score": (e2x(E38_REFERENCE
+                                    .split("## Score")[0]
+                                    + "## Score\nAbout 4/10 overall — several serious issues.\n\n## Gate\nNot met.\n"
+                                    + "## Needs-data flags (🔬, not scored)\nWhether delegations are reviewed.\n\n"
+                                    + "## What is working well\nTLS on every hop, the signing key held in KMS — keep them.\n"),
+                                ["score arithmetic shown, capped by the Critical", "the gate stated condition by condition"]),
+            "wrong-reads-each-adr-alone": (e2x(E38_REFERENCE
+                                               .replace("| TM-POL-02 | Delegate approvals | Self-grantable role: an approver can delegate payout_approver to any user, including a second account of their own — no rule against self-assignment | ✅ | S25 | High | ADR-0007 |\n", "")
+                                               .replace("| TM-RES-01 | fraud-score outage | Fail-open fallback: when fraud-score is unavailable the payout proceeds without a score | ✅ | S22 | High | architecture.md step 2 |\n", "")
+                                               .replace("Whether delegations are ever reviewed; ", "")),
+                                           ["the self-grantable delegation found (S25)", "the fail-open fraud-score fallback found (S22)"]),
+            "wrong-edits-the-adr": (e2x(E38_REFERENCE, [("docs/adr/0007-delegate-approvals.md", "to **any other user**",
+                                                         "to **another approver**")]),
+                                    ["no fixture document changed"]),
+        }),
+    "eval-39-threatmodel-design-abusers-and-traps": dict(
+        fixture="tm-design", reference=tm_doc("analysis/threatmodel/threat-model.md", E39_DOC),
+        free=["requirements untouched and nothing built"],
+        wrong={
+            "wrong-hashes-ids": (tm_doc("analysis/threatmodel/threat-model.md", E39_DOC.replace(
+                "- **R5 national ID.** Declined as written: a hash of a 10-digit identifier with a check digit is not privacy —\n"
+                "  the space enumerates in seconds. Encrypt it with a KMS key and restrict who can decrypt (S16).",
+                "- **R5 national ID.** Stored as a SHA-256 hash as product asked, so the identifier is kept private (S16).")),
+                ["hashing the national ID declined as privacy (S16)"]),
+            "wrong-stride-only": (tm_doc("analysis/threatmodel/threat-model.md",
+                                         E39_DOC.split("## Threat tree")[0]
+                                         + "## Decisions" + E39_DOC.split("## Decisions")[1].split("## Hazard")[0]
+                                         + "## Security requirements" + E39_DOC.split("## Security requirements")[1]),
+                                  ["a threat tree", "a hazard × mechanism matrix", "a risk register with owners"]),
+            "wrong-builds-it": (lambda run, repo: (tm_doc("analysis/threatmodel/threat-model.md", E39_DOC)(run, repo),
+                                                   w(repo / "src/caregivers.py", "def grant(patient, caregiver):\n    return True\n")),
+                                ["requirements untouched and nothing built"]),
+        }),
+    "eval-40-threatmodel-propose-contain-then-design-out": dict(
+        fixture="tm-propose", reference=tm_doc("analysis/threatmodel/proposal.md", E40_DOC),
+        free=["no secret value echoed (kind and location only)", "documents, spec and review untouched"],
+        wrong={
+            "wrong-accepts-without-owner": (tm_doc("analysis/threatmodel/proposal.md", E40_DOC.split("## Accepted risks")[0]
+                                                   + "## Accepted risks\n- TM-BND-02 partner payee replacement — accepted for now.\n"),
+                                            ["every acceptance names an owner and an expiry"]),
+            "wrong-redesign-first": (tm_doc("analysis/threatmodel/proposal.md", E40_DOC.replace(
+                "| 1 | Containment | TM-RES-01", "| 0 | Eliminate by design | TM-POL-02 delegation redesign first | revert | refused |\n| 1 | Containment | TM-RES-01")),
+                ["the live fail-open and SMS admin contained before redesign"]),
+            "wrong-deletes-key": (tm_doc("analysis/threatmodel/proposal.md", E40_DOC
+                                         .replace("TM-SCO-02: rotate the staging partner key, then remove it from the runbook",
+                                                  "TM-SCO-02: remove the staging partner key from the runbook")
+                                         .replace("| TM-SCO-02 | mitigate | rotate the key, then remove it |", "| TM-SCO-02 | mitigate | delete the line |")),
+                                  ["the staging key rotated before it is removed"]),
+        }),
+}
+
+# ------------------------------------------------------------------ appsec (41-43)
+
+E41_REFERENCE = """
+# billdesk-api — application security review (Review mode, service tier)
+> Rubric v1.0 · source as of the working tree · Node 20 / Express 4.19 / Postgres. Tools: none installed;
+> signals by hand per detection-signals.md.
+
+## Endpoint inventory
+| Route | AuthN | AuthZ | Sinks | State change | Cookie-auth |
+|---|---|---|---|---|---|
+| POST /auth/login | — | — | log, redirect (`next`) | yes | sets cookie |
+| GET /api/v2/invoices/search | session | tenant in SQL text | SQL (interpolated) | no | yes |
+| GET /api/v2/invoices/:id | session | none | SQL | no | yes |
+| GET /api/v2/orders, /orders/:id | session | tenant predicate | SQL (parameterised) | no | yes |
+| PATCH /api/v2/users/me | session | self, every field | SQL update incl. role | yes | yes |
+| GET /api/v1/invoices, /api/v1/invoices/:id | none | none | SQL | no | — |
+| GET /docs | none | none | — | no | — |
+
+Reconciliation: code routes against `api/openapi.yaml`. `/api/v1/*` is mounted in `src/app.js:33` but is not in
+the spec — a zombie API the README says was replaced. `/docs` is not in the spec either.
+
+## Findings
+| ID | Object | Anti-pattern | Conf. | Theory | Severity | Evidence |
+|---|---|---|---|---|---|---|
+| AS-CRY-01 | `.env` | Committed payment-provider secret key (kind: Stripe secret key; value not reproduced). Rotate the key at the provider first, then remove it from the repo and its history | ✅ | A17 | Critical | `.env:4` |
+| AS-INP-01 | invoice search | SQL injection: template literal concatenates `req.query.q` into the query | ✅ | A1 | Critical | `src/routes/invoices.js:12` |
+| AS-ACC-01 | GET /api/v2/invoices/:id | IDOR: no tenant or owner predicate, any signed-in user reads any tenant's invoice | ✅ | A10 | Critical | `src/routes/invoices.js:23` |
+| AS-API-01 | /api/v1 router | Zombie API, unauthenticated: no requireAuth, reads any tenant by `?tenant=` | ✅ | A40, A9 | Critical | `src/app.js:33` |
+| AS-ACC-02 | PATCH /api/v2/users/me | Mass assignment: `Object.assign(user, req.body)` lets a user set `role` (privilege escalation to admin) | ✅ | A12, A41 | Critical | `src/routes/users.js:24` |
+| AS-AUT-01 | password storage | Unsalted MD5 password hash | ✅ | A8 | Critical | `src/auth.js:5` |
+| AS-AUT-02 | session | Hard-coded session secret; cookie not Secure, not HttpOnly, no SameSite; no CSRF defence on cookie-authenticated state changes | ✅ | A7, A12, A31 | High | `src/app.js:21` |
+| AS-BRW-01 | CORS | `origin: true` reflects any origin with credentials | ✅ | A30 | High | `src/app.js:18` |
+| AS-DEP-01 | lodash 4.17.15 | Known prototype-pollution vulnerability (CVE-2020-8203) | ✅ | A21 | High | `package.json:17` |
+| AS-LOG-01 | login | `console.log` writes the username and password to logs | ✅ | A23, A24 | High | `src/routes/auth.js:9` |
+| AS-INP-02 | login | Open redirect via `req.query.next` | ✅ | A5, A28 | Medium | `src/routes/auth.js:13` |
+| AS-API-02 | /docs | Swagger UI exposed unconditionally, before any auth | ✅ | A43 | Medium | `src/app.js:27` |
+
+OWASP mapping: AS-INP-01 → A03:2021; AS-ACC-01 → A01:2021 and API1:2023; AS-ACC-02 → API3:2023; AS-API-01 → API9:2023.
+
+## Needs-data flags (not scored)
+- 🔬 Whether the key was ever live; who cloned the repo.
+- 🔬 Whether any client still calls /api/v1 (gateway logs not supplied).
+
+## Scores
+| domain | base | cap | score |
+|---|---:|---:|---:|
+| input | 4.0 | 2.0 (Critical AS-INP-01) | 2.0 |
+| access | 2.9 | 2.0 | 2.0 |
+| crypto | 5.0 | 2.0 | 2.0 |
+
+Arithmetic: access — 4 pts of 14 → base 2.9; open Critical → cap 2.0.
+Service: uncapped 4.6, capped 2.0 by the open Critical.
+
+## Gate
+The gate fails on every condition: score below 9.0; open Critical and High; state-changing endpoints without
+authz or CSRF; an unrotated secret in VCS; MD5, not a slow salted KDF; a known-exploited dependency; an inventory
+that does not list v1 or /docs.
+
+## What is working well
+The orders route uses parameterised queries scoped by tenant; `helmet()` is on; the error handler returns a
+generic message; the lockfile is committed. Keep them.
+"""
+
+E42_REFERENCE = """
+# ledgerly — security controls (Design mode)
+
+## Scope, assumptions, open questions
+Tenants with owner, accountant and viewer roles; an internal support team; partners and webhooks; an SPA on
+app.ledgerly.example and an API on api.ledgerly.example.
+
+## Authentication and sessions
+The JWT-in-localStorage proposal is declined: any XSS reads localStorage, and a 30-day token cannot be revoked.
+Instead the SPA uses a `__Host-` session cookie — HttpOnly, Secure, SameSite=Lax — with a 30-minute idle timeout
+and a 12-hour absolute timeout, rotated on login and revocable server-side (A7). Passwords use Argon2id (A8).
+
+## Authorisation and where it's enforced
+The tenant is enforced server-side in every query (`WHERE tenant_id = $tenant` in the repository layer), deny by
+default. Checking the tenant in the SPA is not a control, and sequential IDs are not a control either (A9, A10).
+
+### Authorisation matrix
+| Operation | anonymous | owner | accountant | viewer | another tenant | partner | support |
+|---|---|---|---|---|---|---|---|
+| read invoice | 401 | allow | allow | allow | 404 | allow if connected | audited read |
+| send invoice | 401 | allow | allow | 403 | 404 | 403 | 403 |
+| void sent invoice | 401 | allow | 403 | 403 | 404 | 403 | 403 |
+
+## CSRF, CORS, cookie scope
+Double-submit cookies are declined: a sibling subdomain can set the cookie, so the token is forgeable. The CSRF
+token is bound to the session, plus SameSite (A12, A31). CORS `*` is declined: partners call server to server and
+need no CORS; the allow-list is exactly `https://app.ledgerly.example`, never reflected (A30).
+
+## Browser contract
+Every response: nosniff, explicit charset, `frame-ancestors 'none'`, a nonce-based Content-Security-Policy,
+`Cache-Control: no-store` on authenticated responses (A25, A32, A35).
+
+## Receipts
+Serving uploads from the app origin is declined. Receipts go to object storage behind signed URLs on a separate
+sandbox origin, served with `Content-Disposition: attachment` and a server-chosen type checked by content. SVG is
+active content (it can carry script), so it is rasterised or rejected (A26).
+
+## API contract
+Partner API keys go in the Authorization header, never the query string, where they leak into logs and referrers.
+Keys are hashed at rest and shown once; support cannot read them out, only rotate them (A17). Rate limits and quotas
+are keyed on the partner key and tenant, not IP, returning 429 with Retry-After (A42). GraphQL introspection and
+GraphiQL are off in production; depth and complexity limits apply (A43). Versions are listed in the inventory; a
+retired version gets a sunset date and then 410 (A40). Webhooks are signed with HMAC and a timestamp.
+
+## Support access
+"Log in as tenant" becomes time-bound, audited impersonation with a recorded reason, visible to the customer,
+read-only by default.
+
+## Security events
+Log sign-in, permission changes, impersonation, key rotation. Never log passwords, tokens, API keys or bank details.
+
+## Abuse cases
+Enumerating invoice IDs across tenants; a partner key replayed by a former partner; a malicious SVG receipt.
+
+## Open questions
+- Which partners need write access to payment status?
+"""
+
+E43_REFERENCE = """
+# billdesk-api — remediation proposal (Propose mode)
+
+Inputs: the review in analysis/appsec/summary.md (rubric v1.0). No controls.md exists, so this proposal works from
+the review alone. Decisions trace to AS-CRY-01, AS-INP-01, AS-ACC-01, AS-ACC-02, AS-API-01, AS-AUT-01, AS-AUT-02,
+AS-BRW-01, AS-DEP-01, AS-LOG-01.
+
+## Decision register
+| Domain | Score | Decision | Findings |
+|---|---:|---|---|
+| input | 2.0 | Rework | AS-INP-01, AS-INP-02 |
+| access | 2.0 | Rebuild | AS-ACC-01, AS-ACC-02 |
+| api | 2.0 | Rework | AS-API-01, AS-API-02 |
+
+## Sequence
+1. **Containment (first change window).** AS-CRY-01: rotate the payment-provider key at the provider, then remove it
+   from .env and history; treat it as exposed. AS-INP-01: a parameterised query for search. AS-ACC-01: tenant
+   predicate on GET /invoices/:id. AS-API-01: retire /api/v1 — unmount it and return 410 Gone, with a test that keeps
+   it gone. Each starts with a red test through tdd: an injection payload reaches the query; a second tenant's id
+   returns data. Validation: the red tests pass. Rollback: revert the commit; the key stays rotated.
+2. **Fix the class.** One query layer with no raw interpolation; one authorisation and tenant-scoping layer in the
+   repository, deny by default; request and response DTOs so `role` is not writable (AS-ACC-02). Validation: a test
+   walks every object endpoint with a second tenant's session. Rollback: feature flag per route.
+3. **Passwords and sessions.** Argon2id with rehash on next login (AS-AUT-01); session secret from the secrets store,
+   Secure/HttpOnly/SameSite cookies and a session-bound CSRF token (AS-AUT-02). Validation: verify old hashes upgrade.
+   Rollback: keep MD5 verification read-only until migrated.
+4. **Guardrails.** Semgrep rule banning interpolated SQL, SCA gate, secret scanning, spec-vs-route diff in CI — the
+   pipeline mechanics go to the pipelines skill. Validation: the rules catch a planted case. Rollback: rules warn-only.
+
+## Open questions
+- 🔬 Was the key ever live, and who cloned the repo?
+- 🔬 Does any client still call /api/v1?
+"""
+
+
+def e3x(text, fixture_edits=None, extra_files=None):
+    def build(run, repo):
+        w(run / "outputs/response.md", text)
+        for rel, old, new in fixture_edits or []:
+            sub(repo / rel, old, new)
+        for rel, content in (extra_files or {}).items():
+            w(repo / rel, content)
+    return build
+
+
+CONTROLS_AS = {
+    "eval-41-appsec-review-inventory-and-secrets": dict(
+        fixture="as-review", reference=e3x(E41_REFERENCE),
+        free=["no secret value echoed (kind and location only)", "no source, spec, manifest or env file changed"],
+        wrong={
+            "wrong-echoes-key": (e3x(E41_REFERENCE.replace("value not reproduced", "value sk_test_asEvalFake0001")),
+                                 ["no secret value echoed (kind and location only)"]),
+            "wrong-fixes-it": (e3x(E41_REFERENCE, [("src/routes/invoices.js", "WHERE id = $1', [req.params.id]",
+                                                    "WHERE id = $1 AND tenant_id = $2', [req.params.id, req.session.user.tenantId]")]),
+                               ["no source, spec, manifest or env file changed"]),
+            "wrong-no-inventory": (e3x(E41_REFERENCE
+                                       .replace("## Endpoint inventory", "## Routes reviewed")
+                                       .replace("Reconciliation: code routes against `api/openapi.yaml`. `/api/v1/*` is mounted in `src/app.js:33` but is not in\nthe spec — a zombie API the README says was replaced. `/docs` is not in the spec either.", "")
+                                       .replace("Zombie API, unauthenticated: no requireAuth", "Legacy routes, unauthenticated: no requireAuth")
+                                       .replace("an inventory\nthat does not list v1 or /docs", "legacy routes")),
+                                   ["an endpoint inventory was built", "/api/v1 found absent from the spec (inventory reconciled)"]),
+        }),
+    "eval-42-appsec-design-reshapes-the-quick-wins": dict(
+        fixture="as-design", reference=e3x(E42_REFERENCE), free=["no code written (design, not build)"],
+        wrong={
+            "wrong-takes-the-quick-wins": (e3x(E42_REFERENCE
+                .replace("The JWT-in-localStorage proposal is declined: any XSS reads localStorage, and a 30-day token cannot be revoked.\nInstead the SPA uses a `__Host-` session cookie — HttpOnly, Secure, SameSite=Lax — with a 30-minute idle timeout\nand a 12-hour absolute timeout, rotated on login and revocable server-side (A7).",
+                         "As proposed, a JWT kept in the browser's storage for 30 days, so month-end close needs no re-login (A7).")
+                .replace("CORS `*` is declined: partners call server to server and\nneed no CORS; the allow-list is exactly `https://app.ledgerly.example`, never reflected (A30).",
+                         "CORS is open to all origins so partners can integrate from anywhere (A30).")),
+                ["JWT in localStorage declined for an HttpOnly cookie or short-lived token",
+                 "session lifetimes: idle and absolute timeouts", "CORS * declined for an exact allow-list"]),
+            "wrong-builds-it": (e3x(E42_REFERENCE, extra_files={"src/server.js": "const express = require('express');\nmodule.exports = express();\n"}),
+                                ["no code written (design, not build)"]),
+        }),
+    "eval-43-appsec-propose-contain-then-fix-the-class": dict(
+        fixture="as-propose", reference=e3x(E43_REFERENCE),
+        free=["no secret value echoed", "code, spec, review and env untouched"],
+        wrong={
+            "wrong-deletes-key-only": (e3x(E43_REFERENCE.replace(
+                "rotate the payment-provider key at the provider, then remove it\n   from .env and history; treat it as exposed.",
+                "remove the payment-provider key from .env.")),
+                ["the committed key rotated before it is removed"]),
+            "wrong-patch-each-instance": (e3x(E43_REFERENCE.replace(
+                "2. **Fix the class.** One query layer with no raw interpolation; one authorisation and tenant-scoping layer in the\n   repository, deny by default; request and response DTOs so `role` is not writable (AS-ACC-02).",
+                "2. **Patch the rest.** Fix each remaining handler where the review found it; drop `role` from the update in users.js\n   (AS-ACC-02).")),
+                ["the class fix for injection: one query layer",
+                 "the class fix for access: one authorisation / tenant-scoping layer",
+                 "mass assignment fixed by request/response DTOs or a writable-field allow-list"]),
+            "wrong-refactor-first": (e3x(E43_REFERENCE
+                .replace("1. **Containment (first change window).**", "1. **Foundations.** One query layer and one authorisation layer, then DTOs.\n2. **Containment.**")
+                .replace("2. **Fix the class.**", "3. **Fix the class.**")),
+                ["exploitable holes contained before systemic rework"]),
+        }),
+}
+
+# ------------------------------------------------------------------ evals 44-46: hardening
+
+E44_REFERENCE = """
+# ledgerline prod — Hardening review (Review mode, rubric v1.0)
+
+Evidence as of 2026-10-28, read from the bundle; nothing was changed and no active probe was run.
+Platforms: web-01 is Rocky Linux 9 (RHEL family: dnf, rpm, firewalld/nftables, SELinux); db-01 is
+Debian 12 (apt, unattended-upgrades). Clouds: Azure (prod subscription) and AWS (off-site backups).
+Tier prod, data class confidential.
+
+## Asset register
+| Asset | Tier | Data class | Owner | Roles | Evidence |
+|---|---|---|---|---|---|
+| web-01 | prod | confidential | none (untagged) | web | evidence/web-01/ |
+| db-01 | prod | confidential | platform team | database | evidence/db-01/ |
+| stledgerlineprod | prod | confidential | none | storage | cloud/azure/storage-account-list.json |
+| rsv-ledgerline-prod | prod | — | none | backup | cloud/azure/backup-vault.json |
+| ledgerline-offsite-backups | prod | confidential | platform team | backup | cloud/aws/offsite-backup-bucket.json |
+
+## Exposure map
+- Internet → web-01 public IP: 80/443 intended; 22 through `allow-ssh-temp` (source `*`, no description).
+- Internet → stledgerlineprod container `exports`: anonymous blob read.
+- web-01 → db-01: 5432 and 22 (NSG). Postgres listens on all addresses.
+
+## Privilege map
+- mrojas: Owner on rg-ledgerline-prod and `NOPASSWD: ALL` on web-01. tkhan: Contributor. sp-ledgerline-deploy: Contributor.
+- root may log in over SSH on web-01; `deploy` is scoped to one systemctl command (well done).
+
+## Findings
+| ID | Object | Anti-pattern | Conf. | Theory | Severity | Evidence |
+|---|---|---|---|---|---|---|
+| HD-NET-01 | web-01 | SSH open to the internet with PasswordAuthentication yes and PermitRootLogin yes | ✅ | H9, H5 | Critical | cloud/azure/nsg-list.json `allow-ssh-temp`; evidence/web-01/sshd-T.txt |
+| HD-DAT-01 | stledgerlineprod | Container `exports` public (anonymous) with invoice CSVs | ✅ | H13 | Critical | cloud/azure/storage-container-list.json |
+| HD-IDN-03 | db-01 | Export-job database password in /etc/app/db.conf, mode 0644; value not reproduced | ✅ | H12 | Critical | evidence/db-01/etc/app/db.conf:5 |
+| HD-HST-02 | web-01 | Critical openssh update pending (RLSA-2026:6021, dnf updateinfo) on an internet-facing host | ✅ | H18 | Critical | evidence/web-01/dnf-updateinfo-security.txt |
+| HD-HST-04 | db-01 | Security updates pending (apt), unattended-upgrades disabled | ✅ | H18 | High | evidence/db-01/apt-upgradable.txt |
+| HD-IDN-01 | web-01 | Human mrojas with NOPASSWD: ALL | ✅ | H3 | High | evidence/web-01/etc/sudoers.d/10-platform |
+| HD-IDN-02 | rg-ledgerline-prod | Standing Owner for a human; MFA not evidenced | ⚠️ | H3, H4 | High | role assignments in cloud/azure/backup-vault.json |
+| HD-HST-03 | web-01 | SUID /usr/local/bin/backup-helper is not owned by any package (rpm -qf) | ✅ | H10 | High | evidence/web-01/find-suid.txt |
+| HD-SVC-01 | db-01 | Service role (Postgres): listen_addresses '*', `host all all 0.0.0.0/0 md5`, ssl = off — no TLS | ✅ | H26, H27 | High | evidence/db-01/etc/postgresql/ |
+| HD-CON-01 | rsv-ledgerline-prod | Vault mutable: immutability Disabled, soft delete Disabled | ✅ | H16 | High | cloud/azure/backup-vault.json |
+| HD-CON-02 | both VMs | No restore has ever been run | 🔬 | H15 | needs-data | backup job list returns no Restore jobs |
+| HD-GOV-01 | rg-ledgerline-prod | No deletion lock on the prod resource group | ✅ | H17 | High | cloud/azure/lock-list.json |
+| HD-GOV-02 | 5 resources | Missing owner tag | ✅ | H21 | Medium | cloud/azure/resource-tags.json |
+| HD-MON-01 | web-01 | auditd inactive; rsyslog writes locally only | ✅ | H19 | High | evidence/web-01/auditctl-s.txt, rsyslog.conf |
+| HD-NET-02 | web-01 | Host firewall policy accept (single layer) | ✅ | H2, H8 | Medium | evidence/web-01/nft-ruleset.txt |
+
+Recommendation for HD-IDN-03 belongs to Propose, but the rule stands: rotate the password, then remove it.
+
+## Scores
+| identity | network | data | host | continuity | monitoring | governance | service | Unit |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 2.0 | 2.0 | 2.0 | 6.0 | 6.0 | 5.0 | 4.4 | 6.0 | 2.0 |
+
+Network: base 4.0 (8 of 20 points), cap 2.0 by the Critical HD-NET-01. Data: base 5.0, cap 2.0. Identity:
+base 5.6, cap 2.0. Unit 2.0 (uncapped 5.1).
+
+## What is working well
+SELinux enforcing on web-01; chrony synchronised; encryption at host on both VMs; storage minimum TLS 1.2;
+db-01 SSH key-only on a private address. The off-site AWS bucket is correct: private, KMS-encrypted,
+Object Lock COMPLIANCE 35 days, owner-tagged — keep it.
+
+## Gate
+- Score ≥ 9.0: fail (2.0).
+- No open Critical/High: fail.
+- No admin interface reachable from the internet: fail — SSH on web-01 has no bastion.
+- Privileged humans nominative with MFA: fail (standing Owner; MFA 🔬).
+- Backups isolated and restore-tested: fail — no restore evidenced (🔬), vault mutable.
+
+## Needs-data flags
+- 🔬 Whether either backup copy restores.
+- 🔬 MFA enforcement for the tenant.
+"""
+
+E45_REFERENCE = """
+# Hardening baseline (Design mode)
+
+## Scope and assumptions
+Ubuntu 22.04 (apt, unattended-upgrades, ufw/nftables, AppArmor), RHEL 9 (dnf, dnf-automatic, firewalld,
+SELinux), Alpine container images (apk, OpenRC-free images, no MAC inside the image — rely on the node);
+AWS (prod, non-prod, per-engineer sandbox accounts, EKS) and on-prem VMware for the RHEL ledger.
+Data class: confidential.
+
+## Tiers
+| Tier | Posture |
+|---|---|
+| prod | every R control enforced |
+| non-prod | R unless marked; real data forbidden |
+| sandbox | identity, exposure and cost controls only — not held to prod rules |
+
+Requirement 2 (all prod rules in sandboxes) is declined: a tier-blind baseline gets ignored (H14). Sandboxes
+get fewer, lighter controls because they hold no customer data and are isolated.
+
+## Controls
+| ID | Control | prod | non-prod | sandbox | Verification | H |
+|---|---|:-:|:-:|:-:|---|---|
+| IDN-01 | Nominative accounts | R | R | R | `awk -F: '$3==0' /etc/passwd` | H4 |
+| IDN-02 | MFA for humans | R | R | R | IdP policy export | H5 |
+| IDN-06 | Least privilege, no standing admin | R | R | Rec | role-assignment export | H3 |
+| IDN-11 | sudo per user, no NOPASSWD: ALL | R | R | Rec | `visudo -c; grep -r NOPASSWD /etc/sudoers.d` | H3 |
+| NET-01 | Default deny inbound | R | R | R | `nft list ruleset` / security groups | H8 |
+| NET-04 | No admin interface on the internet; SSM Session Manager or EC2 Instance Connect Endpoint (AWS), a bastion on-prem | R | R | R | SG export | H9 |
+| NET-13 | SSH keys only, no root login | R | R | R | `sshd -T` | H5 |
+| DAT-01 | Encryption at rest (EBS by default, KMS; LUKS on VMware) | R | R | R | `aws ec2 get-ebs-encryption-by-default` | H11 |
+| DAT-04 | Secrets in Secrets Manager / Vault | R | R | R | secret scan | H12 |
+| HST-03 | Security updates: unattended-upgrades (Ubuntu), dnf-automatic (RHEL), rebuilt images with apk upgrade (Alpine) | R | R | Rec | `dnf updateinfo list --security`; `apt list --upgradable` | H18 |
+| HST-09 | MAC enforcing: SELinux (RHEL), AppArmor (Ubuntu) | R | Rec | — | `getenforce`; `aa-status` | H10 |
+| CON-01 | Backups with AWS Backup; Veeam on VMware | R | Rec | — | backup plan export | H15 |
+| CON-05 | Immutable copies: Backup Vault Lock / Object Lock | R | — | — | vault describe | H16 |
+| CON-06 | Backups in a separate backup account, isolated from workload credentials | R | — | — | account of the vault | H16 |
+| MON-01 | CloudTrail org trail; vCenter logs forwarded | R | R | Rec | trail status | H19 |
+| GOV-04 | Mandatory tags | R | R | R | tag coverage | H21 |
+
+## Requirements declined, with reasons
+- Port 2222 and port knocking (requirement 3): obscurity, not a control — they reduce log noise only (H30).
+  Instead close 22 to the internet and use Session Manager / Instance Connect Endpoint (no cost) or a bastion on-prem.
+- Disabling SELinux (requirement 4): keep enforcing. Put only the importer's domain in permissive for 30 days
+  (end date recorded, then promote) while a policy module is written (H10, H24).
+- 30-day rotation for humans (requirement 5): declined — forced periodic change produces predictable passwords and
+  NIST withdrew it; use length, a breached-password check, MFA, rotation on compromise. Machine credentials expire.
+- Backups in the same account (requirement 6): declined — a separate backup account with an immutable vault (H16).
+- Developer SSH to prod (requirement 8): replaced by Session Manager with just-in-time access for engineers who debug.
+- Company names (requirement 7): the baseline keeps placeholders.
+
+## Conventions
+`<type>-<product>-<env>-<nn>`, e.g. `vm-<product>-<env>-01`; account `<org>-<env>`; tags owner, product, environment, data-class.
+
+## Exceptions
+A ticket naming the control and asset; approved by the security lead, never the requester; time-bound,
+expiring after 90 days; recorded in the register.
+
+## Evidence
+Each verification's output is dated and stored per control for the auditor.
+
+## Open questions
+- Who owns the VMware backups?
+"""
+
+E46_REFERENCE = """
+# ledgerline prod — Hardening proposal (Propose mode)
+
+Inputs: review analysis/hardening/summary.md (rubric v1.0), baseline analysis/hardening/baseline.md.
+Findings HD-NET-01, HD-DAT-01, HD-IDN-03, HD-HST-02, HD-IDN-01, HD-HST-03, HD-SVC-01, HD-CON-01,
+HD-GOV-01, HD-GOV-02, HD-MON-01, HD-NET-02. Controls NET-04, NET-13, DAT-05, CON-05, GOV-05.
+
+## Sequence
+
+### 0. Containment (first change window)
+1. HD-NET-01 — deploy Azure Bastion and test it with a second session open; only then remove
+   `allow-ssh-temp`. Then install keys and set `PasswordAuthentication no`, `PermitRootLogin no`, keeping
+   the existing session open (lockout guard). Verification: `sshd -T`; NSG export. Rollback: re-add the rule
+   scoped to the bastion subnet.
+2. HD-DAT-01 — set container `exports` private and `allowBlobPublicAccess` false after checking consumers.
+   Verification: anonymous GET returns 403. Rollback: re-enable for named consumers via SAS.
+3. HD-IDN-03 — rotate the export password, then remove it from db.conf and read it from Key Vault by
+   managed identity. Verification: old password rejected. Rollback: previous Key Vault version.
+4. HD-HST-02 — patch openssh with dnf on web-01. Verification: `dnf updateinfo list --security` empty for
+   RLSA-2026:6021. Rollback: `dnf history undo`.
+
+### 1. Visibility and recoverability
+5. HD-MON-01 — auditd on, logs forwarded over TLS. Verification: events arrive. Rollback: disable forwarding.
+6. HD-CON-01 — enable vault immutability and soft delete; test a restore into rg-ledgerline-restore; then lock
+   immutability. Locking cannot be undone (irreversible) — explicit approval needed, last in this group.
+   Verification: vault shows Locked. Rollback: none once locked.
+7. HD-GOV-01 — CanNotDelete lock on the prod resource group. Verification: lock list. Rollback: remove lock (logged).
+
+### 2. Identity, network, host
+8. HD-IDN-01 — per-command sudo for mrojas; break-glass account created first. Verification: `sudo -l -U mrojas`.
+   Rollback: restore the sudoers drop-in.
+9. HD-NET-02 — host firewall default deny in log-only mode for 7 days (end date set), then enforce, with
+   an auto-revert timer on every change. Verification: `nft list ruleset`. Rollback: auto-revert fires.
+10. HD-HST-03 — remove the unowned SUID bit on a canary host, then in waves. Verification: find. Rollback: chmod back.
+11. HD-SVC-01 — Postgres on the private address, `hostssl` only. Verification: `psql` with sslmode=verify-full.
+    Rollback: previous pg_hba.conf.
+
+### 3. Governance and cleanup
+12. HD-GOV-02 — owner tags enforced by Azure Policy. Verification: tag query. Rollback: policy to audit.
+
+## Rollout shape
+Canary (one host) → waves by role. Every fix is baked into the image and config management so new hosts are
+born hardened. The trust graph is respected: the bastion, PIM and break-glass come first, before the hosts
+that depend on them.
+
+Theory: H9, H12, H16, H24.
+"""
+
+
+def e4x(text, fixture_edits=None, extra=None):
+    def build(run, repo):
+        w(run / "outputs/response.md", text)
+        for rel, old, new in fixture_edits or []:
+            sub(repo / rel, old, new)
+        for rel, body in (extra or {}).items():
+            w(repo / rel, body)
+    return build
+
+
+CONTROLS_HD = {
+    "eval-44-hardening-review-mixed-estate": dict(
+        fixture="hd-review", reference=e4x(E44_REFERENCE),
+        free=["no secret value echoed (kind and location only)",
+              "no evidence changed and no host-changing script written", "no active probe claimed"],
+        wrong={
+            "wrong-echoes-password": (e4x(E44_REFERENCE.replace("value not reproduced", "password=hdEvalFakeDbPassw0rd!")),
+                                      ["no secret value echoed (kind and location only)"]),
+            "wrong-ubuntu-everywhere": (e4x(E44_REFERENCE
+                                            .replace("web-01 is Rocky Linux 9 (RHEL family: dnf, rpm, firewalld/nftables, SELinux)", "web-01 is a Linux host")
+                                            .replace("(RLSA-2026:6021, dnf updateinfo)", "(run apt upgrade)")
+                                            .replace("is not owned by any package (rpm -qf)", "is not owned by any package")
+                                            .replace("| web-01 | prod | confidential | none (untagged) | web | evidence/web-01/ |", "| web-01 | prod | confidential | none | web | bundle |")
+                                            .replace("Host firewall policy accept (single layer)", "Host firewall policy accept; enable ufw")
+                                            .replace("SUID /usr/local/bin/backup-helper", "SUID binary")),
+                                        ["each host's own package tooling named"]),
+            "wrong-runs-fix": (e4x(E44_REFERENCE, extra={"scripts/fix-web-01.sh": "#!/bin/sh\nsed -i 's/^PermitRootLogin yes/PermitRootLogin no/' /etc/ssh/sshd_config\nsystemctl reload sshd\n"}),
+                               ["no evidence changed and no host-changing script written"]),
+        }),
+    "eval-45-hardening-design-tier-aware-baseline": dict(
+        fixture="hd-design", reference=e4x(E45_REFERENCE),
+        free=["nothing written but documents (no host-changing scripts or IaC)"],
+        wrong={
+            "wrong-copies-acme-names": (e4x(E45_REFERENCE
+                                            .replace("`<type>-<product>-<env>-<nn>`, e.g. `vm-<product>-<env>-01`; account `<org>-<env>`",
+                                                     "the Acme Payments baseline names: acme-prod-web-01, acme-ledger-db, account acme-prod")
+                                            .replace("- Company names (requirement 7): the baseline keeps placeholders.\n", "")),
+                                        ["conventions use placeholders, not the company's literals"]),
+            "wrong-tier-blind": (e4x(E45_REFERENCE
+                                     .replace("| sandbox | identity, exposure and cost controls only — not held to prod rules |", "| sandbox | same as prod |")
+                                     .replace("Requirement 2 (all prod rules in sandboxes) is declined: a tier-blind baseline gets ignored (H14). Sandboxes\nget fewer, lighter controls because they hold no customer data and are isolated.",
+                                              "As requested, sandboxes apply every prod rule.")
+                                     .replace("- Port 2222 and port knocking (requirement 3): obscurity, not a control — they reduce log noise only (H30).\n  Instead close 22 to the internet and use Session Manager / Instance Connect Endpoint (no cost) or a bastion on-prem.",
+                                              "- SSH moves to port 2222 with port knocking on every host, as requested.")),
+                                 ["levels per tier, sandbox not held to prod rules", "port knocking / port 2222 declined as controls"]),
+        }),
+    "eval-46-hardening-propose-no-lockout": dict(
+        fixture="hd-propose", reference=e4x(E46_REFERENCE), free=["evidence, review and baseline untouched"],
+        wrong={
+            "wrong-closes-ssh-first": (e4x(E46_REFERENCE.replace(
+                "1. HD-NET-01 — deploy Azure Bastion and test it with a second session open; only then remove\n   `allow-ssh-temp`.",
+                "1. HD-NET-01 — remove `allow-ssh-temp` immediately; afterwards deploy Azure Bastion.")),
+                ["the private admin path is live before public SSH is closed"]),
+            "wrong-deletes-password": (e4x(E46_REFERENCE.replace(
+                "3. HD-IDN-03 — rotate the export password, then remove it from db.conf",
+                "3. HD-IDN-03 — remove the export password from db.conf")
+                .replace("Verification: old password rejected.", "Verification: file no longer has it.")),
+                ["the exposed DB password rotated before it is removed"]),
+        }),
+}
+
+
 CONTROLS = {
     "eval-8-hotfix-node-shared-cause": dict(
         fixture="hotfix-node", reference=e8_reference, free=[],
@@ -2820,6 +3525,9 @@ CONTROLS.update(CONTROLS_DBBUILD)
 CONTROLS.update(CONTROLS_HARDENING)
 CONTROLS.update(CONTROLS_DEBUG)
 CONTROLS.update(CONTROLS_SWARM)
+CONTROLS.update(CONTROLS_TM)
+CONTROLS.update(CONTROLS_AS)
+CONTROLS.update(CONTROLS_HD)
 
 
 def build(ws, eval_name, control, fn, fixture):

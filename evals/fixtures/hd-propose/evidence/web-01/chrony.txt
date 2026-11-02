@@ -1,0 +1,7 @@
+$ timedatectl show -p NTPSynchronized --value
+yes
+$ chronyc -n sources
+MS Name/IP address         Stratum Poll Reach LastRx Last sample
+^* 168.61.215.74                 2   10   377   321    +12us[ +15us] +/-   18ms
+^- 40.119.6.228                  2   10   377   410   -211us[ -208us] +/-   31ms
+^- 20.101.57.9                   3   10   377   988    +80us[ +82us] +/-   44ms

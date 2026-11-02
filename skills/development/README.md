@@ -87,6 +87,22 @@ The ledger is an **append-only log** in a strict grammar — every stage appends
 
 Add `.workflow/` to the host repo's `.gitignore` unless you want the plan and the ledger in version control — both are legitimate choices, and committing them makes the loop's reasoning reviewable.
 
+## Security runs through the pipeline, not after it
+
+Security is not an eighth stage. Most vulnerabilities are ordinary defects in places where a defect has security consequences, so each stage carries its part, gated by one **security trigger** — the change adds an entry point, crosses a trust boundary, changes who may do what, or handles identity, money, secrets, personal data, paths, queries or URLs:
+
+| Stage | What it adds when the trigger fires |
+|---|---|
+| architect-deep-dive | Abuse cases, trust boundaries, the authorisation rule and where it's enforced, domain primitives, never-logged values, fail-open/closed per control — or a handoff to [threatmodel](../security/threatmodel/SKILL.md) for anything large |
+| agent-brief | Each of those as an acceptance criterion: abuse cases as refusals, authorisation for the allowed and the refused actors, domain primitives as key interfaces |
+| acceptance-tests | Refusals tested from outside with their contrast; an actor × operation authorisation matrix with two real identities; refusals that don't leak |
+| tdd | Domain primitives built first, tested normal / boundary / invalid / extreme |
+| refactor-review | A security-smell family; at a trust boundary those are blocking, never noted |
+| devils-advocate | The security surface split into delegates: authorisation bypass, source-to-sink tracing including second-order paths, interface assumptions, leaks, degraded modes |
+| tyr-verdict | Security findings refuted only on a code path, never downgraded for being hard to reach, and closed only by a slice with an abuse test |
+
+When the trigger doesn't fire, each stage says so in one line and moves on. For a whole-codebase review rather than a change, use [appsec](../security/appsec/SKILL.md).
+
 ## Reference docs
 
 Each lives in the folder of the skill that uses it.
@@ -95,6 +111,7 @@ Each lives in the folder of the skill that uses it.
 |-----|---------|
 | [clean-architecture](architect-deep-dive/clean-architecture.md) | architect-deep-dive — dependency direction, policy vs. detail, boundary placement |
 | [records](architect-deep-dive/records.md) | architect-deep-dive — when a decision earns an ADR, the ADR and glossary formats, where they go |
+| [security](architect-deep-dive/security.md) | architect-deep-dive — the security trigger, the questions behind the Security & permissions dimension, when to hand off to threatmodel |
 | [code-smells](refactor-review/code-smells.md) | refactor-review — the symptom catalog |
 | [refactoring-techniques](refactor-review/refactoring-techniques.md) | refactor-review — the treatment catalog |
 | [comments](refactor-review/comments.md) | refactor-review — which comments earn their place |
@@ -102,6 +119,7 @@ Each lives in the folder of the skill that uses it.
 | [mocking](tdd/mocking.md) | tdd — when and how to mock |
 | [deep-modules](tdd/deep-modules.md) | tdd — the deep-module principle |
 | [interface-design](tdd/interface-design.md) | tdd — designing for testability |
+| [domain-primitives](tdd/domain-primitives.md) | tdd — security-relevant values as validated, immutable types; validation order; the tests they need; read-once secrets |
 
 ## Measured
 
