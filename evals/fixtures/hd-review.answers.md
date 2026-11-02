@@ -1,6 +1,6 @@
 Answer key for `hd-review/`. It lives **outside** the fixture folder on purpose: everything inside the folder is copied into the run, and a run that can read the answer key measures nothing.
 
-# hd-review — `hardening` in Review mode (eval 41)
+# hd-review — `hardening` in Review mode (eval 44)
 
 A small **mixed** prod estate: `web-01` on Rocky Linux 9 and `db-01` on Debian 12 in one Azure subscription, plus an off-site backup bucket in a separate AWS account. Evidence is command output and file copies; nothing is live.
 

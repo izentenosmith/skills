@@ -1,6 +1,6 @@
 Answer key for `hd-propose/`. It lives **outside** the fixture folder on purpose.
 
-# hd-propose — `hardening` in Propose mode (eval 43)
+# hd-propose — `hardening` in Propose mode (eval 46)
 
 The hd-review evidence plus a finished Review (`analysis/hardening/summary.md`) and an abridged target baseline (`analysis/hardening/baseline.md`).
 

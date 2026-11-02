@@ -1,6 +1,6 @@
 Answer key for `hd-design/`. It lives **outside** the fixture folder on purpose.
 
-# hd-design — `hardening` in Design mode (eval 42)
+# hd-design — `hardening` in Design mode (eval 45)
 
 A requirements document for a mixed fleet — Ubuntu 22.04, RHEL 9, Alpine containers on EKS — across AWS and on-prem VMware, three tiers, confidential (card-adjacent) data. Its traps sit in what the requirements **ask for**.
 

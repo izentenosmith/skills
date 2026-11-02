@@ -53,13 +53,17 @@ services:
       - ./src:/app/src:cached
       - /app/node_modules      # anonymous volume — see below
     ports:
-      - "9229:9229"            # debugger
+      - "127.0.0.1:9229:9229"  # debugger — loopback only; an open inspector port is remote code execution
   postgres:
     ports:
-      - "5432:5432"            # so a local GUI can connect
+      - "127.0.0.1:5432:5432"  # so a local GUI can connect, and nothing else on the network
 ```
 
 **The anonymous `- /app/node_modules` line is not a typo.** Bind-mounting `./src` (or worse, `.`) shadows what the image built at that path. An anonymous volume on `node_modules` masks the bind mount there and preserves the container's own copy — which matters because the host's `node_modules` was built for the host's architecture and often won't run. Same pattern for `.venv`, `target/`, `vendor/`.
+
+**It goes stale on the next dependency change.** Compose carries anonymous volumes over when it recreates a container, so after a lockfile change and `docker compose up --build`, the *old* `node_modules` volume still masks the new image's copy and the app runs against yesterday's dependencies. `docker compose up --build -V` (`--renew-anon-volumes`) discards them. `develop.watch`, below, avoids the problem entirely.
+
+**Publish to `127.0.0.1`.** `"5432:5432"` listens on every interface of the laptop — a Postgres with the password `localdev` on whatever network the developer is sitting on, with Docker's own iptables rules bypassing `ufw` and `firewalld`. The loopback form costs nothing and the GUI on the same machine still connects.
 
 ---
 
@@ -222,6 +226,52 @@ The app reads the file rather than the variable — a pattern worth adopting if 
 
 **The honest limit:** `secrets.file` is still a file on disk in your repo directory, so it must be gitignored exactly like `.env`. It is better than an env var, not a secret manager. Once this stack leaves laptops, the values belong in whatever the platform provides.
 
+**"The same way" is only roughly true**, so make the path configurable rather than hard-coding `/run/secrets`:
+
+| | Where the file appears | What it is |
+|---|---|---|
+| Compose (no Swarm) | `/run/secrets/<name>` | A **bind mount** of the host file — host ownership and mode, so a non-root container user may not be able to read it; `uid`/`gid`/`mode` are ignored |
+| Swarm | `/run/secrets/<name>` | Encrypted in the Raft store, delivered to a **tmpfs**; `uid`/`gid`/`mode` honoured |
+| Kubernetes | wherever the pod's `mountPath` says | A tmpfs volume from a Secret — base64 in etcd unless encryption at rest is on |
+
+The `*_FILE` variable is what makes one image work under all three.
+
+---
+
+## Housekeeping that saves an afternoon
+
+- **Pin the project name** with a top-level `name: <project>`. It otherwise defaults to the directory name, so two checkouts or git worktrees of the same repo — both called `app` — silently share volumes, networks and containers.
+- **Cap the logs on a stack that runs for days.** The default `json-file` driver never rotates; a chatty service fills Docker Desktop's VM disk. One anchor covers every service:
+
+  ```yaml
+  x-logging: &logging
+    driver: local          # rotates by default; or json-file with options: {max-size: 10m, max-file: "3"}
+  services:
+    api:
+      logging: *logging
+  ```
+- **SELinux hosts (Fedora, RHEL).** A bind mount fails with `permission denied` until it is relabelled: `./src:/app/src:z` (shared) or `:Z` (this container only). Never put `:Z` on a home or system directory — it relabels the host path for everything else too.
+- **The file name.** Compose v2 prefers `compose.yaml` and still reads `docker-compose.yml`; the top-level `version:` key is obsolete and ignored. In an existing repo, keep whichever name is already there.
+
+---
+
+## If the same file goes to `docker stack deploy`
+
+"Keep the base deployable" means **it runs clean without the override** — not that it is a Swarm stack file. Swarm reads the same format and quietly ignores much of what this skill relies on:
+
+| Key | Under `docker stack deploy` |
+|---|---|
+| `build:` | Ignored — the image must already be in a registry |
+| `depends_on` (any condition) | Ignored — startup order and health gates disappear; the app's own retries are all that's left |
+| `restart:` | Ignored — `deploy.restart_policy` (`none`/`on-failure`/`any`) replaces it |
+| `container_name`, `links`, `network_mode`, `privileged`, `devices` | Ignored |
+| `develop.watch`, `profiles`, top-level `name` | Rejected or ignored, depending on the CLI version |
+| `.env` | **Not loaded** — only the shell environment is interpolated |
+| `secrets.file` | Uploaded from the deploying machine into the cluster's store |
+| `ports:` | Published on every node through the routing mesh, not one host |
+
+So a team deploying with Swarm keeps a **separate stack file** (or a `-f stack.yml` overlay) and validates it with `docker stack config -c stack.yml`. Adding `deploy:` keys to the dev file is the move this skill avoids.
+
 ---
 
 ## Where the dev/prod line actually sits
@@ -233,7 +283,7 @@ Reasonable to configure here:
 - Image versions matching production's majors
 - The same service topology
 - Health gates
-- Resource limits, **if** the point is to catch a memory leak locally
+- Resource limits, **if** the point is to catch a memory leak locally — and then set `memswap_limit` equal to `mem_limit`. A memory limit alone grants the same amount again as swap, so a leak swaps and slows instead of being killed, which is the failure you wanted to see. An out-of-memory kill shows as exit `137` with `docker inspect -f '{{.State.OOMKilled}}'` reading `true`.
 
 Not reasonable here:
 

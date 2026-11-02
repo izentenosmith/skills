@@ -1,6 +1,6 @@
 Answer key for `as-design/`. It lives **outside** the fixture folder on purpose: everything inside the folder is copied into the run, and a run that can read the answer key measures nothing.
 
-# as-design — `appsec` in Design mode (eval 39)
+# as-design — `appsec` in Design mode (eval 42)
 
 Requirements for a multi-tenant invoicing API. The traps are in "What the team proposed": each is quick to build and each is a known anti-pattern. A good `controls.md` declines or reshapes every one, with the reason, and leaves nothing built.
 

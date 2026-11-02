@@ -1,6 +1,6 @@
 Answer key for `tm-propose/`. It lives **outside** the fixture folder on purpose: everything inside the folder is copied into the run, and a run that can read the answer key measures nothing.
 
-# tm-propose — `threatmodel` in Propose mode (eval 37)
+# tm-propose — `threatmodel` in Propose mode (eval 40)
 
 The tm-review documents plus a finished review in `analysis/threatmodel/summary.md` (capped 2.0, gate failing every condition). The run writes the risk-treatment plan.
 

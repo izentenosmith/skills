@@ -1,0 +1,6 @@
+$ docker events --since 10m --filter container=shopfront-worker-1
+2026-10-30T16:41:39.896Z container oom 9f2c1d (image=shopfront-worker, name=shopfront-worker-1)
+2026-10-30T16:41:39.904Z container die 9f2c1d (exitCode=137, image=shopfront-worker, name=shopfront-worker-1)
+2026-10-30T16:41:40.391Z container start 9f2c1d (image=shopfront-worker, name=shopfront-worker-1)
+2026-10-30T16:42:17.388Z container oom 9f2c1d (image=shopfront-worker, name=shopfront-worker-1)
+2026-10-30T16:42:17.395Z container die 9f2c1d (exitCode=137, image=shopfront-worker, name=shopfront-worker-1)

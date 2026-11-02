@@ -93,7 +93,7 @@ mechanism is named as current practice.
 
 ## Measured
 
-One eval per mode in [`evals/`](../../evals/README.md) (evals 35–43): a Review fixture seeded with defects, a Design fixture whose traps sit in what the requirements ask for, and a Propose fixture with a finished review. Each has a reference answer, a do-nothing answer and plausible-but-wrong answers that separate as intended (`python3 evals/controls/make_controls.py --only 35 36 37 38 39 40 41 42 43`).
+One eval per mode in [`evals/`](../../evals/README.md) (evals 38–46): a Review fixture seeded with defects, a Design fixture whose traps sit in what the requirements ask for, and a Propose fixture with a finished review. Each has a reference answer, a do-nothing answer and plausible-but-wrong answers that separate as intended (`python3 evals/controls/make_controls.py --only 38 39 40 41 42 43 44 45 46`).
 
 **First run (2026-11-02, n=1, against no skill — threatmodel Propose re-run n=3 after a fix), scored out of 10 on the delta assertions** — the ones that test what each skill instructs:
 

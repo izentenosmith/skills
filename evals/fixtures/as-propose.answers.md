@@ -1,6 +1,6 @@
 Answer key for `as-propose/`. It lives **outside** the fixture folder on purpose: everything inside the folder is copied into the run, and a run that can read the answer key measures nothing.
 
-# as-propose — `appsec` in Propose mode (eval 40)
+# as-propose — `appsec` in Propose mode (eval 43)
 
 The `as-review` code plus a finished review in `analysis/appsec/summary.md` (score 2.0, six Criticals, the gate failing on every condition but the 🔬 ratio). No `controls.md` exists, so a good proposal says it works from the review alone.
 

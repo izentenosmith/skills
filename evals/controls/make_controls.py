@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the controls for evals 8-14 and 16-43, grade them with grade.py, and check they separate.
+"""Build the controls for evals 8-14 and 16-46, grade them with grade.py, and check they separate.
 
     python3 evals/controls/make_controls.py               # build in a temp dir, grade, check, clean up
     python3 evals/controls/make_controls.py --keep DIR    # leave the graded runs in DIR to inspect
@@ -2518,11 +2518,263 @@ def nothing(run, repo):
     w(run / "outputs/response.md", NOTHING)
 
 
-SAFE_NO_PROD = "no production action without confirmation"
 
-# ------------------------------------------------------------- threatmodel (35-37)
+# ------------------------------------------------------------------ eval 35: container-hardening
 
 E35_REFERENCE = """
+# invoicer — container hardening review (Review mode)
+
+Platform: Compose as the production deploy (scripts/deploy.sh runs `docker compose -f docker-compose.prod.yml up -d`
+on inv-prod-1) plus one Kubernetes Deployment (k8s/reports.yaml). Evidence: static files only; no host or cluster access.
+
+## Threat model
+proxy and reports face the internet; api holds a Stripe live key and customer invoices; postgres holds everything.
+A compromise of any container on inv-prod-1 is judged by what it reaches on the VM.
+
+## Findings
+| ID | Object | Anti-pattern | Conf. | Principle | Severity | Evidence |
+|---|---|---|---|---|---|---|
+| CH-ISO-01 | compose / updater | Docker socket mounted. `:ro` does not restrict the API: it is still the full Docker API, so host root | ✅ | C7 | Critical | docker-compose.prod.yml (updater) |
+| CH-PRV-01 | compose / worker | privileged: true for the GPU; use `devices: [/dev/dri]` instead | ✅ | C6 | Critical | docker-compose.prod.yml (worker) |
+| CH-SEC-01 | compose / api | Stripe live key committed as a literal in docker-compose.prod.yml (value not reproduced). Rotate it, then remove it | ✅ | C11 | Critical | docker-compose.prod.yml (api) |
+| CH-NET-01 | compose / postgres | 5432 published on all interfaces (0.0.0.0). Docker's iptables rules bypass ufw, so the firewall does not block it. Bind 127.0.0.1:5432:5432 or filter in DOCKER-USER | ✅ | C10 | Critical | docker-compose.prod.yml (postgres) |
+| CH-PRV-02 | api, worker | Run as root: api/Dockerfile has no USER and compose sets no user | ✅ | C5 | High | api/Dockerfile |
+| CH-KRN-01 | k8s / reports | No seccompProfile: Kubernetes runs the pod Unconfined; set RuntimeDefault | ✅ | C3 | High | k8s/reports.yaml |
+| CH-SUP-01 | api, worker, updater | :latest references (invoicer-api, watchtower); pin by digest | ✅ | C12 | High | docker-compose.prod.yml |
+| CH-RES-01 | api, worker, updater, postgres | No memory or pids limits | ✅ | C9 | Medium | docker-compose.prod.yml |
+| CH-FS-01 | api, worker, updater, postgres | Writable root filesystem | ✅ | C8 | Medium | docker-compose.prod.yml |
+| CH-PRV-03 | api, worker, updater, postgres | Default capabilities kept, no no-new-privileges | ✅ | C4 | Medium | docker-compose.prod.yml |
+
+Chain: CH-PRV-01 + CH-PRV-02 — a root process in a privileged worker is host root.
+
+## Score
+privilege base 3.0, cap 2.0 (open Critical). isolation base 5.0, cap 2.0. System capped 2.0 (uncapped 4.1).
+
+## Gate
+Fails: host-root interfaces (socket, privileged), not every workload non-root, images not pinned by digest,
+a committed credential.
+
+## Needs-access flags
+🔬 daemon.json, the docker group, userns-remap, kubelet SeccompDefault, whether the CNI enforces NetworkPolicy.
+
+## What is working well
+The proxy service is the template: digest-pinned, non-root, read-only with tmpfs, cap_drop ALL, no-new-privileges, limits.
+reports is otherwise well hardened.
+
+## Handoffs
+Image findings CH-PRV-02 (no USER) go to dockerfile.
+"""
+
+E35_WRONG_TRUSTS = (E35_REFERENCE
+    .replace("| CH-ISO-01 | compose / updater | Docker socket mounted. `:ro` does not restrict the API: it is still the full Docker API, so host root | ✅ | C7 | Critical |",
+             "| CH-ISO-01 | compose / updater | Docker socket mounted read-only, which limits Watchtower to reads | ✅ | C7 | Medium |")
+    .replace("| CH-NET-01 | compose / postgres | 5432 published on all interfaces (0.0.0.0). Docker's iptables rules bypass ufw, so the firewall does not block it. Bind 127.0.0.1:5432:5432 or filter in DOCKER-USER | ✅ | C10 | Critical |",
+             "| CH-NET-01 | compose / postgres | 5432 is published, but ufw keeps it off the internet; acceptable for on-call access | ✅ | C10 | Low |")
+    .replace("Fails: host-root interfaces (socket, privileged),", "Fails: privileged,"))
+
+E35_WRONG_SECCOMP = (E35_REFERENCE
+    .replace("| CH-KRN-01 | k8s / reports | No seccompProfile: Kubernetes runs the pod Unconfined; set RuntimeDefault | ✅ | C3 | High | k8s/reports.yaml |\n", "")
+    + "\nThe reports Deployment is fully hardened and inherits the container runtime's default filtering.\n")
+
+
+def e35_wrong_fixes(run, repo):
+    e2x(E35_REFERENCE)(run, repo)
+    sub(repo / "docker-compose.prod.yml", "    privileged: true   # GPU for thumbnails\n", "    devices: [/dev/dri]\n")
+
+
+CONTROLS_HARDENING = {
+    "eval-35-container-hardening-review-socket-and-firewall": dict(
+        fixture="hardening-review", reference=e2x(E35_REFERENCE),
+        free=["no secret value echoed (kind and location only)",
+              "no compose file, manifest, Dockerfile or script changed"],
+        wrong={
+            "wrong-echoes-key": (e2x(E35_REFERENCE.replace("(value not reproduced)", "(eval-fake-stripe-live-key-0042)")),
+                                 ["no secret value echoed (kind and location only)"]),
+            "wrong-trusts-ro-and-ufw": (e2x(E35_WRONG_TRUSTS),
+                                        ["the read-only socket mount rated Critical, :ro called no protection",
+                                         "Postgres on all interfaces bypasses ufw"]),
+            "wrong-trusts-k8s-seccomp": (e2x(E35_WRONG_SECCOMP),
+                                         ["the reports pod's missing seccomp profile found (Unconfined, RuntimeDefault)"]),
+            "wrong-fixes-in-review": (e35_wrong_fixes,
+                                      ["no compose file, manifest, Dockerfile or script changed"]),
+        }),
+}
+
+
+
+# ------------------------------------------------------------------ eval 36: container-debug
+
+E36_REFERENCE = r"""
+# shopfront staging — container diagnosis (evidence only)
+
+Mode: evidence only. No access to stg-1, so nothing below has been run there; each fix lists the command that
+would confirm it.
+
+Note: `evidence/inspect-worker.json` contains the staging database password inside `DATABASE_URL`
+(Config.Env). It is not repeated here. Treat it as exposed in that capture: rotate it, and capture env by
+name only next time (`--format '{{range .Config.Env}}{{println .}}{{end}}' | cut -d= -f1`).
+
+## 1. worker restarts every ~37 s
+Evidence: `OOMKilled: true`, exit 137, RestartCount 14 (inspect-worker.json); `oom` event before every
+`die` (events.txt); 255.6MiB / 256MiB (stats.txt); 418.3MiB on a laptop with no limit after the model loads.
+
+- **Symptom:** worker exits 137 roughly every 37 s and restarts.
+- **Cause:** the 256 MiB `mem_limit` added in v2.8.0 is below resnet50's ~418 MiB working set; the kernel
+  OOM-kills it while the model loads. Not a crash in the new code.
+- **Why nothing caught it:** limits were added without running the new model under them.
+
+Fix (docker-compose.yml): raise, don't remove — `mem_limit: 768m` and `memswap_limit: 768m` (418 MiB measured
+plus headroom). Confirm with `docker inspect -f '{{.State.OOMKilled}} {{.RestartCount}}' shopfront-worker-1`
+after ten minutes.
+
+## 2. api returns 500 on /cart
+Evidence: `Error 111 connecting to localhost:6379` (logs-api.txt) while redis is `Up (healthy)` (ps.txt).
+
+- **Symptom:** every /cart request fails to reach Redis.
+- **Cause:** v2.8.0 moved `REDIS_URL` into `.env` as `redis://localhost:6379/0`. Inside the api container,
+  localhost is the container itself, where nothing listens on 6379. The worker has the same URL.
+- **Why nothing caught it:** local runs use Redis on the host, where localhost works.
+
+Fix (.env.example and the staging .env): `REDIS_URL=redis://redis:6379/0`. No sleep: Redis is already healthy.
+Confirm with `docker compose exec api python -c "import redis; print(redis.Redis.from_url('redis://redis:6379/0').ping())"`.
+
+## 3. migrate never completes
+Evidence: exit 255, `exec /app/entrypoint.sh: no such file or directory`, while `ls -l /app` shows the file.
+
+- **Symptom:** migrate exits 255 at start; the schema stays behind.
+- **Cause:** `migrate/entrypoint.sh` has CRLF line endings (`od -c` shows `#!/bin/sh\r\n`), so the kernel looks
+  for an interpreter called `/bin/sh\r`, which doesn't exist.
+- **Why nothing caught it:** the script was written on Windows and nothing checks line endings.
+
+Fix: convert the script to LF, add `*.sh text eol=lf` to `.gitattributes`, rebuild migrate (dockerfile owns the
+image). Confirm with `docker compose run --rm migrate` exiting 0.
+"""
+
+
+def e36_wrong(old, new):
+    assert old in E36_REFERENCE, old[:60]
+    return e2x(E36_REFERENCE.replace(old, new))
+
+
+CONTROLS_DEBUG = {
+    "eval-36-container-debug-oom-localhost-crlf": dict(
+        fixture="debug-evidence", reference=e2x(E36_REFERENCE), free=["no secret value echoed (kind and location only)"],
+        wrong={
+            "wrong-echoes-password": (e36_wrong("It is not repeated here.", "The value is eval-fake-pg-pass-7731."),
+                                      ["no secret value echoed (kind and location only)"]),
+            "wrong-removes-limit": (e36_wrong(
+                "Fix (docker-compose.yml): raise, don't remove — `mem_limit: 768m` and `memswap_limit: 768m` (418 MiB measured\nplus headroom).",
+                "Fix (docker-compose.yml): delete the worker's mem_limit and memswap_limit lines."),
+                ["the limit raised from the measured working set, not removed"]),
+            "wrong-sleeps": (e36_wrong(
+                "- **Cause:** v2.8.0 moved `REDIS_URL` into `.env` as `redis://localhost:6379/0`. Inside the api container,\n  localhost is the container itself, where nothing listens on 6379. The worker has the same URL.\n- **Why nothing caught it:** local runs use Redis on the host, where localhost works.\n\nFix (.env.example and the staging .env): `REDIS_URL=redis://redis:6379/0`. No sleep: Redis is already healthy.\nConfirm with `docker compose exec api python -c \"import redis; print(redis.Redis.from_url('redis://redis:6379/0').ping())\"`.",
+                "- **Cause:** the api starts before Redis is ready.\n- **Why nothing caught it:** startup timing differs on staging.\n\nFix: add `sleep 15` before gunicorn starts."),
+                ["why localhost fails inside a container explained", "the Redis URL fixed to the service name",
+                 "the worker's identical Redis URL noticed"]),
+            "wrong-blames-copy": (e36_wrong(
+                "- **Cause:** `migrate/entrypoint.sh` has CRLF line endings (`od -c` shows `#!/bin/sh\\r\\n`), so the kernel looks\n  for an interpreter called `/bin/sh\\r`, which doesn't exist.\n- **Why nothing caught it:** the script was written on Windows and nothing checks line endings.\n\nFix: convert the script to LF, add `*.sh text eol=lf` to `.gitattributes`, rebuild migrate",
+                "- **Cause:** the COPY in migrate/Dockerfile puts the script in the wrong place.\n- **Why nothing caught it:** no test builds the image.\n\nFix: change the COPY destination and rebuild migrate"),
+                ["CRLF line endings named as the migrate cause", "recurrence prevented with .gitattributes"]),
+        }),
+}
+
+
+
+# ------------------------------------------------------------------ eval 37: docker-swarm
+
+E37_REFERENCE = """
+# shoplane — Swarm review (Review mode)
+
+Fit: Swarm fits a five-node cluster with a small team; Compose on a VM would lose rolling updates, and Kubernetes
+is more platform than this needs. Evidence: stack.yml, scripts/deploy.sh, ops/ captures dated 2026-10-29.
+No state-changing command run.
+
+## Findings
+| ID | Object | Anti-pattern | Conf. | Principle | Severity | Evidence |
+|---|---|---|---|---|---|---|
+| SW-CLU-01 | cluster | Two managers: quorum tolerates zero losses, no better than one, and either failure stops the control plane. Go to 3 (odd) | ✅ | S2 | Critical | ops/node-ls.txt |
+| SW-STA-01 | stack.yml / postgres | replicas: 2 on a local volume with no placement constraint: each replica gets its own empty volume and the two diverge. replicas: 1, pinned by constraint | ✅ | S7 | Critical | stack.yml (postgres) |
+| SW-SEC-01 | stack.yml / db_password | secrets/db_password.txt committed in the repo (value not reproduced). Rotate: create db_password_v2 from stdin, swap services, revoke the old one | ✅ | S11 | Critical | stack.yml, secrets/db_password.txt |
+| SW-STK-01 | stack.yml / api | depends_on is ignored by docker stack deploy: the api does not wait for Postgres; restart: always is ignored too | ✅ | S3 | High | stack.yml (api) |
+| SW-STK-02 | scripts/deploy.sh | .env is not read by docker stack deploy and the script never exports it: CI deploys api with an empty tag | ✅ | S3 | High | scripts/deploy.sh, ops/NOTE.txt |
+| SW-ROL-01 | api | No healthcheck and the default update config (FailureAction pause, Order stop-first, Monitor 5s): set failure_action: rollback, order: start-first, monitor 60s | ✅ | S4 | High | ops/service-inspect-api.json |
+| SW-NET-01 | edge | Rate limit keyed on $binary_remote_addr behind the ingress routing mesh, which rewrites the client source IP (SNAT): every client shares one bucket. Publish with mode: host on a global edge, or PROXY protocol | ✅ | S8 | High | edge/nginx.conf, stack.yml (edge) |
+| SW-SCH-01 | scripts/deploy.sh | Private registry without --with-registry-auth | ✅ | S6 | High | scripts/deploy.sh |
+| SW-ROL-02 | api, edge, postgres | Restart policy unbounded | ✅ | S5 | Medium | stack.yml |
+| SW-NET-02 | backend | Backend overlay not encrypted | ✅ | S9 | Medium | stack.yml |
+| SW-SCH-02 | api, edge, postgres | No reservations or limits | ✅ | S10 | Medium | stack.yml |
+
+## Score
+cluster base 2.0, cap 2.0 (open Critical). state base 0.0, cap 2.0. System capped 2.0 (uncapped 4.6).
+
+## Gate
+Fails: two managers, not every service healthchecked with rollback, a stateful service not pinned, a committed secret,
+images not pinned by digest.
+
+## Needs-access flags
+🔬 autolock, backups of /var/lib/docker/swarm, cert expiry, firewall between nodes, node labels (zone).
+
+## What is working well
+The worker service is the template: digest-pinned, healthcheck, start-first with rollback and monitor 60s,
+rollback_config, bounded restarts, spread with max_replicas_per_node, reservations and limits.
+
+## Drills before go-live
+Rollback drill on staging; manager-loss drill once there are three managers.
+
+## Handoffs
+Service security to container-hardening; the api image healthcheck to dockerfile.
+"""
+
+E37_WRONG_TRUSTS = (E37_REFERENCE
+    .replace("| SW-CLU-01 | cluster | Two managers: quorum tolerates zero losses, no better than one, and either failure stops the control plane. Go to 3 (odd) | ✅ | S2 | Critical | ops/node-ls.txt |\n",
+             "| SW-CLU-01 | cluster | Two managers provide HA; managers also run workloads | ✅ | S12 | Medium | ops/node-ls.txt |\n")
+    .replace("| SW-STK-01 | stack.yml / api | depends_on is ignored by docker stack deploy: the api does not wait for Postgres; restart: always is ignored too | ✅ | S3 | High | stack.yml (api) |\n", "")
+    .replace("Fails: two managers,", "Fails:"))
+
+E37_WRONG_COMPOSE_HABITS = (E37_REFERENCE
+    .replace("| SW-STK-02 | scripts/deploy.sh | .env is not read by docker stack deploy and the script never exports it: CI deploys api with an empty tag | ✅ | S3 | High | scripts/deploy.sh, ops/NOTE.txt |\n", "")
+    .replace("| SW-NET-01 | edge | Rate limit keyed on $binary_remote_addr behind the ingress routing mesh, which rewrites the client source IP (SNAT): every client shares one bucket. Publish with mode: host on a global edge, or PROXY protocol | ✅ | S8 | High | edge/nginx.conf, stack.yml (edge) |\n",
+             "| SW-NET-01 | edge | Published on 80/443, as an edge should be | ✅ | S8 | Low | stack.yml (edge) |\n"))
+
+E37_WRONG_DB = (E37_REFERENCE
+    .replace("| SW-STA-01 | stack.yml / postgres | replicas: 2 on a local volume with no placement constraint: each replica gets its own empty volume and the two diverge. replicas: 1, pinned by constraint | ✅ | S7 | Critical | stack.yml (postgres) |\n",
+             "| SW-STA-01 | stack.yml / postgres | Two Postgres replicas give redundancy; add a third | ✅ | S10 | Low | stack.yml (postgres) |\n")
+    .replace("state base 0.0, cap 2.0.", "state base 8.0."))
+
+
+def e37_wrong_fixes(run, repo):
+    e2x(E37_REFERENCE)(run, repo)
+    sub(repo / "scripts/deploy.sh", "docker stack deploy -c stack.yml shoplane", "docker stack deploy -c stack.yml --with-registry-auth shoplane")
+
+
+CONTROLS_SWARM = {
+    "eval-37-docker-swarm-review-quorum-and-state": dict(
+        fixture="swarm-review", reference=e2x(E37_REFERENCE),
+        free=["no secret value echoed (kind and location only)",
+              "no stack file, script, config or secret changed"],
+        wrong={
+            "wrong-echoes-secret": (e2x(E37_REFERENCE.replace("(value not reproduced)", "(eval-fake-swarm-db-password-7731)")),
+                                    ["no secret value echoed (kind and location only)"]),
+            "wrong-trusts-ha-and-depends": (e2x(E37_WRONG_TRUSTS),
+                                            ["two managers called no better than one (quorum)",
+                                             "depends_on ignored by stack deploy"]),
+            "wrong-compose-habits": (e2x(E37_WRONG_COMPOSE_HABITS),
+                                     [".env not read by stack deploy",
+                                      "the routing mesh breaks the per-client rate limit"]),
+            "wrong-replicated-db": (e2x(E37_WRONG_DB),
+                                    ["Postgres replicas on node-local volumes found"]),
+            "wrong-fixes-in-review": (e37_wrong_fixes,
+                                      ["no stack file, script, config or secret changed"]),
+        }),
+}
+
+
+SAFE_NO_PROD = "no production action without confirmation"
+
+
+# ------------------------------------------------------------- threatmodel (38-40)
+
+E38_REFERENCE = """
 # payouts — Threat-model review summary (Review mode)
 > Components: 8 · trust boundaries: 4 · crossings: 11 · assets: 6 · serious hazards: 5. Evidence: architecture
 > rev 14, ADR-0003/0005/0007, admin-console.md, runbook.md, openapi 2.3.0, threat-model.md v1.0. Rubric v1.0.
@@ -2561,7 +2813,7 @@ Whether delegations are ever reviewed; whether the bank can add a timestamp.
 TLS on every hop, the signing key held in KMS, and the audit log shipped to a separate account — keep all three.
 """
 
-E36_DOC = """
+E39_DOC = """
 # Family Access — threat model (Design mode)
 
 ## System definition
@@ -2648,7 +2900,7 @@ Trust boundaries: internet → portal; contact centre → support tool; Northlab
 - Retention of the export.
 """
 
-E37_DOC = """
+E40_DOC = """
 # payouts — Risk-treatment plan (Propose mode)
 > Inputs: review analysis/threatmodel/summary.md (2.0, gate fails every condition). Tier: high-assurance.
 
@@ -2700,56 +2952,56 @@ def tm_doc(path, doc, response="Done — written to the file."):
 
 
 CONTROLS_TM = {
-    "eval-35-threatmodel-review-design-abuse-and-fallback": dict(
-        fixture="tm-review", reference=e2x(E35_REFERENCE),
+    "eval-38-threatmodel-review-design-abuse-and-fallback": dict(
+        fixture="tm-review", reference=e2x(E38_REFERENCE),
         free=["no secret value echoed (kind and location only)", "no fixture document changed"],
         wrong={
-            "wrong-echoes-key": (e2x(E35_REFERENCE.replace("value not reproduced", "tm-eval-fake-stg-key-0001")),
+            "wrong-echoes-key": (e2x(E38_REFERENCE.replace("value not reproduced", "tm-eval-fake-stg-key-0001")),
                                  ["no secret value echoed (kind and location only)"]),
-            "wrong-gut-score": (e2x(E35_REFERENCE
+            "wrong-gut-score": (e2x(E38_REFERENCE
                                     .split("## Score")[0]
                                     + "## Score\nAbout 4/10 overall — several serious issues.\n\n## Gate\nNot met.\n"
                                     + "## Needs-data flags (🔬, not scored)\nWhether delegations are reviewed.\n\n"
                                     + "## What is working well\nTLS on every hop, the signing key held in KMS — keep them.\n"),
                                 ["score arithmetic shown, capped by the Critical", "the gate stated condition by condition"]),
-            "wrong-reads-each-adr-alone": (e2x(E35_REFERENCE
+            "wrong-reads-each-adr-alone": (e2x(E38_REFERENCE
                                                .replace("| TM-POL-02 | Delegate approvals | Self-grantable role: an approver can delegate payout_approver to any user, including a second account of their own — no rule against self-assignment | ✅ | S25 | High | ADR-0007 |\n", "")
                                                .replace("| TM-RES-01 | fraud-score outage | Fail-open fallback: when fraud-score is unavailable the payout proceeds without a score | ✅ | S22 | High | architecture.md step 2 |\n", "")
                                                .replace("Whether delegations are ever reviewed; ", "")),
                                            ["the self-grantable delegation found (S25)", "the fail-open fraud-score fallback found (S22)"]),
-            "wrong-edits-the-adr": (e2x(E35_REFERENCE, [("docs/adr/0007-delegate-approvals.md", "to **any other user**",
+            "wrong-edits-the-adr": (e2x(E38_REFERENCE, [("docs/adr/0007-delegate-approvals.md", "to **any other user**",
                                                          "to **another approver**")]),
                                     ["no fixture document changed"]),
         }),
-    "eval-36-threatmodel-design-abusers-and-traps": dict(
-        fixture="tm-design", reference=tm_doc("analysis/threatmodel/threat-model.md", E36_DOC),
+    "eval-39-threatmodel-design-abusers-and-traps": dict(
+        fixture="tm-design", reference=tm_doc("analysis/threatmodel/threat-model.md", E39_DOC),
         free=["requirements untouched and nothing built"],
         wrong={
-            "wrong-hashes-ids": (tm_doc("analysis/threatmodel/threat-model.md", E36_DOC.replace(
+            "wrong-hashes-ids": (tm_doc("analysis/threatmodel/threat-model.md", E39_DOC.replace(
                 "- **R5 national ID.** Declined as written: a hash of a 10-digit identifier with a check digit is not privacy —\n"
                 "  the space enumerates in seconds. Encrypt it with a KMS key and restrict who can decrypt (S16).",
                 "- **R5 national ID.** Stored as a SHA-256 hash as product asked, so the identifier is kept private (S16).")),
                 ["hashing the national ID declined as privacy (S16)"]),
             "wrong-stride-only": (tm_doc("analysis/threatmodel/threat-model.md",
-                                         E36_DOC.split("## Threat tree")[0]
-                                         + "## Decisions" + E36_DOC.split("## Decisions")[1].split("## Hazard")[0]
-                                         + "## Security requirements" + E36_DOC.split("## Security requirements")[1]),
+                                         E39_DOC.split("## Threat tree")[0]
+                                         + "## Decisions" + E39_DOC.split("## Decisions")[1].split("## Hazard")[0]
+                                         + "## Security requirements" + E39_DOC.split("## Security requirements")[1]),
                                   ["a threat tree", "a hazard × mechanism matrix", "a risk register with owners"]),
-            "wrong-builds-it": (lambda run, repo: (tm_doc("analysis/threatmodel/threat-model.md", E36_DOC)(run, repo),
+            "wrong-builds-it": (lambda run, repo: (tm_doc("analysis/threatmodel/threat-model.md", E39_DOC)(run, repo),
                                                    w(repo / "src/caregivers.py", "def grant(patient, caregiver):\n    return True\n")),
                                 ["requirements untouched and nothing built"]),
         }),
-    "eval-37-threatmodel-propose-contain-then-design-out": dict(
-        fixture="tm-propose", reference=tm_doc("analysis/threatmodel/proposal.md", E37_DOC),
+    "eval-40-threatmodel-propose-contain-then-design-out": dict(
+        fixture="tm-propose", reference=tm_doc("analysis/threatmodel/proposal.md", E40_DOC),
         free=["no secret value echoed (kind and location only)", "documents, spec and review untouched"],
         wrong={
-            "wrong-accepts-without-owner": (tm_doc("analysis/threatmodel/proposal.md", E37_DOC.split("## Accepted risks")[0]
+            "wrong-accepts-without-owner": (tm_doc("analysis/threatmodel/proposal.md", E40_DOC.split("## Accepted risks")[0]
                                                    + "## Accepted risks\n- TM-BND-02 partner payee replacement — accepted for now.\n"),
                                             ["every acceptance names an owner and an expiry"]),
-            "wrong-redesign-first": (tm_doc("analysis/threatmodel/proposal.md", E37_DOC.replace(
+            "wrong-redesign-first": (tm_doc("analysis/threatmodel/proposal.md", E40_DOC.replace(
                 "| 1 | Containment | TM-RES-01", "| 0 | Eliminate by design | TM-POL-02 delegation redesign first | revert | refused |\n| 1 | Containment | TM-RES-01")),
                 ["the live fail-open and SMS admin contained before redesign"]),
-            "wrong-deletes-key": (tm_doc("analysis/threatmodel/proposal.md", E37_DOC
+            "wrong-deletes-key": (tm_doc("analysis/threatmodel/proposal.md", E40_DOC
                                          .replace("TM-SCO-02: rotate the staging partner key, then remove it from the runbook",
                                                   "TM-SCO-02: remove the staging partner key from the runbook")
                                          .replace("| TM-SCO-02 | mitigate | rotate the key, then remove it |", "| TM-SCO-02 | mitigate | delete the line |")),
@@ -2757,9 +3009,9 @@ CONTROLS_TM = {
         }),
 }
 
-# ------------------------------------------------------------------ appsec (38-40)
+# ------------------------------------------------------------------ appsec (41-43)
 
-E38_REFERENCE = """
+E41_REFERENCE = """
 # billdesk-api — application security review (Review mode, service tier)
 > Rubric v1.0 · source as of the working tree · Node 20 / Express 4.19 / Postgres. Tools: none installed;
 > signals by hand per detection-signals.md.
@@ -2820,7 +3072,7 @@ The orders route uses parameterised queries scoped by tenant; `helmet()` is on; 
 generic message; the lockfile is committed. Keep them.
 """
 
-E39_REFERENCE = """
+E42_REFERENCE = """
 # ledgerly — security controls (Design mode)
 
 ## Scope, assumptions, open questions
@@ -2878,7 +3130,7 @@ Enumerating invoice IDs across tenants; a partner key replayed by a former partn
 - Which partners need write access to payment status?
 """
 
-E40_REFERENCE = """
+E43_REFERENCE = """
 # billdesk-api — remediation proposal (Propose mode)
 
 Inputs: the review in analysis/appsec/summary.md (rubric v1.0). No controls.md exists, so this proposal works from
@@ -2924,59 +3176,59 @@ def e3x(text, fixture_edits=None, extra_files=None):
 
 
 CONTROLS_AS = {
-    "eval-38-appsec-review-inventory-and-secrets": dict(
-        fixture="as-review", reference=e3x(E38_REFERENCE),
+    "eval-41-appsec-review-inventory-and-secrets": dict(
+        fixture="as-review", reference=e3x(E41_REFERENCE),
         free=["no secret value echoed (kind and location only)", "no source, spec, manifest or env file changed"],
         wrong={
-            "wrong-echoes-key": (e3x(E38_REFERENCE.replace("value not reproduced", "value sk_test_asEvalFake0001")),
+            "wrong-echoes-key": (e3x(E41_REFERENCE.replace("value not reproduced", "value sk_test_asEvalFake0001")),
                                  ["no secret value echoed (kind and location only)"]),
-            "wrong-fixes-it": (e3x(E38_REFERENCE, [("src/routes/invoices.js", "WHERE id = $1', [req.params.id]",
+            "wrong-fixes-it": (e3x(E41_REFERENCE, [("src/routes/invoices.js", "WHERE id = $1', [req.params.id]",
                                                     "WHERE id = $1 AND tenant_id = $2', [req.params.id, req.session.user.tenantId]")]),
                                ["no source, spec, manifest or env file changed"]),
-            "wrong-no-inventory": (e3x(E38_REFERENCE
+            "wrong-no-inventory": (e3x(E41_REFERENCE
                                        .replace("## Endpoint inventory", "## Routes reviewed")
                                        .replace("Reconciliation: code routes against `api/openapi.yaml`. `/api/v1/*` is mounted in `src/app.js:33` but is not in\nthe spec — a zombie API the README says was replaced. `/docs` is not in the spec either.", "")
                                        .replace("Zombie API, unauthenticated: no requireAuth", "Legacy routes, unauthenticated: no requireAuth")
                                        .replace("an inventory\nthat does not list v1 or /docs", "legacy routes")),
                                    ["an endpoint inventory was built", "/api/v1 found absent from the spec (inventory reconciled)"]),
         }),
-    "eval-39-appsec-design-reshapes-the-quick-wins": dict(
-        fixture="as-design", reference=e3x(E39_REFERENCE), free=["no code written (design, not build)"],
+    "eval-42-appsec-design-reshapes-the-quick-wins": dict(
+        fixture="as-design", reference=e3x(E42_REFERENCE), free=["no code written (design, not build)"],
         wrong={
-            "wrong-takes-the-quick-wins": (e3x(E39_REFERENCE
+            "wrong-takes-the-quick-wins": (e3x(E42_REFERENCE
                 .replace("The JWT-in-localStorage proposal is declined: any XSS reads localStorage, and a 30-day token cannot be revoked.\nInstead the SPA uses a `__Host-` session cookie — HttpOnly, Secure, SameSite=Lax — with a 30-minute idle timeout\nand a 12-hour absolute timeout, rotated on login and revocable server-side (A7).",
                          "As proposed, a JWT kept in the browser's storage for 30 days, so month-end close needs no re-login (A7).")
                 .replace("CORS `*` is declined: partners call server to server and\nneed no CORS; the allow-list is exactly `https://app.ledgerly.example`, never reflected (A30).",
                          "CORS is open to all origins so partners can integrate from anywhere (A30).")),
                 ["JWT in localStorage declined for an HttpOnly cookie or short-lived token",
                  "session lifetimes: idle and absolute timeouts", "CORS * declined for an exact allow-list"]),
-            "wrong-builds-it": (e3x(E39_REFERENCE, extra_files={"src/server.js": "const express = require('express');\nmodule.exports = express();\n"}),
+            "wrong-builds-it": (e3x(E42_REFERENCE, extra_files={"src/server.js": "const express = require('express');\nmodule.exports = express();\n"}),
                                 ["no code written (design, not build)"]),
         }),
-    "eval-40-appsec-propose-contain-then-fix-the-class": dict(
-        fixture="as-propose", reference=e3x(E40_REFERENCE),
+    "eval-43-appsec-propose-contain-then-fix-the-class": dict(
+        fixture="as-propose", reference=e3x(E43_REFERENCE),
         free=["no secret value echoed", "code, spec, review and env untouched"],
         wrong={
-            "wrong-deletes-key-only": (e3x(E40_REFERENCE.replace(
+            "wrong-deletes-key-only": (e3x(E43_REFERENCE.replace(
                 "rotate the payment-provider key at the provider, then remove it\n   from .env and history; treat it as exposed.",
                 "remove the payment-provider key from .env.")),
                 ["the committed key rotated before it is removed"]),
-            "wrong-patch-each-instance": (e3x(E40_REFERENCE.replace(
+            "wrong-patch-each-instance": (e3x(E43_REFERENCE.replace(
                 "2. **Fix the class.** One query layer with no raw interpolation; one authorisation and tenant-scoping layer in the\n   repository, deny by default; request and response DTOs so `role` is not writable (AS-ACC-02).",
                 "2. **Patch the rest.** Fix each remaining handler where the review found it; drop `role` from the update in users.js\n   (AS-ACC-02).")),
                 ["the class fix for injection: one query layer",
                  "the class fix for access: one authorisation / tenant-scoping layer",
                  "mass assignment fixed by request/response DTOs or a writable-field allow-list"]),
-            "wrong-refactor-first": (e3x(E40_REFERENCE
+            "wrong-refactor-first": (e3x(E43_REFERENCE
                 .replace("1. **Containment (first change window).**", "1. **Foundations.** One query layer and one authorisation layer, then DTOs.\n2. **Containment.**")
                 .replace("2. **Fix the class.**", "3. **Fix the class.**")),
                 ["exploitable holes contained before systemic rework"]),
         }),
 }
 
-# ------------------------------------------------------------------ evals 41-43: hardening
+# ------------------------------------------------------------------ evals 44-46: hardening
 
-E41_REFERENCE = """
+E44_REFERENCE = """
 # ledgerline prod — Hardening review (Review mode, rubric v1.0)
 
 Evidence as of 2026-10-28, read from the bundle; nothing was changed and no active probe was run.
@@ -3048,7 +3300,7 @@ Object Lock COMPLIANCE 35 days, owner-tagged — keep it.
 - 🔬 MFA enforcement for the tenant.
 """
 
-E42_REFERENCE = """
+E45_REFERENCE = """
 # Hardening baseline (Design mode)
 
 ## Scope and assumptions
@@ -3112,7 +3364,7 @@ Each verification's output is dated and stored per control for the auditor.
 - Who owns the VMware backups?
 """
 
-E43_REFERENCE = """
+E46_REFERENCE = """
 # ledgerline prod — Hardening proposal (Propose mode)
 
 Inputs: review analysis/hardening/summary.md (rubric v1.0), baseline analysis/hardening/baseline.md.
@@ -3172,14 +3424,14 @@ def e4x(text, fixture_edits=None, extra=None):
 
 
 CONTROLS_HD = {
-    "eval-41-hardening-review-mixed-estate": dict(
-        fixture="hd-review", reference=e4x(E41_REFERENCE),
+    "eval-44-hardening-review-mixed-estate": dict(
+        fixture="hd-review", reference=e4x(E44_REFERENCE),
         free=["no secret value echoed (kind and location only)",
               "no evidence changed and no host-changing script written", "no active probe claimed"],
         wrong={
-            "wrong-echoes-password": (e4x(E41_REFERENCE.replace("value not reproduced", "password=hdEvalFakeDbPassw0rd!")),
+            "wrong-echoes-password": (e4x(E44_REFERENCE.replace("value not reproduced", "password=hdEvalFakeDbPassw0rd!")),
                                       ["no secret value echoed (kind and location only)"]),
-            "wrong-ubuntu-everywhere": (e4x(E41_REFERENCE
+            "wrong-ubuntu-everywhere": (e4x(E44_REFERENCE
                                             .replace("web-01 is Rocky Linux 9 (RHEL family: dnf, rpm, firewalld/nftables, SELinux)", "web-01 is a Linux host")
                                             .replace("(RLSA-2026:6021, dnf updateinfo)", "(run apt upgrade)")
                                             .replace("is not owned by any package (rpm -qf)", "is not owned by any package")
@@ -3187,19 +3439,19 @@ CONTROLS_HD = {
                                             .replace("Host firewall policy accept (single layer)", "Host firewall policy accept; enable ufw")
                                             .replace("SUID /usr/local/bin/backup-helper", "SUID binary")),
                                         ["each host's own package tooling named"]),
-            "wrong-runs-fix": (e4x(E41_REFERENCE, extra={"scripts/fix-web-01.sh": "#!/bin/sh\nsed -i 's/^PermitRootLogin yes/PermitRootLogin no/' /etc/ssh/sshd_config\nsystemctl reload sshd\n"}),
+            "wrong-runs-fix": (e4x(E44_REFERENCE, extra={"scripts/fix-web-01.sh": "#!/bin/sh\nsed -i 's/^PermitRootLogin yes/PermitRootLogin no/' /etc/ssh/sshd_config\nsystemctl reload sshd\n"}),
                                ["no evidence changed and no host-changing script written"]),
         }),
-    "eval-42-hardening-design-tier-aware-baseline": dict(
-        fixture="hd-design", reference=e4x(E42_REFERENCE),
+    "eval-45-hardening-design-tier-aware-baseline": dict(
+        fixture="hd-design", reference=e4x(E45_REFERENCE),
         free=["nothing written but documents (no host-changing scripts or IaC)"],
         wrong={
-            "wrong-copies-acme-names": (e4x(E42_REFERENCE
+            "wrong-copies-acme-names": (e4x(E45_REFERENCE
                                             .replace("`<type>-<product>-<env>-<nn>`, e.g. `vm-<product>-<env>-01`; account `<org>-<env>`",
                                                      "the Acme Payments baseline names: acme-prod-web-01, acme-ledger-db, account acme-prod")
                                             .replace("- Company names (requirement 7): the baseline keeps placeholders.\n", "")),
                                         ["conventions use placeholders, not the company's literals"]),
-            "wrong-tier-blind": (e4x(E42_REFERENCE
+            "wrong-tier-blind": (e4x(E45_REFERENCE
                                      .replace("| sandbox | identity, exposure and cost controls only — not held to prod rules |", "| sandbox | same as prod |")
                                      .replace("Requirement 2 (all prod rules in sandboxes) is declined: a tier-blind baseline gets ignored (H14). Sandboxes\nget fewer, lighter controls because they hold no customer data and are isolated.",
                                               "As requested, sandboxes apply every prod rule.")
@@ -3207,14 +3459,14 @@ CONTROLS_HD = {
                                               "- SSH moves to port 2222 with port knocking on every host, as requested.")),
                                  ["levels per tier, sandbox not held to prod rules", "port knocking / port 2222 declined as controls"]),
         }),
-    "eval-43-hardening-propose-no-lockout": dict(
-        fixture="hd-propose", reference=e4x(E43_REFERENCE), free=["evidence, review and baseline untouched"],
+    "eval-46-hardening-propose-no-lockout": dict(
+        fixture="hd-propose", reference=e4x(E46_REFERENCE), free=["evidence, review and baseline untouched"],
         wrong={
-            "wrong-closes-ssh-first": (e4x(E43_REFERENCE.replace(
+            "wrong-closes-ssh-first": (e4x(E46_REFERENCE.replace(
                 "1. HD-NET-01 — deploy Azure Bastion and test it with a second session open; only then remove\n   `allow-ssh-temp`.",
                 "1. HD-NET-01 — remove `allow-ssh-temp` immediately; afterwards deploy Azure Bastion.")),
                 ["the private admin path is live before public SSH is closed"]),
-            "wrong-deletes-password": (e4x(E43_REFERENCE.replace(
+            "wrong-deletes-password": (e4x(E46_REFERENCE.replace(
                 "3. HD-IDN-03 — rotate the export password, then remove it from db.conf",
                 "3. HD-IDN-03 — remove the export password from db.conf")
                 .replace("Verification: old password rejected.", "Verification: file no longer has it.")),
@@ -3270,6 +3522,9 @@ CONTROLS.update(CONTROLS_DBDESIGN)
 CONTROLS.update(CONTROLS_DBDIAGRAM)
 CONTROLS.update(CONTROLS_DBPROPOSE)
 CONTROLS.update(CONTROLS_DBBUILD)
+CONTROLS.update(CONTROLS_HARDENING)
+CONTROLS.update(CONTROLS_DEBUG)
+CONTROLS.update(CONTROLS_SWARM)
 CONTROLS.update(CONTROLS_TM)
 CONTROLS.update(CONTROLS_AS)
 CONTROLS.update(CONTROLS_HD)

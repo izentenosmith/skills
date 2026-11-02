@@ -1,6 +1,6 @@
 Answer key for `tm-review/`. It lives **outside** the fixture folder on purpose: everything inside the folder is copied into the run, and a run that can read the answer key measures nothing.
 
-# tm-review — `threatmodel` in Review mode (eval 35)
+# tm-review — `threatmodel` in Review mode (eval 38)
 
 Design documents for a marketplace payouts service: architecture with a Mermaid DFD, three ADRs, the admin-console and security-controls notes, a runbook, an OpenAPI spec, and an 18-month-old threat model. No code: the review is graded from the documents.
 

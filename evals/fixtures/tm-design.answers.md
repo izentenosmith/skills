@@ -1,6 +1,6 @@
 Answer key for `tm-design/`. It lives **outside** the fixture folder on purpose: everything inside the folder is copied into the run, and a run that can read the answer key measures nothing.
 
-# tm-design — `threatmodel` in Design mode (eval 36)
+# tm-design — `threatmodel` in Design mode (eval 39)
 
 Product requirements for a health-records "Family Access" feature. Nothing is built; the run writes a threat model. The traps are in what the requirements ask for.
 

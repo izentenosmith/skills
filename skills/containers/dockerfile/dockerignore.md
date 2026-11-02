@@ -34,20 +34,29 @@ Dockerfile*
 docker-compose*.yml
 compose*.yaml
 
-# Secrets — the important block
-.env
-.env.*
-!.env.example
-*.pem
-*.key
-*.p12
-*.pfx
-secrets/
+# Secrets — the important block. `**/` because a bare name only matches at the root.
+**/.env
+**/.env.*
+!**/.env.example
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/secrets/
 .aws/
 .azure/
 .gcloud/
-credentials.json
-service-account*.json
+.kube/
+**/*kubeconfig*
+.docker/
+.ssh/
+**/id_rsa*
+**/id_ed25519*
+.netrc
+.pypirc
+**/credentials.json
+**/service-account*.json
+**/*.tfvars
 
 # Editors and OS
 .vscode/
@@ -78,6 +87,8 @@ helm/
 Two notes on the block that matters:
 
 - **`.env.*` then `!.env.example`.** Order counts — the negation must come after the pattern it re-includes. Without it you exclude the template you wanted to ship.
+- **`**/` on every secret pattern.** `.env` alone excludes the root `.env` and nothing else; a monorepo's `apps/api/.env` sails straight into `COPY . .`. See [the pattern table](#patterns-and-their-traps).
+- **`.npmrc` is a judgement call.** A token-free one carrying settings the install needs (`node-linker`, a registry URL) has to stay in the context. One with an `_authToken` must not — exclude it and bring it back at build time as a secret mount (`--mount=type=secret,id=npmrc,target=/root/.npmrc`, in [optimization.md](optimization.md#secrets)). Same for `pip.conf` and `.pypirc` with credentials.
 - **Exclude the `Dockerfile` itself.** It's read by the daemon from the context metadata, not copied — including it means editing a comment in it invalidates your `COPY . .` layer.
 
 ---
@@ -86,7 +97,7 @@ Two notes on the block that matters:
 
 **Node / TypeScript**
 ```gitignore
-node_modules
+**/node_modules
 npm-debug.log*
 yarn-error.log
 .pnpm-store/
@@ -99,14 +110,14 @@ coverage/
 .eslintcache
 *.tsbuildinfo
 ```
-`node_modules` is the highest-value single line in any Node `.dockerignore` — usually hundreds of megabytes, always rebuilt in the image, and actively harmful if copied across architectures.
+`**/node_modules` is the highest-value single line in any Node `.dockerignore` — usually hundreds of megabytes, always rebuilt in the image, and actively harmful if copied across architectures. The `**/` catches each workspace's copy in a monorepo; bare `node_modules` stops at the root.
 
 Exclude `dist/` and build it in the image. A host-built `dist/` in the context means you ship whatever was last built locally, which is not necessarily what's in the source.
 
 **Python**
 ```gitignore
-__pycache__/
-*.py[cod]
+**/__pycache__/
+**/*.py[cod]
 .venv/
 venv/
 env/
@@ -121,7 +132,8 @@ htmlcov/
 
 **Go**
 ```gitignore
-vendor/          # only if you're not using vendored builds
+# vendor/ only if the build doesn't use it — see below
+vendor/
 bin/
 *.test
 ```
@@ -172,16 +184,21 @@ Compare against `du -sh .`. A repo where those two numbers are close has an inef
 **See what actually landed:**
 
 ```bash
-docker run --rm app find /app -maxdepth 2
+docker run --rm --entrypoint find app /app -maxdepth 2
 ```
+
+(`--entrypoint`, because with an `ENTRYPOINT` in the image a bare `docker run app find …` hands `find` to the app as an argument. A distroless image has no `find`: `docker export $(docker create app) | tar -t | grep '^app/' | head -50` does the same from outside.)
 
 Anything surprising in there came from the context.
 
 **Check the layers for secrets:**
 
 ```bash
-docker history --no-trunc app | grep -iE 'token|key|secret|password'
+docker history --no-trunc app | grep -iE 'token|key|secret|password'   # instruction text only
+trivy image --scanners secret app                                       # the files in every layer
 ```
+
+The first catches a secret in an `ENV`, `ARG` or `RUN` line; only the second catches a key file that came in through `COPY . .`, which is the leak this file exists to prevent.
 
 ---
 
@@ -191,15 +208,18 @@ docker history --no-trunc app | grep -iE 'token|key|secret|password'
 
 | Pattern | Matches |
 |---|---|
-| `node_modules` | that name at **any** depth |
-| `/node_modules` | only at the context root |
+| `node_modules` | only at the context root |
+| `/node_modules` | the same — a leading `/` changes nothing, the root is implied |
+| `**/node_modules` | that name at **any** depth |
 | `*.log` | `.log` files at the root **only** |
 | `**/*.log` | `.log` files at any depth |
 | `!.env.example` | re-includes, and **must follow** the pattern that excluded it |
 
 **The trap:** `*.log` does not recurse the way it does in `.gitignore`. Use `**/*.log` when you mean everywhere.
 
-**A directory name with no slash matches at any depth** — `node_modules` catches nested workspace copies in a monorepo without needing `**/`.
+**Every pattern is anchored at the context root** — this is the biggest difference from `.gitignore`, where a bare name matches at any depth. `node_modules` excludes the root copy and lets every nested workspace's copy through; `.env` excludes the root env file and ships `apps/api/.env`. In a monorepo, or anywhere a name can recur, write `**/`.
+
+**Comments must be whole lines.** `vendor/   # only if…` is not a pattern with a comment — it's a pattern that matches nothing.
 
 ---
 
