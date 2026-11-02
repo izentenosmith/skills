@@ -86,3 +86,7 @@ python3 evals/run.py --evals 7 --reps 1 --baseline-ref none   # post-mortem's ev
 ```
 
 The request is the eval's `prompt` in [`evals/evals.json`](../evals/evals.json); the result is the run's `outputs/response.md`. Say in the demo that the system is a seeded test incident, not a customer's.
+
+To paste a long output, copy it as UTF-8: `LC_ALL=en_US.UTF-8 pbcopy < response.md`. Without a UTF-8 locale, macOS's `pbcopy` reads the bytes as Mac Roman, and every `→`, `–` and `—` lands on the listing as `‚Üí`, `‚Äì`, `‚Äî`.
+
+A listing under review can still be edited from **Creator Studio → Skills → ✎**. Metadata changes such as the demo go live on save; replacing the zip needs re-approval.
