@@ -200,7 +200,9 @@ requirement so the traceability table can reference them.
 Follow [proposal.md](proposal.md). Every risk gets a decision — **eliminate by design**,
 **mitigate**, **transfer**, or **accept** with an owner and an expiry. Sequence: containment of
 anything live and exploitable → eliminate hazards by design → boundary controls → detection →
-assurance. Each item is routed: code to [appsec](../appsec/SKILL.md), platform to
+assurance. **Exploitability, not domain, decides the step:** a live weakness on a privileged path
+(SMS MFA for admins, a fail-open fallback on money) gets an interim containment in the first window
+even when its full fix belongs to a later phase. Each item is routed: code to [appsec](../appsec/SKILL.md), platform to
 [hardening](../hardening/SKILL.md), CI/CD to [pipelines](../../infrastructure/pipelines/SKILL.md),
 network to [netdesign](../../networking/netdesign/SKILL.md).
 

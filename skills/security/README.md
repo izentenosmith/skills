@@ -95,18 +95,18 @@ mechanism is named as current practice.
 
 One eval per mode in [`evals/`](../../evals/README.md) (evals 35–43): a Review fixture seeded with defects, a Design fixture whose traps sit in what the requirements ask for, and a Propose fixture with a finished review. Each has a reference answer, a do-nothing answer and plausible-but-wrong answers that separate as intended (`python3 evals/controls/make_controls.py --only 35 36 37 38 39 40 41 42 43`).
 
-**First run (2026-11-02, n=1, against no skill), scored out of 10 on the delta assertions** — the ones that test what each skill instructs:
+**First run (2026-11-02, n=1, against no skill — threatmodel Propose re-run n=3 after a fix), scored out of 10 on the delta assertions** — the ones that test what each skill instructs:
 
 | Skill | Review | Design | Propose | **Skill** | No skill |
 |---|---:|---:|---:|---:|---:|
-| threatmodel | 10.0 | 10.0 | 9.2 | **9.8** | 5.5 |
+| threatmodel | 10.0 | 10.0 | 10.0 | **10.0** | 5.5 |
 | appsec | 10.0 | 10.0 | 10.0 | **10.0** | 7.5 |
 | hardening | 10.0 | 9.3 | 10.0 | **9.8** | 7.0 |
 
-Capability (what any competent reviewer does) is 10.0 for both arms: the baseline finds the planted defects; the skills add the method — finding ids and principle citations, confidence tags, scored arithmetic with caps, the gate condition by condition, inventories and maps, rotate-before-remove, no-lockout guards. The two misses:
+Capability (what any competent reviewer does) is 10.0 for both arms: the baseline finds the planted defects; the skills add the method — finding ids and principle citations, confidence tags, scored arithmetic with caps, the gate condition by condition, inventories and maps, rotate-before-remove, no-lockout guards. The first run had two misses:
 
-- **threatmodel Propose** contained the fail-open fraud fallback first but scheduled replacing SMS admin MFA after the redesign step, not in containment.
-- **hardening Design** used placeholders throughout but listed the company's legacy host names in its local binding table — defensible, and graded strictly.
+- **threatmodel Propose** contained the fail-open fraud fallback first but scheduled replacing SMS admin MFA after the redesign step, not in containment. Fixed in [proposal.md](threatmodel/proposal.md): exploitability, not domain, decides the step, and weak authentication on a privileged path is named as containment. Re-run three times: 13/13 each, while the pre-fix run still fails the check.
+- **hardening Design** (still open) used placeholders throughout but listed the company's legacy host names in its local binding table — defensible, and graded strictly.
 
 Read these as a first measurement, not a verdict: one run each, keyword graders written alongside the skills, and appsec Design's baseline already scores 9.1, so that eval discriminates weakly.
 

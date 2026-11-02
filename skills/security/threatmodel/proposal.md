@@ -42,9 +42,19 @@ Two rules:
 Order the plan so each step makes the next one safer:
 
 1. **Containment.** Anything live and exploitable now — an unauthenticated crossing to a high-value
-   asset, a leaked or fleet-wide key, a single-credential path to an irreversible action. Rotate
+   asset, a leaked or fleet-wide key, a single-credential path to an irreversible action, **weak
+   authentication on a privileged path** (SMS or other phishable or SIM-swappable MFA on admin or
+   approver roles, password-only or shared admin access, a recovery flow that bypasses the second
+   factor), and a **fail-open fallback** on a control that guards money, identity or data. Rotate
    leaked keys before removing them; disable the path before redesigning it. Each containment step
    names its rollback.
+
+   **Exploitability decides the step; the domain decides only where the full fix lives.** A
+   protocol or policy finding that is live and exploitable gets an **interim containment** here —
+   enrol privileged roles on an authenticator app or hardware key and turn the SMS factor off for
+   them, hold high-risk actions while a control is down, disable a self-service feature — and its
+   complete treatment stays in its own phase below. Filing a live privileged-access weakness under
+   "policy and protocols" because that is its domain leaves it open for the whole redesign.
 2. **Eliminate hazards by design.** Remove data, keys, privileges and central stores that needn't
    exist — before adding controls around them. Removing a hazard can delete whole rows of later work.
 3. **Boundary controls.** Authentication and authorisation on every crossing, in boundary order from

@@ -35,7 +35,7 @@
 | 34-dbbuild-executable-ddl-from-accepted-proposal | i6 | 1 | 1.00 ± 0.00 | 0.78 | +0.22 | 1.00 | 1.00 |
 | 35-threatmodel-review-design-abuse-and-fallback | i13 | 1 | 1.00 ± 0.00 | 0.42 | +0.58 | 1.00 | 1.00 |
 | 36-threatmodel-design-abusers-and-traps | i13 | 1 | 1.00 ± 0.00 | 0.65 | +0.35 | 1.00 | 1.00 |
-| 37-threatmodel-propose-contain-then-design-out | i13 | 1 | 0.92 ± 0.00 | 0.54 | +0.39 | 1.00 | 1.00 |
+| 37-threatmodel-propose-contain-then-design-out | i14 | 3 | 1.00 ± 0.00 | 0.54 | +0.46 | 1.00 | 1.00 |
 | 38-appsec-review-inventory-and-secrets | i13 | 1 | 1.00 ± 0.00 | 0.67 | +0.33 | 1.00 | 1.00 |
 | 39-appsec-design-reshapes-the-quick-wins | i13 | 1 | 1.00 ± 0.00 | 0.91 | +0.10 | 1.00 | 1.00 |
 | 4-teardown-finds-vacuous-test | i2 | 3 | 0.92 ± 0.14 | 0.25 | +0.67 | 1.00 | 1.00 |
@@ -49,7 +49,7 @@
 | 8-hotfix-node-shared-cause | i7 | 1 | 1.00 ± 0.00 | 0.38 | +0.62 | 1.00 | 1.00 |
 | 9-hotfix-jvm-both-callers | i7 | 1 | 1.00 ± 0.00 | 0.71 | +0.29 | 1.00 | 1.00 |
 
-**Delta — current 0.95 vs baseline 0.52**
+**Delta — current 0.96 vs baseline 0.52**
 **Capability — current 0.99 vs baseline 0.88**
 
 ## Delta assertions the baseline also passed (still non-discriminating)
@@ -268,6 +268,7 @@
 - requirements untouched and nothing built
 
 **eval-37-threatmodel-propose-contain-then-design-out**
+- the live fail-open and SMS admin contained before redesign
 - the self-grant eliminated by design, not monitored
 - two independent mechanisms for large payouts
 - the staging key rotated before it is removed
