@@ -14,6 +14,15 @@ Create two clear, editable draw.io diagrams: the **modelo entidad relación**, a
 - If the input lacks information needed for the ER model, diagram the supported facts and annotate the unknowns; do not invent certainty.
 - Read [er-modeling.md](er-modeling.md) when translating between conceptual and relational forms.
 
+### Translating a source in another notation
+
+Sources often arrive in Chen/EER or IE crow's foot. Convert them to Barker with the crosswalk in
+[er-modeling.md](er-modeling.md) §A0.1; never carry a glyph across. Two traps silently invert meaning:
+in IE tools a **dashed line means non-identifying**, not optional (Barker's dashed half-line means *may
+be*); and IE reads **optionality at the far end**, while Barker draws it as the half-line at the **near**
+end. An overlapping EER specialization is roles, not Barker subtypes. List every translated construct in
+the provenance note and mark any you couldn't translate as an open question.
+
 ## Diagram content
 
 **Barker ER model:**
@@ -23,11 +32,12 @@ Create two clear, editable draw.io diagrams: the **modelo entidad relación**, a
 - Binary relationships only, with reciprocal lowercase role names at both ends. A solid segment at an end means mandatory (*must be*); a dashed segment means optional (*may be*). Use a plain/bar end for one and a crow's foot for one or more. Show each end's optionality and cardinality independently.
 - Use a UID bar across a relationship at the identified entity end when that relationship participates in its UID. Mark non-transferable relationships with the Barker diamond; represent subtypes and arcs explicitly, with a legend.
 - Resolve a three-part association as an intersection entity with binary relationships to each participant. Never draw a ternary relationship connector.
+- A model rule the relational view can't enforce — a *must* at the parent end, a mandatory-both-ends 1:1, subtype completeness (er-modeling §A3.2 step 4) — is drawn as the model states it and annotated with its rule id, so the diagram never promises what the schema doesn't enforce.
 - Title the page **Barker ER Model** and include a visible legend identifying Barker notation and explaining its glyphs. Do not mix in Chen diamonds, UML class boxes, or optionality circles from other crow's-foot variants.
 
 These conventions follow [Redgate’s Barker notation guide](https://www.red-gate.com/blog/barkers-erd-notation/); see [er-modeling.md](er-modeling.md) for modelling rules and edge cases.
 
-**Relational model:** one table per relation; columns and useful data types; PK, FK, alternate/unique keys, nullability, and checks where known; labeled FK paths; and schema boundaries when they aid comprehension. Use consistent identifiers across both views so a reader can trace each entity into its table mapping.
+**Relational model:** one table per relation; columns and useful data types; PK, FK, every alternate/unique key, nullability, and checks where known (including partial unique indexes and exclusion constraints that carry a business rule); labeled FK paths; and schema boundaries when they aid comprehension. Use consistent identifiers across both views so a reader can trace each entity into its table mapping.
 
 For both diagrams, include a title, a compact legend, and a provenance note naming the input and any assumptions. Keep the layout legible and avoid decorative details that obscure cardinalities or key markers.
 

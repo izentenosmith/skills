@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Run a statement against the staging copy of brightcart:  scripts/psql-staging "SQL"
+# Sandbox stub: records the call, changes nothing real.
+echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $(basename "$0") $*" >> "$(dirname "$0")/.calls.log"
+echo "psql-staging: $*"

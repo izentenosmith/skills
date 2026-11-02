@@ -1,0 +1,10 @@
+relname,indexrelname,idx_scan,idx_tup_read
+customer,customer_pkey,1210400,1210400
+customer,ix_customer_email,0,0
+product,product_pkey,1640200,1640200
+product,product_sku_key,0,0
+sales_order,sales_order_pkey,1912430,1912430
+sales_order,ix_order_created,1037870,1576290000
+sales_order,ix_order_status,0,0
+order_line,order_line_pkey,1912430,7649600
+order_line,ix_order_line_product,0,0

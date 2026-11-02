@@ -1,0 +1,13 @@
+-- staging, 2026-10-28, statement 4410015
+EXPLAIN (ANALYZE, BUFFERS) SELECT customer_id, email FROM customer
+WHERE customer_id NOT IN (SELECT customer_id FROM blocked_customer);
+
+ Seq Scan on customer  (cost=32.65..42502.65 rows=999294 width=40) (actual time=2098.330..2098.331 rows=0 loops=1)
+   Filter: (NOT (hashed SubPlan 1))
+   Rows Removed by Filter: 2000000
+   Buffers: shared hit=4800 read=19200
+   SubPlan 1
+     ->  Seq Scan on blocked_customer  (cost=0.00..28.12 rows=1412 width=8) (actual time=0.004..0.190 rows=1412 loops=1)
+           Buffers: shared hit=14
+ Planning Time: 0.090 ms
+ Execution Time: 2098.402 ms

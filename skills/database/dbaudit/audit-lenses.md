@@ -19,6 +19,10 @@
   as `ref_type` + `ref_id`, M:M tables with no pair uniqueness, hierarchies as fixed level columns.
   Each is a modelling decision (theory §9; er-modeling.md) that the DDL got wrong or never made
   — catalogued with detection rules in [`tables.md`](tables.md).
+- **Data/metadata confusion** (theory §10). EAV tables that store attribute names as rows, generic
+  arcs that store table names as data, and the inverse — per-year or per-tenant clone tables and
+  columns, value lists frozen in `CHECK`/`ENUM` for a fluid domain. Each moves a constraint the engine
+  could enforce into application code; catalogued in [`tables.md`](tables.md).
 - **Over-normalization.** Excessive splitting that forces many-way joins just to read a basic record,
   penalizing read paths.
 - **The "God table".** A single table holding a large fraction of the system's data or business
@@ -51,6 +55,10 @@ live in [`indexes.md`](indexes.md)**; this section only frames them at the estat
   indexes are write-overhead or scan risks deducible from the DDL.
 - Low-cardinality and "hot-path" judgements are **needs-data** (🔬) — flagged, not graded. See the
   confidence convention in [`scoring.md`](scoring.md).
+- **Query-shape prevalence.** Count the query-shape anti-patterns in view and procedure bodies
+  estate-wide — non-sargable predicates, leading-wildcard `LIKE`, catch-all `@p IS NULL OR` filters,
+  `NOT IN (SELECT`, offset paging, optimizer hints — and the distribution of index count per table.
+  Report prevalence once per estate; the individual findings live in the object-type docs.
 
 ## 4. Data quality & "dark data"
 
@@ -59,7 +67,8 @@ live in [`indexes.md`](indexes.md)**; this section only frames them at the estat
   queryable columns → 1NF violation.
 - **CSV / multivalued cells.** Repeating groups inside one column.
 - **Type drift for a shared concept.** The same logical key typed differently across tables
-  (`id` as `varchar` here, `int` there) — a join hazard and an implicit-conversion source.
+  (`id` as `varchar` here, `int` there) — a join hazard and an implicit-conversion source. ✅ decidable
+  when the drifting columns are linked by a declared FK; ⚠️ when linked only by name.
 - **Collation drift** — see §2 and [`tables.md`](tables.md).
 
 ## 5. Business-logic drift & configuration
@@ -74,16 +83,40 @@ live in [`indexes.md`](indexes.md)**; this section only frames them at the estat
 ## 6. Security & data sensitivity
 
 Personnel, attendance, payroll, payment and customer data are a real PII and financial footprint.
-Security is a first-class lens, with the caveat that **server-side security objects (GRANTs, logins,
-role memberships, encryption metadata) are usually absent from DDL dumps** and must be checked on the
-instance, not here.
+Security is a first-class lens (theory §11). What a dump contains depends on the engine:
+
+- **SQL Server / Oracle:** server-side security objects (GRANTs, logins, role memberships, encryption
+  metadata) are usually **absent** from DDL dumps and must be checked on the instance, not here.
+- **PostgreSQL:** a default `pg_dump --schema-only` **includes** owners (`ALTER … OWNER TO`), `GRANT`/
+  `REVOKE`, `ALTER DEFAULT PRIVILEGES`, row-level-security policies and function `SECURITY DEFINER` /
+  `SET search_path` clauses — audit them statically (✅). If the dump was taken with `-O`/`-x`, say so and
+  mark privilege findings 🔬. Roles and memberships live in the cluster globals
+  (`pg_dumpall --roles-only`); request it.
 
 - **Untrusted / disabled constraints** — `WITH NOCHECK` / `NOCHECK CONSTRAINT` means referential or
   domain integrity is *defined but not enforced*; the optimizer also can't trust it. ✅ decidable.
 - **Elevated execution context** — `EXECUTE AS` in procedures broadens the blast radius of any
   injection or logic flaw. ✅ decidable.
-- **Plaintext secrets** — passwords, connection strings, or tokens embedded in procedure/view text,
-  and password columns stored as plain `varchar`. ⚠️ proxy (grep, then read).
+- **Plaintext secrets** — passwords, connection strings, or tokens embedded in procedure/view text.
+  ⚠️ proxy (grep, then read).
+- **Recoverable credentials** — a password column whose stored value can be turned back into the
+  password: plaintext, reversible encryption (`ENCRYPTBYPASSPHRASE`/`DECRYPTBYKEY`, `AES_ENCRYPT`,
+  `pgp_sym_encrypt`), an unsalted hash, or a fast general-purpose hash (`MD5`, `SHA1`, plain
+  `SHA2_256`). The target is a per-row-salted **slow** hash computed in the application (theory §11); a
+  procedure that compares `password = @password` or hashes inside SQL (`HASHBYTES('SHA2_256', @pwd)`) is
+  evidence of plaintext in transit. A short `varchar` is a shape signal, not proof — a hash is a
+  `varchar` too. High. Password **reset** stores a random, expiring token, never a recoverable password.
+- **PostgreSQL privilege defects** (✅ from a default dump): `SECURITY DEFINER` functions without a
+  pinned `SET search_path` (a caller can plant objects that run with the owner's rights) or still
+  executable by `PUBLIC` (functions get `EXECUTE` to `PUBLIC` by default) — High; untrusted procedural
+  languages (`plpython3u`, `plperlu`, `C`) — High with `SECURITY DEFINER`; broad grants to `PUBLIC` and
+  `CREATE` on schema `public` — Medium–High; objects owned by a superuser or a person's login rather than
+  a `NOLOGIN` owner role — Medium; a `CREATE POLICY` on a table without `ENABLE ROW LEVEL SECURITY`, or
+  `ENABLE` without `FORCE` when the application connects as the owner — High; views over RLS tables
+  without `security_invoker` — High.
+- **Integrity switched off in scripts** — `ALTER TABLE … DISABLE TRIGGER ALL` (disables FK enforcement
+  on PostgreSQL) or `SET session_replication_role = replica` in migrations or procedures. Codd rule 12
+  (nonsubversion). ✅ High.
 - **Injection surface** — dynamic `EXEC(@sql)` on concatenated input (canonical treatment in
   [`procedures.md`](procedures.md)).
 - **PII / sensitive columns** — identify by name (national IDs, surnames, salary, payment); whether
@@ -91,7 +124,39 @@ instance, not here.
 
 See [`detection-signals.md`](detection-signals.md) for the grep commands.
 
-## 7. TL;DR audit checklist *(static-DDL only)*
+## 7. Concurrency
+
+Procedures and triggers that write are graded for the anomalies of theory §5.2, not only for their
+structure. Canonical entries: dirty-read hints, lost updates, check-then-act races, `MAX()+1` numbering
+and elevated isolation without retry in [`procedures.md`](procedures.md); emulated constraints and
+cross-row validation triggers in [`triggers.md`](triggers.md). At estate level record: the count of
+`NOLOCK`/`READ UNCOMMITTED` uses, how many invariants are enforced only by procedural checks, and
+whether `READ_COMMITTED_SNAPSHOT` (SQL Server) is known — it changes what the default level permits, so
+when it can't be established it is a 🔬 flag on every check-then-act finding.
+
+## 8. Derived data & integration plumbing
+
+Classify every redundant structure as *system of record* or *derived* (theory §6) and check the three
+legitimacy conditions — named source, one-way, rebuildable. Static signals:
+
+- **Undeclared derived tables** — `*_cache`, `*_resumen`, `*_snapshot`, `*_consolidado`, `*_acum`
+  tables written by jobs or procedures, with no stated source or rebuild path. ⚠️; source and rebuild
+  path are 🔬 / ask.
+- **Copied parent attributes** — a non-key column on a child matching a non-key column of the
+  FK-referenced parent by name and type (`pedido.nombre_cliente` vs `cliente.nombre`). ⚠️: a
+  **point-in-time fact** (legitimate) or a drifting copy (2NF/SSOT)?
+- **Sync-state columns** — `sincronizado`, `enviado`, `procesado`, `fecha_sync`, `pendiente_*`: an
+  integration whose ordering and retry behaviour live outside the DDL. 🔬 — record as a dataflow
+  question (who consumes, what happens on failure, can it be replayed).
+- **Trigger-maintained change logs** — triggers inserting into `*_log`/`*_audit`/`*_cambios`/queue
+  tables. Legitimate CDC/outbox when written in the same transaction; record the lock-scope cost and
+  that the log is now a system of record for its consumers.
+- **Dual writes across databases** — triggers or procedures writing to another catalog: no atomic commit
+  across the two, so a partial failure leaves them diverged. Escalates the coupling finding in §2.
+- **Read replicas, materialized views, warehouses** are derived data, **not** copy schemas — grade them
+  on the three conditions, never as an SSOT violation.
+
+## 9. TL;DR audit checklist *(static-DDL only)*
 
 Four passes you can run against the dumps with `grep`-level tooling:
 
@@ -104,8 +169,10 @@ Four passes you can run against the dumps with `grep`-level tooling:
    autonomous mutations before they blindside you.
 3. **List shadow/backup/copy artefacts and dead schemas.** Dated copy tables (`*_COPIA_*`),
    name-versioned duplicates (`*2`, `*_old`), and unused databases — archival candidates.
-4. **Scan procedure/view bodies for hotspots.** `CURSOR` / `WHILE` (RBAR), dynamic `EXEC(...)`, and
-   nested-view references — the structural anomalies that most often hide cost and risk.
+4. **Scan procedure/view bodies for hotspots.** `CURSOR` / `WHILE` (RBAR), dynamic `EXEC(...)`,
+   nested-view references, catch-all `@p IS NULL OR` predicates, non-sargable predicates,
+   `NOT IN (SELECT`, `NOLOCK` and `MAX()+1` — the anomalies that most often hide cost, wrong results
+   and races.
 
 ## Explicitly excluded
 

@@ -64,11 +64,42 @@ views, other databases. If you can't establish who the consumers are, raise it a
 A breaking change with a known consumer ships in three steps, never one:
 
 1. **Expand.** Add the new shape beside the old one (the new columns, table or view) and keep both in
-   step: write both, or derive the old from the new.
+   step **inside the database**: derive one from the other (generated column, view, or a trigger in the
+   writer's transaction) so no write can reach one shape without the other. Never two independent
+   writes from application code — they race (the copies end in different final states without an
+   error) and fail partially. When the second shape lives in **another system** (search index, cache,
+   warehouse, another database), feed it from the source's change stream (CDC, or an outbox table
+   written in the same transaction), never by dual writes.
 2. **Migrate consumers.** Move each named consumer to the new shape. Each consumer is its own
    dependency, with its own owner and its own evidence that it has moved.
 3. **Contract.** Remove the old shape, **gated on every named consumer having moved**. Name the
    consumer in the gate. "When nobody uses it" is not a gate.
+
+### Compatibility at every step
+
+During a rolling deploy old and new versions of each consumer run against the same schema, and a
+rollback puts the old version back. Every step keeps both directions working:
+
+- **Backward:** version N of each consumer works against the schema *before* the step (needed to roll
+  the step back).
+- **Forward:** version N-1 works against the schema *after* the step (needed while the rollout is in
+  progress, and after an application rollback).
+
+Consequences for the step table:
+
+- **Expand is additive only:** a new nullable column or one with a default, a new table, a new view. A
+  new `NOT NULL` column without a default breaks every N-1 writer. A rename, retype or narrowing is never
+  an expand step — it is expand (new) + migrate + contract (old).
+- **Old code must not destroy new data.** A consumer that reads a whole row into an object and writes
+  it back (an ORM save, an `UPDATE` of every column) can null out a column it doesn't know. Name such
+  consumers in the pre-check.
+- **Positional consumers break on additions.** `INSERT INTO t VALUES (…)` without a column list and
+  `SELECT *` into fixed structures turn an additive expand into a breaking change — list them as
+  consumers.
+- **Contract waits for the rollback window too:** gate it on every named consumer having moved *and* on
+  no deployed version still reading the old shape.
+- **Data outlives code:** rows written years ago keep the old shape until rewritten, so contract also
+  covers the old rows (backfilled and validated), not just the old code.
 
 ## Ordering rules
 
@@ -78,6 +109,19 @@ A breaking change with a known consumer ships in three steps, never one:
   duplicates before the unique key, map invalid values before the check constraint. Count them in a
   pre-check, and decide what happens to them (repair, quarantine, archive), never silent deletion.
 - **Parents before children** when tables are rebuilt.
+- **Sync before backfill.** Turn on the mechanism that keeps new writes in step (trigger, generated
+  column, CDC) *before* backfilling existing rows, so rows changed during the backfill aren't missed.
+  When copying to another system, take the snapshot at a known change-log position and replay from
+  there.
+- **Backfill in batches, idempotently.** One `UPDATE` over a large table rewrites every row in one
+  transaction (long locks, bloat). Batch by key range, make each batch safe to re-run, record progress
+  so the step can resume; its validation is "both shapes agree on every row".
+- **Load, then index.** For a rebuilt table, bulk-load first and create secondary indexes (and validate
+  FKs) afterwards — a sorted bottom-up build is far cheaper than maintaining the index during the load.
+  The primary key goes first only if the load must reject duplicates as it goes.
+- **Add constraints without a long lock.** Add a `CHECK` or FK as `NOT VALID` (new writes are checked
+  at once), clean the legacy rows, then `VALIDATE CONSTRAINT` as a later step — never PostgreSQL 18's
+  `NOT ENFORCED`, which is never checked.
 - **Expand before contract,** as above.
 - **Each step is independently reversible**, or the proposal says plainly that it isn't and what
   protects it (a backup, a gate that aborts the whole run).
@@ -110,6 +154,25 @@ Every column is filled for every step; a step whose rollback is "restore the bac
 
 For in-place remediation, order proposed changes Critical-first and by dependency, in the same table.
 All changes are proposals for review; this skill never applies them.
+
+**On a PostgreSQL target, every step also names the lock it takes** (add a Lock column), and each DDL
+step runs with `SET lock_timeout` (say `'5s'`) so a blocked `ALTER` fails fast instead of queuing every
+reader behind it. The lock-safe forms:
+
+| Change | Lock-safe PostgreSQL pattern |
+|---|---|
+| Add an index | `CREATE INDEX CONCURRENTLY`, in its own script outside a transaction; on failure it leaves an `INVALID` index — drop it and retry |
+| Add a `UNIQUE`/PK on a live table | `CREATE UNIQUE INDEX CONCURRENTLY …`, then `ALTER TABLE … ADD CONSTRAINT … UNIQUE USING INDEX …` |
+| Add an FK or `CHECK` | `ADD CONSTRAINT … NOT VALID`, then `VALIDATE CONSTRAINT` in a later step (it doesn't block writes) |
+| Add `NOT NULL` | PG18: `ADD CONSTRAINT … NOT NULL col NOT VALID` → `VALIDATE`. Earlier: `CHECK (col IS NOT NULL) NOT VALID` → `VALIDATE` → `SET NOT NULL` (skips the scan) → drop the check |
+| Add a column with a default | a constant default is metadata-only; a volatile one (`uuidv7()`, `now()`) rewrites the table — add the column nullable, backfill in batches, then set the default and `NOT NULL` |
+| Retype a column | `ALTER COLUMN … TYPE … USING` rewrites the table under `ACCESS EXCLUSIVE`; widening `varchar(n)` or dropping the length is metadata-only; for big tables use expand/contract |
+| Partitions | `ATTACH PARTITION` after adding a matching validated `CHECK` (skips the scan); `DETACH PARTITION … CONCURRENTLY` |
+
+**Index changes are validated by measurement:** measure (`pg_stat_statements`, slow-query log), explain
+(`EXPLAIN (ANALYZE, BUFFERS)`), nominate, test (re-measure the same queries), then rebuild if needed
+(`REINDEX CONCURRENTLY`, `ANALYZE`). A before/after measurement is the step's validation; a proposal
+that adds an index no query needs is a write tax with no reader.
 
 ## Deliverable
 

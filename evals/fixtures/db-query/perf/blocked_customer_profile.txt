@@ -1,0 +1,6 @@
+-- staging, 2026-10-28
+SELECT count(*) AS total, count(*) FILTER (WHERE customer_id IS NULL) AS without_customer FROM blocked_customer;
+
+ total | without_customer
+-------+------------------
+  1412 |              212

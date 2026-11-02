@@ -1,0 +1,10 @@
+queryid,calls,total_exec_time_ms,mean_exec_time_ms,rows,shared_blks_hit,shared_blks_read,query
+4410012,1912400,2868600,1.5,7649600,22948800,191240,SELECT product_id, qty, unit_price FROM order_line WHERE order_id = $1
+4410007,52100,1823500,35.0,52100,125040000,1125360000,SELECT customer_id, name, email FROM customer WHERE lower(email) = lower($1)
+4410019,9600,1152000,120.0,28800,401280000,96000000,"SELECT product_id, sku, name, unit_price FROM product WHERE name ILIKE $1 ORDER BY name"
+4410003,38248,1147440,30.0,1912400,1453424000,15299200,SELECT order_id, customer_id, total, created_at FROM sales_order WHERE status = $1 AND created_at >= $2 ORDER BY created_at DESC LIMIT $3 OFFSET $4
+4410021,30,282000,9400.0,96000,912000000,98400000,"SELECT p.sku, sum(l.qty) AS units, sum(l.qty * l.unit_price) AS revenue FROM sales_order o JOIN order_line l ON l.order_id = o.order_id JOIN product p ON p.product_id = l.product_id WHERE o.created_at >= $1 AND o.created_at < $2 GROUP BY p.sku"
+4410020,410000,123000,0.3,410000,1640000,8200,UPDATE product SET stock = $1 WHERE product_id = $2
+4410018,410000,82000,0.2,410000,1230000,4100,SELECT stock FROM product WHERE product_id = $1
+4410015,31,65100,2100.0,0,148800000,12400000,SELECT customer_id, email FROM customer WHERE customer_id NOT IN (SELECT customer_id FROM blocked_customer)
+4410099,1250000,180000,0.144,1250000,5000000,25000,(all other statements combined)
