@@ -33,15 +33,24 @@
 | 32-dbdiagram-barker-and-relational-from-design | i6 | 1 | 0.83 ± 0.00 | 0.75 | +0.08 | 0.83 | 0.83 |
 | 33-dbpropose-orphans-before-constraints | i12 | 3 | 0.92 ± 0.00 | 0.46 | +0.46 | 1.00 | 0.80 |
 | 34-dbbuild-executable-ddl-from-accepted-proposal | i6 | 1 | 1.00 ± 0.00 | 0.78 | +0.22 | 1.00 | 1.00 |
+| 35-threatmodel-review-design-abuse-and-fallback | i13 | 1 | 1.00 ± 0.00 | 0.42 | +0.58 | 1.00 | 1.00 |
+| 36-threatmodel-design-abusers-and-traps | i13 | 1 | 1.00 ± 0.00 | 0.65 | +0.35 | 1.00 | 1.00 |
+| 37-threatmodel-propose-contain-then-design-out | i13 | 1 | 0.92 ± 0.00 | 0.54 | +0.39 | 1.00 | 1.00 |
+| 38-appsec-review-inventory-and-secrets | i13 | 1 | 1.00 ± 0.00 | 0.67 | +0.33 | 1.00 | 1.00 |
+| 39-appsec-design-reshapes-the-quick-wins | i13 | 1 | 1.00 ± 0.00 | 0.91 | +0.10 | 1.00 | 1.00 |
 | 4-teardown-finds-vacuous-test | i2 | 3 | 0.92 ± 0.14 | 0.25 | +0.67 | 1.00 | 1.00 |
+| 40-appsec-propose-contain-then-fix-the-class | i13 | 1 | 1.00 ± 0.00 | 0.64 | +0.36 | 1.00 | 1.00 |
+| 41-hardening-review-mixed-estate | i13 | 1 | 1.00 ± 0.00 | 0.68 | +0.32 | 1.00 | 1.00 |
+| 42-hardening-design-tier-aware-baseline | i13 | 1 | 0.93 ± 0.00 | 0.73 | +0.20 | 1.00 | 1.00 |
+| 43-hardening-propose-no-lockout | i13 | 1 | 1.00 ± 0.00 | 0.69 | +0.31 | 1.00 | 1.00 |
 | 5-verdict-cuts-and-slices | i2 | 3 | 1.00 ± 0.00 | 0.40 | +0.60 | 1.00 | 0.83 |
 | 6-compose-detects-real-services | i6 | 1 | 0.89 ± 0.00 | 0.67 | +0.22 | 1.00 | 1.00 |
 | 7-postmortem-widens-range-and-describes | i6 | 1 | 1.00 ± 0.00 | 0.60 | +0.40 | 1.00 | 1.00 |
 | 8-hotfix-node-shared-cause | i7 | 1 | 1.00 ± 0.00 | 0.38 | +0.62 | 1.00 | 1.00 |
 | 9-hotfix-jvm-both-callers | i7 | 1 | 1.00 ± 0.00 | 0.71 | +0.29 | 1.00 | 1.00 |
 
-**Delta — current 0.95 vs baseline 0.49**
-**Capability — current 0.99 vs baseline 0.85**
+**Delta — current 0.95 vs baseline 0.52**
+**Capability — current 0.99 vs baseline 0.88**
 
 ## Delta assertions the baseline also passed (still non-discriminating)
 
@@ -238,8 +247,121 @@
 - the SQL never run: no database tool call, no database file
 - proposal, design, diagrams and config untouched
 
+**eval-35-threatmodel-review-design-abuse-and-fallback**
+- the self-grantable delegation found (S25)
+- the fail-open fraud-score fallback found (S22)
+- the stale model checked against the partner API (S24/S27)
+- what is working well is recorded
+- no fixture document changed
+
+**eval-36-threatmodel-design-abusers-and-traps**
+- the system definition includes support and recovery
+- adversaries by class and grade, abusers included
+- trust boundaries named
+- hashing the national ID declined as privacy (S16)
+- caregiver delegation guarded against abuse and self-propagation
+- impersonation treated as break-glass
+- 'anonymised' export treated as a claim to test
+- SMS-only recovery declined
+- the lab webhook gets authenticity and freshness
+- open questions listed
+- requirements untouched and nothing built
+
+**eval-37-threatmodel-propose-contain-then-design-out**
+- the self-grant eliminated by design, not monitored
+- two independent mechanisms for large payouts
+- the staging key rotated before it is removed
+- the gate after the plan stated
+- no secret value echoed (kind and location only)
+- documents, spec and review untouched
+
+**eval-38-appsec-review-inventory-and-secrets**
+- no secret value echoed (kind and location only)
+- rotation, not just removal, for the leaked key
+- an endpoint inventory was built
+- /api/v1 found absent from the spec (inventory reconciled)
+- /api/v1 found unauthenticated
+- mass assignment of role found
+- CORS reflecting any origin with credentials found
+- the /docs endpoint exposure found
+- findings carry file:line evidence
+- findings carry confidence tags
+- what is working well is recorded
+- no source, spec, manifest or env file changed
+
+**eval-39-appsec-design-reshapes-the-quick-wins**
+- JWT in localStorage declined for an HttpOnly cookie or short-lived token
+- session lifetimes: idle and absolute timeouts
+- CORS * declined for an exact allow-list
+- receipts served from a sandbox origin or object storage, as attachments
+- SVG uploads handled as active content
+- partner keys in a header, never the query string
+- partner keys hashed at rest, not readable by support
+- double-submit CSRF replaced by a session-bound token or SameSite
+- tenant enforced server-side in the query, not the frontend
+- GraphQL introspection and playground off in production
+- support impersonation audited and time-bound
+- rate limits keyed on the partner or tenant, not IP
+- a version-retirement policy
+- a header contract
+- webhooks signed
+- security events and never-logged values defined
+- abuse cases listed
+- open questions listed
+- no code written (design, not build)
+
 **eval-4-teardown-finds-vacuous-test**
 - does not re-report the refuted party-size finding
+
+**eval-40-appsec-propose-contain-then-fix-the-class**
+- no secret value echoed
+- the committed key rotated before it is removed
+- exploitable holes contained before systemic rework
+- /api/v1 retired or gated, and kept gone
+- the class fix for injection: one query layer
+- mass assignment fixed by request/response DTOs or a writable-field allow-list
+- passwords migrated to a slow KDF by rehash on login
+- needs-data flags carried as open questions
+- code, spec, review and env untouched
+
+**eval-41-hardening-review-mixed-estate**
+- findings cite the theory (H-n)
+- evidence cited by host path or resource
+- each host's distro identified
+- each host's own package tooling named
+- the unowned SUID binary flagged
+- backup immutability gap found, restores flagged needs-data
+- governance graded: deletion lock and owner tags
+- what is working well is recorded
+- the correct off-site AWS bucket credited, not flagged
+- rotation recommended for the exposed password
+- no secret value echoed (kind and location only)
+- no evidence changed and no host-changing script written
+- no active probe claimed
+
+**eval-42-hardening-design-tier-aware-baseline**
+- levels per tier, sandbox not held to prod rules
+- per-platform mapping for AWS and on-prem
+- a read-only verification per control
+- exception process: approver not the requester, with expiry
+- port knocking / port 2222 declined as controls
+- SELinux kept enforcing; permissive only with an end date
+- forced 30-day rotation declined
+- backups isolated in another account and immutable
+- developer SSH replaced by a private, just-in-time admin path
+- open questions listed
+- nothing written but documents (no host-changing scripts or IaC)
+
+**eval-43-hardening-propose-no-lockout**
+- containment before structural and governance work
+- access-reducing steps carry a lockout guard
+- the exposed DB password rotated before it is removed
+- the public container closed in containment
+- blocking controls observed first, with an end date
+- the vault immutability lock flagged as irreversible
+- the trust graph respected (bastion and identity first)
+- every step has verification and rollback
+- evidence, review and baseline untouched
 
 **eval-5-verdict-cuts-and-slices**
 - F4 struck as an already-refuted repeat, citing the prior verdict

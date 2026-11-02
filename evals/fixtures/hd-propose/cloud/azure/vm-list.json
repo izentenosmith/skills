@@ -1,0 +1,16 @@
+[
+  {
+    "name": "web-01", "resourceGroup": "rg-ledgerline-prod",
+    "storageProfile": { "imageReference": { "publisher": "resf", "offer": "rockylinux-x86_64", "sku": "9-base" } },
+    "securityProfile": { "encryptionAtHost": true },
+    "networkProfile": { "networkInterfaces": [{ "id": ".../networkInterfaces/nic-web-01" }] },
+    "tags": { "environment": "prod", "product": "ledgerline", "data-class": "confidential" }
+  },
+  {
+    "name": "db-01", "resourceGroup": "rg-ledgerline-prod",
+    "storageProfile": { "imageReference": { "publisher": "Debian", "offer": "debian-12", "sku": "12-gen2" } },
+    "securityProfile": { "encryptionAtHost": true },
+    "networkProfile": { "networkInterfaces": [{ "id": ".../networkInterfaces/nic-db-01" }] },
+    "tags": { "environment": "prod", "product": "ledgerline", "data-class": "confidential", "owner": "platform-team@ledgerline.example" }
+  }
+]

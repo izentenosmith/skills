@@ -1,0 +1,5 @@
+$ timedatectl
+               Local time: Tue 2026-10-28 09:20:03 UTC
+           Universal time: Tue 2026-10-28 09:20:03 UTC
+System clock synchronized: yes
+              NTP service: active

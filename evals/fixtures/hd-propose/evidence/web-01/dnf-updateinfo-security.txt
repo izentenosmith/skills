@@ -1,0 +1,8 @@
+$ sudo dnf updateinfo list --security
+Last metadata expiration check: 0:12:44 ago on Tue 28 Oct 2026 09:02:11 UTC.
+RLSA-2026:6021 Critical/Sec.  openssh-8.7p1-43.el9_6.x86_64
+RLSA-2026:6021 Critical/Sec.  openssh-server-8.7p1-43.el9_6.x86_64
+RLSA-2026:5870 Important/Sec. kernel-5.14.0-503.38.1.el9_6.x86_64
+RLSA-2026:5512 Important/Sec. nginx-1.20.1-22.el9_6.x86_64
+$ rpm -q --last kernel | head -1
+kernel-5.14.0-427.13.1.el9_4.x86_64          Tue 11 Mar 2026 03:10:22 UTC

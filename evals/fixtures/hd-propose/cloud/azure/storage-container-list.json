@@ -1,0 +1,7 @@
+$ az storage container list --account-name stledgerlineprod --auth-mode login --query "[].{name:name, publicAccess:properties.publicAccess}"
+[
+  { "name": "exports", "publicAccess": "blob" },
+  { "name": "app-logs", "publicAccess": null }
+]
+$ az storage blob list --account-name stledgerlineprod -c exports --auth-mode login --query "[0:3].name"
+[ "invoices-2026-10-27.csv", "invoices-2026-10-26.csv", "invoices-2026-10-25.csv" ]

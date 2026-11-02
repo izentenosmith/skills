@@ -1,0 +1,11 @@
+$ sudo sysctl -a 2>/dev/null | grep -E 'randomize_va_space|kptr_restrict|dmesg_restrict|ip_forward|accept_redirects|rp_filter|tcp_syncookies|protected_(symlinks|hardlinks)|suid_dumpable'
+fs.protected_hardlinks = 1
+fs.protected_symlinks = 1
+fs.suid_dumpable = 0
+kernel.dmesg_restrict = 0
+kernel.kptr_restrict = 0
+kernel.randomize_va_space = 2
+net.ipv4.conf.all.accept_redirects = 1
+net.ipv4.conf.all.rp_filter = 1
+net.ipv4.ip_forward = 0
+net.ipv4.tcp_syncookies = 1

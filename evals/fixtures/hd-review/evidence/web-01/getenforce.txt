@@ -1,0 +1,7 @@
+$ getenforce
+Enforcing
+$ sestatus | head -4
+SELinux status:                 enabled
+SELinuxfs mount:                /sys/fs/selinux
+Current mode:                   enforcing
+Mode from config file:          enforcing

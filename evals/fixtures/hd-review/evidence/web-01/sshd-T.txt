@@ -1,0 +1,20 @@
+$ sudo sshd -T | sort
+addressfamily any
+allowgroups
+allowusers
+authenticationmethods any
+ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr
+clientaliveinterval 0
+gatewayports no
+kbdinteractiveauthentication no
+listenaddress 0.0.0.0:22
+listenaddress [::]:22
+logingracetime 120
+maxauthtries 6
+passwordauthentication yes
+permitemptypasswords no
+permitrootlogin yes
+port 22
+pubkeyauthentication yes
+usepam yes
+x11forwarding yes

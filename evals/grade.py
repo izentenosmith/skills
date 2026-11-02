@@ -3394,6 +3394,498 @@ def eval34(run):
 
 
 
+
+# ------------------------------------------------------------- threatmodel (35-37)
+
+TM_SECRETS = ["tm-eval-fake-stg-key-0001"]
+REDESIGN = r"(?m)eliminat\w* by design|remove[sd]? by design|^#+[^\n]*(eliminat|redesign|design.?out)"
+TM_IDS = r"TM-(?:SCO|ADV|BND|POL|PRO|RES)-\d\d"
+
+
+def tm_ids(t):
+    return set(re.findall(TM_IDS, t))
+
+
+def eval35(run):
+    """threatmodel Review: design-level abuse, the weaker fallback, a stale model, the shared formula, no changes."""
+    t = everything(run, "tm-review")
+    sids = cites(t, "S", 27)
+    ids = tm_ids(t)
+    return [
+        # capability — a competent security design review finds these
+        ("a review with findings was produced", len(t) > 1500 and any_of(t, r"finding"), f"{len(t)} chars", C),
+        ("one approver for irreversible payouts found",
+         near(t, r"approv", r"single|one approv|separation of duty|segregation|dual control|four.eyes|same person|second approver"), "", C),
+        ("SMS one-time codes for admins found", near(t, r"\bSMS\b", r"admin|console|ops staff|MFA|one.time|OTP"), "", C),
+        ("unauthenticated internal service calls found",
+         near(t, r"internal|service.to.service|behind the VPC|inside the VPC", r"trusted|no auth|unauthenticat|without auth"), "", C),
+        ("the replayable settlement webhook found",
+         near(t, r"webhook|HMAC|settlement", r"replay|timestamp|nonce|freshness"), "", C),
+        ("support MFA reset by knowledge questions found",
+         near(t, r"support|phone|call", r"MFA reset|reset[^\n]{0,30}MFA|knowledge|recovery|pretext"), "", C),
+        # delta — what the skill instructs
+        ("no secret value echoed (kind and location only)", *no_secret_echoed(run, "tm-review", TM_SECRETS), D),
+        ("the self-grantable delegation found (S25)",
+         near(t, r"delegat", r"self|themsel|own (second |other )?account|second account|self-assign|self-grant|grant (it )?to (them|your)sel"),
+         "ADR-0007 lets an approver delegate to any user", D),
+        ("the fail-open fraud-score fallback found (S22)",
+         near(t, r"fraud.?score|fraud scor|\bscore\b", r"fallback|fail.?open|unavailable|degrad|without a score|proceeds?"),
+         "payouts proceed without a score when fraud-score is down", D),
+        ("the stale model checked against the partner API (S24/S27)",
+         near(t, r"threat.model", r"stale|outdated|out of date|older|predates|2025|18 months|not cover|doesn't cover|does not cover")
+         and near(t, r"partner", r"not (modell?ed|covered|in the model)|missing|absent|predates|out of scope|stale|unmodell?ed|after the model"),
+         "", D),
+        ("findings carry TM- ids", len(ids) >= 5, f"{len(ids)} distinct ids", D),
+        ("findings cite the theory (S-n)", len(sids) >= 5, f"{len(sids)} distinct: {sorted(sids)[:12]}", D),
+        ("findings carry confidence tags", any_of(t, r"✅|⚠️|decidable|\bproxy\b"), "", D),
+        ("score arithmetic shown, capped by the Critical",
+         any_of(t, SCORED) and near(t, r"\bcap", r"2\.0|critical"), "", D),
+        ("the gate stated condition by condition",
+         near(t, r"\bgate\b", r"fail")
+         and near(t, r"\bgate\b|condition|matrix", r"(two|2|second) (independent )?mechanism|independent mechanism|mechanisms? per")
+         and near(t, r"\bgate\b|condition|crossing", r"authenticat|authori[sz]ation decision|authn"), "", D),
+        ("needs-data flags listed, not scored", any_of(t, r"🔬|needs.data"), "", D),
+        ("what is working well is recorded",
+         near(t, r"KMS|audit log|TLS", r"working well|done well|\bgood\b|strength|solid|keep"), "", D),
+        ("no fixture document changed", *unchanged(run, "tm-review"), D),
+    ]
+
+
+def eval36(run):
+    """threatmodel Design: the full model, abusers and insiders in it, and the requirements' traps declined."""
+    t = everything(run, "tm-design")
+    doc, long_enough = deliverable(run, "tm-design")
+    sids = cites(t, "S", 27)
+    return [
+        # capability
+        ("a threat model document was produced", long_enough, f"{len(doc)} chars", C),
+        ("every requirement area covered",
+         has(t, r"caregiver", r"impersonat", r"northlab|lab (vendor|result)|webhook", r"export|analytics"), "", C),
+        ("a data-flow diagram is given", any_of(t, r"```mermaid|flowchart|data.flow diagram|\bDFD\b"), "", C),
+        # delta
+        ("the system definition includes support and recovery",
+         near(t, r"system definition|in scope|scope", r"support|contact centre|contact center|recovery|operator"), "", D),
+        ("adversaries by class and grade, abusers included",
+         any_of(t, r"abuser|abusive|intimate partner|coerciv|estranged")
+         and any_of(t, r"\bgrade\b|Derek|Charlie|Bruno|Abdurrahman|capabilit"), "", D),
+        ("trust boundaries named", any_of(t, r"trust boundar"), "", D),
+        ("STRIDE applied per boundary crossing", near(t, r"STRIDE", r"boundar|crossing|flow|element"), "", D),
+        ("a threat tree", any_of(t, r"threat tree|attack tree"), "", D),
+        ("a hazard × mechanism matrix", any_of(t, r"hazard\s*[×x]\s*mechanism|mechanism matrix"), "", D),
+        ("a risk register with owners", any_of(t, r"risk register") and near(t, r"risk register|\| *owner", r"owner"), "", D),
+        ("requirements traced threat → requirement → test",
+         near(t, r"requirement", r"\btest") and any_of(t, r"trace|→"), "", D),
+        ("hashing the national ID declined as privacy (S16)",
+         near(t, r"national (health )?id|identifier|\bNHI\b", r"hash")
+         and near(t, r"hash", r"not (privacy|anonymi|a protection|protect)|isn't privacy|low.entropy|enumerat|brute|dictionary|rainbow|reversible|10.digit"),
+         "a 10-digit space enumerates in seconds", D),
+        ("caregiver delegation guarded against abuse and self-propagation",
+         near(t, r"caregiver|delegat", r"self|re-?invite|invite further|consent|notif|revoc|expir|abus|patient (approv|confirm)"), "", D),
+        ("impersonation treated as break-glass",
+         near(t, r"impersonat", r"break.?glass|reason|notif|time.?(bound|limit|box)|expir|audit|log"), "", D),
+        ("'anonymised' export treated as a claim to test",
+         near(t, r"anonymi[sz]|de-?identif|export", r"re-?identif|quasi|k-?anonym|differential|linkage|claim|date of birth|postcode"), "", D),
+        ("SMS-only recovery declined",
+         near(t, r"\bSMS\b", r"SIM.?swap|not (sufficient|enough|alone)|weak|second factor|phishing|port(ing|-out)|pretext"), "", D),
+        ("the lab webhook gets authenticity and freshness",
+         near(t, r"webhook|northlab|lab result", r"timestamp|nonce|replay|fresh")
+         and near(t, r"webhook|northlab|lab result", r"signature|sign(ed|s|ing)|HMAC|mTLS|mutual TLS|authentic"), "", D),
+        ("decisions cite the theory (S-n)", len(sids) >= 5, f"{len(sids)} distinct: {sorted(sids)[:12]}", D),
+        ("open questions listed", any_of(t, r"open question"), "", D),
+        ("requirements untouched and nothing built", *unchanged(run, "tm-design"), D),
+    ]
+
+
+def eval37(run):
+    """threatmodel Propose: a decision per risk, containment first, the self-grant designed out, the work routed."""
+    t = everything(run, "tm-propose")
+    doc, long_enough = deliverable(run, "tm-propose")
+    seq = section(doc, SEQUENCE) or doc
+    ids = tm_ids(doc)
+    accepted = section(doc, r"accepted risks?|acceptances")
+    n_rb = len(re.findall(r"rollback|roll back", doc, re.I))
+    n_done = len(re.findall(r"done when|validat|verif", doc, re.I))
+    return [
+        # capability
+        ("a proposal was produced", long_enough, f"{len(doc)} chars", C),
+        ("decisions trace to the review's finding ids", len(ids) >= 6, f"{len(ids)} ids", C),
+        ("a sequence is given", bool(section(doc, SEQUENCE)), "", C),
+        # delta
+        ("decisions use the treatments (eliminate, mitigate, accept)",
+         has(doc, r"eliminat", r"mitigat", r"accept"), "", D),
+        ("every acceptance names an owner and an expiry",
+         bool(accepted) and any_of(accepted, r"owner|\| *[A-Za-z-]+ (team|lead|head)") and any_of(accepted, r"expir|\d{4}-\d\d-\d\d|review by"),
+         "an acceptance with no owner or expiry is an open finding", D),
+        # The redesign marker is the first "eliminate/remove by design" step, not any mention of the
+        # delegation finding: disabling delegation is itself containment, and may rightly come first.
+        ("the live fail-open and SMS admin contained before redesign",
+         before(seq, r"TM-RES-01|fraud.?score|fail.?(open|closed)", REDESIGN)
+         and before(seq, r"TM-PRO-01|\bSMS\b", REDESIGN), "", D),
+        ("the self-grant eliminated by design, not monitored",
+         near(doc, r"TM-POL-02|delegat", r"eliminat|by design|remov|cannot (be )?delegat|no self|blocked|refus|second person|approved by")
+         and not endorses(doc, r"monitor(ing)? (the )?delegations"), "", D),
+        ("two independent mechanisms for large payouts",
+         near(doc, r"approv|payout", r"second approver|two approv|dual control|four.eyes|two (independent )?mechanism|separation of duty"), "", D),
+        ("the staging key rotated before it is removed",
+         rotated_first(t, r"TM-SCO-02|staging (partner )?(api )?key|runbook"), "", D),
+        ("code work routed to appsec, platform work to hardening",
+         any_of(doc, r"appsec") and any_of(doc, r"hardening"), "", D),
+        ("CI/CD or network work routed by name",
+         any_of(doc, r"pipelines|netdesign|network design"), "", D),
+        ("every step has rollback and a done-when", n_rb >= 3 and n_done >= 3, f"{n_done} done/validation · {n_rb} rollback", D),
+        ("the gate after the plan stated", near(doc, r"\bgate\b", r"after|step|passes|pass when"), "", D),
+        ("needs-data flags carried as open questions", any_of(t, r"🔬|needs.data") and any_of(t, r"open question"), "", D),
+        ("no secret value echoed (kind and location only)", *no_secret_echoed(run, "tm-propose", TM_SECRETS), D),
+        ("documents, spec and review untouched", *unchanged(run, "tm-propose"), D),
+    ]
+
+
+CHECKS_TM = {
+    "eval-35-threatmodel-review-design-abuse-and-fallback": eval35,
+    "eval-36-threatmodel-design-abusers-and-traps": eval36,
+    "eval-37-threatmodel-propose-contain-then-design-out": eval37,
+}
+
+# ---------------------------------------------------------------- appsec (38-40)
+
+AS_SECRETS = ["sk_test_asEvalFake0001"]
+AS_IDS = r"AS-(?:INP|AUT|ACC|CRY|CFG|DEP|LOG|BRW|API)-\d\d"
+AS_EVIDENCE = r"(?:src/[\w/.-]+\.js|\.env|package(?:-lock)?\.json|api/openapi\.yaml):\d+"
+CODE_EXT = (".js", ".ts", ".mjs", ".cjs", ".py", ".go", ".java", ".kt", ".rb", ".php", ".cs", ".rs")
+
+
+def as_cites(t):
+    """Distinct appsec principle ids A1..A43 — not OWASP category codes (A03:2021) or API ids."""
+    return {int(n) for n in re.findall(r"(?<![\w-])A([1-9]\d?)\b(?!:20\d\d)", t) if 1 <= int(n) <= 43}
+
+
+DECLINE = r"\bnot\b|avoid|instead|declin|reject|never|n't|rather|replac|push back|against"
+
+
+def eval38(run):
+    """appsec Review: the endpoint inventory and its reconciliation, the shared formula, and no changes."""
+    t = everything(run, "as-review")
+    aids = as_cites(t)
+    ids = set(re.findall(AS_IDS, t))
+    ev = set(re.findall(AS_EVIDENCE, t))
+    return [
+        # capability — a competent application-security review finds these
+        ("a review with findings was produced", len(t) > 1500 and any_of(t, r"finding"), f"{len(t)} chars", C),
+        ("the SQL injection in invoice search found",
+         near(t, r"sql.?injection|injection|concatenat|interpolat|template literal", r"search|ILIKE|invoices\.js|req\.query\.q"), "", C),
+        ("the IDOR on GET /invoices/:id found",
+         near(t, r"invoices/:id|invoices\.js:2\d|IDOR|object.level|BOLA|any tenant", r"tenant|owner|authori[sz]"), "", C),
+        ("MD5 password hashing found", near(t, r"md5", r"password|hash"), "", C),
+        ("the committed .env secret found",
+         near(t, r"\.env|stripe|secret key|payment.{0,20}key", r"commit|version control|in the repo|git|checked in|gitignore"), "", C),
+        ("the open redirect found", any_of(t, r"open redirect", r"redirect\(req\.query"), "", C),
+        ("the vulnerable lodash found", near(t, r"lodash", r"CVE|prototype|vulnerab|4\.17\.15"), "", C),
+        ("the password written to logs found",
+         near(t, r"log", r"password") and any_of(t, r"console\.log|logs? (the )?(username and )?password|passwords? (is |are )?(written|logged)|passwords?[^\n]{0,40}(written|go(es)?) to (the )?logs?"), "", C),
+        # delta — what the skill instructs
+        ("no secret value echoed (kind and location only)", *no_secret_echoed(run, "as-review", AS_SECRETS), D),
+        ("rotation, not just removal, for the leaked key", near(t, r"rotat|revoke|regenerat|roll the key", r"key|secret|stripe"), "", D),
+        ("an endpoint inventory was built", any_of(t, r"endpoint inventory|route inventory|inventory of (endpoints|routes)"), "", D),
+        ("/api/v1 found absent from the spec (inventory reconciled)",
+         near(t, r"/api/v1|\bv1\b|legacy", r"openapi|the spec|not (listed|documented|in)|zombie|shadow|undocumented|reconcil"),
+         "planted: v1 mounted in app.js, missing from api/openapi.yaml", D),
+        ("/api/v1 found unauthenticated",
+         near(t, r"/api/v1|\bv1\b|legacy", r"requireAuth|unauthenticated|no auth|without auth|anonymous|no (session|authentication)"), "", D),
+        ("mass assignment of role found",
+         any_of(t, r"mass.assign|over-?posting|Object\.assign") and near(t, r"mass.assign|Object\.assign|over-?posting", r"role|privilege|admin|escalat"),
+         "the spec documents only email and display_name", D),
+        ("CORS reflecting any origin with credentials found", near(t, r"cors|origin: ?true|reflect", r"credential"), "", D),
+        ("the /docs endpoint exposure found", near(t, r"/docs|swagger", r"unauth|expos|public|unconditional|production|before (any )?auth"), "", D),
+        ("findings carry AS- ids", len(ids) >= 6, f"{len(ids)} ids", D),
+        ("findings cite the theory (A-n)", len(aids) >= 6, f"{len(aids)} distinct: {sorted(aids)[:12]}", D),
+        ("findings carry file:line evidence", len(ev) >= 5, f"{len(ev)} distinct locations", D),
+        ("findings carry confidence tags", any_of(t, r"✅|⚠️|decidable|\bproxy\b"), "", D),
+        ("score arithmetic shown, capped by the Critical", any_of(t, SCORED) and near(t, r"\bcap", r"2\.0|critical"), "", D),
+        ("the gate stated with its conditions",
+         near(t, r"\bgate\b", r"fail") and near(t, r"\bgate\b|condition", r"KDF|slow|secret|inventory|CSRF|known-exploited"), "", D),
+        ("findings mapped to the OWASP lists", any_of(t, r"A0\d:2021|A10:2021|API\d{1,2}:20(19|23)|OWASP (Top 10|API)"), "", D),
+        ("needs-data flags listed, not scored", any_of(t, r"🔬|needs.data"), "", D),
+        ("what is working well is recorded",
+         near(t, r"helmet|parameteri[sz]ed|orders(\.js| route| queries)", r"well|good|strength|keep|correct|solid"), "", D),
+        ("no source, spec, manifest or env file changed", *unchanged(run, "as-review"), D),
+    ]
+
+
+def eval39(run):
+    """appsec Design: every quick-to-build trap reshaped with a reason, an authorisation matrix, nothing built."""
+    t = everything(run, "as-design")
+    doc, long_enough = deliverable(run, "as-design")
+    added, _, _ = changes(run, "as-design")
+    code = [f for f in added if f.endswith(CODE_EXT)]
+    aids = as_cites(t)
+    return [
+        # capability
+        ("a controls document was produced", long_enough, f"{len(doc)} chars", C),
+        ("the three roles covered", has(t, r"\bowner\b", r"accountant", r"viewer"), "", C),
+        ("partners and webhooks covered", has(t, r"partner", r"webhook"), "", C),
+        # delta
+        ("JWT in localStorage declined for an HttpOnly cookie or short-lived token",
+         near(t, r"localStorage", DECLINE + r"|XSS") and any_of(t, r"httponly"), "trap 1", D),
+        ("session lifetimes: idle and absolute timeouts", has(t, r"\bidle\b", r"absolute"), "trap 1: 30-day token", D),
+        ("CORS * declined for an exact allow-list",
+         near(t, r"Allow-Origin: ?\*|CORS ?\*|wildcard|`\*`", DECLINE)
+         and any_of(t, r"allow-?list|exact (origin|match)|app\.ledgerly\.example"), "trap 2", D),
+        ("receipts served from a sandbox origin or object storage, as attachments",
+         any_of(t, r"sandbox(ed)? (origin|domain|host)|separate (origin|domain|host)|object stor|signed URL|presigned")
+         and any_of(t, r"attachment"), "trap 3", D),
+        ("SVG uploads handled as active content",
+         near(t, r"\bsvg\b", r"script|attachment|not (inline|render)|sanitis|saniti[sz]|reject|rasteri|convert|active content"), "trap 3", D),
+        ("partner keys in a header, never the query string",
+         near(t, r"api.?keys?", r"header|Authorization") and near(t, r"query.?string|\?api_key|api_key=", DECLINE + r"|leak|logs?\b"), "trap 4", D),
+        ("partner keys hashed at rest, not readable by support",
+         near(t, r"api.?keys?|partner keys?|keys", r"hash(ed)? at rest|stored hashed|store (only )?(a |the )?hash|hash of the key|hashed"), "trap 4", D),
+        ("double-submit CSRF replaced by a session-bound token or SameSite",
+         near(t, r"double.submit", DECLINE + r"|weak|forg|cookie (injection|tossing)|sibling") and near(t, r"csrf|token", r"session|SameSite"), "trap 5", D),
+        ("tenant enforced server-side in the query, not the frontend",
+         near(t, r"tenant", r"WHERE|in the query|repository|server.side|data layer")
+         and near(t, r"frontend|SPA|client.side|the client", DECLINE + r"|isn't|insufficient|is no"), "trap 6", D),
+        ("an authorisation matrix including another tenant and anonymous",
+         any_of(t, r"authori[sz]ation matrix") and any_of(t, r"another tenant|other tenant|cross-tenant")
+         and any_of(t, r"anonymous|unauthenticated"), "", D),
+        ("GraphQL introspection and playground off in production",
+         near(t, r"introspection|graphiql|playground", r"\boff\b|disabl|not in prod|never|declin|n't|only in (dev|non-prod)"), "trap 7", D),
+        ("support impersonation audited and time-bound",
+         near(t, r"impersonat|log in as|support access", r"audit|time.bound|expir|reason|notif|logged|break.?glass"), "trap 8", D),
+        ("rate limits keyed on the partner or tenant, not IP",
+         near(t, r"rate.?limit|429|throttl|quota", r"partner|api.?key|tenant|identity|principal"), "the 3,000 rps partner", D),
+        ("a version-retirement policy", near(t, r"version|\bv2\b", r"sunset|retire|deprecat|410"), "", D),
+        ("a header contract", any_of(t, r"nosniff") and any_of(t, r"frame-ancestors|Content-Security-Policy|\bCSP\b"), "", D),
+        ("webhooks signed", near(t, r"webhook", r"HMAC|sign(ed|ature)"), "", D),
+        ("security events and never-logged values defined",
+         near(t, r"\blog", r"never|must not|not be logged|redact|mask"), "", D),
+        ("abuse cases listed", any_of(t, r"abuse case|misuse"), "", D),
+        ("decisions cite the theory (A-n)", len(aids) >= 5, f"{sorted(aids)[:12]}", D),
+        ("open questions listed", any_of(t, r"open question"), "", D),
+        ("no code written (design, not build)", not code, f"code files added: {code[:5]}" if code else "none", D),
+    ]
+
+
+def eval40(run):
+    """appsec Propose: contain first, rotate before remove, fix the class, every fix red first."""
+    t = everything(run, "as-propose")
+    doc, long_enough = deliverable(run, "as-propose")
+    seq = section(doc, SEQUENCE) or doc
+    ids = set(re.findall(AS_IDS, doc))
+    n_rb = len(re.findall(r"rollback|roll back|revert", doc, re.I))
+    n_val = len(re.findall(r"validat|verif", doc, re.I))
+    return [
+        # capability
+        ("a proposal was produced", long_enough, f"{len(doc)} chars", C),
+        ("decisions trace to the review's finding ids", len(ids) >= 6, f"{len(ids)} ids", C),
+        # delta
+        ("no secret value echoed", *no_secret_echoed(run, "as-propose", AS_SECRETS), D),
+        ("the committed key rotated before it is removed",
+         rotated_first(t, r"AS-CRY-01|\.env|stripe|payment.{0,15}key|secret key|leaked key"), "", D),
+        ("exploitable holes contained before systemic rework",
+         before(seq, r"AS-INP-01|AS-ACC-01|AS-API-01|AS-CRY-01",
+                r"query (layer|builder)|(policy|authori[sz]ation) layer|\bDTOs?\b"), "", D),
+        ("/api/v1 retired or gated, and kept gone",
+         near(t, r"/api/v1|\bv1\b|AS-API-01", r"retire|remov|410|gate|disable|unmount|decommission"), "", D),
+        ("the class fix for injection: one query layer",
+         any_of(t, r"query (layer|builder|helper)|data.access layer|repository layer|\bORM\b"), "", D),
+        ("the class fix for access: one authorisation / tenant-scoping layer",
+         any_of(t, r"(policy|authori[sz]ation|tenant[- ]scop\w*) (layer|middleware|module|guard)|repository layer|deny by default"), "", D),
+        ("mass assignment fixed by request/response DTOs or a writable-field allow-list",
+         any_of(t, r"\bDTOs?\b|allow-?list of (writable )?(fields|properties)|writable (fields|properties)|_\.pick|explicit fields"), "", D),
+        ("each fix starts with a red test, through tdd",
+         near(t, r"\bred\b|failing test|fails first", r"test") and any_of(t, r"\btdd\b"), "", D),
+        ("class guards in CI, handed to the pipelines skill",
+         any_of(t, r"semgrep|codeql|lint rule|\bSCA\b|secret scan|spec.vs.route|gitleaks")
+         and any_of(t, r"pipelines skill|\[pipelines\]|/pipelines\b|pipelines\.md|pipelines \("), "", D),
+        ("passwords migrated to a slow KDF by rehash on login",
+         near(t, r"argon2|bcrypt|scrypt|pbkdf2", r"rehash|on (next |successful )?login|migrat|upgrade"), "", D),
+        ("every step has validation and rollback", n_rb >= 3 and n_val >= 3, f"{n_val} validation · {n_rb} rollback", D),
+        ("needs-data flags carried as open questions", any_of(t, r"🔬|needs.data") and any_of(t, r"open question"), "", D),
+        ("the missing controls.md is stated",
+         near(t, r"controls\.md|controls design", r"\bno\b|not |missing|absent|doesn't|does not|without|n't exist"), "", D),
+        ("code, spec, review and env untouched", *unchanged(run, "as-propose"), D),
+    ]
+
+
+CHECKS_AS = {
+    "eval-38-appsec-review-inventory-and-secrets": eval38,
+    "eval-39-appsec-design-reshapes-the-quick-wins": eval39,
+    "eval-40-appsec-propose-contain-then-fix-the-class": eval40,
+}
+
+# ---------------------------------------------------------------- hardening (41-43)
+
+HD_SECRETS = ["hdEvalFakeDbPassw0rd!"]
+HD_IDS = r"HD-(?:IDN|NET|DAT|HST|CON|MON|GOV|SVC)-\d\d"
+HD_CONTROL_IDS = r"\b(?:IDN|NET|DAT|HST|CON|MON|GOV|SVC(?:-[A-Z]+)?)-\d\d\b"
+
+
+def line_with(t, a, b):
+    """Some line matching `a` also matches `b` — a decision and its reason stated together."""
+    return any(re.search(b, line, re.I) for line in t.splitlines() if re.search(a, line, re.I))
+
+
+def gate_conditions(t, *conds):
+    """The gate section states a failure and each named condition."""
+    g = section(t, r"\bgate\b")
+    return bool(g) and re.search(r"fail", g, re.I) is not None and all(re.search(c, g, re.I) for c in conds)
+
+
+def no_probe_claimed(run):
+    """Review collects evidence; active probes are the user's to run. The run must not say it scanned."""
+    hit = re.search(r"\b(I|we) (ran|executed|performed|launched) [^\n]{0,40}(nmap|testssl|masscan|port.?scan|nikto|openvas)",
+                    resp(run), re.I)
+    return not hit, f"claims: {hit.group(0)[:80]}" if hit else "no active probe claimed"
+
+
+def eval41(run):
+    """hardening Review: a mixed Rocky/Debian, Azure/AWS estate graded without changing it."""
+    t = everything(run, "hd-review")
+    hids = cites(t, "H", 30)
+    ids = set(re.findall(HD_IDS, t))
+    return [
+        # capability — what a competent sysadmin finds
+        ("a review with findings was produced", len(t) > 1500 and any_of(t, r"finding"), f"{len(t)} chars", C),
+        ("SSH open to the internet found",
+         near(t, r"allow-ssh-temp|\bssh\b|port 22", r"internet|public|anywhere|0\.0\.0\.0/0|any source|source `?\*"), "", C),
+        ("password authentication on SSH found", any_of(t, r"passwordauthentication|password auth"), "", C),
+        ("root login over SSH found", any_of(t, r"permitrootlogin|root login"), "", C),
+        ("the NOPASSWD: ALL human found", near(t, r"NOPASSWD", r"mrojas|ALL"), "", C),
+        ("the public storage container found", near(t, r"exports|container|blob", r"public|anonymous"), "", C),
+        ("pending security updates found", any_of(t, r"RLSA-2026|security updates?|pending (security )?(update|patch)"), "", C),
+        ("Postgres reachable from 0.0.0.0/0 found",
+         near(t, r"0\.0\.0\.0/0|listen_addresses", r"postgres|pg_hba|5432"), "", C),
+        # delta — what the skill instructs
+        ("findings carry HD- ids", len(ids) >= 6, f"{len(ids)} ids", D),
+        ("findings cite the theory (H-n)", len(hids) >= 6, f"{len(hids)} distinct: {sorted(hids)[:12]}", D),
+        ("findings carry confidence tags", any_of(t, r"✅|⚠️|decidable|\bproxy\b"), "", D),
+        ("evidence cited by host path or resource",
+         any_of(t, r"evidence/(web|db)-01/|cloud/(azure|aws)/|sshd-T\.txt|nsg-list\.json"), "", D),
+        ("asset register, exposure map and privilege map built",
+         has(t, r"asset register", r"exposure map", r"privilege map"), "", D),
+        ("each host's distro identified", has(t, r"rocky|rhel|el9", r"debian"), "", D),
+        ("each host's own package tooling named",
+         near(t, r"web-01", r"\bdnf\b|RLSA|rpm -qf|\brpm\b") and near(t, r"db-01", r"\bapt\b|unattended-upgrades|deb12")
+         and not near(t, r"web-01", r"\bufw\b|apt (upgrade|install)|apt-get"),
+         "dnf/rpm on the Rocky host, apt on the Debian host", D),
+        ("Postgres graded as a service role, TLS included",
+         near(t, r"\bservice\b|SVC", r"postgres|pg_hba|database")
+         and any_of(t, r"ssl\s*=\s*off|hostssl|TLS[^\n]{0,40}(postgres|database|5432)|(postgres|database)[^\n]{0,60}(TLS|ssl)"), "", D),
+        ("the unowned SUID binary flagged",
+         near(t, r"backup-helper", r"not owned|no package|unowned|unpackaged|owned by no|outside (the )?(distro|package)"), "", D),
+        ("backup immutability gap found, restores flagged needs-data",
+         near(t, r"immutab|soft.?delete", r"vault|backup")
+         and near(t, r"restore", r"🔬|needs.data|never|no restore|untested|not (been )?tested"), "", D),
+        ("governance graded: deletion lock and owner tags",
+         near(t, r"\block", r"resource group|rg-ledgerline|delet") and near(t, r"\bowner\b", r"\btag"), "", D),
+        ("score arithmetic shown, capped by the Critical", any_of(t, SCORED) and near(t, r"\bcap", r"2\.0|critical"), "", D),
+        ("the gate stated condition by condition",
+         gate_conditions(t, r"admin|internet|bastion", r"restor"), "", D),
+        ("what is working well is recorded",
+         near(t, r"selinux|chrony|encryption at host|encryptionAtHost|object lock|TLS ?1\.2", r"well|good|strength|solid|keep|🟢"), "", D),
+        ("the correct off-site AWS bucket credited, not flagged",
+         near(t, r"offsite|off-site|object lock|ledgerline-offsite", r"well|good|private|🟢|correct|immutable|locked"), "", D),
+        ("rotation recommended for the exposed password", near(t, r"rotat", r"password|credential|secret"), "", D),
+        ("no secret value echoed (kind and location only)", *no_secret_echoed(run, "hd-review", HD_SECRETS), D),
+        ("no evidence changed and no host-changing script written", *unchanged(run, "hd-review"), D),
+        ("no active probe claimed", *no_probe_claimed(run), D),
+    ]
+
+
+def eval42(run):
+    """hardening Design: a tier-aware, platform-mapped baseline that declines the requirements' traps."""
+    t = everything(run, "hd-design")
+    doc, long_enough = deliverable(run, "hd-design")
+    cids = set(re.findall(HD_CONTROL_IDS, doc))
+    hids = cites(t, "H", 30)
+    return [
+        # capability
+        ("a baseline document was produced", long_enough, f"{len(doc)} chars", C),
+        ("Ubuntu, RHEL and Alpine all covered", has(t, r"ubuntu", r"rhel|red hat", r"alpine"), "", C),
+        ("AWS and on-prem both covered", has(t, r"\baws\b", r"on-?prem|vmware|vsphere"), "", C),
+        # delta
+        ("controls carry IDs by domain", len(cids) >= 10, f"{len(cids)} control ids", D),
+        ("levels per tier, sandbox not held to prod rules",
+         has(doc, r"sandbox", r"non-?prod")
+         and near(t, r"sandbox", r"\bnot\b|n't|instead|declin|differ|lighter|relax|tier-?blind|ignored|fewer"), "", D),
+        ("per-distro mapping (apt, dnf, apk/OpenRC)",
+         has(t, r"\bapt\b|unattended-upgrades", r"\bdnf\b|dnf-automatic|firewalld", r"\bapk\b|openrc"), "", D),
+        ("per-platform mapping for AWS and on-prem",
+         any_of(t, r"Session Manager|\bSSM\b|Instance Connect|AWS Backup|\bKMS\b|Security Hub|CloudTrail|Vault Lock")
+         and near(t, r"vmware|vsphere|vcenter|on-?prem", r"backup|patch|firewall|log|bastion|satellite|ansible"), "", D),
+        ("a read-only verification per control", has(t, r"sshd -T", r"getenforce|sestatus") and any_of(t, r"verif|check"), "", D),
+        ("exception process: approver not the requester, with expiry",
+         near(t, r"exception", r"approv") and near(t, r"exception", r"expir|\d+ days|time-?bound")
+         and any_of(t, r"not the requester|never the requester|other than the requester|security (lead|owner)"), "", D),
+        ("conventions use placeholders, not the company's literals",
+         any_of(doc, r"<org>|<product>|<env>|\{org\}|\$\{?org")
+         and not endorses("\n".join(l for l in doc.splitlines() if not re.search(r"<[a-z-]+>", l)),
+                          r"acme-prod-web|acme-ledger-db|acme-prod\b"),
+         "requirement 7 asks for acme-* names", D),
+        ("port knocking / port 2222 declined as controls",
+         line_with(t, r"port.knock|2222", r"not a control|obscur|declin|\bnot\b|n't|instead|no security|noise"), "", D),
+        ("SELinux kept enforcing; permissive only with an end date",
+         near(t, r"selinux", r"enforc") and near(t, r"permissive", r"end date|expir|until|deadline|time-?box|\d+ (days|weeks)"), "", D),
+        ("forced 30-day rotation declined",
+         near(t, r"30.day|periodic (password )?(rotation|change)|rotate every", r"\bnot\b|n't|declin|instead|withdrawn|NIST|predictable|breach|on compromise"), "", D),
+        ("backups isolated in another account and immutable",
+         near(t, r"backup", r"separate (aws )?account|another account|dedicated (backup )?account|cross-account|isolated|different account")
+         and any_of(t, r"vault lock|object lock|immutab"), "", D),
+        ("developer SSH replaced by a private, just-in-time admin path",
+         near(t, r"bastion|session manager|\bSSM\b|instance connect", r"developer|debug|admin|engineer"), "", D),
+        ("decisions cite the theory (H-n)", len(hids) >= 4, f"{sorted(hids)[:12]}", D),
+        ("open questions listed", any_of(t, r"open question"), "", D),
+        ("nothing written but documents (no host-changing scripts or IaC)", *unchanged(run, "hd-design"), D),
+    ]
+
+
+def eval43(run):
+    """hardening Propose: containment first, no lockouts, rotate before remove, irreversible steps flagged."""
+    t = everything(run, "hd-propose")
+    doc, long_enough = deliverable(run, "hd-propose")
+    seq = section(doc, SEQUENCE) or doc
+    ids = set(re.findall(HD_IDS, doc))
+    hids = cites(t, "H", 30)
+    n_rb = len(re.findall(r"rollback|roll back|revert", doc, re.I))
+    n_val = len(re.findall(r"verif|validat|check", doc, re.I))
+    return [
+        # capability
+        ("a proposal was produced", long_enough, f"{len(doc)} chars", C),
+        ("decisions trace to the review's finding ids", len(ids) >= 6, f"{len(ids)} ids", C),
+        ("the target baseline's controls are carried", len(set(re.findall(HD_CONTROL_IDS, doc))) >= 3, "", C),
+        # delta
+        ("containment before structural and governance work",
+         before(seq, r"HD-NET-01|HD-DAT-01|HD-IDN-03|HD-HST-02", r"HD-GOV-0[12]|HD-MON-01|HD-HST-03|HD-NET-02"), "", D),
+        ("the private admin path is live before public SSH is closed",
+         before(t, r"bastion|vpn|private (admin )?path|session manager",
+                r"(remov|delet|clos)\w*\s+(the\s+)?`?allow-ssh-temp|allow-ssh-temp`?[^\n]{0,40}(remov|delet|clos)|clos\w*\s[^\n]{0,30}port 22"),
+         "", D),
+        ("access-reducing steps carry a lockout guard",
+         any_of(t, r"second session|lockout guard|lock(ed)? out|auto-?revert|break-?glass"), "", D),
+        ("the exposed DB password rotated before it is removed", rotated_first(t, r"HD-IDN-03|db\.conf|DB password|database password"), "", D),
+        ("the public container closed in containment", before(seq, r"exports|HD-DAT-01", r"HD-GOV|owner tag"), "", D),
+        ("blocking controls observed first, with an end date",
+         near(t, r"observe|report-?only|log-?only|permissive|complain|log (only|first)", r"end date|until|expir|\d+ (days|weeks)|promot"), "", D),
+        ("the vault immutability lock flagged as irreversible",
+         near(t, r"immutab|vault lock|lock(ing)? (the )?immutab", r"irreversib|cannot be undone|can't be undone|one-way|explicit approval"), "", D),
+        ("canary first, then waves", has(t, r"canary", r"\bwaves?\b"), "", D),
+        ("fixes baked into the image or config management",
+         near(t, r"bake|golden image|image pipeline|config(uration)?.management|ansible|cloud-init", r"new hosts|source|born|drift|template|role"), "", D),
+        ("the trust graph respected (bastion and identity first)",
+         any_of(t, r"trust graph") or near(t, r"break-?glass|PIM|bastion", r"\bbefore\b|\bfirst\b"), "", D),
+        ("every step has verification and rollback", n_rb >= 4 and n_val >= 4, f"{n_val} verification · {n_rb} rollback", D),
+        ("decisions cite the theory (H-n)", len(hids) >= 3, f"{sorted(hids)[:12]}", D),
+        ("evidence, review and baseline untouched", *unchanged(run, "hd-propose"), D),
+    ]
+
+
+CHECKS_HD = {
+    "eval-41-hardening-review-mixed-estate": eval41,
+    "eval-42-hardening-design-tier-aware-baseline": eval42,
+    "eval-43-hardening-propose-no-lockout": eval43,
+}
+
+
 CHECKS = {
     "eval-0-architect-charter-and-options": eval0,
     "eval-1-brief-ordered-criteria": eval1,
@@ -3430,6 +3922,15 @@ CHECKS = {
     "eval-32-dbdiagram-barker-and-relational-from-design": eval32,
     "eval-33-dbpropose-orphans-before-constraints": eval33,
     "eval-34-dbbuild-executable-ddl-from-accepted-proposal": eval34,
+    "eval-35-threatmodel-review-design-abuse-and-fallback": eval35,
+    "eval-36-threatmodel-design-abusers-and-traps": eval36,
+    "eval-37-threatmodel-propose-contain-then-design-out": eval37,
+    "eval-38-appsec-review-inventory-and-secrets": eval38,
+    "eval-39-appsec-design-reshapes-the-quick-wins": eval39,
+    "eval-40-appsec-propose-contain-then-fix-the-class": eval40,
+    "eval-41-hardening-review-mixed-estate": eval41,
+    "eval-42-hardening-design-tier-aware-baseline": eval42,
+    "eval-43-hardening-propose-no-lockout": eval43,
 }
 
 

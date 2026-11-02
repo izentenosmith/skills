@@ -1,0 +1,10 @@
+$ az resource list -g rg-ledgerline-prod --query "[].{name:name, owner:tags.owner, environment:tags.environment}"
+[
+  { "name": "web-01",              "owner": null, "environment": "prod" },
+  { "name": "db-01",               "owner": "platform-team@ledgerline.example", "environment": "prod" },
+  { "name": "nsg-ledgerline-web",  "owner": null, "environment": "prod" },
+  { "name": "nsg-ledgerline-db",   "owner": "platform-team@ledgerline.example", "environment": "prod" },
+  { "name": "pip-web-01",          "owner": null, "environment": "prod" },
+  { "name": "stledgerlineprod",    "owner": null, "environment": "prod" },
+  { "name": "rsv-ledgerline-prod", "owner": null, "environment": "prod" }
+]

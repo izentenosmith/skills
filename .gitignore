@@ -81,6 +81,9 @@ xcuserdata/
 .env.*.local
 # the dockerfile fixture's .env is planted: the skill must keep it out of the image
 !evals/fixtures/dockerfile/.env
+# the appsec fixtures' .env is planted: the review must report it without echoing the key
+!evals/fixtures/as-review/.env
+!evals/fixtures/as-propose/.env
 
 # --- Node tooling (in case skills grow scripts/tests) ---
 node_modules/

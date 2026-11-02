@@ -1,0 +1,15 @@
+[
+  {
+    "name": "stledgerlineprod",
+    "resourceGroup": "rg-ledgerline-prod",
+    "kind": "StorageV2",
+    "allowBlobPublicAccess": true,
+    "allowSharedKeyAccess": true,
+    "minimumTlsVersion": "TLS1_2",
+    "enableHttpsTrafficOnly": true,
+    "publicNetworkAccess": "Enabled",
+    "networkRuleSet": { "defaultAction": "Allow" },
+    "encryption": { "keySource": "Microsoft.Storage" },
+    "tags": { "environment": "prod", "product": "ledgerline", "data-class": "confidential" }
+  }
+]
