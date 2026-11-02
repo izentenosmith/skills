@@ -17,7 +17,7 @@ skills/
   development/      build the change      seven stages, design → adversarial close
   containers/       package it to run     dockerfile → docker-compose
   operations/       live with it          hotfix → incident-fix → post-mortem · release-notes
-  database/         audit, design, diagram, propose
+  database/         architect, audit, design, diagram, propose, build, query review
   networking/       audit, design, diagram, propose, blueprint
   infrastructure/   review, design, propose   terraform · pipelines
 harness/            the skills' rules as code: the closing loop, bug → PR, incident → post-mortem, DB and network audit → proposal
@@ -29,11 +29,11 @@ evals/              seeded fixtures, scored assertions, the recorded benchmark
 | **[development/](skills/development/README.md)** | [architect-deep-dive](skills/development/architect-deep-dive/SKILL.md) · [agent-brief](skills/development/agent-brief/SKILL.md) · [tdd](skills/development/tdd/SKILL.md) · [refactor-review](skills/development/refactor-review/SKILL.md) · [devils-advocate](skills/development/devils-advocate/SKILL.md) · [tyr-verdict](skills/development/tyr-verdict/SKILL.md) |
 | **[containers/](skills/containers/README.md)** | [dockerfile](skills/containers/dockerfile/SKILL.md) · [docker-compose](skills/containers/docker-compose/SKILL.md) |
 | **[operations/](skills/operations/README.md)** | [hotfix](skills/operations/hotfix/SKILL.md) · [incident-fix](skills/operations/incident-fix/SKILL.md) · [post-mortem](skills/operations/post-mortem/SKILL.md) · [release-notes](skills/operations/release-notes/SKILL.md) |
-| **[database/](skills/database/README.md)** | [dbaudit](skills/database/dbaudit/SKILL.md) · [dbdesign](skills/database/dbdesign/SKILL.md) · [dbdiagram](skills/database/dbdiagram/SKILL.md) · [dbpropose](skills/database/dbpropose/SKILL.md) · [dbbuild](skills/database/dbbuild/SKILL.md) |
+| **[database/](skills/database/README.md)** | [dbarchitect](skills/database/dbarchitect/SKILL.md) · [dbaudit](skills/database/dbaudit/SKILL.md) · [dbdesign](skills/database/dbdesign/SKILL.md) · [dbdiagram](skills/database/dbdiagram/SKILL.md) · [dbpropose](skills/database/dbpropose/SKILL.md) · [dbbuild](skills/database/dbbuild/SKILL.md) · [dbquery](skills/database/dbquery/SKILL.md) |
 | **[networking/](skills/networking/README.md)** | [netaudit](skills/networking/netaudit/SKILL.md) · [netdesign](skills/networking/netdesign/SKILL.md) · [netdiagram](skills/networking/netdiagram/SKILL.md) · [netpropose](skills/networking/netpropose/SKILL.md) · [netblueprint](skills/networking/netblueprint/SKILL.md) |
 | **[infrastructure/](skills/infrastructure/README.md)** | [terraform](skills/infrastructure/terraform/SKILL.md) · [pipelines](skills/infrastructure/pipelines/SKILL.md) |
 
-The families are loosely coupled by design. `development` is a genuine pipeline where each stage checks the one before it; `containers` is an ordered pair; `operations` is a response chain — hotfix escalates to incident-fix, which hands its record to post-mortem — plus release-notes, which stands alone; `database` and `networking` each have five independent skills coordinated by an optional harness; `infrastructure` has two skills that each run review → design → propose as modes of one skill. Every skill also works entirely on its own.
+The families are loosely coupled by design. `development` is a genuine pipeline where each stage checks the one before it; `containers` is an ordered pair; `operations` is a response chain — hotfix escalates to incident-fix, which hands its record to post-mortem — plus release-notes, which stands alone; `database` has seven independent skills — five of them coordinated by an optional harness, plus an architecture stage above them and a query review beside them — and `networking` has five coordinated the same way; `infrastructure` has two skills that each run review → design → propose as modes of one skill. Every skill also works entirely on its own.
 
 **The family directories are scaffolding for reading this repo, nothing more.** The agent never sees them — it selects on each `SKILL.md`'s frontmatter `description`. When you take a skill, you take the skill folder; see [How to use](#how-to-use).
 
@@ -145,23 +145,29 @@ It needs inputs you supply: a **date range for the git history** and whatever **
 
 ## database
 
-Five independent skills, coordinated by [`harness/dbworkflow.py`](harness/dbworkflow.py) when the user wants a full or partial workflow.
+Seven independent skills. Five of them — audit to build — are coordinated by [`harness/dbworkflow.py`](harness/dbworkflow.py) when the user wants a full or partial workflow; `dbarchitect` sits above them and `dbquery` beside them, and the harness runs neither.
 
 ```
+Which stores, which flows:    dbarchitect → (one dbdesign per relational system of record)
 Existing database: dbaudit → dbdesign → dbdiagram (Barker ER + relational) → dbpropose
 New database:                 dbdesign → dbdiagram (Barker ER + relational) → dbpropose
 Accepted proposal:                                       dbbuild
+Running workload:  dbquery  (settles dbaudit's needs-data flags; index changes → dbpropose)
 ```
 
 | Skill | What it does |
 |-------|--------------|
+| [dbarchitect](skills/database/dbarchitect/SKILL.md) | Decides which data stores a system needs and how data flows between them — system of record per fact, derived stores, data model, replication, partitioning, consistency per workflow — as decision records and a dataflow map, or reviews an existing architecture against the same rubric. |
 | [dbaudit](skills/database/dbaudit/SKILL.md) | Audits existing databases with a repeatable score and evidence-backed strengths, weaknesses, and improvement opportunities. |
 | [dbdesign](skills/database/dbdesign/SKILL.md) | Designs a new database or revises an audited design using relational theory, Codd's rules, normal forms, and physical-design guidance. |
 | [dbdiagram](skills/database/dbdiagram/SKILL.md) | Produces editable draw.io ER and relational model diagrams from a design or database structure. |
 | [dbpropose](skills/database/dbpropose/SKILL.md) | Assembles the recommendation from available audit, design, and diagram artifacts. |
 | [dbbuild](skills/database/dbbuild/SKILL.md) | Generates reviewable DDL from an explicitly accepted proposal and its design. |
+| [dbquery](skills/database/dbquery/SKILL.md) | Reviews the SQL a system actually runs — query text, execution plans and workload statistics — for cost, wrong results, races and injection, with prescriptions weighed against the whole workload and a 0–10 score. |
 
 **The audit doesn't prescribe; design owns the model; proposal assembles the recommendation; dbbuild generates DDL only after proposal acceptance.** Conceptual ER diagrams use Barker notation throughout; relational diagrams keep table/key notation. The harness checks the required Barker page name/legend and diagram pair. The harness applies the 9.0 score threshold plus Critical/High, unused/copy, and unresolved needs-data ratio conditions. Structural iterations return through design, diagrams, and proposal before a revised proposal can be accepted for DDL generation. Skills remain independently usable outside the harness.
+
+**The theory comes from the relational canon and its practitioners:** Codd; Date & Darwen (*The Third Manifesto*, *Database Explorations*); Silberschatz, Korth & Sudarshan; Ramakrishnan & Gehrke; Barker's CASE\*METHOD; Watt & Eng, Sharma et al. and Booth on design; Karwin's *SQL Antipatterns*; Winand's *SQL Performance Explained* and Faroult's *The Art of SQL*; Kleppmann's *Designing Data-Intensive Applications* and Petrov's *Database Internals*; and Obe & Hsu and Fontaine on PostgreSQL. Every term a finding cites is defined once in [theory.md](skills/database/dbaudit/theory.md), and its reference list says what each book contributes.
 
 ---
 
@@ -230,14 +236,15 @@ These carry no workflow of their own — the skill in the same folder links into
 | [blameless-culture](skills/operations/post-mortem/blameless-culture.md) | post-mortem — why blameless is a data-collection strategy (Google SRE; Dekker) |
 | [contributing-factors](skills/operations/post-mortem/contributing-factors.md) | post-mortem — past single-root-cause; the categories to sweep and where to stop |
 | [evidence-sources](skills/operations/post-mortem/evidence-sources.md) | post-mortem — reading a git range, incident PDFs, chat exports and monitoring into a sourced timeline |
-| [theory](skills/database/dbaudit/theory.md) | dbaudit and dbdesign — relational principles including Codd's rules, FDs, normal forms, ACID, SSOT |
-| [er-modeling](skills/database/dbaudit/er-modeling.md) | dbaudit and dbdesign; copied in dbdiagram — CAP1–CAP4 pure modelling, reverse-engineering, 25 drills |
+| [theory](skills/database/dbaudit/theory.md) | dbaudit and dbdesign — relational principles: relations vs tables, Codd's rules, FDs and keys, normal forms 1NF–6NF and decomposition, NULL and three-valued logic, isolation anomalies, SSOT vs derived data, constraint kinds, data/metadata separation, security |
+| [er-modeling](skills/database/dbaudit/er-modeling.md) | dbaudit and dbdesign; copied in dbdiagram — CAP1–CAP4 pure modelling, reverse-engineering, notation crosswalk, 29 drills |
 | [scoring](skills/database/dbaudit/scoring.md) | dbaudit — severity, confidence tags, the 0–10 formula, triage, output templates |
 | [audit-lenses](skills/database/dbaudit/audit-lenses.md) | dbaudit — dead/copy schemas, coupling, dark data, security |
 | [tables](skills/database/dbaudit/tables.md) · [indexes](skills/database/dbaudit/indexes.md) · [views](skills/database/dbaudit/views.md) · [procedures](skills/database/dbaudit/procedures.md) · [triggers](skills/database/dbaudit/triggers.md) | dbaudit — the per-object-type rubrics |
 | [detection-signals](skills/database/dbaudit/detection-signals.md) | dbaudit — grep/regex per anti-pattern, with engine notes |
 | [proposal](skills/database/dbpropose/proposal.md) | dbpropose — input contract, verdicts, topology, translation, target-schema and remediation skeletons |
-| [physical-design](skills/database/dbdesign/physical-design.md) | dbdesign — the PostgreSQL 18 physical standard |
+| [physical-design](skills/database/dbdesign/physical-design.md) | dbdesign — the PostgreSQL 18 physical standard, including rule-enforcement tiers, concurrency and access design |
+| [requirements](skills/database/dbdesign/requirements.md) | dbdesign — the requirements dossier: rule catalogue, data dictionary, access matrix |
 | [theory](skills/networking/netaudit/theory.md) | netaudit, netdesign, netpropose, netblueprint — networking principles §1–§16 (Kurose & Ross; Tanenbaum & Wetherall) |
 | [graph-theory](skills/networking/netaudit/graph-theory.md) | netaudit, netdesign, netpropose, netblueprint — the network-science lens G1–G12 (Newman; Barabási) |
 | [topology-modeling](skills/networking/netaudit/topology-modeling.md) | all five network skills — the `topology.json` contract, reverse-engineering, drills |
@@ -294,7 +301,7 @@ Each skill carries its own copy of the dispatch contract it needs, so the folder
 
 Assertions are split: **capability** (does the stage do its job at all) from **delta** (does it do what a change to the skill added). Only the delta column is evidence an edit helped. Against the pre-session baseline over 36 runs: **0.98 vs 0.22** on delta, **0.96 vs 0.92** on capability.
 
-**Scored: every skill.** The six `development` stages carry the recorded n=3 result above. The other skills' first run (2026-10-25) is one with-skill run each — three for evals 11–13 — against a baseline with no skill at all, which is the honest comparison for a skill that did not exist at the baseline ref. Across all 35 evals: **0.95 vs 0.49** on delta, **0.99 vs 0.85** on capability. Per eval in [evals/benchmark.md](evals/benchmark.md).
+**Scored: every skill but the two newest.** The six `development` stages carry the recorded n=3 result above. The other skills' first run (2026-10-25) is one with-skill run each — three for evals 11–13 — against a baseline with no skill at all, which is the honest comparison for a skill that did not exist at the baseline ref. Across evals 0–34: **0.95 vs 0.49** on delta, **0.99 vs 0.85** on capability. Per eval in [evals/benchmark.md](evals/benchmark.md).
 
 The fixtures are seeded so a naive answer fails them: a compose fixture with a stale `ELASTICSEARCH_URL`, an incident whose trigger sits nine days before the outage, production levers that are stubs recording their calls (so "took no action without confirmation" is checked, not inferred), networks graded by parsing every CIDR and every draw.io cell, DDL executed in SQLite and probed with rows that must be refused, acceptance tests run against three mutants.
 
@@ -302,6 +309,7 @@ The fixtures are seeded so a naive answer fails them: a compose fixture with a s
 
 - `dockerfile` **0.79 vs 0.79**: no better than no skill, and it quoted a planted key in its "rotate this" warning instead of naming the variable. Scored before the skill's upgrade in #9 (never repeat a secret's value, a check/command/observed table); not yet re-run.
 - `netblueprint` scores **1.00 vs 1.00**: its eval checks that it refuses an unaccepted proposal, which a bare agent also does.
+- `dbquery` and `dbarchitect` (evals 35–36) **have no run yet**: their fixtures, graders and controls exist and separate, but no model has been scored on them.
 
 Three skills were fixed after their first run and re-run three times each: `acceptance-tests` **0.75 → 1.00** (criteria that already hold are tested with their contrast; edges tested within seconds; one mapping line per criterion), `dbpropose` **0.61 → 0.92** (a `proposal.md` file, a step table with validation, rollback and blast radius, data before constraints, expand/contract, acceptance before dbbuild), and `dbdesign` **0.69 → 0.95** — most of whose first score was four grader false negatives (bold Barker sentences, a "Normal-form" heading, the intersection table's own column, an age-band lookup), fixed in `grade.py` with every control re-checked.
 
@@ -323,8 +331,8 @@ npx skills add izentenosmith/skills --skill dockerfile docker-compose
 # operations — the response chain plus release-notes
 npx skills add izentenosmith/skills --skill hotfix incident-fix post-mortem release-notes
 
-# database — audit, design, diagram, propose, build
-npx skills add izentenosmith/skills --skill dbaudit dbdesign dbdiagram dbpropose dbbuild
+# database — architect, audit, design, diagram, propose, build, query review
+npx skills add izentenosmith/skills --skill dbarchitect dbaudit dbdesign dbdiagram dbpropose dbbuild dbquery
 
 # networking — audit, design, diagram, propose, blueprint
 npx skills add izentenosmith/skills --skill netaudit netdesign netdiagram netpropose netblueprint
@@ -356,11 +364,13 @@ npx skills add izentenosmith/skills --skill '*'
 | | `npx skills add izentenosmith/skills --skill incident-fix` |
 | | `npx skills add izentenosmith/skills --skill post-mortem` |
 | | `npx skills add izentenosmith/skills --skill release-notes` |
-| database | `npx skills add izentenosmith/skills --skill dbaudit` |
+| database | `npx skills add izentenosmith/skills --skill dbarchitect` |
+| | `npx skills add izentenosmith/skills --skill dbaudit` |
 | | `npx skills add izentenosmith/skills --skill dbdesign` |
 | | `npx skills add izentenosmith/skills --skill dbdiagram` |
 | | `npx skills add izentenosmith/skills --skill dbpropose` |
 | | `npx skills add izentenosmith/skills --skill dbbuild` |
+| | `npx skills add izentenosmith/skills --skill dbquery` |
 | networking | `npx skills add izentenosmith/skills --skill netaudit` |
 | | `npx skills add izentenosmith/skills --skill netdesign` |
 | | `npx skills add izentenosmith/skills --skill netdiagram` |
@@ -402,6 +412,8 @@ The installer copies each skill folder whole, dereferencing the database and net
    cp -RL skills/skills/database/dbdiagram      my-project/.claude/skills/
    cp -RL skills/skills/database/dbpropose      my-project/.claude/skills/
    cp -RL skills/skills/database/dbbuild        my-project/.claude/skills/
+   cp -RL skills/skills/database/dbarchitect    my-project/.claude/skills/
+   cp -RL skills/skills/database/dbquery        my-project/.claude/skills/
    cp -RL skills/skills/networking/netaudit     my-project/.claude/skills/
    cp -RL skills/skills/networking/netdesign    my-project/.claude/skills/
    cp -RL skills/skills/networking/netdiagram   my-project/.claude/skills/
@@ -424,6 +436,7 @@ The installer copies each skill folder whole, dereferencing the database and net
    /hotfix                /incident-fix
    /release-notes         /post-mortem
    /dbaudit       /dbdesign       /dbdiagram       /dbpropose       /dbbuild
+   /dbarchitect   /dbquery
    /netaudit      /netdesign      /netdiagram      /netpropose      /netblueprint
    /terraform     /pipelines
    ```

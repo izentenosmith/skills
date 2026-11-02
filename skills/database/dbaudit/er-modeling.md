@@ -40,8 +40,11 @@ This document is written forwards (requirements → model → tables). On a lega
 **backwards**, to recover what the tables were trying to say:
 
 1. **Tables → candidate entities.** One table per entity is the hypothesis; shadow/copy tables
-   collapse into their authoritative sibling; a table with only two FKs and a few attributes is a
-   candidate *intersection* entity (a resolved M:M).
+   collapse into their authoritative sibling; per-value clones (`ventas_2023`) collapse into one entity.
+   Classify each table: **kernel** (PK not an FK — an independent entity); **associative** (≥ 2 FKs
+   forming a key — a resolved M:M); **characteristic** (one FK + a qualifier as the key — a resolved
+   multi-valued attribute, `employee_phone (employee_id, phone)`); **subtype** (PK is also an FK to one
+   parent). A table that fits none of these is where to look for the missing model.
 2. **FKs (declared or by convention) → relationships.** Write the relationship sentence for each
    (CAP1 §A1.3). A relationship you cannot phrase is a modelling smell, not a documentation gap.
 3. **Columns → attributes.** Run the single-value test (A1.4) and the normalization checks (A2.1).
@@ -49,10 +52,52 @@ This document is written forwards (requirements → model → tables). On a lega
 4. **PKs → UIDs.** Grade every PK against the UID criteria (A1.5). A business-code PK that can change
    is a UID that fails the *invariant* criterion.
 5. **`tipo_*` columns, sparse nullable column blocks, `id_x` + `tipo_x` pairs → hidden subtypes and
-   arcs** (A2.4, A2.5) that were mapped badly or not at all.
+   arcs** (A2.4, A2.5) that were mapped badly or not at all; `attr_name` + `attr_value` rows → an EAV
+   table hiding the attributes of one or more subtypes.
+6. **Write each table's predicate** — one sentence with one placeholder per column ("Employee *E*,
+   named *N*, works in department *D*"). An **OR** you need to make it true of every row ("…or we
+   don't know…", "…if it is a company…") means the table holds several predicates → subtypes, a state,
+   or a missing-information table (theory §3.2). Clauses that vary **independently** over time mean a
+   separate history entity per clause (A2.6). A table whose predicate you can't write is a finding, not
+   a documentation gap.
 
 The recovered model is the input to the target design; the legacy mapping is evidence, not the
 standard.
+
+### A0.1 Reading a source in another notation
+
+Legacy models and textbooks arrive in Chen/EER or in IE crow's foot. Convert to Barker; never carry a
+glyph across, and list every translated construct in the provenance note. Two traps silently **invert
+meaning**:
+
+- **Line style.** In IE crow's-foot tools solid vs dashed means *identifying vs non-identifying*; in
+  Barker the solid or dashed half-line means *must be vs may be*.
+- **Look-across vs look-here.** IE puts both min and max at the *far* end ("an ORDER has 0..1
+  CUSTOMER" is drawn at CUSTOMER). In Barker the cardinality is at the far end but the **optionality is
+  the half-line at the near end**.
+
+| Source construct | Barker rendering |
+|---|---|
+| IE min symbol (`○` / `\|`) at B's end | optionality of the **A** half-line (`○` → A *may be*, dashed; `\|` → A *must be*, solid) |
+| IE max symbol at B's end (`\|` / crow) | Barker end marker at B (bar / crow's foot) — same side |
+| IE **solid** line (identifying) | UID bar at the child end — *not* a mandatory marker |
+| IE **dashed** line (non-identifying) | no UID bar — *not* optional |
+| Chen total participation (double line) / partial | solid (*must be*) / dashed (*may be*) half-line |
+| Chen arrow to an entity (≤ 1), 1 : N labels | bar / crow's foot at the corresponding ends |
+| Chen weak entity + identifying relationship + discriminator | dependent entity: UID bar on the relationship + `#` on the discriminator (A1.5) |
+| Chen relationship with attributes | intersection entity carrying them (M:M), or attributes on the many-side entity (1:M) |
+| Chen n-ary relationship, aggregation | intersection entity with binary relationships to each participant (A2.7); an "A, B → C" rule becomes `UNIQUE (a_id, b_id)` in the TID |
+| Chen multivalued attribute (double oval) | new entity, M:1 back (A1.4) |
+| Chen composite attribute | the components the business uses (A1.4) |
+| Chen derived attribute (dashed oval) | omit (A1.4) — unless it is an event-time fact |
+| EER specialization, disjoint + total | Barker subtypes (A2.4) |
+| EER specialization, partial | Barker subtypes + an **OTHER** subtype |
+| EER specialization, overlapping; multiple ISA parents | **not** subtypes — roles (A2.3) |
+
+Three common mistakes in source models to report: a foreign identifier drawn as an **attribute**
+instead of a relationship; the participants' keys repeated as attributes of a relationship; a
+single-valued relationship attribute where the fact is multi-valued (marks per assignment), which calls
+for a dependent entity.
 
 ## CAP1 — Conceptual data modelling basics
 
@@ -100,6 +145,16 @@ unqualified crow's-foot ERD. A Barker ER diagram has a page title/legend that na
 4. Write a one-sentence description with examples: *"An EMPLOYEE is a paid worker of the company —
    for example, Juan Pérez and María Muñoz are EMPLOYEEs."*
 5. Diagram it.
+6. **Merge synonyms** (*borrower*, *loaner*, *client* → one entity; keep the others as synonyms). Don't
+   model **the system itself** (LIBRARY in a library system) — one instance means a parameter.
+7. **Verbs are relationships.** Every action between two nouns is a candidate relationship sentence.
+8. **Probe for implied entities and rare paths.** Ask the "always?" question of every fact ("does an
+   order always ship to the customer's address?" — no → SHIPPING ADDRESS) and walk the exceptions
+   (backorder, transfer, cancellation). The infrequent processes are the ones missing from a first model.
+9. **Record the source** (person, department, document) of every entity, relationship and rule —
+   different departments know different halves of a process.
+10. **One model per subsystem** when the subsystems barely touch; integrate them through the shared
+    entities, not one monolithic diagram.
 
 Don't disqualify a candidate too early; a noun that looks like an attribute often turns out to be an
 entity once its own attributes appear.
@@ -168,6 +223,16 @@ model. Whether to *store* one is a **physical** decision driven by volume and ac
 the physical design (generated column, materialized view) and kept consistent by mechanism, never
 by hand.
 
+**Fact at event time vs derived.** Before excluding a "computed" value, ask whether the rule that
+computes it can change. The **price charged**, the **tax rate applied**, the **due date granted** are
+facts *of the transaction*, recorded when it happened — keep them on the transaction entity (ORDER LINE,
+LOAN). Only values recomputable **forever** from data still in the model (line total = quantity × price
+charged; a count; a sum) are derived.
+
+**Unstable attributes.** An attribute whose value drifts with the calendar (*age*, *year of study*,
+*days overdue*, *seniority*) is derived from a stable one. Model the stable fact (*birth date*,
+*enrolment date*, *due date*) and compute the rest.
+
 **Optionality.** Mark each attribute **`*` mandatory** (a value must be known for every instance) or
 **`o` optional**. Validate the marks with an **entity instance diagram** — a few rows of real sample
 data under the attribute names; a mandatory attribute with blanks in the sample is mis-marked.
@@ -232,9 +297,10 @@ BCNF, 4NF) are in [`theory.md` §2–§3](theory.md); the model-level checks are
 | **2NF** | Every attribute depends on the **whole** UID | Each UID value determines exactly one value of each attribute; no attribute depends on only *part* of a composite UID | The misplaced attribute moves to the entity it really depends on (bank address belongs to BANK, not to ACCOUNT whose UID is bank + account number) |
 | **3NF** | No non-UID attribute depends on another non-UID attribute | Look for attribute pairs that determine each other | Move **both** the dependent attribute and its determinant to a **new entity**, related back by M:1 |
 
-**3NF is the working target** for eliminating redundancy in design. The audit still looks at BCNF and
-4NF (overlapping candidate keys, independent multi-valued facts — see theory §3), because legacy
-schemas break those too.
+**3NF is the working target** for eliminating redundancy in design; BCNF wherever it doesn't lose a
+dependency (theory §3.1). The audit still looks at BCNF (overlapping composite candidate keys), 4NF
+(independent multi-valued facts) and 5NF (cyclic three-way rules — A2.7), because legacy schemas break
+those too.
 
 ### A2.2 Hierarchies and recursive relationships
 
@@ -252,6 +318,9 @@ schemas break those too.
   composed of one or more COMPONENTs*). Resolve it like any M:M: an intersection entity (ASSEMBLY
   RULE) with **two M:1 relationships back to COMPONENT** — one for the parent, one for the child —
   carrying the attribute that belongs to the pairing (**quantity**).
+- The *physical* encoding of a hierarchy (adjacency list, closure table, path, nested sets) is chosen
+  later by the operations it must support (physical-design §5.4); the model is always the recursive
+  relationship.
 
 ### A2.3 Roles
 
@@ -300,19 +369,29 @@ Patterns:
 
 - **Historical attribute** → a new entity whose **UID includes a time indicator** (date, date+time,
   period number or sequence). CONTRACT with a current status becomes CONTRACT + STATUS, UID = the
-  CONTRACT + `# effective date`. One history entity can track several attributes of the same parent.
+  CONTRACT + `# effective date`. One history entity may track several attributes of the same parent
+  **only if they always change together**; attributes that change independently each get their own
+  history entity (6NF, theory §3), or every change to one re-states the others.
 - **Historical relationship** → a new entity holding the relationship over time (APARTMENT —
   current tenant becomes APARTMENT + LEASE HISTORY).
 - **M:M over time** → the intersection entity carries the period, with the **start date in its UID**
   so the same pair can recur (EMPLOYMENT between MEMBER and COMPANY, `# from date`, `to date`).
-- Decide explicitly whether **gaps** (periods with no value) and **overlaps** are allowed, and whether
-  **future-dated** values (a rent already agreed for next year) are recorded. Non-overlap is enforceable
+- Decide explicitly whether **gaps** (periods with no value) and **overlaps** are allowed, whether
+  **adjacent equal** values are allowed (they shouldn't be — merge them, or "when did the price
+  change?" lies), and whether **future-dated** values (a rent already agreed for next year) are
+  recorded. An open end is "until further notice", modelled as an unbounded period — not as an optional
+  end date that also has to mean "not recorded" (theory §3.2). Non-overlap is enforceable
   by a temporal key (PostgreSQL 18: `WITHOUT OVERLAPS`); *no gaps* and *always has a value* need more
   than a key constraint.
 - Agree the **retention window** ("the last two years") — history kept forever by default is a cost
   nobody chose.
 - If the user says **current state only**, model the present tense and stop; don't add history the
   requirement didn't ask for.
+- **Audit trail ≠ history.** History records *when a fact was true in the business* (valid time) and is
+  queried as data. An **audit trail** records *who changed what, when, from what to what* (transaction
+  time) and answers accountability questions: an append-only CHANGE LOG per audited entity — entity key,
+  changed at, changed by, column, old value, new value, reason — on which no updates or deletes are
+  granted. Decide per entity which one the requirement asks for: sometimes both, rarely all entities.
 
 ### A2.7 Complex relationships — rings of M:M
 
@@ -325,6 +404,17 @@ relationship connector. Business rules can be enforced by making an intersection
 intersections** instead of base entities — e.g. an employee's task assignment references *(employee,
 task) ∈ SKILL* and *(project, task) ∈ PROJECT TASK*, so nobody is assigned a task they can't do or that
 the project doesn't contain. Then remove intersections the result makes redundant.
+
+The intersection's UID is the participants on the **many** side of the n-ary fact. A participant
+functionally determined by the others (*each (employee, project) has one and only one supervisor*)
+becomes a mandatory non-UID relationship; putting it in the UID would allow two supervisors for one
+pair.
+
+**Test before merging or splitting (5NF).** Replacing a three-way intersection by its three binaries is
+lossless **only if** a cyclic rule holds ("if supplier S supplies part P, P is used by project J, and S
+supplies J, then S supplies P to J"). Without that rule the ternary is the correct, irreducible fact and
+splitting it invents rows on rejoin; with it, the ternary stores the same fact many times and must be
+split. Ask the business for the rule; don't infer it from sample rows.
 
 ## CAP3 — Database design: mapping the ER model to relations
 
@@ -369,6 +459,17 @@ broken uniqueness that a column list hides.
    | **1:1 optional at both ends** | Either table | `U` (nullable) |
    | **Recursive 1:M** | Self-referencing FK in the same table, named for the role (`manager_id`) | **Never `NN`** (A2.2) |
    | **Recursive 1:1** | Self-referencing FK | `U`, never `NN` |
+   | **Mandatory at the *one* end** (*each PARENT must be … one or more CHILD*) | FK in the many table as usual | The parent-side *must* is an **equality dependency** (theory §7.1) — no FK expresses it. Record it as a model rule with its mechanism (physical-design §5.3), or ask whether it is really *may be* during an initial state. Never let the diagram promise what the schema doesn't enforce. |
+   | **1:1 mandatory at both ends** | Prefer **one table**; if kept apart, FK + `U` on one side | The reverse direction is an equality dependency and a referential cycle — needs deferred checking (theory §7.2) |
+
+   On SQL Server a nullable `UNIQUE` admits only **one** NULL, so the *1:1 optional at both ends* row
+   needs a filtered unique index (`… WHERE col IS NOT NULL`) there.
+
+   **Not declarable with PK / FK / NOT NULL** — state each as a named invariant and say how it is
+   enforced (deferred constraint trigger, write-path rule, or "not enforced"): mandatory at the one end;
+   mandatory participation in an M:M (every PROJECT has an assignment); subtype completeness in
+   supertype + subtype tables; n-ary functional rules, which *are* declarable as `UNIQUE` on the
+   intersection but which no Barker cardinality shows — write them in the TID.
 
 5. **Arcs → alternative foreign keys.** Two designs:
 
@@ -380,6 +481,19 @@ broken uniqueness that a column list hides.
 
    **Target standard: explicit arc + `CHECK`.** A generic arc is a polymorphic association — the
    database can no longer guarantee the referenced row exists.
+
+   Before choosing, ask **what the targets have in common** — the generic arc is often a symptom, not a
+   decision:
+   - **Targets are kinds of one thing** (BUG and FEATURE REQUEST are both ISSUEs) → the arc hides a
+     **missing supertype**. Model it (A2.4), map it as supertype + subtype tables (step 6), and point
+     **one** FK at the supertype. No arc remains.
+   - **Targets are unrelated and the child belongs to exactly one** → explicit arc + exclusivity
+     `CHECK`.
+   - **The child is shared, or optional, per target** → *reverse the reference*: one intersection table
+     per target (`bug_comment (bug_id, comment_id)`), with `UNIQUE (comment_id)` in each if a child may
+     have only one parent of that kind. Exclusivity *across* the intersections is not declarable.
+   - **The child relates to several targets at once** (an ADDRESS used by a CUSTOMER *and* an ORDER) →
+     not an arc at all: separate relationships or roles (A2.3).
 6. **Subtypes → tables.**
 
    | | **Single table** | **Separate tables** (one per subtype) | **Supertype + subtype tables** (shared PK, 1:1) |
@@ -389,7 +503,8 @@ broken uniqueness that a column list hides.
    | Subtype `NN` | CAP3: not enforceable in the DB; **PG18: enforceable** with `CHECK (type <> 'C' OR salary IS NOT NULL)` per subtype | Enforced | Enforced |
    | UID across subtypes | Natural | **Hard** — nothing stops the same id in two subtype tables | Natural (one PK space) |
    | Application | Must branch on `type` | Must be subtype-specific | Joins for the full row |
-   | Use when | Few subtype-specific attributes/relationships | Subtypes are queried apart and never as a whole | Many subtype-specific columns **and** the supertype is an FK target |
+   | Use when | Few subtype-specific attributes/relationships | Subtypes are queried apart and never as a whole — **only for a total, disjoint** specialization; no FK can reference the supertype | Many subtype-specific columns **and** the supertype is an FK target |
+   | Not enforced | — | Overlap across subtype tables (the supertype columns stored twice) | **Completeness** — every supertype row having a subtype row is an equality dependency (theory §7.1); the `(id, kind)` device enforces exclusivity only |
 
    Avoid PostgreSQL table `INHERITS` for this: primary keys, unique constraints and foreign keys do not
    propagate across inheritance children.
@@ -409,12 +524,12 @@ in DDL.
 | 4 | Challenge a 1:1 (numbered manual copies, one per employee, spares in the safe) | Making it mandatory both ways | Optional on the manual side (spares exist), mandatory-or-optional on the employee side as the rule says | 1:1 FK with no `UNIQUE` — silently 1:M |
 | 5 | Choose an identifier (agents identified by quadrant–area–zone) | Using location as identity | A system-generated agent id; the zone is a **relationship** that can change ("Smith moved zones") | PK on a business/location code; FK cascades when it changes |
 | 6 | 1NF (order date on ORDER; current part name on PART) | Calling single-valued facts violations | Both fine; current part price lives on PART, order total is **derived** | Repeating groups: `curso_numero_1..3` |
-| 7 | 2NF (part name on ORDER LINE; customer number on ORDER LINE) | Attributes depending on part of the composite UID | Part name on PART; customer on ORDER; line total (price × qty) is derived | Descriptions copied into detail tables |
+| 7 | 2NF (part name on ORDER LINE; customer number on ORDER LINE) | Attributes depending on part of the composite UID — or stripping the price charged as "redundant" | Part name on PART; customer on ORDER; **unit price charged on ORDER LINE** (a fact of the sale, A1.4); line total = qty × price charged, derived | Descriptions copied into detail tables; old invoices reprinted with today's price |
 | 8 | 3NF (employee with department id **and** department name) | Keeping the transitive dependency | DEPARTMENT entity; EMPLOYEE references it | `nombre_depto` next to `cod_depto`; mass updates to rename one department |
 | 9 | Recursion (re-parent a manager and their subtree; merge under a new manager) | Assuming a width/depth limit; updating every descendant | No limit in either direction; moving a subtree updates **one** row | Fixed `jefe_1`, `jefe_2` level columns |
 | 10 | Recursive and non-recursive versions of one hierarchy (sales area → city → district; manager → supervisor → seller) | Forcing a recursive model where levels have different attributes and rules | Both models drawn; recursive only where levels are alike | — |
 | 11 | Subtypes + arcs together (vehicle rental: vehicle kinds with kind-specific readings; contract holder person **or** company; risky-customer flag) | Modelling the holder as two optional FKs with no exclusivity; subtype attributes on the supertype | Vehicle supertype/subtypes; an arc on the contract holder; risk as customer state | `id_persona` + `id_empresa` both nullable, no `CHECK` |
-| 12 | Price history with no gaps, changing at most daily | Overwriting the current price; allowing overlaps | PART PRICE with `# effective date` in the UID; non-overlap enforced; no-gap rule stated and enforced | `precio` overwritten in place, or history table with no uniqueness on (part, date) |
+| 12 | Price history with no gaps, changing at most daily | Overwriting the current price; allowing overlaps; a nullable end date meaning "current" | PART PRICE with `# effective date` in the UID; non-overlap enforced; no-gap rule stated and enforced; open end unbounded | `precio` overwritten in place, a history table with no uniqueness on (part, date), or a nullable `hasta` |
 | 13 | Ring of M:M (employee–project–task; skills; tasks per project) | Three binaries that let an employee do any task on any project | A ternary intersection referencing SKILL and PROJECT TASK, redundant intersections removed | Assignment table with FKs to the base tables only |
 | 14 | TID checks (mark nulls, circle `NN`/`U` violations, find the FKs, recursive FKs, BOM table) | Missing that a "unique" column has duplicates or a recursive FK is mandatory | Every `NN`/`U` mark consistent with the sample rows | Self-FK declared `NOT NULL` |
 | 15 | Map arcs explicitly **and** generically; map subtypes as single **and** separate tables | Picking one without stating the trade-off | Both drawn, choice justified against A3.2 steps 5–6 | `tipo_ref` + `id_ref` with no FK |
@@ -435,3 +550,7 @@ Larger narratives where several rules interact. Each lists the decisions a corre
 | 23 | Spare parts whose number encodes row–drawer–bin; one part per bin, but a part can sit in two bins; clerks often know only the name | **Eliminate the intelligent key**: PART with a meaningless id, BIN as its own entity, PART × BIN placement; part name searchable (alternate key or index) | PK = location code; duplicate part rows for the second bin |
 | 24 | Apartment complex: building code + floor + room identifies a unit; tenants identified by name (duplicates exist); rent varies monthly with two years of history and next year's agreed changes; tenant history with gaps allowed; payments; extras per floor | Dependent UID (unit within building); system-generated tenant id (names aren't unique); RENT with effective date, **always one value, no overlaps, future dates allowed**; tenancy history **gaps allowed but no overlaps**; PAYMENT history; EXTRA × FLOOR with quantity | Rent overwritten in place; tenant PK on name |
 | 25 | Restaurant chain: districts, branches within districts, employees numbered by hiring branch, full/part-time, branch managers and district managers, daily product sales with two years of history | Branch UID dependent on district; employee id **not** derived from the hiring branch (they transfer); part/full-time as state or subtype; manager roles as relationships (a branch manager temporarily covering a district); daily sales at branch × product × day, monthly figures **derived** | Employee id `A-01-01`; a stored monthly-sales table kept in step by a job |
+| 26 | Library: books, copies, borrowers, authors; loan date, due date, return date; a fine per day overdue; "a borrower may borrow one book per day" | BOOK (title) vs COPY (instance) is a **type/instance** split, not an M:M resolver; LOAN = BORROWER × COPY, historical, `# loan date` in the UID; return date a **recorded event**, optional until return; due date a fact of the loan unless the loan period can never change (A1.4); "one copy out at a time" → a partial unique on open loans; "one book per day" → `UNIQUE (borrower, loan date)`; AUTHOR and BORROWER may be roles of PERSON | `copy.borrower_id` beside a loan table; loan PK (copy, borrower), so a copy can never be re-borrowed |
+| 27 | Distance-learning university: students, staff counsellors and tutors in regions; one counsellor per student from registration; a tutor per student per course; 15/30-point courses with a quota and up to 3/5 assignments per offering; ≤ 180 points at once; current enrolments only | Counsellor relationship **mandatory**; tutor on **ENROLMENT**, not on STUDENT or COURSE; a missing **PRESENTATION** (course offering) entity holds the quota and the assignment limit; "same region" → an overlapping composite FK (physical-design §5.3); ≤ 180 points and ≤ 3/5 assignments are aggregate rules; credit ∈ {15, 30} and mark 0–100 are `CHECK`s; history excluded by an explicit assumption | One unlabelled `staff_no` on both STUDENT and COURSE; `quota` on COURSE with no offering |
+| 28 | Swim club: levels, classes with a size limit and an enrolled count, pools, instructors (salaried or not, one pay amount), students; "a level must always have a class; a class must have students; a class may have no instructor" | Enrolled count **derived**; "≤ limit" an aggregate rule enforced under concurrency; `salaried` + one `pay_amount` meaning salary *or* rate is a hidden subtype (A2.4); level → class and class → student are **mandatory at the one end** (A3.2 step 4); instructor optional → nullable FK | An `enrolled` counter kept by code; `pay_amount` whose meaning depends on a flag |
+| 29 | Double-entry ledger: chart of accounts (type encoded in the number range), transactions, entries (debit or credit, not both), posting | Σ debit = Σ credit per transaction is an **aggregate rule** checked at commit, not a header `CHECK`; exactly one of debit or credit is a row `CHECK`; account **balance derived** (or a documented materialized projection); account type a relationship to ACCOUNT TYPE, not decoded from the number range (intelligent key, A1.5); posted entries immutable — reversals are new entries | `CHECK (posted = 0 OR dbo.fn(id) = 0)`; a stored `balance` updated in place |

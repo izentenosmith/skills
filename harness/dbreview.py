@@ -44,7 +44,7 @@ sys.path.insert(0, str(HERE))
 import loop  # noqa: E402
 
 EXIT_OK, EXIT_ERROR, EXIT_USAGE = 0, 1, 2
-RUBRIC = "v1.1"
+RUBRIC = "v1.2"
 BANDS = [(9.0, "Exemplary"), (7.0, "Good, minor debt"), (5.0, "Needs work"), (3.0, "Poor"), (0.0, "Critical / unsafe")]
 OBJECT_RE = {
     "tables": r"\bCREATE\s+(?:GLOBAL\s+|LOCAL\s+)?(?:TEMP(?:ORARY)?\s+)?TABLE\b",
@@ -217,7 +217,7 @@ def inventory(files):
     return counts
 
 
-# ------------------------------------------------------------------ scoring (scoring.md v1.1)
+# ------------------------------------------------------------------ scoring (scoring.md v1.2)
 
 def band(score):
     return next(name for floor, name in BANDS if score >= floor)

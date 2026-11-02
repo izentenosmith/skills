@@ -1,6 +1,6 @@
 {
  "skill_name": "skills",
- "note": "Evals 0-5 cover the six-stage development pipeline; 6-7 cover the containers and operations skills; 8-14 cover hotfix and incident-fix across different stacks; 15 runs harness/loop.py end to end (runner: loop) instead of one claude -p call; 16-20 cover the five networking skills; 21-26 cover terraform and pipelines, one eval per mode (review, design, propose); 27 covers acceptance-tests on the tdd fixture; 28 covers dockerfile; 29 covers release-notes; 30-34 cover the five database skills. Each with-skill run is repeated 3x for variance analysis; baseline is a single no-skill run on the same prompt.",
+ "note": "Evals 0-5 cover the six-stage development pipeline; 6-7 cover the containers and operations skills; 8-14 cover hotfix and incident-fix across different stacks; 15 runs harness/loop.py end to end (runner: loop) instead of one claude -p call; 16-20 cover the five networking skills; 21-26 cover terraform and pipelines, one eval per mode (review, design, propose); 27 covers acceptance-tests on the tdd fixture; 28 covers dockerfile; 29 covers release-notes; 30-34 cover the five database schema skills; 35 covers dbquery and 36 dbarchitect. Each with-skill run is repeated 3x for variance analysis; baseline is a single no-skill run on the same prompt.",
  "evals": [
   {
    "id": 0,
@@ -288,6 +288,22 @@
    "fixture": "db-build",
    "prompt": "The proposal in proposal/ has been accepted (see proposal/acceptance.md). Generate the DDL.",
    "expected_output": "Ordered .sql files for SQLite 3.45 that run in one pass on an empty database: the seven design tables with their primary keys, parents before children, every foreign key with the design's ON DELETE action, NOT NULL, UNIQUE and CHECK constraints that refuse bad rows, the design's indexes, and nothing beyond the design. pet.microchip left without a UNIQUE and flagged as undecided (Q3) rather than invented. A header naming proposal/proposal.md, design/design.md, the engine, the generation date and that it creates a new schema. No credential from config/app.ini anywhere; the SQL never run (no scripts/db call, no database file); proposal, design, diagrams and config untouched; the response says the SQL was not run and what it could not verify."
+  },
+  {
+   "id": 35,
+   "name": "dbquery-workload-ranked-plans-read-indexes-weighed",
+   "skill": "dbquery",
+   "fixture": "db-query",
+   "prompt": "Review the database workload for the brightcart order service. Everything we collected is in this repo.",
+   "expected_output": "A query review (written as markdown, nothing else) that ranks statements by total time — 4410012, the order-line lookup at 37 % of 7.7 M ms, ahead of the 9.4 s monthly report — and states coverage as a share of total time. It finds the N+1 behind 4410012 (one lookup per order from list_recent_orders); the lower(email) lookup that seq-scans past ix_customer_email (settling AUD-09); the open-orders list filtering status after a created_at index scan, fixed by (status, created_at) and seek paging; the monthly report's 1,000x misestimate traced to autovacuum disabled on sales_order since the import, fixed by ANALYZE rather than an index; the marketing export's NOT IN over a nullable column with 212 NULLs, fixed by NOT EXISTS; the stock lost update in reserve_stock; the ORDER BY injection in search_products and the trigram index its ILIKE needs. Plan 05 is labelled as laptop volume, not production evidence. Of the proposed indexes, order_line(order_id) is rejected as redundant with the primary key, the note index on write cost, the name B-tree as useless for ILIKE; lower(email) and (status, created_at) accepted. ix_order_status reported unused (settling AUD-07). Each prescription names its verification; the score shows its base and cap. scripts/psql-staging never called; the password in config/database.env never echoed; no fixture file changed and no SQL written."
+  },
+  {
+   "id": 36,
+   "name": "dbarchitect-one-system-of-record-no-dual-writes",
+   "skill": "dbarchitect",
+   "fixture": "db-architect",
+   "prompt": "Decide the data architecture for the Tidewater Tickets relaunch. The requirements, the current setup and the team's proposal are in this repo.",
+   "expected_output": "A data-architecture record in markdown opening with a charter: seat state given one system of record (PostgreSQL) with a uniqueness constraint as the coordination point for 'no seat sold twice', Redis demoted from source of availability to a derived cache; the MongoDB proposal declined for lack of numbers, with R1's 4,000 holds/s carried as a benchmark question rather than a reason to shard; the dual writes to Redis and Elasticsearch replaced by an outbox or CDC, both stores named as derived with a source, mechanism, staleness bound and rebuild path in a dataflow map; My tickets given read-your-writes; payment webhooks made idempotent; zero lost paid orders met by synchronous replication for the primary; the dashboard moved off the primary to a derived store with its 15-minute staleness stated; the unknown search load carried as an open question; decision records with options and reversal cost. No DDL, no compose or IaC change, nothing provisioned, and the compose file's password never echoed."
   }
  ]
 }

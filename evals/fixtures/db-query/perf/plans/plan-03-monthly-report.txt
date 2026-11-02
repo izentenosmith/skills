@@ -1,0 +1,19 @@
+-- staging, 2026-10-28, statement 4410021 (October)
+EXPLAIN (ANALYZE, BUFFERS) SELECT p.sku, sum(l.qty) AS units, sum(l.qty * l.unit_price) AS revenue
+FROM sales_order o JOIN order_line l ON l.order_id = o.order_id JOIN product p ON p.product_id = l.product_id
+WHERE o.created_at >= '2026-10-01' AND o.created_at < '2026-11-01' GROUP BY p.sku;
+
+ HashAggregate  (cost=1890.22..1890.34 rows=12 width=72) (actual time=9302.114..9388.020 rows=3200 loops=1)
+   Group Key: p.sku
+   Buffers: shared hit=30400000 read=3280000
+   ->  Nested Loop  (cost=1.30..1890.10 rows=12 width=46) (actual time=0.061..9022.478 rows=4019700 loops=1)
+         Buffers: shared hit=30400000 read=3280000
+         ->  Nested Loop  (cost=0.87..1882.01 rows=12 width=26) (actual time=0.044..4103.330 rows=4019700 loops=1)
+               ->  Index Scan using ix_order_created on sales_order o  (cost=0.43..96.40 rows=1004 width=8) (actual time=0.020..310.902 rows=1004890 loops=1)
+                     Index Cond: ((created_at >= '2026-10-01 00:00:00+00'::timestamp with time zone) AND (created_at < '2026-11-01 00:00:00+00'::timestamp with time zone))
+               ->  Index Scan using order_line_pkey on order_line l  (cost=0.44..1.77 rows=1 width=26) (actual time=0.002..0.003 rows=4 loops=1004890)
+                     Index Cond: (order_id = o.order_id)
+         ->  Index Scan using product_pkey on product p  (cost=0.43..0.67 rows=1 width=28) (actual time=0.001..0.001 rows=1 loops=4019700)
+               Index Cond: (product_id = l.product_id)
+ Planning Time: 0.611 ms
+ Execution Time: 9391.507 ms

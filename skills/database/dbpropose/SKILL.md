@@ -18,6 +18,7 @@ Turn evidence and a design into a recommendation a decision-maker can accept and
 | Design (`design.md`, model) and its version | The target: entities, keys, constraints | Stop short of a migration plan; recommend running dbdesign |
 | ER diagram (Barker) and relational diagram | Cross-checked against the design | Note the gap. Required only when the proposal changes the model |
 | Requirements, consumers, target engine | Changes the audit didn't cause, breaking-change impact | Carry as open questions |
+| Query review (dbquery) and data architecture (dbarchitect), when they exist | Index changes with their workload case; store and dataflow decisions the migration must follow | Index changes rest on the audit alone; say so |
 
 ## Steps
 
@@ -25,8 +26,8 @@ Turn evidence and a design into a recommendation a decision-maker can accept and
 2. **Check the diagrams against the design.** A diagram drawn from an older revision, or one that disagrees with the design, is a mismatch. Describe it and route it to [dbdiagram](../dbdiagram/SKILL.md) (or [dbdesign](../dbdesign/SKILL.md) when the design is the one that's wrong). Never redraw or repair either here.
 3. **Decide a posture per object.** Decide structure, data and logic separately in the band vocabulary (Reuse / Refactor / Rework / Rebuild). Start from the score band and explain any evidence-based override. See [proposal.md](proposal.md).
 4. **Build the decision register,** Critical first, then by dependency. Every row cites the audit finding id it answers. A change no finding asked for (a new table from a requirement, a design decision) says **"no audit finding"** and names what drives it. Never invent a finding id.
-5. **Find the consumers of every breaking change.** For anything removed, renamed, retyped or newly constrained, name who reads or writes it: the app, reports, add-ons, ETL, views, integrations. A breaking change with a known consumer is planned as **expand → migrate consumers → contract**, and the contract step is gated on that named consumer having moved. An unknown consumer is an open question, not an assumption.
-6. **Sequence the migration.** Data work comes before the constraint it unblocks: orphans resolved before the foreign key, duplicates before the unique key, bad values before the check. Containment comes before structure, and parents before children. Write the sequence as the step table in [proposal.md](proposal.md): every step has its pre-check, validation, rollback and blast radius.
+5. **Find the consumers of every breaking change.** For anything removed, renamed, retyped or newly constrained, name who reads or writes it: the app, reports, add-ons, ETL, views, integrations — including positional consumers (`INSERT … VALUES` with no column list, `SELECT *`) and whole-row writers (ORM saves) that additions can break. A breaking change with a known consumer is planned as **expand → migrate consumers → contract**, every step compatible both backward and forward for a rolling deploy, the expand step keeping both shapes in step inside the database (never application dual writes), and the contract step gated on that named consumer having moved. An unknown consumer is an open question, not an assumption.
+6. **Sequence the migration.** Data work comes before the constraint it unblocks: orphans resolved before the foreign key, duplicates before the unique key, bad values before the check. Containment comes before structure, parents before children, sync before backfill, load before index. Write the sequence as the step table in [proposal.md](proposal.md): every step has its pre-check, validation, rollback and blast radius — and, on PostgreSQL, the lock it takes and its lock-safe form.
 7. **Carry the unknowns.** Every unresolved needs-data flag, every unknown consumer and every unconfirmed assumption becomes an open question that names the decision it blocks.
 8. **Write `proposal/proposal.md`** (or the path the user names) in the structure in [proposal.md](proposal.md). End it with the acceptance line. Your response summarizes the recommendation and links the file; the proposal itself never lives only in the chat.
 
@@ -36,6 +37,7 @@ Turn evidence and a design into a recommendation a decision-maker can accept and
 - [ ] Every register row has a finding id from the audit, or says "no audit finding" and why.
 - [ ] Every breaking change names its consumers and, where one is known, is expand/contract with a gated contract.
 - [ ] No constraint is added before the data step that makes it hold.
+- [ ] Every step is backward- and forward-compatible for a rolling deploy; no step relies on application dual writes.
 - [ ] Every migration step has its validation, rollback and blast radius filled in.
 - [ ] Diagram mismatches are described and routed, not fixed.
 - [ ] The proposal closes with the acceptance line.

@@ -1,0 +1,13 @@
+-- staging, 2026-10-28, statement 4410007
+EXPLAIN (ANALYZE, BUFFERS) SELECT customer_id, name, email FROM customer WHERE lower(email) = lower('ana.silva@example.com');
+
+ Gather  (cost=1000.00..33870.10 rows=10000 width=48) (actual time=4.812..34.906 rows=1 loops=1)
+   Workers Planned: 2
+   Workers Launched: 2
+   Buffers: shared hit=2400 read=21600
+   ->  Parallel Seq Scan on customer  (cost=0.00..31870.10 rows=4167 width=48) (actual time=22.190..30.411 rows=0 loops=3)
+         Filter: (lower(email) = 'ana.silva@example.com'::text)
+         Rows Removed by Filter: 666666
+         Buffers: shared hit=2400 read=21600
+ Planning Time: 0.142 ms
+ Execution Time: 34.958 ms

@@ -11,7 +11,9 @@ Give a balanced assessment: what is working well, what is deficient, and what co
 
 This skill evaluates and stops. For a redesign, continue with [dbdesign](../dbdesign/SKILL.md), then
 [dbdiagram](../dbdiagram/SKILL.md) and [dbpropose](../dbpropose/SKILL.md) when a complete recommendation
-is wanted. The workflow coordinator is [dbworkflow.py](../../../harness/dbworkflow.py).
+is wanted. The workflow coordinator is [dbworkflow.py](../../../harness/dbworkflow.py). The 🔬 flags
+this audit raises — hot paths, real index usage, plan behaviour, cardinality — are settled by
+[dbquery](../dbquery/SKILL.md) when plans and workload statistics are available.
 
 This skill **evaluates and stops**. It does not recommend a redesign, write target DDL or decide what
 to drop — an audit that also prescribes has an incentive to shape its findings toward the prescription.
@@ -51,13 +53,17 @@ Pick one up front and say which:
 | **Model audit** | An ER model or schema proposal, no DDL dumps | Grade it against [er-modeling.md](er-modeling.md) — its checklists and the CAP4 drills — and report gaps with severity; skip the scoring formula, which is built for DDL files |
 
 For model audits, identify the source notation before reading its marks. Assess conceptual content against
-the Barker convention in [er-modeling.md](er-modeling.md); accurately interpret another source notation,
+the Barker convention in [er-modeling.md](er-modeling.md); accurately interpret another source notation
+with the crosswalk in [er-modeling.md](er-modeling.md) §A0.1 (Chen/EER and crow's foot → Barker),
 report material notation deviations, and express any recovered ER model in Barker notation. Never
 silently reinterpret glyphs from another convention.
 
 Also state the **source engine**, inferred from the syntax (`IDENTITY`/`dbo`/`INSERTED` → SQL Server;
-`:NEW`/`VARCHAR2` → Oracle; `AUTO_INCREMENT` → MySQL). The signals are written for T-SQL;
-[detection-signals.md](detection-signals.md) says how each translates.
+`:NEW`/`VARCHAR2` → Oracle; `AUTO_INCREMENT` → MySQL; `pg_dump` headers/`OWNER TO`/`plpgsql` →
+PostgreSQL). The signals are written for T-SQL; [detection-signals.md](detection-signals.md) says how
+each translates and which criteria are **n/a** on the engine — those are left out of the base, never
+graded 🟢 or 🔴. A PostgreSQL schema dump also carries owners, grants and policies, so the security lens
+grades them statically ([audit-lenses.md](audit-lenses.md) §6).
 
 ---
 
@@ -91,12 +97,17 @@ One file, one rubric, one evaluation file. For each:
   file:line reference. A finding missing any of them is incomplete — the theory most of all: a defect
   without the principle it breaks is taste.
 - [ ] **Reverse-engineer the model while reading tables** ([er-modeling.md](er-modeling.md) §A0):
-  phrase each FK as a two-way relationship sentence, test each PK against the UID criteria (including
-  intelligent keys), and look for what was never modelled — repeating groups, unresolved M:M, arcs and
-  subtypes hiding in type columns, stored derived totals, history overwritten in place. Record the
+  write each table's predicate (one sentence, one placeholder per column — an *OR* you need means
+  several predicates in one table), phrase each FK as a two-way relationship sentence, test each PK
+  against the UID criteria (including intelligent keys and reducible keys), and look for what was never
+  modelled — repeating groups, unresolved M:M, arcs and
+  subtypes hiding in type columns, EAV and per-value clone tables, stored derived totals, history
+  overwritten in place, model rules no FK can hold. Record the
   recovered model in the evaluation's notes; dbdesign can use it as redesign evidence.
-- [ ] **Cross-file criteria** need both inputs open: FK columns vs. index keys; collation across
-  catalogs; a trigger's writes vs. the tables that have triggers. Record them in the file where the
+- [ ] **Cross-file criteria** need both inputs open: FK columns vs. index keys (leading columns
+  only); collation across catalogs; a trigger's writes vs. the tables that have triggers; a predicate in
+  a view or procedure vs. the index it should use; a `NOT IN` subquery or check-then-act vs. the
+  nullability and `UNIQUE` constraints in `tables.sql`. Record them in the file where the
   defect lives.
 
 Write `<db>/analysis/<type>.md` from the template in [scoring.md](scoring.md).
@@ -172,11 +183,11 @@ not file excerpts."* Delegates **never score** and **never write** outside their
 5. **Evaluate, don't prescribe.** A fix hint in a finding is fine ("set-based rewrite over the
    pseudo-tables"); a redesign is dbdesign's job.
 6. **Read-only.** Never alter a database, a dump or a live instance.
-7. **Record the rubric version** (`v1.1`) and the source version in every output.
+7. **Record the rubric version** (`v1.2`) and the source version in every output.
 
 ## Handoff
 
-> Audited `<N>` objects across `<D>` databases (rubric v1.1, source `<commit/date>`). Estate score
+> Audited `<N>` objects across `<D>` databases (rubric v1.2, source `<commit/date>`). Estate score
 > `<x.x>` — `<band>`, capped by `<finding>`. `<c>` Critical · `<h>` High · `<m>` Medium · `<l>` Low;
 > `<k>` 🔬 flags open. Outputs: `<paths>`.
 

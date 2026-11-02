@@ -1,0 +1,13 @@
+-- staging, 2026-10-28, statement 4410003 (page 20)
+EXPLAIN (ANALYZE, BUFFERS) SELECT order_id, customer_id, total, created_at FROM sales_order
+WHERE status = 'open' AND created_at >= '2026-10-01' ORDER BY created_at DESC LIMIT 50 OFFSET 1000;
+
+ Limit  (cost=2210.40..2320.91 rows=50 width=40) (actual time=27.806..29.112 rows=50 loops=1)
+   Buffers: shared hit=38012
+   ->  Index Scan Backward using ix_order_created on sales_order  (cost=0.43..2210.40 rows=1004 width=40) (actual time=0.031..29.064 rows=1050 loops=1)
+         Index Cond: (created_at >= '2026-10-01 00:00:00+00'::timestamp with time zone)
+         Filter: (status = 'open'::text)
+         Rows Removed by Filter: 41180
+         Buffers: shared hit=38012
+ Planning Time: 0.118 ms
+ Execution Time: 29.154 ms

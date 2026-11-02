@@ -1,0 +1,13 @@
+-- captured on a developer laptop (local database: 1,000 products), 2026-10-25, statement 4410019
+EXPLAIN (ANALYZE, BUFFERS) SELECT product_id, sku, name, unit_price FROM product WHERE name ILIKE '%lamp%' ORDER BY name;
+
+ Sort  (cost=24.10..24.11 rows=3 width=52) (actual time=0.301..0.302 rows=3 loops=1)
+   Sort Key: name
+   Sort Method: quicksort  Memory: 25kB
+   Buffers: shared hit=9
+   ->  Seq Scan on product  (cost=0.00..24.07 rows=3 width=52) (actual time=0.022..0.288 rows=3 loops=1)
+         Filter: (name ~~* '%lamp%'::text)
+         Rows Removed by Filter: 997
+         Buffers: shared hit=9
+ Planning Time: 0.071 ms
+ Execution Time: 0.329 ms

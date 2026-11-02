@@ -1,6 +1,6 @@
 # Scoring — Severity, Confidence, the 0–10 Formula, Templates
 
-> How an evaluation is graded and written down. **Rubric version: `v1.1`** — every output records the
+> How an evaluation is graded and written down. **Rubric version: `v1.2`** — every output records the
 > version it was graded against and the source version (commit or dump date) it read. Each finding
 > must be backed by the relevant theory in [`theory.md`](theory.md): an evaluation that asserts a
 > defect without naming the principle it violates is incomplete.
@@ -9,9 +9,9 @@
 
 | Severity | Meaning | Calibration anchor |
 |---|---|---|
-| **Critical** | Silent data loss or corruption | Multi-row trigger defect (`SELECT @x = col FROM DELETED`) processing 1 of N rows |
-| **High** | Severe, broad performance degradation or integrity gap | Index-suppressing collation mismatch; missing PK; generic arc; missing FK index |
-| **Medium** | Maintainability cost / controlled redundancy | Redundant index; nested-view pyramid; RBAR where set-based works; stored derived total |
+| **Critical** | Silent data loss or corruption | Multi-row trigger defect (`SELECT @x = col FROM DELETED`) processing 1 of N rows; a confirmed lost update on a balance or stock column; `NOT IN` over a nullable subquery driving a `DELETE` |
+| **High** | Severe, broad performance degradation or integrity gap | Index-suppressing collation mismatch; missing PK; generic arc; relationship with no declared FK; EAV; missing index on an FK whose parent is deleted or key-updated; dirty-read hint feeding a write; unprotected check-then-act on money, stock or bookings |
+| **Medium** | Maintainability cost / uncontrolled redundancy | Redundant index; nested-view pyramid; RBAR where set-based works; stored derived total; overloaded NULL; volatile value list in a `CHECK` duplicated in code |
 | **Low** | Style / naming / cosmetic | Inconsistent constraint naming; `SELECT *` in a small view |
 
 ## Quality scale (per criterion)
@@ -45,7 +45,10 @@ so two evaluators reach the same number.
    - `p < 0.50` → 🔴 (0 pts)
 
    This stops large files from collapsing to all-🔴 because one of 463 objects trips a rule, and stops
-   small files from looking perfect by luck. "In-scope" excludes objects a criterion can't apply to.
+   small files from looking perfect by luck. "In-scope" excludes objects a criterion can't apply to —
+   including criteria that don't exist on the source engine (`SET NOCOUNT`, `SCHEMABINDING`, heaps and
+   `TRY/CATCH` on PostgreSQL; the engine table in [`detection-signals.md`](detection-signals.md) marks
+   them n/a). A criterion with no in-scope object is left out of the base, never graded 🟢.
 2. **Checklist base.** `base = (Σ points / (2 × criteria)) × 10`. Normalized — independent of object
    count.
 3. **Severity caps** (applied after the base, lowest wins):
@@ -96,11 +99,11 @@ Files below the threshold are read in full.
 
 | Object type | Primary theory to invoke |
 |---|---|
-| tables | Entity/referential/domain integrity (§7); normalization 1NF–4NF (§3); functional dependencies (§2); SSOT (§6); ER modelling — UIDs, arcs, subtypes, recursion, derived attributes (§9) |
-| indexes | Performance & physical design (§7); relational-algebra plan cost (§4); Winand B-tree mechanics |
-| procedures | Relational algebra: set vs row-based (§4); ACID Atomicity/Isolation (§5) |
-| views | Relational algebra & query cost (§4); controlled redundancy / materialization (§7) |
-| triggers | ACID Isolation & transaction scheduling (§5) |
+| tables | Entity/referential/domain integrity (§7); keys and FDs (§2); normalization 1NF–5NF, decomposition (§3, §3.1); missing information and three-valued logic (§3.2); constraint kinds (§7.1); SSOT and derived data (§6); data/metadata separation (§10); ER modelling — UIDs, arcs, subtypes, recursion, derived attributes (§9) |
+| indexes | Access paths — access vs filter predicates, column order, sargability (§4.1); performance & physical design (§7); Winand B-tree mechanics |
+| procedures | Relational algebra: set vs row-based (§4); atomicity; isolation anomalies — dirty read, lost update, write skew, phantom (§5.2); locking and deadlock (§5.1); three-valued logic (§3.2); code/data separation (§11) |
+| views | Relational algebra & query cost (§4, §4.1); relations have no duplicates (§1.1); view updating (§7.3); controlled redundancy / materialization (§7) |
+| triggers | Integrity independence — declared vs emulated constraints (Codd rule 10, §7.1); atomicity (a trigger error aborts the statement); lock-scope inflation and lock-order deadlocks (§5.1); write skew in cross-row checks (§5.2); compensatory actions (§7.3) |
 
 ## Ordering & efficiency notes
 
@@ -119,7 +122,7 @@ Files below the threshold are read in full.
 
 ```markdown
 # <DB> — <Object type> evaluation
-> Evaluated against dbaudit/<objecttype>.md (rubric v1.1).
+> Evaluated against dbaudit/<objecttype>.md (rubric v1.2).
 > Source: `<db>/<objecttype>.sql` — dump as of <date / git commit>.
 > Coverage: <N of M objects deep-read; signal-scan covers all M>.
 
@@ -151,7 +154,7 @@ Files below the threshold are read in full.
 ```markdown
 # <DB> (<CATALOG>) — Database analysis summary
 > Status: 🟢 used / 🟡 barely used / 🔴 unused / copy of <X>. Object counts: T/I/V/P/Tr.
-> Source dump as of <date / git commit>; rubric v1.1.
+> Source dump as of <date / git commit>; rubric v1.2.
 
 ## Scores
 | tables | indexes | views | procedures | triggers | **Database** |
@@ -181,7 +184,7 @@ Files below the threshold are read in full.
 
 ```markdown
 # Estate-wide database analysis
-> Synthesis across <N> databases. Rubric v1.1; source <commit/date>.
+> Synthesis across <N> databases. Rubric v1.2; source <commit/date>.
 
 ## Estate score
 <capped and un-capped weighted means; the cap and the finding that sets it>
