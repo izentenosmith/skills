@@ -1,6 +1,6 @@
 {
  "skill_name": "skills",
- "note": "Evals 0-5 cover the six-stage development pipeline; 6-7 cover the containers and operations skills; 8-14 cover hotfix and incident-fix across different stacks; 15 runs harness/loop.py end to end (runner: loop) instead of one claude -p call; 16-20 cover the five networking skills; 21-26 cover terraform and pipelines, one eval per mode (review, design, propose); 27 covers acceptance-tests on the tdd fixture; 28 covers dockerfile; 29 covers release-notes; 30-34 cover the five database skills. Each with-skill run is repeated 3x for variance analysis; baseline is a single no-skill run on the same prompt.",
+ "note": "Evals 0-5 cover the six-stage development pipeline; 6-7 cover the containers and operations skills; 8-14 cover hotfix and incident-fix across different stacks; 15 runs harness/loop.py end to end (runner: loop) instead of one claude -p call; 16-20 cover the five networking skills; 21-26 cover terraform and pipelines, one eval per mode (review, design, propose); 27 covers acceptance-tests on the tdd fixture; 28 covers dockerfile; 29 covers release-notes; 30-34 cover the five database skills; 35 covers container-hardening; 36 container-debug; 37 docker-swarm. Each with-skill run is repeated 3x for variance analysis; baseline is a single no-skill run on the same prompt.",
  "evals": [
   {
    "id": 0,
@@ -288,6 +288,30 @@
    "fixture": "db-build",
    "prompt": "The proposal in proposal/ has been accepted (see proposal/acceptance.md). Generate the DDL.",
    "expected_output": "Ordered .sql files for SQLite 3.45 that run in one pass on an empty database: the seven design tables with their primary keys, parents before children, every foreign key with the design's ON DELETE action, NOT NULL, UNIQUE and CHECK constraints that refuse bad rows, the design's indexes, and nothing beyond the design. pet.microchip left without a UNIQUE and flagged as undecided (Q3) rather than invented. A header naming proposal/proposal.md, design/design.md, the engine, the generation date and that it creates a new schema. No credential from config/app.ini anywhere; the SQL never run (no scripts/db call, no database file); proposal, design, diagrams and config untouched; the response says the SQL was not run and what it could not verify."
+  },
+  {
+   "id": 35,
+   "name": "container-hardening-review-socket-and-firewall",
+   "skill": "container-hardening",
+   "fixture": "hardening-review",
+   "prompt": "Is our production container setup secure? Review it and tell me how bad it is.",
+   "expected_output": "Review mode, nothing changed. Compose-as-production plus a Kubernetes Deployment inferred. Finds the privileged worker and names /dev/dri as the replacement; the Watchtower Docker socket mount rated Critical with :ro called out as no protection; Postgres published on all interfaces with ufw bypassed by Docker's iptables rules, fixed by binding 127.0.0.1 or the DOCKER-USER chain; the committed Stripe live key without echoing it, with rotation; api and worker running as root; the reports pod with no seccompProfile running Unconfined, fixed with RuntimeDefault; :latest references. Findings carry CH IDs, confidence, C-n and severity; the score shows base and the 2.0 Critical cap; the gate fails condition by condition; needs-access flags for the daemon, docker group and kubelet; the hardened proxy recorded as what works; image findings handed to dockerfile."
+  },
+  {
+   "id": 36,
+   "name": "container-debug-oom-localhost-crlf",
+   "skill": "container-debug",
+   "fixture": "debug-evidence",
+   "prompt": "Our staging stack has been broken since Friday's release. What we captured is in evidence/ — nobody can give you access to the VM. What's wrong, and how do we fix it?",
+   "expected_output": "Evidence-only mode. Three symptoms, each with its evidence and a cause line: the worker OOM-killed (OOMKilled true, oom events, 255.6 of 256 MiB; 418 MiB working set unconstrained) with the limit raised from that measurement rather than removed; api and worker using REDIS_URL=redis://localhost:6379, which inside a container is the container itself, fixed to the service name with no sleep; migrate exiting 255 because entrypoint.sh has CRLF line endings, fixed to LF with a .gitattributes rule. A root-cause note per symptom; the database password visible in the captured inspect output named by location only, never repeated, with rotation; the confirming commands on the VM listed as not run."
+  },
+  {
+   "id": 37,
+   "name": "docker-swarm-review-quorum-and-state",
+   "skill": "docker-swarm",
+   "fixture": "swarm-review",
+   "prompt": "Review our Swarm setup before we go live next week.",
+   "expected_output": "Review mode, nothing changed and no state-changing command run. A fit verdict. Finds two managers and says they tolerate no more failures than one (go to 3); Postgres replicas: 2 on a local volume with no constraint as two diverging databases (replicas 1, pinned); the committed secrets/db_password.txt without echoing it, rotated to a new versioned secret; depends_on and restart ignored by stack deploy though the README relies on the ordering; .env not read by stack deploy and never exported by deploy.sh, so CI deploys an empty image tag; the api with no healthcheck and the default update config (pause, stop-first) with rollback prescribed; the edge's per-client rate limit broken by the routing mesh rewriting source IPs, fixed with mode: host or PROXY protocol; no --with-registry-auth. Findings carry SW IDs, confidence, S-n and severity; the score shows base and the 2.0 Critical cap; the gate fails condition by condition; needs-access flags for autolock, backups, firewall and labels; the worker recorded as the template; drills before go-live; handoffs to container-hardening and dockerfile."
   }
  ]
 }

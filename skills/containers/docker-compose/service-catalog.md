@@ -129,11 +129,11 @@ rabbitmq:
     RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-app}
     RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?required}
   ports:
-    - "15672:15672"   # management UI — dev convenience
+    - "127.0.0.1:15672:15672"   # management UI — dev convenience
   volumes:
     - rabbitmq_data:/var/lib/rabbitmq
   healthcheck:
-    test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running", "&&", "rabbitmq-diagnostics", "-q", "check_local_alarms"]
+    test: ["CMD-SHELL", "rabbitmq-diagnostics -q check_running && rabbitmq-diagnostics -q check_local_alarms"]
     interval: 10s
     timeout: 10s
     retries: 10
@@ -144,6 +144,7 @@ rabbitmq:
 **Connection:** `amqp://app:${RABBITMQ_PASSWORD}@rabbitmq:5672/`
 
 - `check_running` alone reports a broker that's up but in an alarm state; pairing it with `check_local_alarms` is what makes the gate meaningful.
+- **`CMD-SHELL`, because of the `&&`.** The exec form (`["CMD", …]`) runs no shell, so `&&` reaches `rabbitmq-diagnostics` as a literal argument and the second check never runs. Any healthcheck with `&&`, `||`, a pipe or a redirect needs `CMD-SHELL` — and an image that has a shell.
 - The `-management` tag adds the UI on 15672. Publish it in the **override** file, not the base.
 - Erlang boot is slow — `start_period: 30s`.
 
@@ -244,13 +245,13 @@ Starts in about a second and uses a fraction of Elasticsearch's memory — the r
 
 ```yaml
 minio:
-  image: minio/minio:latest
+  image: minio/minio:RELEASE.<pin a dated release>
   command: server /data --console-address ":9001"
   environment:
     MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
     MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?required}
   ports:
-    - "9001:9001"   # console — dev convenience
+    - "127.0.0.1:9001:9001"   # console — dev convenience
   volumes:
     - minio_data:/data
   healthcheck:
@@ -264,6 +265,7 @@ minio:
 
 **Connection:** endpoint `http://minio:9000`, path-style addressing, region `us-east-1`.
 
+- **Pin a dated `RELEASE.` tag, never `latest`** — and check the image is still published before adopting it: MinIO moved its community edition to source-only distribution in late 2025, so new tags may not appear on Docker Hub. If it's gone, pin the last tag you've verified pulls, or use another S3-compatible emulator, and say which.
 - **Set `forcePathStyle: true` / `AWS_S3_FORCE_PATH_STYLE`** in the client. Virtual-host addressing (`bucket.minio:9000`) doesn't resolve inside the compose network.
 - Bucket creation needs a one-shot `mc` container with `depends_on: {minio: {condition: service_healthy}}`.
 
@@ -273,9 +275,9 @@ minio:
 
 ```yaml
 mailpit:
-  image: axllent/mailpit:latest
+  image: axllent/mailpit:v1.27
   ports:
-    - "8025:8025"   # web UI
+    - "127.0.0.1:8025:8025"   # web UI
   healthcheck:
     test: ["CMD", "/mailpit", "readyz"]
     interval: 5s
@@ -285,6 +287,8 @@ mailpit:
 ```
 
 **Connection:** SMTP `mailpit:1025`, no auth, no TLS.
+
+Pin a release tag like any other image (check the current one); `latest` here is how a dev stack silently changes under everyone at once.
 
 Stateless — no volume needed. Worth adding whenever the app sends mail, because the alternative is either real mail from a dev environment or an untested code path.
 
@@ -319,4 +323,6 @@ api:
 - **Use the internal port**, not the published one. Publishing `5433:5432` does not change the address inside the network.
 - **Publish only what a human needs**, and prefer to publish it from the override file.
 - **`${VAR:?required}` for anything with no safe default**, `${VAR:-default}` for anything with one.
-- **Named volume on every data path.** Without it, `docker compose down` deletes the database.
+- **Named volume on every data path.** Without one, the database lands in an *anonymous* volume (these images declare `VOLUME` on their data directory): `docker compose down` orphans it and the next `up` starts on a fresh, empty one. The data looks lost; it's in `docker volume ls -f dangling=true` until someone prunes it.
+- **Published ports bind to loopback** — `"127.0.0.1:5432:5432"`, not `"5432:5432"`. The short form listens on every interface, which puts a database with the password `localdev` on the office or café network, and Docker's own firewall rules bypass `ufw` and `firewalld` to do it.
+- **Never mount `/var/run/docker.sock`** into a service in the base file. Access to the socket is root on the host — `:ro` doesn't restrict the API. When a dev tool genuinely needs it (Traefik's Docker provider, Portainer, a Testcontainers runner), put that service behind a `profiles:` entry in the override with a comment saying so.

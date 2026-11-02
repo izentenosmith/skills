@@ -1,0 +1,7 @@
+$ docker compose logs migrate
+migrate-1  | exec /app/entrypoint.sh: no such file or directory
+
+$ docker compose run --rm --entrypoint ls migrate -l /app
+total 8
+-rwxr-xr-x 1 root root  89 Oct 30 14:02 entrypoint.sh
+-rw-r--r-- 1 root root 210 Oct 30 14:02 migrate.py
