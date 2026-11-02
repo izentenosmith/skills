@@ -78,8 +78,8 @@ def main():
     ws = pathlib.Path(sys.argv[1]).parent
     (ws / "benchmark.json").write_text(json.dumps(bench, indent=2))
 
-    L = ["# Benchmark — six-stage pipeline", "",
-         "`delta` = assertions this session's edits added. `cap` = does the stage work at all.", "",
+    L = ["# Benchmark", "",
+         "`delta` = assertions that test what the skill instructs. `cap` = does the skill do its job at all. `n` = with-skill runs; the baseline is one run.", "",
          "| eval | from | n | delta (mean ± sd) | delta base | gain | cap | cap base |",
          "|---|---|---|---|---|---|---|---|"]
     for r in out:

@@ -4,7 +4,7 @@ These skills are prompts, and a prompt's claims about its own behavior are hypot
 
 The headline result is in [benchmark.md](benchmark.md). The short version: on the assertions that test what the skills instruct, the six-stage pipeline scores **0.98** against **0.22** for the pre-session baseline; on core capability, **0.96** against **0.92**.
 
-**Evals 6, 7 and 16–34 have fixtures and assertions but no scored run yet.** Their assertions are verified to *discriminate* — see [Negative controls](#negative-controls) — but nobody has dispatched the with-skill runs, so there is no number for `docker-compose`, `post-mortem`, the networking, infrastructure and database skills, `acceptance-tests`, `dockerfile` or `release-notes`, and `benchmark.md` does not report one.
+**Every eval now has a scored run.** Evals 6–14 and 16–34 were first run on 2026-10-25 (iterations 6, 7, 9 and the combined 10 in the workspace): one with-skill run each, three for evals 11–13, against a no-skill baseline — none of those skills exists at `3b71f54^`. Across all 35 evals, **0.95** against **0.49** on delta and **0.99** against **0.85** on capability. The weakest results are listed in the root [README](../README.md#do-they-work). Evals 27, 31 and 33 were re-run three times after their skills were fixed (iteration 11, combined with iteration 6's baselines as iteration 12). `benchmark.md` was aggregated from iterations 1, 2, 5, 6, 7, 10 and 12; iterations 3 and 4 are left out, as in the recorded result, because iteration 4 ran the skills from before the ledger grammar.
 
 ## Layout
 
@@ -69,7 +69,7 @@ Six small repos in six shapes, so the two response skills have to discover their
 | 13 | incident-fix | `incident-batch` | `data/prod.db` must stay byte-identical; 12 wrong orders (cancelled excluded); invoices already issued; repair as a dry-run, backed-up artifact — **executed** on throwaway copies: no flags must change nothing, an apply flag must fix exactly the 12 and leave a backup |
 | 14 | incident-fix | `incident-library` | no deploy step — containment is a yank and an advisory; the corrupted data lives with consumers |
 
-`hotfix-jvm` needs a JDK (`javac`, `java`) and `hotfix-node` needs Node 22+, both to run and to grade; nothing else needs setup. **Controls** ([`controls/make_controls.py`](controls/make_controls.py), see [Negative controls](#negative-controls)): a reference answer scores every assertion on all seven, a do-nothing answer fails every delta assertion except the safety invariants it passes by doing nothing (no production call, no file changed), and a plausible-but-wrong answer per eval fails the assertion it was built to game. **No with-skill run has been scored.**
+`hotfix-jvm` needs a JDK (`javac`, `java`) and `hotfix-node` needs Node 22+, both to run and to grade; nothing else needs setup. **Controls** ([`controls/make_controls.py`](controls/make_controls.py), see [Negative controls](#negative-controls)): a reference answer scores every assertion on all seven, a do-nothing answer fails every delta assertion except the safety invariants it passes by doing nothing (no production call, no file changed), and a plausible-but-wrong answer per eval fails the assertion it was built to game. **First run (n=1):** see [benchmark.md](benchmark.md).
 
 ### `harness/loop.py` end to end (eval 15)
 
@@ -132,7 +132,7 @@ Nothing is executed against a network, and nothing needs setup; eval 18 and the 
 | 20 | do-nothing | 5/9 | 5/8 | asks for acceptance; names where it comes from; says nothing was produced |
 | 20 | `wrong-builds-anyway` — notes the proposal isn't accepted, builds the package anyway | 5/9 | 4/8 | no network-design.md; no accepted topology.json |
 
-Eval 20 is the one where doing nothing scores well: five of its eight delta assertions are "did not build". That is the point of the eval — the skill's job here is to stop — and the three that the do-nothing control fails are the ones a stopping run has to earn by saying why. **No with-skill run has been scored.**
+Eval 20 is the one where doing nothing scores well: five of its eight delta assertions are "did not build". That is the point of the eval — the skill's job here is to stop — and the three that the do-nothing control fails are the ones a stopping run has to earn by saying why. **First run (n=1):** see [benchmark.md](benchmark.md).
 
 ### `tf-*` and `ci-*`: terraform and pipelines (evals 21–26)
 
@@ -160,7 +160,7 @@ Grading is from files and the response; nothing is executed against a cloud or a
 | 25 | 18/18 | 1/18 | `wrong-keeps-builds-and-cab` keeps per-environment builds and the meeting: 14/18 · `wrong-big-bang` deploys both regions at once: 17/18 · `wrong-invalid-skeleton` fails actionlint: 17/18 |
 | 26 | 12/12 | 1/12 | `wrong-big-bang-cutover` (no parallel run, rollback = git revert): 10/12 · `wrong-canary-first`: 11/12 · `wrong-deletes-token`: 11/12 |
 
-Building these controls caught four of my own assertions being too loose before any run was spent. The proposal-sequence check matched the word "order" in a heading, so a findings table at the top decided the order. A prod-isolation check was satisfied by payments' own state. Any mention of Helm values counted as "config not baked in". A rotate-before-remove check accepted a rotation of a *different* token on a neighbouring line. **No with-skill run has been scored.**
+Building these controls caught four of my own assertions being too loose before any run was spent. The proposal-sequence check matched the word "order" in a heading, so a findings table at the top decided the order. A prod-isolation check was satisfied by payments' own state. Any mention of Helm values counted as "config not baked in". A rotate-before-remove check accepted a rotation of a *different* token on a neighbouring line. **First run (n=1):** see [benchmark.md](benchmark.md).
 
 ### `acceptance-tests` on the `tdd` fixture (eval 27)
 
@@ -198,7 +198,7 @@ Every pytest the grader starts runs with `TZ` set so that local time is noon (th
 | `wrong-reaches-internals`: the both-codes test calls `Booking.validate` directly | 17/18 | 11/12 | no internals |
 | `wrong-three-of-five`: five tests, but only three criteria mapped in the brief | 17/18 | 11/12 | each criterion mapped exactly once |
 
-`wrong-implements-it` writes the usual exclusive comparison against `datetime.now()`. Its edge test is then red even with the rule in place, because the slot is a few microseconds inside the window by the time the rule runs. A test built at exactly `now + 120 min` therefore depends on how the implementation reads the clock, which is why the grader's reference reads it to the second. **No with-skill run has been scored.**
+`wrong-implements-it` writes the usual exclusive comparison against `datetime.now()`. Its edge test is then red even with the rule in place, because the slot is a few microseconds inside the window by the time the rule runs. A test built at exactly `now + 120 min` therefore depends on how the implementation reads the clock, which is why the grader's reference reads it to the second. **First run (n=1):** see [benchmark.md](benchmark.md).
 
 ### `dockerfile` (eval 28)
 
@@ -239,7 +239,7 @@ Every pytest the grader starts runs with `TZ` set so that local time is noon (th
 | `wrong-env-star` — `.env*`, no re-include | 19/20 | 13/14 | .env out, .env.example in |
 | `wrong-echoes-secret` — quotes the key in the defect list | 19/20 | 13/14 | never echoed |
 
-Building the controls tightened four assertions before any run. Do-nothing passed "production dependencies" because the old file sets `ENV NODE_ENV=production`, though only *after* its install. Paired defect markers (`/health` vs `/healthz`) missed when a sentence wrapped. "No Docker HEALTHCHECK" read as "no docker". And the platform check rejected a correct `PLATFORM ?= linux/amd64` + `--platform $(PLATFORM)` in the Makefile. Alternative correct shapes are probed too, and all pass: alpine in every stage with `pnpm fetch`, tini and a `wget` healthcheck; a `$BUILDPLATFORM` stage that only runs `tsc`. Known strictness: a distroless `nodejs20` runtime fails the 20.11 pin, because its tag cannot carry the minor. **No with-skill run has been scored.**
+Building the controls tightened four assertions before any run. Do-nothing passed "production dependencies" because the old file sets `ENV NODE_ENV=production`, though only *after* its install. Paired defect markers (`/health` vs `/healthz`) missed when a sentence wrapped. "No Docker HEALTHCHECK" read as "no docker". And the platform check rejected a correct `PLATFORM ?= linux/amd64` + `--platform $(PLATFORM)` in the Makefile. Alternative correct shapes are probed too, and all pass: alpine in every stage with `pnpm fetch`, tini and a `wget` healthcheck; a `$BUILDPLATFORM` stage that only runs `tsc`. Known strictness: a distroless `nodejs20` runtime fails the 20.11 pin, because its tag cannot carry the minor. **First run (n=1): 0.79 against 0.79 for no skill** — the run quoted the planted key in its rotation warning, and named only 3 of 8 Step 4 commands.
 
 ### `release-notes` (eval 29)
 
@@ -272,7 +272,7 @@ The grader separates **the notes** from **the handoff**. The notes are the markd
 | `wrong-announces-reverted`: the reference plus "Threaded Slack updates" under New | 19/20 | 12/13 | the reverted feature not announced |
 | `wrong-names-the-bump`: the security entry is "Updated saml-verify from 3.1.2 to 3.1.4 (CVE-2026-41207)" | 19/20 | 12/13 | the CVE published as its effect |
 
-Building the controls caught three loose spots. A `\b2\.4\.0\b` pattern does not match `v2.4.0`, because there is no word boundary between `v` and `2`, so every header written as `v2.4.0` failed. A tier check that accepted "Major" near "breaking" was passed by a heading such as "Major breaking change" with no tier stated. A help-link match that returned a truncated line cut the response-only fallback mid-line. Throwaway variants were checked as well. A number wrapped onto the timeline entry's second line, and the export figure with no source in the handoff, each fail exactly their one assertion. Notes with no "New" heading, where the feature's own bold line marks the features, grade 20/20. So do notes placed in `outputs/`, in a new file, or in the response before or after the handoff. **No with-skill run has been scored.**
+Building the controls caught three loose spots. A `\b2\.4\.0\b` pattern does not match `v2.4.0`, because there is no word boundary between `v` and `2`, so every header written as `v2.4.0` failed. A tier check that accepted "Major" near "breaking" was passed by a heading such as "Major breaking change" with no tier stated. A help-link match that returned a truncated line cut the response-only fallback mid-line. Throwaway variants were checked as well. A number wrapped onto the timeline entry's second line, and the export figure with no source in the handoff, each fail exactly their one assertion. Notes with no "New" heading, where the feature's own bold line marks the features, grade 20/20. So do notes placed in `outputs/`, in a new file, or in the response before or after the handoff. **First run (n=1):** see [benchmark.md](benchmark.md).
 
 ### `db-audit` and `db-design`: dbaudit and dbdesign (evals 30–31)
 
@@ -316,7 +316,7 @@ Eval 31 takes the run's added `.sql` files, or else the ```` ```sql ```` blocks 
 - The gate passed a single sentence naming all four conditions. It now needs one clause per condition, split the way `dbreview.py`'s gate.md writes them (`;`, lines, bullets, cells).
 - The subtype check rejected the reference's supertype + subtype tables, because their FK is the composite `(member_id, kind)`. It also accepted a bare `CHECK (kind IN (…))` as a single-table mapping, which physical-design §5.1 says must tie the kind to the subtype's columns.
 
-**No with-skill run has been scored.**
+**First run (n=1):** see [benchmark.md](benchmark.md).
 
 ### `db-diagram`, `db-propose` and `db-build`: dbdiagram, dbpropose and dbbuild (evals 32–34)
 
@@ -363,7 +363,7 @@ A probe drawing caught one loose assertion before any run was spent. The relatio
 - A script that leaves a transaction open, or turns `foreign_keys` off, would let bad rows through the probe. The grader commits and turns foreign keys back on before probing.
 - `ATTACH` in a run's script could write a file in the grader's directory, so it is refused.
 
-**No with-skill run has been scored.**
+**First run (n=1):** see [benchmark.md](benchmark.md).
 
 ## Running it
 
@@ -495,7 +495,7 @@ Eval 15's controls are a separate script, because its runs are whole loop.py run
 
 - **The fixtures are deliberately time-of-day sensitive.** The seeded cutoff tests build slots from `datetime.now()` without pinning the hour, so they collide with the opening-hours rule outside roughly 06:00–18:00 local. That is a planted defect the teardown is supposed to find — but it also means a `suite green` assertion can legitimately flip depending on when you run. Grading is stable back-to-back; it is not stable across a day boundary.
 - **n=3, one fixture, one language, one defect class** for the pipeline evals. Low variance in the recorded run, but this is not broad coverage.
-- **Evals 6, 7 and 16–34 are unrun.** Fixtures and assertions exist and discriminate against a negative control; no with-skill run has been scored, so nothing in `benchmark.md` covers any skill outside the development pipeline's first six stages.
+- **Evals 6–14 and 16–34 have one run each** (three for 11–13), against a no-skill baseline rather than an older version of the skill. A single missed assertion is a signal to look at the run, not a verdict on the skill. Eval 13's repair checks and eval 33's ordering check failed runs whose output was correct by reading; #9 fixed both graders, and every run here is graded with the fixed versions.
 - **Eval 28 is graded from files, never built.** It checks that the Dockerfile and `.dockerignore` say the right things, not that the image builds, runs, rebuilds from cache or lands at the right size, which is exactly what the skill's own Step 4 requires and this harness cannot do without Docker.
 - **Eval 6 is graded from files, never executed.** It checks that the right compose file was written, not that the stack comes up — which is precisely the claim the skill's own Step 6 makes and this harness does not verify.
 - **Dispatch is automated, the run itself is not pinned.** `run.py` keeps the layout, the prompt and the isolation identical between runs, which manual dispatch could not. It does not pin the model or the Claude Code version, it only records them in `dispatch.json`. Two iterations run months apart can differ for reasons that have nothing to do with the skill. Check those fields before you compare them.

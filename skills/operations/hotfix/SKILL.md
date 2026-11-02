@@ -9,10 +9,11 @@ description: A fast, still-disciplined lane for an urgent bug in a running syste
 
 The [development pipeline](../../development/README.md) is the right way to build a change and the wrong way to fix a wrong number on an invoice page by lunchtime. This lane is the short path between them: **every discipline that catches a bad fix, none of the ceremony that designs a good feature.** It is not a lighter standard — the red test, the shared-cause fix and the review pass are all mandatory. What it drops is the design dialogue, the plan document and the review *loop*.
 
-It leans on five reference docs:
+It leans on six reference docs:
 
 - [discovery.md](discovery.md) — finding the repo's commands, conventions and installed skills, and the `.workflow/env.md` profile that caches them
 - [root-cause-note.md](root-cause-note.md) — the three-line note, and the caller sweep
+- [diagnosis.md](diagnosis.md) — finding the cause when it isn't in plain sight: a red loop, minimise, ranked hypotheses, one probe at a time
 - [review-checklist.md](review-checklist.md) — the review pass when no review skill is installed
 - [follow-up.md](follow-up.md) — the item a band-aid owes, with or without a tracker
 - [final-checklist.md](final-checklist.md) — the record that closes the lane
@@ -40,6 +41,8 @@ Say which way the gate went, and why, in one line.
 ## 🧭 Step 2: Root cause — in three lines
 
 Write the note in [root-cause-note.md](root-cause-note.md): **symptom · cause · why no existing test caught it.** If you cannot write the cause line from evidence, you have not found it — and a fix for a cause you have guessed is a second bug.
+
+**When the code and the report don't hand you the cause** — it resists a first read, it's intermittent, it's a slowdown, or it appeared somewhere between two known-good states — work [diagnosis.md](diagnosis.md) before writing the cause line: a command that goes red on this bug first, then hypotheses. Its minimised reproduction becomes Step 3's red test.
 
 **Before editing, find every caller of the code you're about to change.** The report names the path somebody hit; the defect lives in shared code with other paths into it. **Fix it in the shared place**, once — not on the reported path only, and not by refactoring beyond what the fix needs. If the sweep turns up a caller that would *break* under the fix, that's the design-ambiguity exit from Step 1.
 
@@ -77,7 +80,7 @@ Fill [final-checklist.md](final-checklist.md) and tick every item: root-cause no
 
 The lane's speed is a budget, not a promise. Leave it, saying which exit fired:
 
-- **The cause isn't clear** after the evidence you can reasonably gather — escalate to the user with what you've ruled out, or to incident-fix if it's getting worse.
+- **The cause isn't clear** after the evidence you can reasonably gather — no red loop can be built, or every hypothesis in [diagnosis.md](diagnosis.md) is contradicted — escalate to the user with what you've ruled out, or to incident-fix if it's getting worse.
 - **The fix spreads** past one module or across a boundary, or the caller sweep finds callers that need different behavior — that's a design question.
 - **Strict mode turned up a blocker** that can't be fixed in the lane — hand it to the full pipeline.
 

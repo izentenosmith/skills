@@ -94,6 +94,7 @@ Each lives in the folder of the skill that uses it.
 | Doc | Used by |
 |-----|---------|
 | [clean-architecture](architect-deep-dive/clean-architecture.md) | architect-deep-dive — dependency direction, policy vs. detail, boundary placement |
+| [records](architect-deep-dive/records.md) | architect-deep-dive — when a decision earns an ADR, the ADR and glossary formats, where they go |
 | [code-smells](refactor-review/code-smells.md) | refactor-review — the symptom catalog |
 | [refactoring-techniques](refactor-review/refactoring-techniques.md) | refactor-review — the treatment catalog |
 | [comments](refactor-review/comments.md) | refactor-review — which comments earn their place |
@@ -104,4 +105,4 @@ Each lives in the folder of the skill that uses it.
 
 ## Measured
 
-These six are the only skills in this repo with a **scored** result behind them — 0.98 vs 0.22 on delta over 36 runs. See [`../evals/`](../../evals/README.md) and [benchmark.md](../../evals/benchmark.md). (`docker-compose` and `post-mortem` have fixtures and assertions but no scored run.) `acceptance-tests` has eval 27, on the `tdd` fixture: the tests it writes are run against the unchanged code, a correct implementation and three mutants, so a test that is red for the wrong reason or cannot fail is caught by execution, not by reading. Its controls separate as intended; **no with-skill run has been scored.**
+These six carry the repo's deepest scored result — 0.98 vs 0.22 on delta over 36 runs. See [`../evals/`](../../evals/README.md) and [benchmark.md](../../evals/benchmark.md). `acceptance-tests` has eval 27, on the `tdd` fixture: the tests it writes are run against the unchanged code, a correct implementation and three mutants, so a test that is red for the wrong reason or cannot fail is caught by execution, not by reading. Its controls separate as intended. **0.75 against 0.25 for no skill on its first run** — two tests passed on the unimplemented code and the edge had a minute of slack — and **1.00 on all three runs** after the fix: criteria that already hold are tested with their contrast, and edges within seconds.

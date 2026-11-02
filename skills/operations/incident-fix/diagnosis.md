@@ -1,0 +1,1 @@
+../hotfix/diagnosis.md

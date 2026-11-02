@@ -49,13 +49,15 @@ For each acceptance criterion in the brief, in order:
 - [ ] **Edge-case criteria get their own tests** — the unhappy paths are where independent tests earn their keep.
 - [ ] **Respect the deferrals.** A test must not commit to a decision the brief deferred — no asserting on a storage engine, a framework, or a wire format the architect left open.
 - [ ] **Assert the specific outcome, not just success.** "Returns 422 with code `CUTOFF_WINDOW`", not "returns an error". A test that passes for any failure tests nothing.
+- [ ] **Criteria that hold today get their contrast.** A criterion that says what stays allowed — "outside the window is accepted", "the boundary itself is accepted", "proceeds as today" — passes on the unimplemented code only because the rule it qualifies doesn't exist yet. Test it **with its contrast**: in the same test, first show the rule in force (a case just on the other side is refused), then assert the acceptance. The test is red now, and once built it fails if the rule over-reaches *or* disappears. An acceptance asserted alone stays green with the feature deleted.
+- [ ] **Boundaries as tight as the system allows.** An edge criterion is tested at the edge: the exact value, or as close as the system's clock or precision lets you get from outside — seconds, not minutes. Slack of a whole unit turns the edge test into a second copy of the inside/outside test, and an inclusive/exclusive mistake survives it. When no seam lets you get close enough, say so in the mapping as the reason, rather than loosening the test.
 
 ## 🔴 Step 3: Red, for the right reason
 
 Run the acceptance command. **Every new test must fail**, and fail because **the behavior is missing** — an assertion on the outcome, a 404 from a route that doesn't exist yet, an unknown-command exit from the CLI.
 
 - [ ] **A failure to load is not red.** An import error, a missing module, a compile error, a test that never ran — those prove nothing about the behavior. Where the public interface itself doesn't exist yet (a new library function, a new class), **declare it** — the signature the brief's Key interfaces name, failing with a not-implemented error — so the tests reach it and fail on behavior. That stub is the only production code this stage writes, and it is tdd's first target.
-- [ ] **A test that passes now is a finding**, not a success: either the behavior already exists (the brief is wrong — feedback edge) or the test doesn't test the criterion (rewrite it).
+- [ ] **A test that passes now is a finding**, not a success: either the behavior already exists (the brief is wrong — feedback edge), the criterion is one that holds today and is missing its contrast (Step 2), or the test doesn't test the criterion (rewrite it). There is no fourth case: a test recorded as a green-now "guard" is not an acceptance test.
 - [ ] **The rest of the suite stays green.** This stage adds failing acceptance tests and nothing else.
 
 Where a red/green checker is available, record its output now and run it again once tdd is done.
@@ -73,7 +75,7 @@ Add or update this section of `.workflow/brief.md`, and log it under **Revisions
 - Not acceptance-testable: <criterion> — <why>; covered by tdd at <seam>
 ```
 
-**Every criterion appears exactly once** — mapped to a test, or listed as not acceptance-testable with its reason. Nothing silently dropped.
+**Every criterion appears exactly once** — mapped to a test, or listed as not acceptance-testable with its reason. Nothing silently dropped. **One line per criterion, in exactly this shape**: tdd and tyr-verdict read it as a table. Parametrized cases stay inside the test; red/green status and reasoning go in the **Revisions** entry, not under the mapping line.
 
 ## 🛑 Stopping rule
 

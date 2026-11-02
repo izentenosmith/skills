@@ -30,4 +30,6 @@ If revising an existing database without an audit, say so. Proceed with the evid
 
 Return a reviewable design with: scope and assumptions; conceptual entities and relationship sentences plus a Barker ER model when diagrammed; candidate/primary keys; relational table definitions; normal-form assessment with dependencies; constraints; engine-specific DDL if requested or useful; audit traceability for redesigns; and open questions. Keep the logical model separate from engine-specific choices.
 
+**The DDL runs as written** on the target engine and version, top to bottom: one script, statements only, in dependency order, no placeholders, bind parameters or other engines' syntax. Example queries — a report, an export, a parameterized lookup — go in their own section after the DDL, never inside it. When the engine is at hand (SQLite usually is), execute the script against a throwaway in-memory database and say that it ran; otherwise say it was not executed.
+
 When diagrams are requested or the workflow continues, hand the model to [dbdiagram](../dbdiagram/SKILL.md). A full recommendation that incorporates audit evidence and diagrams belongs to [dbpropose](../dbpropose/SKILL.md).

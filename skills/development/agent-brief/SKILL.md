@@ -37,7 +37,7 @@ This skill is **stage 2 of a seven-stage workflow**:
 6. [devils-advocate](../devils-advocate/SKILL.md) — assumes the result is wrong and hunts evidence for every defect
 7. [tyr-verdict](../tyr-verdict/SKILL.md) — adjudicates the findings, cuts false claims, and enforces the fixes
 
-**Upstream (from architect-deep-dive):** every dimension the architect resolved is your raw material — pull directly from it. Its **charter** (what we're solving, why now, what done looks like) becomes your **Summary** and **Desired behavior**; carry the *why now* rather than dropping it, because it is what tells TDD which criterion matters when two conflict. Its interface decisions become your **Key interfaces**; its resolved failure modes and edge cases become your **edge-case criteria**; its user-facing behaviors become your **happy-path criteria**; its scope boundaries become your **Out of scope**. If a dimension was left implicit, you are missing input — go back to architect-deep-dive rather than guessing.
+**Upstream (from architect-deep-dive):** every dimension the architect resolved is your raw material — pull directly from it. Its **charter** (what we're solving, why now, what done looks like) becomes your **Summary** and **Desired behavior**; carry the *why now* rather than dropping it, because it is what tells TDD which criterion matters when two conflict. Its interface decisions become your **Key interfaces**; its resolved failure modes and edge cases become your **edge-case criteria**; its user-facing behaviors become your **happy-path criteria**; its scope boundaries become your **Out of scope**. If a dimension was left implicit, you are missing input — go back to architect-deep-dive rather than guessing. The ADRs it lists as **records** go under **Decisions on record** by path: cite them, don't restate their rationale.
 
 Two of its outputs are **constraints on the plan rather than work in it**. Its resolved boundaries and dependency directions bound where the behavior may live — carry them into **Key interfaces** so TDD builds inward-pointing seams instead of rediscovering them. Its **deliberately deferred** decisions (database engine, framework, delivery mechanism) stay deferred: record each one with the boundary that protects it, and do not let an acceptance criterion commit to it. A criterion that names a deferred detail has quietly resolved a decision the architect chose to leave open.
 
@@ -118,6 +118,9 @@ Be specific about edge cases and error conditions.
 
 **Deferred by design** (constraints, not work — carried from architect-deep-dive):
 - <decision left open> — deferred behind <the boundary that protects it>; forced by <signal>
+
+**Decisions on record** (the ADRs architect-deep-dive wrote or cited — omit when there are none):
+- <ADR path> — <the decision in one line>; binding on this build
 
 **Out of scope:**
 - Thing that should NOT be changed or addressed here

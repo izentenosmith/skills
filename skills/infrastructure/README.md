@@ -91,6 +91,6 @@ SLSA provenance), the principle comes from the book and the mechanism is named a
 | design-patterns | [layouts, state, modules, environments, AWS specifics](terraform/design-patterns.md) | [reference pipeline, release strategies, security model, IaC delivery](pipelines/design-patterns.md) |
 | proposal | [decisions, no-recreate rule, sequencing](terraform/proposal.md) | [decisions, keep-prod-up sequencing](pipelines/proposal.md) |
 
-## Measured, partly
+## Measured
 
-Each skill has one eval per mode in [`evals/`](../../evals/README.md) (evals 21–26): a Review fixture seeded with defects, a Design fixture whose traps are in what the requirements ask for, and a Propose fixture with a finished review and a target design. Each has a reference answer, a do-nothing answer and plausible-but-wrong answers that separate as intended (`python3 evals/controls/make_controls.py --only 21 22 23 24 25 26`). **No with-skill run has been scored**, so there is no number for either skill yet.
+Each skill has one eval per mode in [`evals/`](../../evals/README.md) (evals 21–26): a Review fixture seeded with defects, a Design fixture whose traps are in what the requirements ask for, and a Propose fixture with a finished review and a target design. Each has a reference answer, a do-nothing answer and plausible-but-wrong answers that separate as intended (`python3 evals/controls/make_controls.py --only 21 22 23 24 25 26`). **First runs (n=1), against no skill:** terraform 1.00 / 1.00 / 0.91 vs 0.57 / 0.86 / 0.82; pipelines 1.00 / 1.00 / 0.80 vs 0.67 / 0.79 / 0.50 (Review / Design / Propose).

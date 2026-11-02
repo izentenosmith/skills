@@ -106,6 +106,6 @@ outside this repository, dereference the links during copy (for example,
 | Proposal | `netpropose/`. Decision rules, posture by score band, cut-over sequencing. |
 | Blueprint | `netblueprint/`. Package layout, the IaC handoff contract, the `network-design.md` template. |
 
-## Measured, partly
+## Measured
 
-Each skill has one eval in [`evals/`](../../evals/README.md) (evals 16–20): a Terraform/IOS estate to audit that carries a pre-shared key the audit must never echo; requirements whose habitual address plan collides with what's already in use, graded by parsing every CIDR; a target model to draw, graded by parsing the draw.io XML; a proposal hiding an open Critical under a 7.9; and a blueprint request against an unaccepted proposal. Reference, do-nothing and plausible-but-wrong controls separate as intended (`python3 evals/controls/make_controls.py --only 16 17 18 19 20`). **No with-skill run has been scored.**
+Each skill has one eval in [`evals/`](../../evals/README.md) (evals 16–20): a Terraform/IOS estate to audit that carries a pre-shared key the audit must never echo; requirements whose habitual address plan collides with what's already in use, graded by parsing every CIDR; a target model to draw, graded by parsing the draw.io XML; a proposal hiding an open Critical under a 7.9; and a blueprint request against an unaccepted proposal. Reference, do-nothing and plausible-but-wrong controls separate as intended (`python3 evals/controls/make_controls.py --only 16 17 18 19 20`). **First runs (n=1), against no skill:** netaudit 1.00 vs 0.23, netdesign 0.90 vs 0.30, netdiagram 0.90 vs 0.20, netpropose 0.90 vs 0.70, netblueprint 1.00 vs 1.00 — its eval checks a refusal a bare agent also makes.

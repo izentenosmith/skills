@@ -15,6 +15,7 @@ Reference docs, all in this folder:
 
 - [severity.md](severity.md) — what qualifies as an incident, and how severe
 - [discovery.md](discovery.md) — the repo's conventions, plus rollback levers, observability and data access
+- [diagnosis.md](diagnosis.md) — when Phase 2's evidence runs out: a reproduction off production, minimise, ranked hypotheses, one probe at a time
 - [incident-log.md](incident-log.md) — the durable, UTC-stamped log every phase writes to
 - [data-repair.md](data-repair.md) — the checklist for repairing what the bug wrote
 - [follow-through.md](follow-through.md) — turning contributing factors into follow-ups or accepted risks
@@ -46,8 +47,7 @@ Then classify with [severity.md](severity.md), say the severity and why in one l
 
 ## 🔬 Phase 2: Diagnose and size the impact
 
-- [ ] **Root cause from evidence** — logs, metrics, read-only queries, and the git history of the affected code (the triggering change often merged days earlier: widen the range). Find **every caller** of the faulty code — the impact is the union of their paths, not just the one in the alert.
-- [ ] **Impact assessment**: which users, records or documents; **from when to when**; with a **reproducible query or command** and its counts. Wrong data is the worst case and the easiest to under-count, because it doesn't announce itself.
+- [ ] **Root cause from evidence** — logs, metrics, read-only queries, and the git history of the affected code (the triggering change often merged days earlier: widen the range). Find **every caller** of the faulty code — the impact is the union of their paths, not just the one in the alert.- [ ] **Impact assessment**: which users, records or documents; **from when to when**; with a **reproducible query or command** and its counts. Wrong data is the worst case and the easiest to under-count, because it doesn't announce itself.
 - [ ] **Known vs. assumed** for every number. "~2,300 orders (query in log at 15:02); whether refunds were affected is assumed not — no refund path calls this code" is an assessment. "Some orders" is not.
 
 **Gate:** a stated cause with its evidence, and an impact with a reproducible count, both logged.
@@ -74,7 +74,7 @@ Then classify with [severity.md](severity.md), say the severity and why in one l
 
 - **No containment option works**, or every one is too risky to recommend → stop, say so, and lay out what you know; this needs a person with more access or authority.
 - **The fix loop hits its cap** (two iterations, still NO-GO) → stop with the open findings and the options: ship the containment as the long-term state, accept the risk, or take it back to design.
-- **Evidence runs out** before the cause is found → keep containment in place, record the open question in the log, and say what evidence would settle it. Don't fix a guess.
+- **Evidence runs out** before the cause is found → keep containment in place, record the open question in the log, and say what evidence would settle it. Don't fix a guess. Before stopping, and only once Phase 1's gate holds, [diagnosis.md](diagnosis.md) can still find it: a reproduction from captured artifacts in a non-production copy, then ranked hypotheses — reading and reproducing only, with application code untouched until Phase 3.
 
 Otherwise, stop when Phase 4's gate holds.
 
