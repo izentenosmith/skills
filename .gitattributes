@@ -1,0 +1,2 @@
+# Planted defect for eval 36: this script must keep its CRLF line endings.
+evals/fixtures/debug-evidence/migrate/entrypoint.sh -text

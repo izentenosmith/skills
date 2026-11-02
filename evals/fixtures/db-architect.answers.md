@@ -1,6 +1,6 @@
 Answer key for `db-architect/`. It lives **outside** the fixture folder on purpose: everything inside the folder is copied into the run, and a run that can read the answer key measures nothing.
 
-# db-architect — `dbarchitect` on a ticketing relaunch (eval 36)
+# db-architect — `dbarchitect` on a ticketing relaunch (eval 39)
 
 Tidewater Tickets: requirements with numbers (and one unknown), the tech lead's description of the current stores, a backend proposal to move seats to sharded MongoDB, the compose file, and the purchase and webhook code.
 

@@ -7,10 +7,13 @@ description: Generate a Docker Compose stack for this repo — app services dete
 
 ## Where this fits
 
-Two container skills, in order:
+The container skills:
 
 1. [dockerfile](../dockerfile/SKILL.md) — one image per service, plus the `.dockerignore` that defines its build context
 2. **docker-compose** (this skill) — wires those images to datastores, networks, volumes and health gates
+3. [container-hardening](../container-hardening/SKILL.md) — reviews how containers run in production. When a compose file *is* the production deploy (a VM running `docker compose up -d`), it gets that full review; a dev stack built here is only checked for what hurts the laptop
+4. [container-debug](../container-debug/SKILL.md) — when a container won't start, stay up or connect: reads the runtime's own record, matches the symptom, proves the cause, and routes the fix back to the skill that owns it
+5. [docker-swarm](../docker-swarm/SKILL.md) — reviews or designs a Swarm cluster and the stack files `docker stack deploy` runs
 
 **Run [dockerfile](../dockerfile/SKILL.md) first.** Compose orchestrates images; it cannot repair one. Most "compose is broken" reports are an image that doesn't start, doesn't answer its healthcheck, or dies on `SIGTERM` — and no amount of compose configuration fixes any of those.
 
@@ -26,7 +29,7 @@ It leans on two reference docs:
 Say which you picked:
 
 - **Greenfield** — no compose file. Work Steps 1–5 in order.
-- **Repair** — a compose file exists and something is wrong (startup races, data lost on `down`, ports colliding, a service that can't reach another). **Reproduce the failure and name it before editing.** Rewriting a compose file that mostly works is how a local environment that was merely annoying becomes broken.
+- **Repair** — a compose file exists and something is wrong (startup races, data lost on `down`, ports colliding, a service that can't reach another). **Reproduce the failure and name it before editing.** Rewriting a compose file that mostly works is how a local environment that was merely annoying becomes broken. Read it for the settings in Step 2's "never in the base" list as well, whatever the reported problem is, and name any you find.
 - **Add a service** — the stack exists and needs one more. Read the existing conventions (network name, volume naming, env var style) and match them. Consistency inside the file beats correctness imported from elsewhere.
 
 ---
@@ -62,7 +65,8 @@ For each service, the definitions in [service-catalog.md](service-catalog.md) gi
 - [ ] `environment:` reading from the `.env` via `${VAR}` interpolation — **not literal values**, and never a literal secret.
 - [ ] `ports:` only for services a human or an external tool needs to reach. Service-to-service traffic uses the network and needs no published port. **Every published port is a port that can collide with another project**, so publish deliberately.
 - [ ] `depends_on:` with `condition: service_healthy` — see Step 3.
-- [ ] `restart: unless-stopped` for anything long-running.
+- [ ] `restart: unless-stopped` for anything long-running. It restarts a container that **exits**; one that hangs and fails its healthcheck stays up and `unhealthy`, because plain Docker acts on nothing but exit.
+- [ ] **Never in the base, and flagged in repair:** `privileged: true`, `pid: host`, `network_mode: host`, `cap_add` of `SYS_ADMIN`/`SYS_PTRACE`/`NET_ADMIN`/`SYS_MODULE`, bind mounts of `/`, `/etc`, `/proc`, `/sys` or `$HOME`, and a mounted `/var/run/docker.sock` (socket access is root on the host; `:ro` doesn't restrict the API). The host here is a developer's laptop. Where a dev tool genuinely needs one — `docker:dind` needs `privileged`, Traefik needs the socket — it goes behind a `profiles:` entry in the override with a comment naming the risk.
 - [ ] Source syncing for development **only in the override file**, never in the base — see Step 5. Prefer `develop.watch` over a bind mount on anything new: it copies changed files into the image's own filesystem instead of shadowing it, so the host's architecture-specific `node_modules` never enters the container, and it can rebuild on a lockfile change. [environments.md](environments.md) has both patterns and the version requirement.
 
 **Backing services:**
@@ -72,7 +76,9 @@ For each service, the definitions in [service-catalog.md](service-catalog.md) gi
 - [ ] A healthcheck that proves readiness, not liveness — Step 3.
 - [ ] Credentials via `${VAR}` from the env file, with a dev-only default.
 
-**One network, explicitly declared.** The default bridge works, but an explicit `networks:` block makes the isolation boundary visible and keeps this project's services from resolving another project's. Services reach each other by **service name** — `postgres:5432`, not `localhost:5432`. Getting that wrong is the most common connection failure in a first compose file, because the string that works on the host doesn't work inside the network.
+**One network, explicitly declared.** Compose already puts every service on a project-scoped `<project>_default` network with DNS by service name, so the explicit `networks:` block buys **visibility**, not isolation — it names the boundary in the file, and it is the place to split a `backend` network off later if the local stack has to mirror a real segmentation boundary. (Docker's *default bridge*, the one `docker run` uses without `--network`, is different: no DNS by name, which is why a container started by hand can't find `postgres`.) Services reach each other by **service name** — `postgres:5432`, not `localhost:5432`. Getting that wrong is the most common connection failure in a first compose file, because the string that works on the host doesn't work inside the network.
+
+**Pin the project name** with a top-level `name:`. It otherwise comes from the directory, so two checkouts or worktrees both called `app` share — and clobber — each other's volumes.
 
 ---
 
@@ -97,7 +103,7 @@ depends_on:
 
 ## 💾 Step 4: Volumes — named, not bind
 
-- [ ] **Every stateful service has a named volume** on its data directory. Without one, `docker compose down` destroys the database. People discover this by losing a seeded dev database, and it is entirely preventable by one line.
+- [ ] **Every stateful service has a named volume** on its data directory. Without one, the data goes into an anonymous volume the image declares, `docker compose down` orphans it, and the next `up` starts on an empty database. People discover this by losing a seeded dev database — it is recoverable from `docker volume ls -f dangling=true` until someone prunes, and entirely preventable by one line.
 - [ ] **Named volumes for data, bind mounts for source.** A bind mount for Postgres data hits permission and performance problems on macOS and Windows; a named volume for source code means your edits don't show up.
 - [ ] **Declare them in the top-level `volumes:` block** so they're namespaced to the project and `docker compose down -v` can remove them deliberately.
 - [ ] **Seed and init data** mounts read-only at the container's init path (`/docker-entrypoint-initdb.d` on Postgres and MySQL) — it runs once, on an empty data directory only.
@@ -111,7 +117,8 @@ Say out loud which volumes hold data a developer would be upset to lose, and tha
 - [ ] **`.env.example` lists every variable** the stack reads, **with a comment per variable** saying what it's for and what a safe local value looks like. It is committed. It is the file that makes `git clone && docker compose up` work for someone who has never seen the project.
 - [ ] **`.env` is gitignored** — verify this rather than assuming it, because the whole scheme fails silently and permanently if it isn't.
 - [ ] **Dev-only defaults are marked as such.** `POSTGRES_PASSWORD=localdev` is fine and should say `# local only — production uses the secret store`. A default that looks production-plausible is how a weak password reaches production.
-- [ ] **`docker-compose.override.yml` carries the dev-only parts** — source syncing, a hot-reload command, debugger ports, published database ports. Compose loads it automatically, so `up` is the dev experience and `-f docker-compose.yml` alone is the clean one. **Keep the base file deployable**; a base with a bind mount over `/app` isn't.
+- [ ] **`docker-compose.override.yml` carries the dev-only parts** — source syncing, a hot-reload command, debugger ports, published database ports. Compose loads it automatically, so `up` is the dev experience and `-f docker-compose.yml` alone is the clean one. **Keep the base file deployable** — meaning it runs clean without the override; a base with a bind mount over `/app` doesn't. It does not mean Swarm-ready: `docker stack deploy` ignores `build:` and `depends_on`, and [environments.md](environments.md#if-the-same-file-goes-to-docker-stack-deploy) has the full list.
+- [ ] **Published ports bind to loopback**: `"127.0.0.1:5432:5432"`. The short form listens on every interface of the laptop, and Docker's firewall rules bypass `ufw` to do it.
 
 [environments.md](environments.md) covers the override mechanics, the merge rules that surprise people (lists append, scalars replace), and where secrets go once this leaves a laptop.
 
@@ -123,11 +130,24 @@ Every claim here has a command behind it:
 
 - [ ] **`docker compose config`** — renders and validates. Catches interpolation typos and a missing `.env` var before anything starts.
 - [ ] **`docker compose up -d`** from a **clean state** (`down -v` first). The startup race only reproduces on a cold start with empty volumes; a warm start hides it.
-- [ ] **Every service is healthy** — `docker compose ps` shows `healthy`, not just `running`.
+- [ ] **Every service is healthy** — `docker compose ps -a` shows `healthy`, not just `running`, and every one-shot service shows `Exited (0)`. Without `-a`, an exited migration container — the one that failed — isn't listed at all.
 - [ ] **The app answers.** Hit its port and get a real response, not just an open socket.
 - [ ] **The app reached its dependencies** — `docker compose logs app` shows a successful connection, no retry storm.
-- [ ] **Data survives a restart** — write something, `docker compose restart`, read it back. This is the check that proves the volume is real.
+- [ ] **Data survives the containers** — write something, `docker compose down` (**no** `-v`), `docker compose up -d`, read it back. This is the check that proves the volume is real. **`docker compose restart` proves nothing**: it reuses the same container, whose writable layer survives a restart with no volume at all.
 - [ ] **It works from cold twice.** `down -v && up -d`, twice. A startup race that appears one run in three is still a broken file, and a single green run is not evidence.
+
+When a check fails, the moves that find out why:
+
+| Symptom | Look with |
+|---|---|
+| A service exited | `docker compose ps -a` for the exit code, `docker compose logs --tail=100 <svc>` |
+| Exit `137` | `docker inspect -f '{{.State.OOMKilled}}' <container>` — `true` is a memory limit, `false` a kill after the stop timeout |
+| Crash-looping, `exec` refused | `docker compose run --rm --entrypoint sh <svc>` — a fresh container you can look around in |
+| `no such host` for a service name | `docker compose exec <svc> getent hosts <other>`; the two aren't on a common network, or the other isn't running |
+| `connection refused` | The target is up but not listening yet — a missing health gate, or the app not retrying |
+| An edit to the compose file had no effect | `restart` doesn't re-read the file; `docker compose up -d` does |
+| Old dependencies after a rebuild | Anonymous volumes carried over — `docker compose up --build -V` |
+| Healthcheck failing | `docker inspect -f '{{json .State.Health}}' <container>` shows the probe's own output |
 
 ---
 
@@ -140,7 +160,7 @@ Stop when all four hold:
 - [ ] **`.env.example` is complete** — a clean clone starts with no undocumented variable.
 - [ ] Anything left undone is **recorded with its reason** — a cloud service with no local substitute, a licensed image, a dependency deliberately left pointed at staging.
 
-Then stop. **Compose is a local development tool, and hardening it past that is effort spent on the wrong artifact.** Resource limits, replica counts, secret backends and restart policies tuned for production belong in whatever actually runs production. A compose file that tries to be a deployment manifest ends up being a bad one and a confusing dev environment at the same time.
+Then stop. **Compose is a local development tool, and hardening it past that is effort spent on the wrong artifact.** Resource limits, replica counts, secret backends, restart policies tuned for production, `read_only` root filesystems and dropped capabilities belong in whatever actually runs production — the [dockerfile](../dockerfile/SKILL.md) skill's "survives runtime hardening" check is where an image proves it can take them, and [container-hardening](../container-hardening/SKILL.md) is where a production deployment gets reviewed for them. A compose file that tries to be a deployment manifest ends up being a bad one and a confusing dev environment at the same time.
 
 ---
 
@@ -162,6 +182,7 @@ Worth it when **Step 1 spans a large monorepo** — dispatch one subagent per se
 4. **Named volumes on everything stateful.** `down` must not be able to destroy a developer's data by accident.
 5. **No literal secret in the file.** `${VAR}` from a gitignored `.env`, with the template committed.
 6. **Verify from cold, twice.** Warm starts hide exactly the bug this file is most likely to have.
+7. **The laptop is a host too.** Nothing in the base gets root on it — no privileged containers, no host namespaces, no Docker socket — and nothing listens beyond loopback.
 
 ## Handoff
 

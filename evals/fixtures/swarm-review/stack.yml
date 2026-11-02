@@ -1,0 +1,98 @@
+services:
+  edge:
+    image: nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10
+    ports:
+      - "80:8080"
+      - "443:8443"
+    configs:
+      - source: edge_conf_v3
+        target: /etc/nginx/nginx.conf
+    networks: [frontend]
+    deploy:
+      replicas: 2
+
+  api:
+    image: registry.example.com/shoplane/api:${API_TAG}
+    environment:
+      DB_HOST: postgres
+      DB_PASSWORD_FILE: /run/secrets/db_password
+      LOG_LEVEL: ${LOG_LEVEL}
+    secrets: [db_password]
+    depends_on: [postgres]
+    restart: always
+    networks: [frontend, backend]
+    deploy:
+      replicas: 3
+
+  worker:
+    image: registry.example.com/shoplane/worker:2.4.0@sha256:4b1d0c6e2f8a9b3c5d7e9f1a2b4c6d8e0f2a4b6c8d0e2f4a6b8c0d2e4f6a8b0c
+    environment:
+      DB_HOST: postgres
+      DB_PASSWORD_FILE: /run/secrets/db_password
+    secrets:
+      - source: db_password
+        mode: 0400
+    healthcheck:
+      test: ["CMD", "/app/worker", "healthcheck"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 15s
+    networks: [backend]
+    deploy:
+      replicas: 2
+      placement:
+        preferences:
+          - spread: node.labels.zone
+        max_replicas_per_node: 1
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+        failure_action: rollback
+        monitor: 60s
+      rollback_config:
+        parallelism: 0
+        order: stop-first
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      resources:
+        reservations: {cpus: "0.25", memory: 256M}
+        limits: {cpus: "1", memory: 512M}
+
+  postgres:
+    image: postgres:16.4
+    environment:
+      POSTGRES_USER: shop
+      POSTGRES_DB: shop
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets: [db_password]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shop -d shop"]
+      interval: 5s
+      retries: 10
+    networks: [backend]
+    deploy:
+      replicas: 2
+
+networks:
+  frontend:
+    driver: overlay
+  backend:
+    driver: overlay
+
+volumes:
+  pgdata:
+
+configs:
+  edge_conf_v3:
+    file: ./edge/nginx.conf
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt

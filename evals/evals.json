@@ -1,6 +1,6 @@
 {
  "skill_name": "skills",
- "note": "Evals 0-5 cover the six-stage development pipeline; 6-7 cover the containers and operations skills; 8-14 cover hotfix and incident-fix across different stacks; 15 runs harness/loop.py end to end (runner: loop) instead of one claude -p call; 16-20 cover the five networking skills; 21-26 cover terraform and pipelines, one eval per mode (review, design, propose); 27 covers acceptance-tests on the tdd fixture; 28 covers dockerfile; 29 covers release-notes; 30-34 cover the five database schema skills; 35 covers dbquery and 36 dbarchitect. Each with-skill run is repeated 3x for variance analysis; baseline is a single no-skill run on the same prompt.",
+ "note": "Evals 0-5 cover the six-stage development pipeline; 6-7 cover the containers and operations skills; 8-14 cover hotfix and incident-fix across different stacks; 15 runs harness/loop.py end to end (runner: loop) instead of one claude -p call; 16-20 cover the five networking skills; 21-26 cover terraform and pipelines, one eval per mode (review, design, propose); 27 covers acceptance-tests on the tdd fixture; 28 covers dockerfile; 29 covers release-notes; 30-34 cover the five database skills; 35 covers container-hardening; 36 container-debug; 37 docker-swarm; 38 dbquery; 39 dbarchitect. Each with-skill run is repeated 3x for variance analysis; baseline is a single no-skill run on the same prompt.",
  "evals": [
   {
    "id": 0,
@@ -291,6 +291,30 @@
   },
   {
    "id": 35,
+   "name": "container-hardening-review-socket-and-firewall",
+   "skill": "container-hardening",
+   "fixture": "hardening-review",
+   "prompt": "Is our production container setup secure? Review it and tell me how bad it is.",
+   "expected_output": "Review mode, nothing changed. Compose-as-production plus a Kubernetes Deployment inferred. Finds the privileged worker and names /dev/dri as the replacement; the Watchtower Docker socket mount rated Critical with :ro called out as no protection; Postgres published on all interfaces with ufw bypassed by Docker's iptables rules, fixed by binding 127.0.0.1 or the DOCKER-USER chain; the committed Stripe live key without echoing it, with rotation; api and worker running as root; the reports pod with no seccompProfile running Unconfined, fixed with RuntimeDefault; :latest references. Findings carry CH IDs, confidence, C-n and severity; the score shows base and the 2.0 Critical cap; the gate fails condition by condition; needs-access flags for the daemon, docker group and kubelet; the hardened proxy recorded as what works; image findings handed to dockerfile."
+  },
+  {
+   "id": 36,
+   "name": "container-debug-oom-localhost-crlf",
+   "skill": "container-debug",
+   "fixture": "debug-evidence",
+   "prompt": "Our staging stack has been broken since Friday's release. What we captured is in evidence/ — nobody can give you access to the VM. What's wrong, and how do we fix it?",
+   "expected_output": "Evidence-only mode. Three symptoms, each with its evidence and a cause line: the worker OOM-killed (OOMKilled true, oom events, 255.6 of 256 MiB; 418 MiB working set unconstrained) with the limit raised from that measurement rather than removed; api and worker using REDIS_URL=redis://localhost:6379, which inside a container is the container itself, fixed to the service name with no sleep; migrate exiting 255 because entrypoint.sh has CRLF line endings, fixed to LF with a .gitattributes rule. A root-cause note per symptom; the database password visible in the captured inspect output named by location only, never repeated, with rotation; the confirming commands on the VM listed as not run."
+  },
+  {
+   "id": 37,
+   "name": "docker-swarm-review-quorum-and-state",
+   "skill": "docker-swarm",
+   "fixture": "swarm-review",
+   "prompt": "Review our Swarm setup before we go live next week.",
+   "expected_output": "Review mode, nothing changed and no state-changing command run. A fit verdict. Finds two managers and says they tolerate no more failures than one (go to 3); Postgres replicas: 2 on a local volume with no constraint as two diverging databases (replicas 1, pinned); the committed secrets/db_password.txt without echoing it, rotated to a new versioned secret; depends_on and restart ignored by stack deploy though the README relies on the ordering; .env not read by stack deploy and never exported by deploy.sh, so CI deploys an empty image tag; the api with no healthcheck and the default update config (pause, stop-first) with rollback prescribed; the edge's per-client rate limit broken by the routing mesh rewriting source IPs, fixed with mode: host or PROXY protocol; no --with-registry-auth. Findings carry SW IDs, confidence, S-n and severity; the score shows base and the 2.0 Critical cap; the gate fails condition by condition; needs-access flags for autolock, backups, firewall and labels; the worker recorded as the template; drills before go-live; handoffs to container-hardening and dockerfile."
+  },
+  {
+   "id": 38,
    "name": "dbquery-workload-ranked-plans-read-indexes-weighed",
    "skill": "dbquery",
    "fixture": "db-query",
@@ -298,7 +322,7 @@
    "expected_output": "A query review (written as markdown, nothing else) that ranks statements by total time — 4410012, the order-line lookup at 37 % of 7.7 M ms, ahead of the 9.4 s monthly report — and states coverage as a share of total time. It finds the N+1 behind 4410012 (one lookup per order from list_recent_orders); the lower(email) lookup that seq-scans past ix_customer_email (settling AUD-09); the open-orders list filtering status after a created_at index scan, fixed by (status, created_at) and seek paging; the monthly report's 1,000x misestimate traced to autovacuum disabled on sales_order since the import, fixed by ANALYZE rather than an index; the marketing export's NOT IN over a nullable column with 212 NULLs, fixed by NOT EXISTS; the stock lost update in reserve_stock; the ORDER BY injection in search_products and the trigram index its ILIKE needs. Plan 05 is labelled as laptop volume, not production evidence. Of the proposed indexes, order_line(order_id) is rejected as redundant with the primary key, the note index on write cost, the name B-tree as useless for ILIKE; lower(email) and (status, created_at) accepted. ix_order_status reported unused (settling AUD-07). Each prescription names its verification; the score shows its base and cap. scripts/psql-staging never called; the password in config/database.env never echoed; no fixture file changed and no SQL written."
   },
   {
-   "id": 36,
+   "id": 39,
    "name": "dbarchitect-one-system-of-record-no-dual-writes",
    "skill": "dbarchitect",
    "fixture": "db-architect",

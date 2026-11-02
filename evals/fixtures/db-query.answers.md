@@ -1,6 +1,6 @@
 Answer key for `db-query/`. It lives **outside** the fixture folder on purpose: everything inside the folder is copied into the run, and a run that can read the answer key measures nothing.
 
-# db-query — `dbquery` on a PostgreSQL 17 workload (eval 35)
+# db-query — `dbquery` on a PostgreSQL 17 workload (eval 38)
 
 Brightcart's order service: the schema, the service's data-access code, production `pg_stat_statements` and table/index statistics, five captured plans (four from a full staging copy, one from a laptop), a profiling query, a developer's index proposal, and last month's audit flags.
 

@@ -1,0 +1,10 @@
+$ docker compose logs --tail 12 api
+api-1  | [2026-10-30 16:39:58 +0000] [7] [ERROR] Error handling request /cart
+api-1  | Traceback (most recent call last):
+api-1  |   File "/usr/local/lib/python3.12/site-packages/redis/connection.py", line 357, in connect
+api-1  |     sock = self.retry.call_with_retry(
+api-1  | ConnectionRefusedError: [Errno 111] Connection refused
+api-1  | During handling of the above exception, another exception occurred:
+api-1  | redis.exceptions.ConnectionError: Error 111 connecting to localhost:6379. Connection refused.
+api-1  | [2026-10-30 16:40:31 +0000] [7] [ERROR] Error handling request /cart
+api-1  | redis.exceptions.ConnectionError: Error 111 connecting to localhost:6379. Connection refused.

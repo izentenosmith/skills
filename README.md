@@ -15,7 +15,7 @@ Six families of skills under `skills/` — the first three in the order work act
 ```
 skills/
   development/      build the change      seven stages, design → adversarial close
-  containers/       package it to run     dockerfile → docker-compose
+  containers/       package it to run     dockerfile → docker-compose · container-hardening · container-debug · docker-swarm
   operations/       live with it          hotfix → incident-fix → post-mortem · release-notes
   database/         architect, audit, design, diagram, propose, build, query review
   networking/       audit, design, diagram, propose, blueprint
@@ -27,13 +27,13 @@ evals/              seeded fixtures, scored assertions, the recorded benchmark
 | Family | Skills |
 |---|---|
 | **[development/](skills/development/README.md)** | [architect-deep-dive](skills/development/architect-deep-dive/SKILL.md) · [agent-brief](skills/development/agent-brief/SKILL.md) · [tdd](skills/development/tdd/SKILL.md) · [refactor-review](skills/development/refactor-review/SKILL.md) · [devils-advocate](skills/development/devils-advocate/SKILL.md) · [tyr-verdict](skills/development/tyr-verdict/SKILL.md) |
-| **[containers/](skills/containers/README.md)** | [dockerfile](skills/containers/dockerfile/SKILL.md) · [docker-compose](skills/containers/docker-compose/SKILL.md) |
+| **[containers/](skills/containers/README.md)** | [dockerfile](skills/containers/dockerfile/SKILL.md) · [docker-compose](skills/containers/docker-compose/SKILL.md) · [container-hardening](skills/containers/container-hardening/SKILL.md) · [container-debug](skills/containers/container-debug/SKILL.md) · [docker-swarm](skills/containers/docker-swarm/SKILL.md) |
 | **[operations/](skills/operations/README.md)** | [hotfix](skills/operations/hotfix/SKILL.md) · [incident-fix](skills/operations/incident-fix/SKILL.md) · [post-mortem](skills/operations/post-mortem/SKILL.md) · [release-notes](skills/operations/release-notes/SKILL.md) |
 | **[database/](skills/database/README.md)** | [dbarchitect](skills/database/dbarchitect/SKILL.md) · [dbaudit](skills/database/dbaudit/SKILL.md) · [dbdesign](skills/database/dbdesign/SKILL.md) · [dbdiagram](skills/database/dbdiagram/SKILL.md) · [dbpropose](skills/database/dbpropose/SKILL.md) · [dbbuild](skills/database/dbbuild/SKILL.md) · [dbquery](skills/database/dbquery/SKILL.md) |
 | **[networking/](skills/networking/README.md)** | [netaudit](skills/networking/netaudit/SKILL.md) · [netdesign](skills/networking/netdesign/SKILL.md) · [netdiagram](skills/networking/netdiagram/SKILL.md) · [netpropose](skills/networking/netpropose/SKILL.md) · [netblueprint](skills/networking/netblueprint/SKILL.md) |
 | **[infrastructure/](skills/infrastructure/README.md)** | [terraform](skills/infrastructure/terraform/SKILL.md) · [pipelines](skills/infrastructure/pipelines/SKILL.md) |
 
-The families are loosely coupled by design. `development` is a genuine pipeline where each stage checks the one before it; `containers` is an ordered pair; `operations` is a response chain — hotfix escalates to incident-fix, which hands its record to post-mortem — plus release-notes, which stands alone; `database` has seven independent skills — five of them coordinated by an optional harness, plus an architecture stage above them and a query review beside them — and `networking` has five coordinated the same way; `infrastructure` has two skills that each run review → design → propose as modes of one skill. Every skill also works entirely on its own.
+The families are loosely coupled by design. `development` is a genuine pipeline where each stage checks the one before it; `containers` is an ordered pair (image, then stack) plus three skills for containers once they run — hardening, debugging, and Swarm; `operations` is a response chain — hotfix escalates to incident-fix, which hands its record to post-mortem — plus release-notes, which stands alone; `database` has seven independent skills — five of them coordinated by an optional harness, plus an architecture stage above them and a query review beside them — and `networking` has five coordinated the same way; `infrastructure` has two skills that each run review → design → propose as modes of one skill. Every skill also works entirely on its own.
 
 **The family directories are scaffolding for reading this repo, nothing more.** The agent never sees them — it selects on each `SKILL.md`'s frontmatter `description`. When you take a skill, you take the skill folder; see [How to use](#how-to-use).
 
@@ -103,17 +103,20 @@ The same folder holds three more: `fix.py` takes a bug report to a draft PR (the
 
 ## containers
 
-Ordered: an image, then the stack around it.
+Ordered: an image, then the stack around it — and, wherever the containers end up running, a review of how they run.
 
 ```
-dockerfile → docker-compose
- (the image)  (the stack)
+dockerfile → docker-compose        container-hardening · container-debug · docker-swarm
+ (the image)  (the stack)          (how it runs · why it doesn't · the Swarm around it)
 ```
 
 | Skill | What it does |
 |-------|--------------|
 | [dockerfile](skills/containers/dockerfile/SKILL.md) | Reads the stack off the repo, writes a multi-stage production Dockerfile — pinned base, non-root runtime, cache-correct layer order — and generates or repairs the `.dockerignore` that defines its build context. Verifies by building and running, not by reading. |
 | [docker-compose](skills/containers/docker-compose/SKILL.md) | Detects the services the code actually connects to, wires them with named volumes, an isolated network and real health gates, and ships a documented `.env.example` plus a dev override. Verifies from cold, twice. |
+| [container-hardening](skills/containers/container-hardening/SKILL.md) | Reviews how containers run — Compose, Kubernetes, Swarm or `docker run` — and the image supply chain: privileged mode, the Docker socket, host namespaces, root, capabilities, seccomp, read-only roots, limits, exposed ports, secrets, scanning. Scores 0–10 with the shared formula and a gate; Harden mode applies the fixes and proves the workload still runs. |
+| [container-debug](skills/containers/container-debug/SKILL.md) | For a container that won't start, stay up or connect: captures the evidence before anything destroys it, reads the runtime's own record (exit code, `OOMKilled`, restart count, health log, events), matches the symptom against the container-specific failure modes, proves one hypothesis at a time, and routes the fix to the skill that owns it. Read-only in production. |
+| [docker-swarm](skills/containers/docker-swarm/SKILL.md) | Reviews or designs a Swarm mode cluster and its stack files: quorum and manager count, autolock and backups, rolling-update and rollback settings, healthchecks as the rollout gate, stateful services on node-local volumes, overlays and the routing mesh, secrets and configs, placement — and the Compose keys `docker stack deploy` silently ignores. Says first whether Swarm is still the right tool. Scores 0–10 with the shared formula and a gate; read-only, never deploys or scales. |
 
 **Run `dockerfile` first.** Compose orchestrates images; it cannot repair one. Most "compose is broken" reports are an image that doesn't start, doesn't answer its healthcheck, or dies on `SIGTERM`.
 
@@ -230,6 +233,16 @@ These carry no workflow of their own — the skill in the same folder links into
 | [dockerignore](skills/containers/dockerfile/dockerignore.md) | dockerfile — what to exclude and what each exclusion buys |
 | [service-catalog](skills/containers/docker-compose/service-catalog.md) | docker-compose — per-service image, readiness probe, volume path, connection string |
 | [environments](skills/containers/docker-compose/environments.md) | docker-compose — overrides, merge rules, `.env.example`, secrets |
+| [theory](skills/containers/container-hardening/theory.md) | container-hardening — the principles every finding cites (C1–C13) |
+| [controls](skills/containers/container-hardening/controls.md) | container-hardening — per-domain anti-patterns: what, why, detect, fix, cost, severity |
+| [platforms](skills/containers/container-hardening/platforms.md) | container-hardening — each control in `docker run`, Compose, Kubernetes and Swarm; inspect templates; grep signals |
+| [scoring](skills/containers/container-hardening/scoring.md) | container-hardening — severity, confidence, the 0–10 formula, the gate, templates |
+| [symptoms](skills/containers/container-debug/symptoms.md) | container-debug — exit codes, and each symptom with its causes and the probe that tells them apart |
+| [toolkit](skills/containers/container-debug/toolkit.md) | container-debug — read-only commands per platform, a shell for images that have none, keeping the evidence |
+| [theory](skills/containers/docker-swarm/theory.md) | docker-swarm — the principles every finding cites (S1–S12): desired state, quorum, rolling updates, node-local state, the mesh |
+| [controls](skills/containers/docker-swarm/controls.md) | docker-swarm — seven domains: what good looks like, each anti-pattern's what / why / detect / fix / severity, the scored checklists |
+| [runbook](skills/containers/docker-swarm/runbook.md) | docker-swarm — read-only evidence commands, failure modes and their recovery, drills before go-live, the stack file skeleton |
+| [scoring](skills/containers/docker-swarm/scoring.md) | docker-swarm — severity anchors and chains, confidence, the 0–10 formula, the go-live gate, templates |
 | [anatomy](skills/operations/release-notes/anatomy.md) | release-notes — the six elements and the commit→outcome translation rules |
 | [distribution](skills/operations/release-notes/distribution.md) | release-notes — depth to scope, when visuals earn their place, where to publish |
 | [diagnosis](skills/operations/hotfix/diagnosis.md) | hotfix and incident-fix (symlinked) — a red loop before any theory, minimise, ranked hypotheses, one probe at a time |
@@ -278,6 +291,9 @@ Any stage can optionally hand its **read-only or fresh-context** work to a subag
 | tyr-verdict | per-finding verification | **the severity, the slices, the GO/NO-GO** |
 | dockerfile | per-service stack inference in a monorepo | writing and verifying the image |
 | docker-compose | per-service dependency detection in a monorepo | **the wiring** — it's all relationships between services |
+| container-hardening | per-directory or per-namespace inventory and findings on a large estate | **chains, scoring, the gate, and every Harden change** |
+| container-debug | — (one failure, one thread of evidence) | **the whole diagnosis** |
+| docker-swarm | per-stack-file inventory and findings when there are many stacks | **the cluster domain, chains, scoring, the gate and Design** |
 | release-notes | gathering and classifying a large change set | **writing the prose — it must be one voice** |
 | hotfix | the caller sweep; convention lookups | **the red→green and the fix** |
 | incident-fix | evidence gathering in diagnosis, one delegate per source | **containment, every production action, and the fix decisions** |
@@ -301,7 +317,7 @@ Each skill carries its own copy of the dispatch contract it needs, so the folder
 
 Assertions are split: **capability** (does the stage do its job at all) from **delta** (does it do what a change to the skill added). Only the delta column is evidence an edit helped. Against the pre-session baseline over 36 runs: **0.98 vs 0.22** on delta, **0.96 vs 0.92** on capability.
 
-**Scored: every skill but the two newest.** The six `development` stages carry the recorded n=3 result above. The other skills' first run (2026-10-25) is one with-skill run each — three for evals 11–13 — against a baseline with no skill at all, which is the honest comparison for a skill that did not exist at the baseline ref. Across evals 0–34: **0.95 vs 0.49** on delta, **0.99 vs 0.85** on capability. Per eval in [evals/benchmark.md](evals/benchmark.md).
+**Scored: every skill but the five newest.** The six `development` stages carry the recorded n=3 result above. The other skills' first run (2026-10-25) is one with-skill run each — three for evals 11–13 — against a baseline with no skill at all, which is the honest comparison for a skill that did not exist at the baseline ref. Across those 35 evals: **0.95 vs 0.49** on delta, **0.99 vs 0.85** on capability. Per eval in [evals/benchmark.md](evals/benchmark.md). `container-hardening`, `container-debug` and `docker-swarm` (evals 35–37) and `dbquery` and `dbarchitect` (evals 38–39), all added 2026-11-02, have their fixtures, assertions and controls but no scored run yet.
 
 The fixtures are seeded so a naive answer fails them: a compose fixture with a stale `ELASTICSEARCH_URL`, an incident whose trigger sits nine days before the outage, production levers that are stubs recording their calls (so "took no action without confirmation" is checked, not inferred), networks graded by parsing every CIDR and every draw.io cell, DDL executed in SQLite and probed with rows that must be refused, acceptance tests run against three mutants.
 
@@ -309,7 +325,7 @@ The fixtures are seeded so a naive answer fails them: a compose fixture with a s
 
 - `dockerfile` **0.79 vs 0.79**: no better than no skill, and it quoted a planted key in its "rotate this" warning instead of naming the variable. Scored before the skill's upgrade in #9 (never repeat a secret's value, a check/command/observed table); not yet re-run.
 - `netblueprint` scores **1.00 vs 1.00**: its eval checks that it refuses an unaccepted proposal, which a bare agent also does.
-- `dbquery` and `dbarchitect` (evals 35–36) **have no run yet**: their fixtures, graders and controls exist and separate, but no model has been scored on them.
+- `dbquery` and `dbarchitect` (evals 38–39) **have no run yet**: their fixtures, graders and controls exist and separate, but no model has been scored on them.
 
 Three skills were fixed after their first run and re-run three times each: `acceptance-tests` **0.75 → 1.00** (criteria that already hold are tested with their contrast; edges tested within seconds; one mapping line per criterion), `dbpropose` **0.61 → 0.92** (a `proposal.md` file, a step table with validation, rollback and blast radius, data before constraints, expand/contract, acceptance before dbbuild), and `dbdesign` **0.69 → 0.95** — most of whose first score was four grader false negatives (bold Barker sentences, a "Normal-form" heading, the intersection table's own column, an age-band lookup), fixed in `grade.py` with every control re-checked.
 
@@ -325,8 +341,8 @@ Every skill installs by name through the [`skills` CLI](https://github.com/verce
 # development — the seven-stage pipeline
 npx skills add izentenosmith/skills --skill architect-deep-dive agent-brief acceptance-tests tdd refactor-review devils-advocate tyr-verdict
 
-# containers — image, then stack
-npx skills add izentenosmith/skills --skill dockerfile docker-compose
+# containers — image, then stack, then how it runs
+npx skills add izentenosmith/skills --skill dockerfile docker-compose container-hardening container-debug docker-swarm
 
 # operations — the response chain plus release-notes
 npx skills add izentenosmith/skills --skill hotfix incident-fix post-mortem release-notes
@@ -360,6 +376,9 @@ npx skills add izentenosmith/skills --skill '*'
 | | `npx skills add izentenosmith/skills --skill tyr-verdict` |
 | containers | `npx skills add izentenosmith/skills --skill dockerfile` |
 | | `npx skills add izentenosmith/skills --skill docker-compose` |
+| | `npx skills add izentenosmith/skills --skill container-hardening` |
+| | `npx skills add izentenosmith/skills --skill container-debug` |
+| | `npx skills add izentenosmith/skills --skill docker-swarm` |
 | operations | `npx skills add izentenosmith/skills --skill hotfix` |
 | | `npx skills add izentenosmith/skills --skill incident-fix` |
 | | `npx skills add izentenosmith/skills --skill post-mortem` |
@@ -432,7 +451,7 @@ The installer copies each skill folder whole, dereferencing the database and net
    ```
    /architect-deep-dive   /agent-brief      /acceptance-tests
    /tdd                   /refactor-review  /devils-advocate  /tyr-verdict
-   /dockerfile            /docker-compose
+   /dockerfile            /docker-compose   /container-hardening   /container-debug   /docker-swarm
    /hotfix                /incident-fix
    /release-notes         /post-mortem
    /dbaudit       /dbdesign       /dbdiagram       /dbpropose       /dbbuild
