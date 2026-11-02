@@ -1,0 +1,9 @@
+$ sudo nft list ruleset
+table inet firewalld {
+	chain filter_INPUT {
+		type filter hook input priority filter + 10; policy accept;
+		ct state established,related accept
+		iifname "lo" accept
+		tcp dport { 22, 80, 443 } accept
+	}
+}

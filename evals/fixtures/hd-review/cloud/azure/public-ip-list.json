@@ -1,0 +1,9 @@
+[
+  {
+    "name": "pip-web-01",
+    "resourceGroup": "rg-ledgerline-prod",
+    "ipAddress": "203.0.113.47",
+    "ipConfiguration": { "id": "/subscriptions/00000000-0000-0000-0000-00000000eval/resourceGroups/rg-ledgerline-prod/providers/Microsoft.Network/networkInterfaces/nic-web-01/ipConfigurations/ipconfig1" },
+    "tags": { "environment": "prod" }
+  }
+]

@@ -73,6 +73,7 @@ The TDD stage's planning step asks: *"What should the public interface look like
 - **Prioritize the acceptance criteria.** TDD does NOT test everything — it focuses on critical paths and complex logic. Order the criteria so the first is the **tracer-bullet candidate**: the single most important end-to-end behavior that proves the path works. Everything after it is one incremental red→green slice. The list must read top-to-bottom as a build order.
 - **State criteria as observable behavior.** Each criterion must be verifiable through the public interface and read like a spec sentence.
 - **Separate edge-case criteria from happy-path.** Carry the unhappy paths resolved during architect-deep-dive (empty/missing input, boundaries, permission failures, partial failures, isolation/tenancy quirks) into their own clearly-marked criteria so TDD writes the edge-case slices it would otherwise skip.
+- **Carry the security block as criteria.** When architect-deep-dive's security trigger fired, every item in its security block becomes a criterion, not a note: each **abuse case** is an edge-case criterion stated as a refusal ("a user cannot …", with the exact refusal the caller sees); each **authorisation rule** becomes criteria for the allowed actor *and* the refused ones, on every path to the operation; each **domain primitive** is a Key interface whose validity rule is a criterion; each **never-logged value** is a criterion ("the reset token appears in no log line or error response"). A security decision that isn't a criterion never gets a test — and is the first thing a later change quietly undoes. When the trigger didn't fire, say so in one line under Desired behavior.
 - **Supply prior art.** TDD's planning step looks for similar tests already in the codebase. Point at the closest existing test suites/patterns (e.g. table-driven constraint tests, public-entry-point handler tests, component-contract tests, boundary/gateway tests) so TDD matches conventions instead of inventing them.
 
 ## Subagents — optional
@@ -104,6 +105,7 @@ Be specific about edge cases and error conditions.
 - `functionName()` return type — what it currently returns vs what it should return
 - Public entry point the behavior is observable through (endpoint / service method / component contract) — the seam tests should target
 - Config shape — any new configuration options needed
+- Domain primitive (when the security trigger fired) — `TypeName` and the rule that makes a value valid; constructing an invalid one fails
 
 **Acceptance criteria** (ordered — first is the tracer-bullet candidate, each one a single red→green slice):
 - [ ] Tracer bullet: the most important end-to-end behavior that proves the path works
@@ -111,6 +113,8 @@ Be specific about edge cases and error conditions.
 - [ ] Next most important behavior
 - [ ] Edge case: <unhappy path — empty/missing input, boundary, permission failure, partial failure, isolation/tenancy quirk>
 - [ ] Edge case: <unhappy path>
+- [ ] Abuse case: <what a hostile caller must not be able to do> → <the exact refusal they see> (security trigger only)
+- [ ] Authorisation: <operation> — allowed for <actor>; refused for <other actors, other tenants, anonymous>, on every path to it (security trigger only)
 
 **Test seams & prior art:**
 - Highest existing seam to test through (prefer existing seams to new ones)

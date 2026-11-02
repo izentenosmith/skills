@@ -1,0 +1,5 @@
+$ sudo ss -tulpn
+Netid State  Recv-Q Send-Q Local Address:Port Peer Address:Port Process
+tcp   LISTEN 0      128        10.20.2.4:22        0.0.0.0:*     users:(("sshd",pid=702,fd=3))
+tcp   LISTEN 0      244          0.0.0.0:5432      0.0.0.0:*     users:(("postgres",pid=911,fd=6))
+tcp   LISTEN 0      244             [::]:5432         [::]:*     users:(("postgres",pid=911,fd=7))

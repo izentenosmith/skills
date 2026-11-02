@@ -1,6 +1,6 @@
 # Skills
 
-A collection of repo-agnostic AI coding agent skills — taking a feature from a vague idea to reviewed, tested code, packaging it to run, dealing with it once it's live, grading the database and the network underneath it, and reviewing the infrastructure code and pipelines that ship it. Each skill lives in its own folder as a `SKILL.md` file with YAML frontmatter (`name` + `description`) that the agent loads on demand when the work matches.
+A collection of repo-agnostic AI coding agent skills — taking a feature from a vague idea to reviewed, tested code, packaging it to run, dealing with it once it's live, grading the database and the network underneath it, reviewing the infrastructure code and pipelines that ship it, and securing all of it — threat model, application code, and the hosts and cloud accounts it runs on. Each skill lives in its own folder as a `SKILL.md` file with YAML frontmatter (`name` + `description`) that the agent loads on demand when the work matches.
 
 Works with [Cursor](https://www.cursor.com/) and [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
 
@@ -10,7 +10,7 @@ Inspired by [mattpocock/skills](https://github.com/mattpocock/skills).
 
 ## What's in here
 
-Six families of skills under `skills/` — the first three in the order work actually moves through them, then the database, the network, and the infrastructure code and pipelines underneath — plus a harness that runs the development pipeline's closing loop as code, and the evals that measure the skills.
+Seven families of skills under `skills/` — the first three in the order work actually moves through them, then the database, the network, the infrastructure code and pipelines underneath, and the security of every layer — plus a harness that runs the development pipeline's closing loop as code, and the evals that measure the skills.
 
 ```
 skills/
@@ -20,6 +20,7 @@ skills/
   database/         architect, audit, design, diagram, propose, build, query review
   networking/       audit, design, diagram, propose, blueprint
   infrastructure/   review, design, propose   terraform · pipelines
+  security/         review, design, propose   threatmodel · appsec · hardening
 harness/            the skills' rules as code: the closing loop, bug → PR, incident → post-mortem, DB and network audit → proposal
 evals/              seeded fixtures, scored assertions, the recorded benchmark
 ```
@@ -32,8 +33,9 @@ evals/              seeded fixtures, scored assertions, the recorded benchmark
 | **[database/](skills/database/README.md)** | [dbarchitect](skills/database/dbarchitect/SKILL.md) · [dbaudit](skills/database/dbaudit/SKILL.md) · [dbdesign](skills/database/dbdesign/SKILL.md) · [dbdiagram](skills/database/dbdiagram/SKILL.md) · [dbpropose](skills/database/dbpropose/SKILL.md) · [dbbuild](skills/database/dbbuild/SKILL.md) · [dbquery](skills/database/dbquery/SKILL.md) |
 | **[networking/](skills/networking/README.md)** | [netaudit](skills/networking/netaudit/SKILL.md) · [netdesign](skills/networking/netdesign/SKILL.md) · [netdiagram](skills/networking/netdiagram/SKILL.md) · [netpropose](skills/networking/netpropose/SKILL.md) · [netblueprint](skills/networking/netblueprint/SKILL.md) |
 | **[infrastructure/](skills/infrastructure/README.md)** | [terraform](skills/infrastructure/terraform/SKILL.md) · [pipelines](skills/infrastructure/pipelines/SKILL.md) |
+| **[security/](skills/security/README.md)** | [threatmodel](skills/security/threatmodel/SKILL.md) · [appsec](skills/security/appsec/SKILL.md) · [hardening](skills/security/hardening/SKILL.md) |
 
-The families are loosely coupled by design. `development` is a genuine pipeline where each stage checks the one before it; `containers` is an ordered pair (image, then stack) plus three skills for containers once they run — hardening, debugging, and Swarm; `operations` is a response chain — hotfix escalates to incident-fix, which hands its record to post-mortem — plus release-notes, which stands alone; `database` has seven independent skills — five of them coordinated by an optional harness, plus an architecture stage above them and a query review beside them — and `networking` has five coordinated the same way; `infrastructure` has two skills that each run review → design → propose as modes of one skill. Every skill also works entirely on its own.
+The families are loosely coupled by design. `development` is a genuine pipeline where each stage checks the one before it; `containers` is an ordered pair (image, then stack) plus three skills for containers once they run — hardening, debugging, and Swarm; `operations` is a response chain — hotfix escalates to incident-fix, which hands its record to post-mortem — plus release-notes, which stands alone; `database` has seven independent skills — five of them coordinated by an optional harness, plus an architecture stage above them and a query review beside them — and `networking` has five coordinated the same way; `infrastructure` has two skills and `security` three, each running review → design → propose as modes of one skill. Every skill also works entirely on its own.
 
 **The family directories are scaffolding for reading this repo, nothing more.** The agent never sees them — it selects on each `SKILL.md`'s frontmatter `description`. When you take a skill, you take the skill folder; see [How to use](#how-to-use).
 
@@ -214,6 +216,26 @@ pipelines   flow · feedback · release · security & supply chain · environmen
 
 ---
 
+## security
+
+Three skills, one per layer of defence, each with the same three modes — **Review**, **Design**, **Propose**.
+
+```
+threatmodel  what to protect, from whom    scope · adversaries · boundaries · policy · protocols · resilience
+appsec       does the code enforce it      input · authentication · access · crypto · configuration · dependencies · logging · browser · api
+hardening    is the platform locked down   identity · network · data · host · continuity · monitoring · governance · service
+```
+
+| Skill | What it does |
+|-------|--------------|
+| [threatmodel](skills/security/threatmodel/SKILL.md) | Reviews or builds a system's security design — system definition, assets, adversary classes and grades, a data-flow diagram with trust boundaries, threat tree and STRIDE per boundary, a hazard × mechanism matrix wanting two independent mechanisms per serious hazard, a risk register with owners, and security requirements traced to tests. Proposes risk treatment. Never attacks a live system. |
+| [appsec](skills/security/appsec/SKILL.md) | Reviews application code on any stack across nine domains — browser trust boundary and APIs included — findings mapped to the current OWASP Top 10 and API Top 10 with `file:line` evidence, a score and a gate; designs a service's security controls; proposes remediation in risk order. Static by default; dynamic testing only against an environment you own and name. |
+| [hardening](skills/security/hardening/SKILL.md) | Reviews hosts and cloud estates against a baseline — distro-agnostic and cloud-agnostic — recovering an asset register, exposure map and privilege map, with service-role overlays (web, mail, DNS, database, VPN); designs the baseline (control IDs, level per tier, per-platform mapping, a read-only check each); proposes a rollout where no step locks out its own operators. Never changes a host or account. |
+
+**The theory comes from eighteen sources:** Anderson's *Security Engineering* (3rd ed.) as the spine; *The Art of Software Security Assessment* for design review; Hunt's *OWASP Top 10 for .NET developers*, Zalewski's *The Tangled Web*, McDonald's *Web Security for Developers* and Ball's *Hacking APIs* for application code; four LPI learning-material books; six Linux-hardening books (Rankin, Turnbull, Kalsi, Clinton and two shorter ones); and an anonymised production cloud-governance standard. *Secure by Design* (slides) is folded into the development pipeline instead — distilled into S1–S27, A1–A43 and H1–H30 that every finding cites. Scoring uses the shared formula. **First run (n=1, one eval per mode), out of 10:** threatmodel **10.0** vs 5.5 with no skill (its Propose eval re-run three times after a fix), appsec **10.0** vs 7.5, hardening **9.8** vs 7.0 (delta assertions; capability 10.0 for both arms).
+
+---
+
 ## Reference docs
 
 These carry no workflow of their own — the skill in the same folder links into them.
@@ -273,6 +295,12 @@ These carry no workflow of their own — the skill in the same folder links into
 | [scoring](skills/infrastructure/terraform/scoring.md) · [scoring](skills/infrastructure/pipelines/scoring.md) | terraform and pipelines — severity, confidence, formula, gate, templates |
 | [design-patterns](skills/infrastructure/terraform/design-patterns.md) · [design-patterns](skills/infrastructure/pipelines/design-patterns.md) | terraform (layouts, state, modules, environments) and pipelines (reference pipeline, release strategies, security model, IaC delivery) |
 | [proposal](skills/infrastructure/terraform/proposal.md) · [proposal](skills/infrastructure/pipelines/proposal.md) | terraform (no-recreate rule) and pipelines (keep-prod-up sequencing) — decisions and migration order |
+| [theory](skills/security/threatmodel/theory.md) · [theory](skills/security/appsec/theory.md) · [theory](skills/security/hardening/theory.md) | threatmodel (S1–S27), appsec (A1–A43) and hardening (H1–H30) — Anderson, TAOSSA, Hunt, Zalewski, McDonald, Ball, the LPI essentials, six Linux-hardening books and a generalised cloud-governance standard |
+| [review-rubric](skills/security/threatmodel/review-rubric.md) · [review-rubric](skills/security/appsec/review-rubric.md) · [review-rubric](skills/security/hardening/review-rubric.md) | the six, nine and eight domains: 🟢, 🔴 anti-patterns, checklists |
+| [detection-signals](skills/security/threatmodel/detection-signals.md) · [detection-signals](skills/security/appsec/detection-signals.md) · [detection-signals](skills/security/hardening/detection-signals.md) | design-artefact signals; grep per anti-pattern per stack; read-only checks per control per distro and per cloud |
+| [scoring](skills/security/threatmodel/scoring.md) · [scoring](skills/security/appsec/scoring.md) · [scoring](skills/security/hardening/scoring.md) | severity, confidence, formula, gate, templates |
+| [design-patterns](skills/security/threatmodel/design-patterns.md) · [design-patterns](skills/security/appsec/design-patterns.md) · [design-patterns](skills/security/hardening/design-patterns.md) | DFD, STRIDE, threat trees, adversary and access-control catalogues; per-stack control patterns; the baseline catalogue with distro and cloud mapping, naming, tagging and exceptions |
+| [proposal](skills/security/threatmodel/proposal.md) · [proposal](skills/security/appsec/proposal.md) · [proposal](skills/security/hardening/proposal.md) | risk treatment; remediation in risk order; the no-lockout rollout |
 
 Each doc lives in the folder of the skill that uses it, and nothing reaches across folders.
 
@@ -308,6 +336,9 @@ Any stage can optionally hand its **read-only or fresh-context** work to a subag
 | netpropose | audit/design/diagram inputs | **the recommendation and cut-over order** |
 | terraform | per-codebase inventory and evaluation in an estate review | **scoring, the gate, state boundaries and the migration sequence** |
 | pipelines | per-repo inventory and evaluation in an estate review | **scoring, the gate, the stage chain and the migration sequence** |
+| threatmodel | evidence gathering from design docs and code | **the threat tree, the risk ratings and the treatment decisions** |
+| appsec | per-module or per-service code reading in a large repo | **scoring, the gate and the remediation order** |
+| hardening | per-account or per-host-role evidence collection | **scoring, the gate, the baseline and the rollout order** |
 
 Each skill carries its own copy of the dispatch contract it needs, so the folders stay independently copyable — see [Conventions](#conventions).
 
@@ -317,7 +348,7 @@ Each skill carries its own copy of the dispatch contract it needs, so the folder
 
 Assertions are split: **capability** (does the stage do its job at all) from **delta** (does it do what a change to the skill added). Only the delta column is evidence an edit helped. Against the pre-session baseline over 36 runs: **0.98 vs 0.22** on delta, **0.96 vs 0.92** on capability.
 
-**Scored: every skill but the five newest.** The six `development` stages carry the recorded n=3 result above. The other skills' first run (2026-10-25) is one with-skill run each — three for evals 11–13 — against a baseline with no skill at all, which is the honest comparison for a skill that did not exist at the baseline ref. Across those 35 evals: **0.95 vs 0.49** on delta, **0.99 vs 0.85** on capability. Per eval in [evals/benchmark.md](evals/benchmark.md). `container-hardening`, `container-debug` and `docker-swarm` (evals 35–37) and `dbquery` and `dbarchitect` (evals 47–48), all added 2026-11-02, have their fixtures, assertions and controls but no scored run yet.
+**Scored: every skill but the five newest** (the three container skills, dbquery and dbarchitect). The six `development` stages carry the recorded n=3 result above. The other skills' first run (2026-10-25) is one with-skill run each — three for evals 11–13 — against a baseline with no skill at all, which is the honest comparison for a skill that did not exist at the baseline ref. The security family's first run (2026-11-02, evals 38–46, one per mode) is the same shape. Across those 44 evals: **0.96 vs 0.52** on delta, **0.99 vs 0.88** on capability. Per eval in [evals/benchmark.md](evals/benchmark.md). `container-hardening`, `container-debug` and `docker-swarm` (evals 35–37) and `dbquery` and `dbarchitect` (evals 47–48), all added 2026-11-02, have their fixtures, assertions and controls but no scored run yet.
 
 The fixtures are seeded so a naive answer fails them: a compose fixture with a stale `ELASTICSEARCH_URL`, an incident whose trigger sits nine days before the outage, production levers that are stubs recording their calls (so "took no action without confirmation" is checked, not inferred), networks graded by parsing every CIDR and every draw.io cell, DDL executed in SQLite and probed with rows that must be refused, acceptance tests run against three mutants.
 
@@ -355,6 +386,9 @@ npx skills add izentenosmith/skills --skill netaudit netdesign netdiagram netpro
 
 # infrastructure — terraform and pipelines (review, design, propose)
 npx skills add izentenosmith/skills --skill terraform pipelines
+
+# security — threat model, application code, hardening (review, design, propose)
+npx skills add izentenosmith/skills --skill threatmodel appsec hardening
 ```
 
 **Everything:**
@@ -397,6 +431,9 @@ npx skills add izentenosmith/skills --skill '*'
 | | `npx skills add izentenosmith/skills --skill netblueprint` |
 | infrastructure | `npx skills add izentenosmith/skills --skill terraform` |
 | | `npx skills add izentenosmith/skills --skill pipelines` |
+| security | `npx skills add izentenosmith/skills --skill threatmodel` |
+| | `npx skills add izentenosmith/skills --skill appsec` |
+| | `npx skills add izentenosmith/skills --skill hardening` |
 
 Any mix works too — `--skill` takes as many names as you give it.
 
@@ -440,9 +477,12 @@ The installer copies each skill folder whole, dereferencing the database and net
    cp -RL skills/skills/networking/netblueprint my-project/.claude/skills/
    cp -r  skills/skills/infrastructure/terraform my-project/.claude/skills/
    cp -r  skills/skills/infrastructure/pipelines my-project/.claude/skills/
+   cp -r  skills/skills/security/threatmodel     my-project/.claude/skills/
+   cp -r  skills/skills/security/appsec          my-project/.claude/skills/
+   cp -r  skills/skills/security/hardening       my-project/.claude/skills/
    ```
 
-   **Copy the skill folder, not the category folder.** `development/`, `containers/`, `operations/`, `database/`, `networking/` and `infrastructure/` are scaffolding for reading this repo — the agent never sees them, and copying one wholesale just nests your skills a level too deep.
+   **Copy the skill folder, not the category folder.** `development/`, `containers/`, `operations/`, `database/`, `networking/`, `infrastructure/` and `security/` are scaffolding for reading this repo — the agent never sees them, and copying one wholesale just nests your skills a level too deep.
 
    Skill folders are self-contained when installed. The database and networking skill trees share companion docs through relative symlinks; use `cp -RL` for those folders so each installed skill contains the referenced files.
 
@@ -458,11 +498,12 @@ The installer copies each skill folder whole, dereferencing the database and net
    /dbarchitect   /dbquery
    /netaudit      /netdesign      /netdiagram      /netpropose      /netblueprint
    /terraform     /pipelines
+   /threatmodel   /appsec         /hardening
    ```
 
 Take one skill, take a family, or take them all. Every skill works on its own — `tdd` plans from scratch when there's no brief, `refactor-review` reviews any diff, `devils-advocate` tears down a change it didn't build, `post-mortem` reconstructs an incident in a system it has never seen. Where skills cross-link and the other one isn't installed, the prompt still names it, so you know what would have run.
 
-Each family has its own README with more detail: [development](skills/development/README.md) · [containers](skills/containers/README.md) · [operations](skills/operations/README.md) · [database](skills/database/README.md) · [networking](skills/networking/README.md) · [infrastructure](skills/infrastructure/README.md).
+Each family has its own README with more detail: [development](skills/development/README.md) · [containers](skills/containers/README.md) · [operations](skills/operations/README.md) · [database](skills/database/README.md) · [networking](skills/networking/README.md) · [infrastructure](skills/infrastructure/README.md) · [security](skills/security/README.md).
 
 ## Conventions
 

@@ -107,8 +107,9 @@ Ask: "What should the public interface look like? Which behaviors are most impor
 - [ ] Identify opportunities for [deep modules](deep-modules.md) (small interface, deep implementation)
 - [ ] [Design interfaces for testability](interface-design.md)
 - [ ] Decide what (if anything) needs to be substituted — [mock only at system boundaries](mocking.md)
+- [ ] Where the brief names **domain primitives** or the change handles a security-relevant value, build those types first and test them the way [domain-primitives.md](domain-primitives.md) describes — normal, boundary, invalid and extreme input, immutability, and no raw value escaping into logs or errors
 
-Design references for this step: [deep-modules.md](deep-modules.md) (power behind a small interface), [interface-design.md](interface-design.md) (shape it to be testable), [mocking.md](mocking.md) (what to leave real vs. substitute).
+Design references for this step: [deep-modules.md](deep-modules.md) (power behind a small interface), [interface-design.md](interface-design.md) (shape it to be testable), [mocking.md](mocking.md) (what to leave real vs. substitute), [domain-primitives.md](domain-primitives.md) (security-relevant values as validated types, and the tests they need).
 
 ### 2. Tracer Bullet
 
@@ -182,6 +183,7 @@ If tyr-verdict returns **NO-GO**, its remediation slices come back to this skill
 ## Checklist Per Cycle
 
 ```
+[ ] Security trigger: refusal tested alongside the permitted case
 [ ] Test describes behavior, not implementation
 [ ] Test uses public interface only
 [ ] Test would survive internal refactor

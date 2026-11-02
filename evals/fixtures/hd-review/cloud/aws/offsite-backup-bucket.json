@@ -1,0 +1,13 @@
+$ aws s3api get-public-access-block --bucket ledgerline-offsite-backups
+{ "PublicAccessBlockConfiguration": { "BlockPublicAcls": true, "IgnorePublicAcls": true, "BlockPublicPolicy": true, "RestrictPublicBuckets": true } }
+$ aws s3api get-bucket-policy-status --bucket ledgerline-offsite-backups
+{ "PolicyStatus": { "IsPublic": false } }
+$ aws s3api get-object-lock-configuration --bucket ledgerline-offsite-backups
+{ "ObjectLockConfiguration": { "ObjectLockEnabled": "Enabled", "Rule": { "DefaultRetention": { "Mode": "COMPLIANCE", "Days": 35 } } } }
+$ aws s3api get-bucket-encryption --bucket ledgerline-offsite-backups
+{ "ServerSideEncryptionConfiguration": { "Rules": [ { "ApplyServerSideEncryptionByDefault": { "SSEAlgorithm": "aws:kms" } } ] } }
+$ aws s3api get-bucket-tagging --bucket ledgerline-offsite-backups
+{ "TagSet": [ { "Key": "owner", "Value": "platform-team" }, { "Key": "environment", "Value": "prod" }, { "Key": "data-class", "Value": "confidential" } ] }
+$ aws s3 ls s3://ledgerline-offsite-backups/pg/ | tail -2
+2026-10-19 02:10:44  2203114 ledgerline-2026-10-19.dump
+2026-10-26 02:10:51  2219830 ledgerline-2026-10-26.dump

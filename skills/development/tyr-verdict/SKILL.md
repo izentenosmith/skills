@@ -40,6 +40,12 @@ For each finding from the teardown, render exactly one verdict:
   - **major** — a real defect on a supported path that a user will hit, but not catastrophic.
   - **minor** — a genuine but low-impact defect (narrow edge, cosmetic, degraded-but-correct).
 
+**Security findings** — an authorisation gate, an isolation or tenancy boundary, an injection path, a secret or personal value leaking into logs or responses — follow three extra rules, none of which changes how the verdict is computed:
+
+- **Refute only on a code path.** "No test failed" and "a scanner found nothing" are not refutations: a black-box suite misses paths that only a specific input reaches (TAOSSA pp. 11–12). REFUTED needs the guard that blocks the breaking case, named.
+- **Exploitability is not severity.** A confirmed breach is a blocker even when the breaking case looks hard to reach; "an attacker would have to know the ID" is how IDs leak through a list endpoint later. Downgrade only for a stated reason that is about impact, not effort.
+- **Design-layer defects go upstream.** When the defect is the design doing the wrong thing correctly — a rule another feature circumvents, a role someone can grant themselves, a fallback that skips a control — the slice fixes the symptom and the reason names [architect-deep-dive](../architect-deep-dive/SKILL.md) (and, where one exists, the threat model) as the place the decision has to be revisited.
+
 Record each in `.workflow/ledger.md`, in the current iteration's `### Verdicts` section:
 
 ```markdown
@@ -153,6 +159,8 @@ For every **CONFIRMED** finding, write a remediation slice in agent-brief accept
 - [ ] [minor]   F2 — <observable behavior that must hold>
 ```
 
+A slice that closes a **security** finding states the refusal and its contrast — *"a user of another account requesting this invoice gets 404 and the invoice is unchanged; its owner still gets 200"* — so tdd's red test fails if the gate disappears or over-reaches, and the slice can't be closed by a fix with no abuse test.
+
 Every CONFIRMED finding gets exactly one slice, at the severity you gave it. TDD closes each one as it goes green with a `### Closed slices` line in the next iteration. Opened and closed lines together are the loop's progress record — rule 2 above reads them.
 
 ## Carried debt — the noted smells
@@ -184,6 +192,8 @@ A NO-GO does not end the workflow — it closes the loop:
 4. Return here to re-adjudicate, opening with the iteration count.
 
 The loop **converges** when devils-advocate surfaces no new proven finding and this stage confirms nothing — then the verdict is GO. If it doesn't converge, the ledger rules stop it: three iterations, one evidence re-run per INCONCLUSIVE, and every iteration must close something. A loop that runs a fourth time is not being thorough, it is stuck.
+
+> **Sources cited above.** TAOSSA = Dowd, McDonald & Schuh, *The Art of Software Security Assessment* (Addison-Wesley), printed page numbers.
 
 ## Handoff
 

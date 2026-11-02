@@ -72,7 +72,14 @@ Walk each of these deliberately. For each, state what you attacked and what you 
 - [ ] **Listed edge cases.** The unhappy paths the brief called out — are they genuinely handled, or stubbed/short-circuited to make a test pass?
 - [ ] **Unlisted unhappy paths.** Empty/missing/null input, boundary and off-by-one values, concurrent access, ordering assumptions, partial failure and rollback, duplicate/retry.
 - [ ] **Contracts & invariants.** Can a documented invariant be violated through the public interface? Did the change break a contract an existing caller depends on (backwards-compatibility)?
-- [ ] **Security & permissions.** Missing authorization gate, an isolation/tenancy boundary that can be crossed, sensitive data exposed or logged.
+- [ ] **Security & permissions.** On a change the brief marks as security-triggered, or one that adds an entry point or touches identity, money, secrets or personal data, split this into its own delegates — one per line below — rather than one sweep. Read it the way an attacker reads it: infer what the developer intended, then construct the input they didn't anticipate (TAOSSA pp. 20–21, 92).
+  - **Authorisation bypass.** Every path to each protected operation — other handlers, other HTTP methods, other API versions, batch and export endpoints — and every ID the request carries (path, query, body, nested objects, arrays) checked for ownership and tenancy. A role or delegation someone can grant themselves.
+  - **Untrusted data source-to-sink.** Each input traced to where it is used — query, command, template, file path, redirect, outbound request, header — including **stored and second-order paths**: data validated where it entered and read back later by code that assumes it is clean (TAOSSA pp. 18–19).
+  - **Assumptions at interfaces.** "Only our client calls this", "the gateway already validated it", "the UI hides that button" — each is a candidate defect; find the caller that breaks it.
+  - **Leaks.** Secrets or personal fields in logs, exception messages, error responses, serialised entities or analytics; refusals that reveal whether an object or account exists.
+  - **Failure and degraded modes.** A dependency down, a timeout, a partial write: does the code fall back to a weaker check, a default role, or "allow"? Input that makes work grow without bound.
+
+  A passing suite does not clear any of these: black-box tests miss paths that only a specific input reaches (TAOSSA pp. 11–12). The evidence is the path, the breaking case and, where it can only be settled by running, the exact request to send — which is Tyr's to make, against a test environment only.
 - [ ] **Error handling.** Swallowed errors, errors surfaced at the wrong layer or with the wrong shape, failures that leave state half-written.
 - [ ] **Coupling & state leakage.** Did the refactor introduce hidden shared state, order-dependence between tests, or a leak that only bites under real load?
 - [ ] **Performance & scale.** Repeated work, fan-out, unbounded growth, or a hot path that is fine on fixture data and falls over at real volume.
@@ -160,6 +167,8 @@ An append to a ledger that starts with prose from before the grammar:
 ```
 
 If the repo carries the harness, check your append before handing off: `python3 harness/ledger.py check .workflow/ledger.md --against <copy taken before you wrote>`. It should report no `E04` or `E1x` shape errors. Undefined-id errors that come from a prose preamble are expected.
+
+> **Sources cited above.** TAOSSA = Dowd, McDonald & Schuh, *The Art of Software Security Assessment* (Addison-Wesley), printed page numbers.
 
 ## Handoff
 

@@ -1,0 +1,52 @@
+openapi: 3.0.3
+info:
+  title: billdesk API
+  version: 2.3.0
+servers:
+  - url: https://api.billdesk.example/api/v2
+security:
+  - session: []
+components:
+  securitySchemes:
+    session:
+      type: apiKey
+      in: cookie
+      name: connect.sid
+paths:
+  /invoices/search:
+    get:
+      summary: Search the tenant's invoices by customer name
+      parameters:
+        - { name: q, in: query, schema: { type: string } }
+      responses: { "200": { description: matching invoices } }
+  /invoices/{id}:
+    get:
+      summary: One invoice
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses: { "200": { description: the invoice }, "404": { description: not found } }
+  /orders:
+    get:
+      summary: The tenant's latest orders
+      responses: { "200": { description: orders } }
+  /orders/{id}:
+    get:
+      summary: One order
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses: { "200": { description: the order }, "404": { description: not found } }
+  /users/me:
+    get:
+      summary: The signed-in user
+      responses: { "200": { description: the user } }
+    patch:
+      summary: Update your profile (email, display name)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string }
+                display_name: { type: string }
+      responses: { "200": { description: the updated user } }

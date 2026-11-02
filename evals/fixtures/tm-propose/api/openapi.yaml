@@ -1,0 +1,54 @@
+openapi: 3.0.3
+info:
+  title: Payouts API
+  version: 2.3.0
+servers:
+  - url: https://api.bazaar.test
+  - url: https://partner.bazaar.test
+paths:
+  /merchant/v1/payouts:
+    post:
+      summary: Request a payout (merchant session)
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PayoutRequest' }
+      responses: { '202': { description: accepted } }
+  /partner/v1/payouts:
+    post:
+      summary: Request a payout on behalf of a merchant (partner, added 2026-02)
+      security: [{ partnerKey: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/PayoutRequest'
+                - type: object
+                  properties:
+                    merchant_id: { type: string }
+      responses: { '202': { description: accepted } }
+  /partner/v1/merchants/{merchant_id}/payees:
+    put:
+      summary: Replace a merchant's payee (partner, added 2026-02)
+      security: [{ partnerKey: [] }]
+      parameters:
+        - { name: merchant_id, in: path, required: true, schema: { type: string } }
+      responses: { '200': { description: replaced } }
+  /webhooks/settlement:
+    post:
+      summary: Settlement status from the bank
+      security: []
+      responses: { '204': { description: applied } }
+components:
+  securitySchemes:
+    sessionCookie: { type: apiKey, in: cookie, name: session }
+    partnerKey: { type: apiKey, in: header, name: X-Api-Key }
+  schemas:
+    PayoutRequest:
+      type: object
+      properties:
+        amount_cents: { type: integer }
+        currency: { type: string }
+        payee_id: { type: string }

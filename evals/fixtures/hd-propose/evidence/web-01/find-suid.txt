@@ -1,0 +1,26 @@
+$ sudo find / -xdev -type f \( -perm -4000 -o -perm -2000 \) 2>/dev/null
+/usr/bin/chage
+/usr/bin/gpasswd
+/usr/bin/newgrp
+/usr/bin/mount
+/usr/bin/su
+/usr/bin/umount
+/usr/bin/sudo
+/usr/bin/passwd
+/usr/sbin/unix_chkpwd
+/usr/local/bin/backup-helper
+
+$ for f in $(cat suid.lst); do rpm -qf "$f"; done
+shadow-utils-4.9-8.el9.x86_64
+shadow-utils-4.9-8.el9.x86_64
+shadow-utils-4.9-8.el9.x86_64
+util-linux-2.37.4-18.el9.x86_64
+util-linux-2.37.4-18.el9.x86_64
+util-linux-2.37.4-18.el9.x86_64
+sudo-1.9.5p2-10.el9.x86_64
+passwd-0.80-12.el9.x86_64
+pam-1.5.1-19.el9.x86_64
+file /usr/local/bin/backup-helper is not owned by any package
+
+$ ls -l /usr/local/bin/backup-helper
+-rwsr-xr-x 1 root root 18432 Jan 14  2026 /usr/local/bin/backup-helper

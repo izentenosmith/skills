@@ -1,0 +1,8 @@
+$ sudo auditctl -s
+enabled 0
+failure 1
+pid 0
+rate_limit 0
+backlog_limit 8192
+$ systemctl is-active auditd
+inactive

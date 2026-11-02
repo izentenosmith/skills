@@ -1,0 +1,8 @@
+$ sudo sshd -T | sort | grep -E '^(permitrootlogin|passwordauthentication|kbdinteractiveauthentication|pubkeyauthentication|maxauthtries|listenaddress|allowgroups)'
+allowgroups platform
+kbdinteractiveauthentication no
+listenaddress 10.20.2.4:22
+maxauthtries 3
+passwordauthentication no
+permitrootlogin no
+pubkeyauthentication yes
