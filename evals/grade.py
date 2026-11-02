@@ -3394,6 +3394,150 @@ def eval34(run):
 
 
 
+
+# ------------------------------------------------------------ container-hardening (35)
+
+CH_SECRETS = ["eval-fake-stripe-live-key-0042"]
+
+
+def eval35(run):
+    """container-hardening Review: the read-only socket, the ufw bypass, the Kubernetes seccomp default, no changes."""
+    t = everything(run, "hardening-review")
+    cids = cites(t, "C", 13)
+    return [
+        # capability — a competent container security review finds these
+        ("a review with findings was produced", len(t) > 1500 and any_of(t, r"finding"), f"{len(t)} chars", C),
+        ("the privileged worker found", near(t, r"privileged", r"\bworker\b"), "", C),
+        ("the committed Stripe key found",
+         near(t, r"STRIPE_SECRET_KEY|stripe", r"commit|literal|hard.?coded|plain.?text|in the (compose )?file|in the repo|docker-compose"), "", C),
+        ("api and worker running as root found",
+         near(t, r"\broot\b|no USER|uid 0|non-root", r"\bapi\b|\bworker\b|Dockerfile"), "", C),
+        # delta — what the skill instructs
+        ("no secret value echoed (kind and location only)", *no_secret_echoed(run, "hardening-review", CH_SECRETS), D),
+        ("rotation for the committed key", near(t, r"rotat|revoke|roll (it|the key)|regenerat", r"stripe|key|credential"), "", D),
+        ("the read-only socket mount rated Critical, :ro called no protection",
+         near(t, r"docker\.sock|docker socket", r"critical")
+         and near(t, r":ro\b|read.only", r"(still|does ?n[o\u2019']?t|not|no)[^\n]{0,80}(API|protect|restrict|mitigat|help|matter|limit)|full (docker )?API|host root|root on the host"),
+         "the README claims read-only access", D),
+        ("Postgres on all interfaces bypasses ufw",
+         near(t, r"ufw|firewall", r"bypass|DOCKER-USER|iptables|ahead of|before (ufw|the firewall)|does ?n[o\u2019']?t (block|apply|protect|stop)|not (block|protect|apply)")
+         and near(t, r"5432|postgres", r"0\.0\.0\.0|all interfaces|every interface|127\.0\.0\.1"),
+         "the README trusts ufw", D),
+        ("the reports pod's missing seccomp profile found (Unconfined, RuntimeDefault)",
+         near(t, r"seccomp", r"RuntimeDefault") and near(t, r"seccomp", r"unconfined|no (seccomp )?profile|without (a )?(seccomp|profile)|not set|missing|absent"),
+         "the pod is otherwise hardened", D),
+        ("the privileged worker's replacement named (/dev/dri)",
+         near(t, r"/dev/dri|devices:", r"privileged|instead|replac|only needs|rather"), "", D),
+        ("mutable :latest references found", near(t, r":latest|\blatest\b", r"watchtower|updater|invoicer-api|digest|pin"), "", D),
+        ("findings cite the theory (C-n)", len(cids) >= 5, f"{len(cids)} distinct: {sorted(cids)}", D),
+        ("score arithmetic shown, capped by the Critical",
+         any_of(t, SCORED) and near(t, r"\bcap", r"2\.0|critical"), "", D),
+        ("the gate stated failing with its conditions",
+         near(t, r"\bgate\b", r"fail") and near(t, r"\bgate\b|condition", r"non-root|socket|host.root|privileged|digest|credential"), "", D),
+        ("needs-access flags listed (host, daemon, cluster)",
+         near(t, r"\U0001F52C|needs.access|needs.data", r"daemon|host|docker group|userns|kubelet|CNI|SeccompDefault"), "", D),
+        ("the hardened proxy recorded as what works",
+         near(t, r"\bproxy\b|nginx", r"well|good|strength|template|already|keep|model|right"), "", D),
+        ("image findings handed to dockerfile", near(t, r"dockerfile", r"hand|USER|image|fix(ed)? (there|in)|next"), "", D),
+        ("no compose file, manifest, Dockerfile or script changed", *unchanged(run, "hardening-review"), D),
+    ]
+
+
+# ------------------------------------------------------------ container-debug (36)
+
+DBG_SECRETS = ["eval-fake-pg-pass-7731"]
+
+
+def eval36(run):
+    """container-debug from evidence: OOM read from the runtime, localhost inside a container, CRLF entrypoint."""
+    t = everything(run, "debug-evidence")
+    return [
+        # capability — a competent diagnosis finds these
+        ("a diagnosis was produced", len(t) > 1200, f"{len(t)} chars", C),
+        ("the worker's memory kill found", near(t, r"OOM|out of memory|memory limit", r"\bworker\b"), "", C),
+        ("the api's Redis failure tied to localhost", near(t, r"localhost", r"redis|REDIS_URL"), "", C),
+        ("the migrate entrypoint failure addressed", near(t, r"entrypoint\.sh", r"migrat"), "", C),
+        # delta — what the skill instructs
+        ("no secret value echoed (kind and location only)", *no_secret_echoed(run, "debug-evidence", DBG_SECRETS), D),
+        ("the password in the captured inspect output flagged as exposed",
+         near(t, r"password|DATABASE_URL|credential", r"inspect|captured|evidence|exposed|redact|rotat"), "", D),
+        ("OOMKilled read from the runtime, not inferred from 137",
+         any_of(t, r"OOMKilled[\"'`\s:=]*true", r"\boom\b[^\n]{0,40}event"), "", D),
+        ("the limit raised from the measured working set, not removed",
+         near(t, r"418|working set|resident|unconstrained|peak", r"limit")
+         and any_of(t, r"mem_limit:\s*\d{3,4}\s?m|(raise|increase|set|bump)[^\n]{0,60}\b(5\d\d|6\d\d|7\d\d|8\d\d|9\d\d|1\d{3})\s?(m|MiB|MB|Mi)\b|\b(1|1\.5|2)\s?(g|GiB|G)\b"),
+         "", D),
+        ("why localhost fails inside a container explained",
+         near(t, r"localhost", r"(the )?container itself|itself|its own|own (network )?namespace|the api container|loopback"), "", D),
+        ("the Redis URL fixed to the service name", any_of(t, r"redis://redis:6379"), "", D),
+        ("the worker's identical Redis URL noticed",
+         near(t, r"\bworker\b[^\n]{0,60}\b(same|also|too|as well)\b|\b(same|also|too|both)\b[^\n]{0,60}\bworker\b",
+              r"REDIS_URL|localhost:6379|redis://", 200), "", D),
+        ("CRLF line endings named as the migrate cause",
+         near(t, r"CRLF|\\r|carriage.return|line.ending", r"entrypoint|#!|shebang|interpreter|/bin/sh"), "", D),
+        ("recurrence prevented with .gitattributes", any_of(t, r"\.gitattributes|eol=lf"), "", D),
+        ("a root-cause note per symptom", len(re.findall(r"\*\*Cause:?\*\*:?|^\s*[-*]?\s*Cause:", t, re.M)) >= 3,
+         f"{len(re.findall(r'[*]{2}Cause:?[*]{2}:?|^[ ]*[-*]?[ ]*Cause:', t, re.M))} cause lines", D),
+        ("nothing claimed verified on the VM",
+         any_of(t, r"not (been )?(run|verified)|unverified|could not verify|can.?t verify|would confirm|to confirm"), "", D),
+    ]
+
+
+# ------------------------------------------------------------ docker-swarm (37)
+
+SW_SECRETS = ["eval-fake-swarm-db-password-7731"]
+
+
+def eval37(run):
+    """docker-swarm Review: two managers, node-local Postgres, ignored keys and .env, the mesh, no changes."""
+    t = everything(run, "swarm-review")
+    sids = cites(t, "S", 12)
+    return [
+        # capability — a competent Swarm review finds these
+        ("a review with findings was produced", len(t) > 1500 and any_of(t, r"finding"), f"{len(t)} chars", C),
+        ("the two-replica Postgres found", near(t, r"postgres", r"replicas:?\s*2|two replicas|2 replicas"), "", C),
+        ("the committed secret file found",
+         near(t, r"db_password|secrets/", r"commit|in the repo|git|plain.?text|checked in"), "", C),
+        ("the api's missing healthcheck found",
+         near(t, r"health.?check", r"\bapi\b") and near(t, r"health.?check", r"\bno\b|missing|without|none|lacks?"), "", C),
+        # delta — what the skill instructs
+        ("no secret value echoed (kind and location only)", *no_secret_echoed(run, "swarm-review", SW_SECRETS), D),
+        ("rotation to a new secret, not deletion",
+         near(t, r"rotat|revoke|regenerat|_v2\b|new (secret|name|version)", r"secret|password|db_password"), "", D),
+        ("two managers called no better than one (quorum)",
+         near(t, r"two managers|2 managers|manager count", r"quorum|toleran|tolerat|worse|no better|odd|zero"),
+         "the README claims HA", D),
+        ("Postgres replicas on node-local volumes found",
+         near(t, r"postgres", r"local volume|node.local|node.scoped|own (empty )?volume|diverg|split.brain|placement|constraint")
+         and near(t, r"replicas:?\s*1|single (writer|replica)|one replica", r"."), "", D),
+        ("depends_on ignored by stack deploy",
+         near(t, r"depends_on", r"ignor|not (honou?red|supported|applied|respected)|has no effect|dropped|doesn.?t (wait|apply|order)"),
+         "the README relies on it", D),
+        (".env not read by stack deploy",
+         near(t, r"\.env\b", r"not (read|loaded|load)|ignor|doesn.?t (read|load)|empty|never export|not exported|unset"),
+         "CI deploys an empty image tag", D),
+        ("the default update config named (pause / stop-first) and rollback prescribed",
+         near(t, r"update_config|UpdateConfig|failure_action|FailureAction|update config", r"pause|stop.first")
+         and near(t, r"failure_action|FailureAction|update", r"rollback"), "", D),
+        ("the routing mesh breaks the per-client rate limit",
+         near(t, r"mesh|ingress", r"client IP|source (IP|address)|remote_addr|SNAT|rewrit")
+         and any_of(t, r"mode:?\s*host|host.mode|PROXY protocol"), "", D),
+        ("registry auth missing from the deploy", any_of(t, r"with-registry-auth"), "", D),
+        ("findings cite the theory (S-n)", len(sids) >= 5, f"{len(sids)} distinct: {sorted(sids)}", D),
+        ("score arithmetic shown, capped by the Critical",
+         any_of(t, SCORED) and near(t, r"\bcap", r"2\.0|critical"), "", D),
+        ("the gate stated failing with its conditions",
+         near(t, r"\bgate\b", r"fail") and near(t, r"\bgate\b|condition", r"manager|healthcheck|rollback|digest|secret|stateful|pinned"), "", D),
+        ("needs-access flags listed (autolock, backups, firewall, labels)",
+         near(t, r"\U0001F52C|needs.access|needs.data", r"autolock|backup|firewall|label|cert|unlock"), "", D),
+        ("the worker recorded as what works",
+         near(t, r"\bworker\b", r"well|good|template|already|strength|keep|model|right"), "", D),
+        ("fit verdict stated (Swarm vs Compose-on-a-VM vs Kubernetes)",
+         near(t, r"\bfit\b|right tool|still (the )?right|suits?", r"swarm|kubernetes|compose"), "", D),
+        ("no stack file, script, config or secret changed", *unchanged(run, "swarm-review"), D),
+    ]
+
+
 CHECKS = {
     "eval-0-architect-charter-and-options": eval0,
     "eval-1-brief-ordered-criteria": eval1,
@@ -3430,6 +3574,9 @@ CHECKS = {
     "eval-32-dbdiagram-barker-and-relational-from-design": eval32,
     "eval-33-dbpropose-orphans-before-constraints": eval33,
     "eval-34-dbbuild-executable-ddl-from-accepted-proposal": eval34,
+    "eval-35-container-hardening-review-socket-and-firewall": eval35,
+    "eval-36-container-debug-oom-localhost-crlf": eval36,
+    "eval-37-docker-swarm-review-quorum-and-state": eval37,
 }
 
 

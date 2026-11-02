@@ -1,0 +1,1 @@
+captured 2026-10-29 from a staging deploy run by hand with 'set -a; . ./.env; set +a' first

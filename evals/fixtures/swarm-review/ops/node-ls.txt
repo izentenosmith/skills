@@ -1,0 +1,7 @@
+# captured 2026-10-29 on mgr-1: docker node ls
+ID                            HOSTNAME   STATUS    AVAILABILITY   MANAGER STATUS   ENGINE VERSION
+3x9a1kq0v7wq2mzq7c4f1l2p8 *   mgr-1      Ready     Active         Leader           28.5.1
+8p2r6t0y4u8i2o6p0a4s8d2f6     mgr-2      Ready     Active         Reachable        28.5.1
+1q5w9e3r7t1y5u9i3o7p1a5s9     wrk-1      Ready     Active                          28.5.1
+6d0f4g8h2j6k0l4z8x2c6v0b4     wrk-2      Ready     Active                          28.5.1
+9n3m7q1w5e9r3t7y1u5i9o3p7     wrk-3      Ready     Active                          28.5.1

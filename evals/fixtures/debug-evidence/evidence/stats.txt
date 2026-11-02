@@ -1,0 +1,10 @@
+$ docker stats --no-stream
+NAME                   CPU %     MEM USAGE / LIMIT     MEM %     PIDS
+shopfront-api-1        0.05%     61.2MiB / 512MiB      11.95%    5
+shopfront-postgres-1   0.01%     38.9MiB / 512MiB      7.60%     7
+shopfront-redis-1      0.21%     4.1MiB / 256MiB       1.60%     6
+shopfront-worker-1     98.71%    255.6MiB / 256MiB     99.84%    19
+
+Captured on a developer laptop (no limit), same worker image, after "model loaded":
+NAME                   CPU %     MEM USAGE / LIMIT     MEM %     PIDS
+shopfront-worker-1     0.30%     418.3MiB / 7.66GiB    5.33%     19

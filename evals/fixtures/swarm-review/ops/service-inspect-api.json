@@ -1,0 +1,19 @@
+[
+  {
+    "Spec": {
+      "Name": "shoplane_api",
+      "TaskTemplate": {
+        "ContainerSpec": {
+          "Image": "registry.example.com/shoplane/api:2.4.0@sha256:9e8d7c6b5a4f3e2d1c0b9a8f7e6d5c4b3a2f1e0d9c8b7a6f5e4d3c2b1a0f9e8d",
+          "Env": ["DB_HOST=postgres", "DB_PASSWORD_FILE=/run/secrets/db_password", "LOG_LEVEL=info"]
+        },
+        "RestartPolicy": {"Condition": "any", "Delay": 5000000000, "MaxAttempts": 0},
+        "Placement": {}
+      },
+      "Mode": {"Replicated": {"Replicas": 3}},
+      "UpdateConfig": {"Parallelism": 1, "FailureAction": "pause", "Monitor": 5000000000, "MaxFailureRatio": 0, "Order": "stop-first"},
+      "RollbackConfig": {"Parallelism": 1, "FailureAction": "pause", "Monitor": 5000000000, "MaxFailureRatio": 0, "Order": "stop-first"},
+      "EndpointSpec": {"Mode": "vip"}
+    }
+  }
+]
