@@ -6,7 +6,7 @@
 > index and partitioning choices from the volumetrics. A requirement says **what the data is**, not how
 > it is processed.
 
-## The six artefacts
+## The seven artefacts
 
 ### 1. Scope and user views
 One row per user group or subsystem: the data it creates, the data it reads, and its source person or
@@ -45,8 +45,20 @@ Expected row counts and growth per entity; the most frequent queries and updates
 requirements), with their frequency and latency expectations. Indexes and partitioning are chosen
 against these, not guessed.
 
-### 6. Open-questions log
-Every unknown, with the decision it blocks and who can answer it.
+### 6. Assumptions
+Every point the design **commits to** without confirmation (`A-nn`): the assumption, why it is the
+reasonable reading, the rule or table it shapes, and what changing it would cost. The design is built
+on these, so a reviewer must be able to find and overturn each one.
+
+### 7. Open-questions log
+Every point the design **does not decide** (`OQ-nn`): the question, the decision it blocks, who can
+answer it, and how the schema stays neutral until then (an optional column, no constraint yet).
+
+Assumptions and open questions are **two lists under two headings**, and each item sits in exactly one.
+Don't head a section "Assumptions and open questions", and don't list an assumption again as a
+question "to confirm". If the design picks an answer, it's an assumption, and confirming it is part of
+reviewing it. If the design leaves the point open, it's a question, and no constraint enforces a guess at
+the answer.
 
 ## Elicitation checklist
 

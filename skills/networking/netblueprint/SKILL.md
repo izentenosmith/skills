@@ -1,6 +1,6 @@
 ---
 name: netblueprint
-description: After a network proposal is explicitly accepted, produce the final network topology package — the canonical draw.io topology diagrams, a companion network-design document that explains them (addressing plan, zones and flow matrix, routing, services, failure domains), and the accepted topology.json that a separate IaC skill implements. Never writes IaC, never configures devices; structural changes route back through design.
+description: After a network proposal is explicitly accepted, produce the final network topology package — the canonical draw.io topology diagrams, a companion network-design document that explains them (addressing plan, zones and flow matrix, routing, services, failure domains), and the accepted topology.json that a separate IaC skill implements. Never writes IaC, never configures devices; structural changes route back through design. Use when a netpropose proposal has been accepted and the user wants the final or accepted network design, the blueprint, or the topology package to hand to IaC; with no recorded acceptance it stops and asks for it.
 ---
 
 # netblueprint

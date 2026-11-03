@@ -82,7 +82,7 @@ All changes are proposals for review. This skill never applies them.
 
 ## Deliverable
 
-A concise `proposal.md` that includes:
+A concise `proposal.md`, written to disk (SKILL.md, *Write `proposal.md`*), that includes:
 
 1. Executive recommendation, scope, source versions, and target platforms.
 2. What is good, what needs attention, and the expected improvement: score, gate conditions,
