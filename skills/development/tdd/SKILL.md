@@ -138,6 +138,23 @@ Rules:
 - Don't anticipate future tests
 - Keep tests focused on observable behavior
 
+#### Red, for the right reason
+
+Run each new test and **read the failure before writing any production code**. RED counts only when the test reaches the behavior and fails on it: an assertion on the outcome, `DID NOT RAISE`, the wrong code or value coming back.
+
+- **A failure to load or call is not red.** `ImportError`, `NameError`, `AttributeError`, a `TypeError` from a signature or keyword that doesn't exist yet, a missing fixture — the test never reached the behavior, so it proves nothing about it. Add the least scaffolding that lets it get there (the seam, with a default that keeps today's behavior; the function, returning nothing), run it again, and go green only once it fails on the behavior.
+- **A test that passes the first time it runs has not been red.** Either earlier code already does the job or the test doesn't test it. Break the code on purpose — invert the comparison, drop the rule — watch the test fail for the right reason, then restore it.
+
+**Keep a cycle record as you go** — one row per slice, in build order — and put it in your response. The quoted failure is the evidence that each slice was its own red→green, and that the red was the missing behavior:
+
+```markdown
+| # | Criterion | Test | Red — the failure, quoted | Green — what made it pass |
+|---|---|---|---|---|
+| 1 | Tracer: a late invoice is charged a fee | `test_late_invoice_is_charged_a_fee` | first run `TypeError: unexpected keyword 'today'` — not red, added the seam; then `assert 0 == 15` | `late_fee` joins the charge rules |
+| 2 | The rate reads from the plan | `test_fee_rate_reads_from_plan` | `assert 15 == 50` | `late_fee` reads `plan.rate` |
+| 3 | Edge case: no fee on the due date | `test_no_fee_on_due_date_is_exclusive` | passed on first run; with `>=` → `assert 15 == 0` | already held — restored `>` |
+```
+
 ### 4. Refactor
 
 After all tests pass, look for refactor candidates:
@@ -161,7 +178,7 @@ After all tests pass, look for refactor candidates:
 
 The loop is finished when every one of these holds:
 
-- [ ] Every **acceptance criterion in `.workflow/brief.md`** is implemented and has a test that verifies it — check each one off in the file, so the record survives the next loop iteration. (Running standalone: every behavior agreed in Planning.)
+- [ ] Every **acceptance criterion in `.workflow/brief.md`** is implemented and has a test that verifies it — check each one off **in the file, in place, naming that test**: `- [x] <the criterion, as written> — verified by <test name>` (on a criterion that wraps, append to its last line). The tick is what the next loop iteration, devils-advocate and tyr-verdict read to find which test proves which criterion, so a bare `[x]` is a claim with nothing to check it against. (Running standalone: every behavior agreed in Planning.)
 - [ ] On a loop-back pass: every **remediation slice** you were handed is closed in `.workflow/ledger.md` — one `### Closed slices` line per slice, naming the test that verifies it
 - [ ] **The acceptance tests are GREEN** — the command in the brief's **Acceptance tests** section passes, and each mapped criterion is ticked there. (No acceptance stage ran: skip this line and say so.)
 - [ ] The full suite is GREEN
@@ -184,6 +201,7 @@ If tyr-verdict returns **NO-GO**, its remediation slices come back to this skill
 
 ```
 [ ] Security trigger: refusal tested alongside the permitted case
+[ ] Seen red on the behavior — the failure read and recorded, not a load error
 [ ] Test describes behavior, not implementation
 [ ] Test uses public interface only
 [ ] Test would survive internal refactor
