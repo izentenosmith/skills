@@ -33,7 +33,7 @@ All three hold → step 0 is a one-line confirmation. Any fails → re-discover 
 | **Tracker** | **Evidence only**: ticket keys in commit messages, tracker links in docs or PR templates | Use a local markdown log in `.workflow/` — never invent a tracker |
 | **Installed skills** | The skills directories the agent loads from | Use the fallback checklist for that step |
 
-**Installed skills to look for**, by the phase they'd cover: a design skill (`architect-deep-dive`) and the build-and-review pipeline (`tdd`, `refactor-review`, `devils-advocate`, `tyr-verdict`) for Phase 3, a deployment-rules or release skill for promotion, a ticket-creation skill for the incident item and follow-ups, `post-mortem` for Phase 4, and the repo's own dev-criteria or conventions skill throughout. **Delegate to what's there instead of duplicating it**, and say which you used.
+**Installed skills to look for**, by the phase they'd cover: a design skill (`architect-deep-dive`) and the build-and-review pipeline (`tdd`, `refactor-review`, `devils-advocate`, `tyr-verdict`) for Phase 3, a deployment-rules or release skill for promotion, a ticket skill (`ticket` in this collection) for the incident item and follow-ups, `post-mortem` for Phase 4, and the repo's own dev-criteria or conventions skill throughout. **Delegate to what's there instead of duplicating it**, and say which you used.
 
 ## Ask once
 
@@ -53,12 +53,19 @@ An incident needs four more things the hotfix lane doesn't. Find each **before**
 | **Revertable commits** | The git range since the last good deploy | Does reverting require a deploy, and does the deploy path work right now? |
 | **Secret rotation** | Where credentials are referenced: env, a secrets manager, config | Who can rotate, and what restarts afterwards? |
 | **Traffic controls** | Load balancer, gateway or maintenance-mode switches the repo references | What do users see while it's on? |
+| **Load shedding and degraded modes** | Rate limits, kill switches for expensive features, read-only or cached modes, retry settings, health-check thresholds | Can it be changed at runtime, and for a fraction of traffic? |
+| **Batch and background load** | Schedulers, queues, report and import jobs | Can it be paused without losing work, and resumed in slices? |
 
 For each lever found: **what it stops, what it costs users, how long to undo, who can pull it.** A lever nobody here can pull is still worth listing — it tells the user whom to call.
 
 ### Observability
 
 What is reachable **from this environment**: log and metrics CLIs that are installed and authenticated, connected tools, dashboards or runbooks the repo links to, error-tracking clients in the code (which tell you where errors are sent). **If nothing is reachable, ask the user for logs, screenshots or exports** — and say which ones, for which time window.
+
+### Coordination and service levels
+
+- **Where responders coordinate**, and whether that channel depends on the system being contained — a chat, wiki or tracker hosted on the same infrastructure goes down with it. Name a fallback.
+- **Service level objectives**, if the repo, its monitoring config or its docs define any: the objective, the window, and where the error budget is shown. [severity.md](severity.md) uses them to size the impact.
 
 ### Data access mode
 
@@ -86,7 +93,7 @@ The log must be **durable**: committed to the repo, or in the tracker — **neve
 - **CI runs tests:** <yes / no>
 - **Environments:** <pre-production names and how to reach them, or "none">
 - **Ship:** <how a change reaches production>
-- **Tracker:** <name and link pattern, or "local log in .workflow/">
+- **Tracker:** <name and link pattern, or "local log in .workflow/"> — `.workflow/tracker.md` holds the details where the ticket skill has run
 - **Commit message convention:** <…>
 
 ## Installed skills
@@ -100,6 +107,9 @@ The log must be **durable**: committed to the repo, or in the tracker — **neve
 - **Flags / config:** <what can be flipped at runtime, and how>
 - **Jobs / scaling:** <what can be paused or scaled down, and how>
 - **Secret rotation:** <where, by whom>
+- **Load shedding / degraded modes:** <what exists, and how it's changed>
+- **Coordination:** <channel, and its fallback if it shares infrastructure with the system>
+- **SLOs:** <objective, window, where the budget is shown — or "none defined">
 - **Observability:** <reachable tools and dashboards, or "ask the user">
 - **Data access:** <read-only path; who can approve writes>
 - **Incident logs live in:** <path or tracker>

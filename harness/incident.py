@@ -9,7 +9,7 @@ production action that has no confirmation of its own, `check` validates the who
 and `timeline` hands the post-mortem its spine. The format is the one in
 skills/operations/incident-fix/incident-log.md.
 
-    python3 incident.py new      <log.md> --title T --severity SEV2 --why W --detected-by "alert — source" [--tracker ID]
+    python3 incident.py new      <log.md> --title T --severity SEV2 --why W --detected-by "alert — source" [--tracker ID] [--exit-criteria E]
     python3 incident.py log      <log.md> <kind> <text…> [--at ISO]   (--at only for impact-start / change)
     python3 incident.py factor   <log.md> "<factor>" --follow-up "<outcome>" --owner O --due D [--where W]
     python3 incident.py factor   <log.md> "<factor>" --accepted "<reason>" --by WHO [--revisit WHEN]
@@ -29,7 +29,8 @@ import re
 import sys
 
 KINDS = ("detected", "impact-start", "change", "phase", "evidence", "finding", "proposed", "confirmed",
-         "action[prod]", "action", "result", "comms", "severity", "mitigated", "resolved", "closed", "note")
+         "action[prod]", "action", "result", "comms", "severity", "role", "handoff", "checkpoint",
+         "mitigated", "resolved", "closed", "note")
 BACKFILL = ("impact-start", "change")
 PHASES = ("contain", "diagnose", "fix", "learn")
 MILESTONES = ("mitigated", "resolved", "closed")
@@ -170,6 +171,9 @@ def verify(log: Log):
             warnings.append(("W02", 0, "header **Status:** still says open"))
     elif "mitigated" not in seen:
         warnings.append(("W01", 0, "not yet mitigated"))
+    exit_criteria = f.get("exit criteria", "").replace("to be stated before resolved", "").strip()
+    if "resolved" in seen and not exit_criteria:
+        warnings.append(("W03", 0, "resolved with no **Exit criteria:** in the header to resolve against"))
     return errors, warnings
 
 
@@ -209,6 +213,7 @@ def cmd_new(a):
         f"- **Severity:** {a.severity} — {a.why}\n"
         f"- **Detected by:** {a.detected_by}\n"
         f"- **Tracker:** {a.tracker or 'none — this log is the record'}\n"
+        f"- **Exit criteria:** {a.exit_criteria or 'to be stated before resolved'}\n"
         f"- **Status:** open\n\n"
         f"## Log\n- {iso(now())} · detected · {a.detected_by}\n\n"
         f"## Contributing factors\n")
@@ -309,6 +314,7 @@ def main(argv=None):
     n.add_argument("--why", required=True)
     n.add_argument("--detected-by", required=True)
     n.add_argument("--tracker")
+    n.add_argument("--exit-criteria")
     lg = sub.add_parser("log")
     lg.add_argument("log")
     lg.add_argument("kind")

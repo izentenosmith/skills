@@ -46,7 +46,16 @@ A minimal repro leaves fewer moving parts to suspect in step 3, and it *is* the 
 
 ## 3. Hypotheses — several, each falsifiable
 
+**Start from what changed.** Before ranking anything, list what touched the system between the last known-good state and the first bad one: deploys and merges, config and flag changes, scheduled or batch jobs, dependency and vendor updates, and shifts in data volume, data shape or traffic mix. Systems have inertia — a working one tends to keep working until something acts on it — so the change list is the cheapest source of hypotheses, and a bug with no code change behind it usually came from data growth or a dependency (*Site Reliability Engineering*, ch. 12).
+
 Write **three to five ranked hypotheses** before testing any. Generating one anchors on the first plausible idea, and the first plausible idea is usually the symptom's location, not its cause.
+
+Rank them against four common traps:
+
+- **Common before exotic.** Rank the ordinary explanation above the interesting one; it's right far more often.
+- **Not last time's cause by default.** A symptom that looks like a previous incident has a different cause often enough that the match is a hypothesis, not a finding.
+- **Correlation isn't cause.** Two things that started together may share a third cause, or be coincidence. A correlated signal earns a probe, not a conclusion.
+- **Probe cost and risk.** Order the probes by likelihood *and* by what each costs to run — and note when one probe changes the system in a way that affects the next (a restart clears the state you wanted to inspect).
 
 Each one states its prediction:
 
@@ -64,7 +73,7 @@ Each probe tests one prediction from step 3, and changes one thing.
 - **Targeted logs at the boundaries that separate the hypotheses** — never "log everything and read it." **Tag every one** with a unique prefix (`[DEBUG-a4f2]`), so cleanup is a single search.
 - **Performance bugs:** logs are usually the wrong tool. Measure a baseline first (a timing harness, a profiler, the query plan), then bisect against that number.
 
-Record what each probe eliminated as well as what it confirmed — the eliminated hypotheses are half of the evidence for the cause line.
+Record what each probe eliminated as well as what it confirmed — the eliminated hypotheses are half of the evidence for the cause line. **A negative result is a result**: "it isn't the cache — the bug reproduces with caching off" saves the next person the same hour, so it goes in the log or the PR body like any finding.
 
 **Gate:** one hypothesis predicted every probe correctly, and the others are each contradicted by at least one.
 

@@ -33,7 +33,7 @@ All three hold → step 0 is a one-line confirmation. Any fails → re-discover 
 | **Tracker** | **Evidence only**: ticket keys in commit messages, tracker links in docs or PR templates | Use a local markdown log in `.workflow/` — never invent a tracker |
 | **Installed skills** | The skills directories the agent loads from | Use the fallback checklist for that step |
 
-**Installed skills to look for**, by the step they'd cover: a TDD skill (Step 3), a code-review or adversarial-review skill (Step 4 — `devils-advocate` and `tyr-verdict` in this collection), a deployment-rules or release skill (Step 6), a ticket-creation skill (Step 5), and the repo's own dev-criteria or conventions skill (all steps). **Delegate to what's there instead of duplicating it**, and say which you used.
+**Installed skills to look for**, by the step they'd cover: a TDD skill (Step 3), a code-review or adversarial-review skill (Step 4 — `devils-advocate` and `tyr-verdict` in this collection), a deployment-rules or release skill (Step 6), a ticket skill (Step 5 — `ticket` in this collection), and the repo's own dev-criteria or conventions skill (all steps). **Delegate to what's there instead of duplicating it**, and say which you used.
 
 ## Ask once
 

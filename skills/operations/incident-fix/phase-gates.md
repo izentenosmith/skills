@@ -6,13 +6,15 @@ Each phase ends at a gate. **Don't start a phase's work on top of an open gate**
 - [ ] `.workflow/env.md` current, including the incident levers, observability and data access mode
 - [ ] Severity stated with a reason ([severity.md](severity.md)); routed to hotfix instead if it isn't an incident
 - [ ] Incident log started, in a durable location, with the `detected` entry
+- [ ] Roles assigned and logged; exit criteria and the coordination channel written in the state block
 
 ## Phase 1 — contained
 - [ ] Evidence that containment would destroy captured (or its loss accepted by the user)
 - [ ] Containment options listed, ranked by risk and reversibility, one recommended
 - [ ] Each production action proposed, **confirmed**, taken, and its effect verified — all logged
+- [ ] Every temporary change listed in the state block, with how it's undone
 - [ ] Tracker item opened with the incident label (confirmed), or "no tracker" noted
-- [ ] Stakeholder update drafted
+- [ ] Stakeholder update drafted, naming the time of the next one
 - [ ] `mitigated` logged — impact stopped, or bounded and accepted by the user
 - [ ] Log committed
 
@@ -28,14 +30,16 @@ Each phase ends at a gate. **Don't start a phase's work on top of an open gate**
 - [ ] Red test → fix → review → verdict, at most two loops
 - [ ] Data repair as a separate artifact ([data-repair.md](data-repair.md)), if any data was written wrong
 - [ ] Verified in pre-production (if it exists) → promoted (confirmed) → verified in production
-- [ ] Containment no longer needed is undone (confirmed), or kept with a reason
+- [ ] Containment no longer needed is undone in steps (confirmed), or kept with a reason and a dated follow-up
+- [ ] The exit criteria stated at declaration hold, with the evidence
 - [ ] `resolved` logged with the evidence; log committed
 
 ## Phase 4 — learned
 - [ ] Post-mortem record written, blameless, descriptive
-- [ ] Every contributing factor → follow-up (owner, date) or accepted risk (reason, who) ([follow-through.md](follow-through.md))
+- [ ] Every contributing factor → follow-up (owner, date, action type) or accepted risk (reason, who) ([follow-through.md](follow-through.md))
+- [ ] Nothing left on the temporary-changes list without a dated follow-up
 - [ ] Detection gap → alert or monitoring follow-up, if detection was slow or human
-- [ ] Tracker item closed (confirmed); `closed` logged; log committed
+- [ ] Tracker item closed (confirmed) with its cause labels; `closed` logged; log committed
 
 ---
 

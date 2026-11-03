@@ -2,6 +2,8 @@
 
 The one record every phase writes to, and the spine the post-mortem's timeline is built from. It is **append-only**: a mistaken entry is corrected by a later entry, never by editing. It is **durable**: committed (or in the tracker) at every phase gate.
 
+One part is the exception: the **Current state** block at the top is edited in place, so anyone joining — a second responder, a stakeholder, the next agent session — reads the situation in ten seconds instead of reconstructing it from two hundred lines (*Site Reliability Engineering*, appendix C). The block says where things stand; the log below says how they got there. Every change to the block that matters — a role taken, a temporary change made or undone — also gets a log entry.
+
 ## Timestamps come from the clock
 
 Every entry's time is **read from the system clock at the moment of writing** — `date -u +%Y-%m-%dT%H:%M:%SZ`, or an incident log tool if one is available. Never type a time from memory, and never let the model estimate one. Under stress, times written afterwards drift toward a tidier story, and the post-mortem will measure detection and mitigation from these numbers.
@@ -15,10 +17,22 @@ Every entry's time is **read from the system clock at the moment of writing** �
 - **Severity:** <SEV1 | SEV2 | SEV3> — <why>
 - **Detected by:** <alert | monitoring | user report | engineer> — <the specific source>
 - **Tracker:** <item id or link, or "none — this log is the record">
+- **Exit criteria:** <the observable condition that means resolved — "checkout 5xx < 0.5% and order rate at baseline for 30 min">
 - **Status:** open
+
+## Current state
+*Edited in place, unlike the log below. Last updated <UTC> by <who>.*
+- **Summary:** <one or two lines: what's broken, for whom, what's been done>
+- **Roles:** commander <who> · operations <who> · communications <who> · planning <who>
+- **Coordination:** <channel or call — not hosted on the affected system>
+- **Next update:** <UTC>
+- **Temporary changes:** <each change made to contain the incident, and how it's undone — struck through when undone>
+  - flag `new-checkout` off — undo: re-enable for 10%, then 100%
+- **Open questions:** <what isn't known yet, and who's finding out>
 
 ## Log
 - 2026-10-15T14:07:00Z · detected · alert "orders 5xx > 5%" fired in <source>
+- 2026-10-15T14:08:10Z · role · commander: <user> · operations: <user> · planning and comms drafts: agent
 - 2026-10-15T14:08:30Z · phase · contain
 - 2026-10-15T14:09:12Z · evidence · saved worker logs 13:50–14:09 to <path> (secrets redacted)
 - 2026-10-15T14:11:40Z · proposed · disable flag `new-checkout` — stops new orders on the faulty path; undo in ~1 min
@@ -54,6 +68,9 @@ Every entry's time is **read from the system clock at the moment of writing** �
 | `result` | What an action did, observed |
 | `comms` | A stakeholder update drafted or sent |
 | `severity` | A re-classification, with the reason |
+| `role` | A role assigned or taken over — `commander: <who> · operations: <who> · …` |
+| `handoff` | A role passed on, **and acknowledged** by the incoming holder |
+| `checkpoint` | The 30–60 minute check: is the approach still right, is the severity still right, are more people needed — and the answer |
 | `mitigated`, `resolved`, `closed` | The three milestones, in that order |
 | `note` | Anything else worth the timeline |
 
@@ -63,5 +80,6 @@ Every entry's time is **read from the system clock at the moment of writing** �
 - `detected` comes first; phases run contain → diagnose → fix → learn.
 - **Every `action[prod]` has a `confirmed` entry after the previous `action[prod]`.** One approval, one action.
 - `mitigated` before `resolved` before `closed`.
+- `resolved` is logged only when the header's **Exit criteria** hold.
 - At `closed`, every contributing factor has either a follow-up (owner and due date) or an accepted risk (reason and who accepted it).
 - Where **Detected by** is a user report, one follow-up or accepted risk addresses the missing alert or monitoring.

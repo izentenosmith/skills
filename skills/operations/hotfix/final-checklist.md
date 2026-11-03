@@ -21,6 +21,7 @@ The record that closes the lane. Every box is ticked or carries **skipped: <why>
 - [ ] **Lint / type-check:** `<commands>` → <results, or "none in this repo">
 - [ ] **Review pass:** <skill used, or "fallback checklist"> — <blockers fixed: n> · <follow-ups: n>
 - [ ] **Follow-up item:** <id or link> — <or "not a band-aid">
+- [ ] **Rollback:** <how this change is undone — revert, previous version, flag> — checked to work at <time>; <canary or staged rollout used, or "none in this repo">
 - [ ] **Shipped by:** <PR link | merge commit | …> — confirmed by the user at <time>
 - [ ] **Pre-production verification:** `<request or command>` → <result> at <sha> — <or "no pre-production environment">
 - [ ] **Production verification:** `<request or command>` → <result> at <sha> — <or why not reachable>

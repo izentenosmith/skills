@@ -9,11 +9,13 @@ description: Reconstruct a resolved incident into a blameless written record —
 
 This runs **after the incident is over and already resolved**. It is a reconstruction, not a response and not a plan.
 
-It leans on three reference docs:
+It leans on five reference docs:
 
 - [evidence-sources.md](evidence-sources.md) — reading a git history range, incident docs and PDFs, chat exports and monitoring into a sourced timeline
 - [blameless-culture.md](blameless-culture.md) — what blameless actually means, why it is a data-collection strategy rather than a kindness, and the language patterns that break it
 - [contributing-factors.md](contributing-factors.md) — why "the root cause" is usually a fiction, and what to look for instead
+- [template.md](template.md) — the document's shape, and the metadata block that lets incidents be counted and compared over time
+- [review-checklist.md](review-checklist.md) — the review a draft passes before it's published, and what happens to the record afterwards
 
 ## What this skill does not do
 
@@ -38,6 +40,8 @@ Two of those are routinely under-triggered. **"A human noticed first" is a findi
 | **Lightweight** | Short, contained, well-understood; near misses | Timeline, impact, factors, what was done. One page, circulated for correction. |
 | **Standard** | Real user impact, multiple factors, some uncertainty | The full document, circulated to everyone involved for correction before publishing. |
 | **Deep** | Data loss, security, a repeat, or anything that surprised people | The above, plus **what the previous record got wrong or left out**, plus the class rather than the instance. |
+
+**Search for earlier incidents before deciding it isn't a repeat.** Don't wait for someone to remember: query the tracker for items with the production-incident label and the same service or cause labels, and read the titles in the repo's postmortem folder. A match goes in the document with its link; a near match is noted as one.
 
 **A repeat incident is automatically Deep**, and its first question is about the previous postmortem rather than this outage: a recurrence means the last model was wrong or what it described was never carried out, and establishing which is worth more than re-describing the instance. Where the previous record is missing or inaccessible, that is itself the finding.
 
@@ -76,9 +80,9 @@ Source reliability runs roughly: git and deploy logs · monitoring and alerts ·
 Numbers, or an explicit statement that a number is unavailable and why. "Significant impact" cannot be compared against the next incident and cannot be checked.
 
 - [ ] **Duration** of user impact — impact start to mitigation, not to resolution
-- [ ] **Who and how many** — as a fraction of the whole, not just a count
+- [ ] **Who and how many** — as a fraction of the whole, not just a count. For a partial outage, count **failed requests or operations against the total** over the window, not minutes of outage: a 10% error rate for an hour and a full outage for six minutes affect the same number of requests, and only the request count says so
 - [ ] **What they experienced** — errors, slowness, wrong data, silent failure. **Wrong data is the worst case** and the easiest to under-report, because unlike an outage it does not announce itself
-- [ ] **Business effect** where it is real and known — failed transactions, missed SLA, error budget consumed
+- [ ] **Business effect** where it is real and known — failed transactions, missed SLA, and, where the service has an SLO, **the share of the period's error budget consumed**, with the arithmetic shown
 - [ ] **Internal cost** — responder hours, work displaced. Frequently larger than the user-facing cost and almost always omitted
 - [ ] **What was still outstanding at resolution** — data corrected late or not at all, customers notified late, a workaround left running. **A record that closes over an unresolved remainder is how the remainder gets forgotten**
 
@@ -133,6 +137,7 @@ Re-read the finished draft **specifically hunting for blame**. It leaks in throu
 - [ ] **Hindsight markers** — "obviously," "clearly," "simply." If it had been obvious at the time it would not have happened.
 - [ ] **Prescription that crept in** — "we need to…", "this should be…", "the team must…". Rewrite as the factual finding it came from, or cut it. A reconstruction that starts recommending has stopped being one, and the recommendation is not this document's to make.
 - [ ] **Would the person closest to the triggering change read this and call it fair?** The practical test. If not, this will be the last document anyone contributes to candidly.
+- [ ] **No customer can be identified.** Account names, emails, order numbers that resolve to a person, IP addresses, screenshots with personal data — replace them with counts and categories (*"three accounts on the legacy plan"*). The record circulates far more widely than the incident did, and outlives the retention rules the original data was under.
 
 ## 🛑 Stopping rule
 
@@ -142,9 +147,10 @@ Stop when all five hold:
 - [ ] **Impact is quantified**, or its absence is explained.
 - [ ] **Contributing factors are plural**, every category swept including "none found," each with evidence and confidence, each descended to something concrete about the system.
 - [ ] **What was done is recorded**, including loose ends still in place, and the open questions are stated as open.
-- [ ] **The blamelessness pass is done** on the final text, not on the draft — including the prescription check.
+- [ ] **The blamelessness pass is done** on the final text, not on the draft — including the prescription check and the customer-data check.
+- [ ] **The metadata block is filled** ([template.md](template.md)) — times, durations, detection method, cause labels — so this incident can be counted with the others.
 
-Then publish it, **with the open questions marked as open**. A record circulated in three days with two unknowns is worth far more than a complete one in three weeks: memories decay fast, log retention decays faster, and a reconstruction that arrives after everyone has moved on is an artifact rather than a record. **Do not hold a postmortem for certainty it cannot reach** — mark the gap and ship it.
+Then put it through [review-checklist.md](review-checklist.md) and publish it, **with the open questions marked as open**. A record circulated in three days with two unknowns is worth far more than a complete one in three weeks: memories decay fast, log retention decays faster, and a reconstruction that arrives after everyone has moved on is an artifact rather than a record. **Do not hold a postmortem for certainty it cannot reach** — mark the gap and ship it.
 
 ---
 
@@ -173,7 +179,7 @@ Worth it on a **large incident** — a wide git range, hours of logs, several sy
 
 Once the document is complete:
 
-> Postmortem for `<incident>` is ready: `<d>` of user impact, `<n>` contributing factors across `<c>` categories, `<u>` open questions the evidence could not settle. Sources: git `<X>..<Y>` (`<k>` commits), `<m>` incident documents. Blamelessness pass complete, including the prescription check.
+> Postmortem for `<incident>` is ready (status: `<draft | reviewed>`): `<d>` of user impact, detected in `<ttd>`, mitigated in `<ttm>`; `<n>` contributing factors across `<c>` categories, cause labels `<labels>`; `<u>` open questions the evidence could not settle. Sources: git `<X>..<Y>` (`<k>` commits), `<m>` incident documents. Earlier related incidents: `<links, or "none found">`. Blamelessness pass complete, including the prescription and customer-data checks.
 
 Then, in order:
 

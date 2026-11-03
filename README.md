@@ -16,7 +16,7 @@ Eight families of skills under `skills/` — the first three in the order work a
 skills/
   development/      build the change      seven stages, design → adversarial close
   containers/       package it to run     dockerfile → docker-compose · container-hardening · container-debug · docker-swarm
-  operations/       live with it          hotfix → incident-fix → post-mortem · release-notes
+  operations/       live with it          hotfix → incident-fix → post-mortem · release-notes · ticket · backlog
   database/         architect, audit, design, diagram, propose, build, query review
   networking/       audit, design, diagram, propose, blueprint
   infrastructure/   review, design, propose   terraform · pipelines
@@ -31,14 +31,14 @@ marketplace/        packages each skill as a standalone zip for Agensi
 |---|---|
 | **[development/](skills/development/README.md)** | [architect-deep-dive](skills/development/architect-deep-dive/SKILL.md) · [agent-brief](skills/development/agent-brief/SKILL.md) · [tdd](skills/development/tdd/SKILL.md) · [refactor-review](skills/development/refactor-review/SKILL.md) · [devils-advocate](skills/development/devils-advocate/SKILL.md) · [tyr-verdict](skills/development/tyr-verdict/SKILL.md) |
 | **[containers/](skills/containers/README.md)** | [dockerfile](skills/containers/dockerfile/SKILL.md) · [docker-compose](skills/containers/docker-compose/SKILL.md) · [container-hardening](skills/containers/container-hardening/SKILL.md) · [container-debug](skills/containers/container-debug/SKILL.md) · [docker-swarm](skills/containers/docker-swarm/SKILL.md) |
-| **[operations/](skills/operations/README.md)** | [hotfix](skills/operations/hotfix/SKILL.md) · [incident-fix](skills/operations/incident-fix/SKILL.md) · [post-mortem](skills/operations/post-mortem/SKILL.md) · [release-notes](skills/operations/release-notes/SKILL.md) |
+| **[operations/](skills/operations/README.md)** | [hotfix](skills/operations/hotfix/SKILL.md) · [incident-fix](skills/operations/incident-fix/SKILL.md) · [post-mortem](skills/operations/post-mortem/SKILL.md) · [release-notes](skills/operations/release-notes/SKILL.md) · [ticket](skills/operations/ticket/SKILL.md) · [backlog](skills/operations/backlog/SKILL.md) |
 | **[database/](skills/database/README.md)** | [dbarchitect](skills/database/dbarchitect/SKILL.md) · [dbaudit](skills/database/dbaudit/SKILL.md) · [dbdesign](skills/database/dbdesign/SKILL.md) · [dbdiagram](skills/database/dbdiagram/SKILL.md) · [dbpropose](skills/database/dbpropose/SKILL.md) · [dbbuild](skills/database/dbbuild/SKILL.md) · [dbquery](skills/database/dbquery/SKILL.md) |
 | **[networking/](skills/networking/README.md)** | [netaudit](skills/networking/netaudit/SKILL.md) · [netdesign](skills/networking/netdesign/SKILL.md) · [netdiagram](skills/networking/netdiagram/SKILL.md) · [netpropose](skills/networking/netpropose/SKILL.md) · [netblueprint](skills/networking/netblueprint/SKILL.md) |
 | **[infrastructure/](skills/infrastructure/README.md)** | [terraform](skills/infrastructure/terraform/SKILL.md) · [pipelines](skills/infrastructure/pipelines/SKILL.md) |
 | **[security/](skills/security/README.md)** | [threatmodel](skills/security/threatmodel/SKILL.md) · [appsec](skills/security/appsec/SKILL.md) · [hardening](skills/security/hardening/SKILL.md) |
 | **[review/](skills/review/README.md)** | [pr-prep](skills/review/pr-prep/SKILL.md) · [code-xray](skills/review/code-xray/SKILL.md) · [peer-review](skills/review/peer-review/SKILL.md) · [test-review](skills/review/test-review/SKILL.md) · [concurrency-review](skills/review/concurrency-review/SKILL.md) · [review-retro](skills/review/review-retro/SKILL.md) |
 
-The families are loosely coupled by design. `development` is a genuine pipeline where each stage checks the one before it; `containers` is an ordered pair (image, then stack) plus three skills for containers once they run — hardening, debugging, and Swarm; `operations` is a response chain — hotfix escalates to incident-fix, which hands its record to post-mortem — plus release-notes, which stands alone; `database` has seven independent skills — five of them coordinated by an optional harness, plus an architecture stage above them and a query review beside them — and `networking` has five coordinated the same way; `infrastructure` has two skills and `security` three, each running review → design → propose as modes of one skill; `review` has six skills around one change as it arrives from anyone — pr-prep before review, code-xray for what the history says, peer-review as the gate with test-review and concurrency-review as its specialists, review-retro after — and `harness/prreview.py` runs all of them on a single pull request. Every skill also works entirely on its own.
+The families are loosely coupled by design. `development` is a genuine pipeline where each stage checks the one before it; `containers` is an ordered pair (image, then stack) plus three skills for containers once they run — hardening, debugging, and Swarm; `operations` is a response chain — hotfix escalates to incident-fix, which hands its record to post-mortem — plus release-notes, which stands alone, and the tracker pair — ticket writes work items to Linear, Azure DevOps or Jira for every other skill, backlog shapes and orders them; `database` has seven independent skills — five of them coordinated by an optional harness, plus an architecture stage above them and a query review beside them — and `networking` has five coordinated the same way; `infrastructure` has two skills and `security` three, each running review → design → propose as modes of one skill; `review` has six skills around one change as it arrives from anyone — pr-prep before review, code-xray for what the history says, peer-review as the gate with test-review and concurrency-review as its specialists, review-retro after — and `harness/prreview.py` runs all of them on a single pull request. Every skill also works entirely on its own.
 
 **The family directories are scaffolding for reading this repo, nothing more.** The agent never sees them — it selects on each `SKILL.md`'s frontmatter `description`. When you take a skill, you take the skill folder; see [How to use](#how-to-use).
 
@@ -129,11 +129,14 @@ dockerfile → docker-compose        container-hardening · container-debug · d
 
 ## operations
 
-What happens around a system that's already running: fixing it when it breaks, recording what happened, and telling people what changed.
+What happens around a system that's already running: fixing it when it breaks, recording what happened, telling people what changed, and keeping the tracker that holds the work honest.
 
 ```
 hotfix ──escalates──► incident-fix ──hands its log to──► post-mortem      release-notes
  (urgent, not down)    (contain → diagnose → fix → learn)  (the record)     (stands alone)
+      │                        │                               │
+      └──── follow-ups, incident items ──► ticket ◄── changes ── backlog
+                                    (Linear · Azure DevOps · Jira)  (map · refine · health · order)
 ```
 
 | Skill | What it does |
@@ -141,7 +144,13 @@ hotfix ──escalates──► incident-fix ──hands its log to──► pos
 | [hotfix](skills/operations/hotfix/SKILL.md) | A fast lane for an urgent bug in a system that is **up**: discovers the repo's own commands and conventions, routes outages and design questions out, proves the bug red, fixes it once at the shared cause, runs one adversarial pass (strict on data, money, permissions and tenancy), and ships with recorded evidence. |
 | [incident-fix](skills/operations/incident-fix/SKILL.md) | Production incidents end to end: contain first with ranked, reversible levers, diagnose read-only and size the impact with a reproducible count, fix through the review pipeline capped at two loops with data repair as its own artifact, then post-mortem and **follow-through** — every factor owned or explicitly accepted. Every production action waits for confirmation. |
 | [release-notes](skills/operations/release-notes/SKILL.md) | Reads the change set from git, classifies every change (including an explicit **drop** bucket for anything with no user-visible effect), and translates each survivor from what was built into what the reader can now do. Depth matched to scope; breaking changes above the fold. |
-| [post-mortem](skills/operations/post-mortem/SKILL.md) | Reconstructs a **resolved** incident into a blameless written record — timeline built from a git history date range plus incident docs and PDFs, quantified impact, and **contributing factors** rather than a single root cause. Ends with a pass over the prose hunting the blame that leaks in through grammar. |
+| [post-mortem](skills/operations/post-mortem/SKILL.md) | Reconstructs a **resolved** incident into a blameless written record — timeline built from a git history date range plus incident docs and PDFs, quantified impact, and **contributing factors** rather than a single root cause. Ends with a pass over the prose hunting the blame that leaks in through grammar, a metadata block that makes incidents countable, and a review before publishing. |
+| [ticket](skills/operations/ticket/SKILL.md) | Creates, updates, closes and logs time on work items in **Linear, Azure DevOps or Jira** — or a markdown log when there's no tracker — through one adapter per tool. Discovers types, states, required fields, sprints and labels at runtime into `.workflow/tracker.md`, reconciles against existing items before creating any, confirms the change set, and reads every write back. Owns the production-incident labels DORA metrics are built from. |
+| [backlog](skills/operations/backlog/SKILL.md) | Shapes and audits a backlog, grounded in *User Story Mapping*, *Making Work Visible* and SRE: story maps with outcome-named release slices, refinement into thin stories with acceptance criteria, a scored 0–10 health check (oversized items, stale work, WIP, unplanned work, competing priorities, overdue follow-ups, error budget), and ordering by class of service and cost of delay. Reads the tracker; every change goes through ticket. |
+
+`incident-fix` runs incidents the way *Site Reliability Engineering* describes: declared early, with a commander, exit criteria, a live state block above the append-only log, a register of temporary changes undone in steps, and impact sized against the error budget where an SLO exists.
+
+`ticket` and `backlog` hardcode nothing about the team either: the tracker, its schema and its conventions are discovered and cached in `.workflow/tracker.md`, and every write waits for confirmation.
 
 `hotfix` and `incident-fix` discover everything environment-specific at runtime — build and test commands as CI runs them, the merge convention, the tracker, rollback levers, observability — and cache it in `.workflow/env.md`, which both read. Neither hardcodes a stack, a CI product, a cloud or a ticket system.
 
@@ -297,6 +306,13 @@ These carry no workflow of their own — the skill in the same folder links into
 | [blameless-culture](skills/operations/post-mortem/blameless-culture.md) | post-mortem — why blameless is a data-collection strategy (Google SRE; Dekker) |
 | [contributing-factors](skills/operations/post-mortem/contributing-factors.md) | post-mortem — past single-root-cause; the categories to sweep and where to stop |
 | [evidence-sources](skills/operations/post-mortem/evidence-sources.md) | post-mortem — reading a git range, incident PDFs, chat exports and monitoring into a sourced timeline |
+| [template](skills/operations/post-mortem/template.md) | post-mortem — the document's sections and the metadata block that makes incidents countable |
+| [review-checklist](skills/operations/post-mortem/review-checklist.md) | post-mortem — the review before publishing, and reusing records afterwards |
+| [roles](skills/operations/incident-fix/roles.md) | incident-fix — commander, operations, communications, planning; scaled to a small team; handoffs |
+| [containment-levers](skills/operations/incident-fix/containment-levers.md) | incident-fix — ranked levers, overload and cascading-failure responses, the stepped ramp back |
+| [adapters](skills/operations/ticket/adapters/azure-devops.md) | ticket — Azure DevOps, [Jira](skills/operations/ticket/adapters/jira.md), [Linear](skills/operations/ticket/adapters/linear.md) and a [local](skills/operations/ticket/adapters/local.md) markdown log |
+| [profile](skills/operations/ticket/profile.md) | ticket — the `.workflow/tracker.md` project profile and where each value is discovered |
+| [theory](skills/operations/backlog/theory.md) | backlog — the principles every finding cites, from story mapping, flow and SRE |
 | [theory](skills/database/dbaudit/theory.md) | dbaudit and dbdesign — relational principles: relations vs tables, Codd's rules, FDs and keys, normal forms 1NF–6NF and decomposition, NULL and three-valued logic, isolation anomalies, SSOT vs derived data, constraint kinds, data/metadata separation, security |
 | [er-modeling](skills/database/dbaudit/er-modeling.md) | dbaudit and dbdesign; copied in dbdiagram — CAP1–CAP4 pure modelling, reverse-engineering, notation crosswalk, 29 drills |
 | [scoring](skills/database/dbaudit/scoring.md) | dbaudit — severity, confidence tags, the 0–10 formula, triage, output templates |
@@ -378,6 +394,8 @@ Any stage can optionally hand its **read-only or fresh-context** work to a subag
 | hotfix | the caller sweep; convention lookups | **the red→green and the fix** |
 | incident-fix | evidence gathering in diagnosis, one delegate per source | **containment, every production action, and the fix decisions** |
 | post-mortem | gathering and timeline reconstruction, split by source | the factors and the blamelessness pass |
+| ticket | reconciliation searches over a long commit range | **drafting, confirmation and every write** |
+| backlog | reading a large snapshot, per area or per board | **the map, the scores, the order and the change set** |
 | dbaudit | per-database evaluation of each DDL file | **scoring and the synthesis** |
 | dbdesign | requirements mapping and model review | **the modeling decisions and target structure** |
 | dbdiagram | source-backed ER and relational views | **diagram semantics and layout** |
@@ -447,8 +465,8 @@ npx skills add izentenosmith/skills --skill architect-deep-dive agent-brief acce
 # containers — image, then stack, then how it runs
 npx skills add izentenosmith/skills --skill dockerfile docker-compose container-hardening container-debug docker-swarm
 
-# operations — the response chain plus release-notes
-npx skills add izentenosmith/skills --skill hotfix incident-fix post-mortem release-notes
+# operations — the response chain, release-notes, and the tracker pair
+npx skills add izentenosmith/skills --skill hotfix incident-fix post-mortem release-notes ticket backlog
 
 # database — architect, audit, design, diagram, propose, build, query review
 npx skills add izentenosmith/skills --skill dbarchitect dbaudit dbdesign dbdiagram dbpropose dbbuild dbquery
@@ -492,6 +510,8 @@ npx skills add izentenosmith/skills --skill '*'
 | | `npx skills add izentenosmith/skills --skill incident-fix` |
 | | `npx skills add izentenosmith/skills --skill post-mortem` |
 | | `npx skills add izentenosmith/skills --skill release-notes` |
+| | `npx skills add izentenosmith/skills --skill ticket` |
+| | `npx skills add izentenosmith/skills --skill backlog` |
 | database | `npx skills add izentenosmith/skills --skill dbarchitect` |
 | | `npx skills add izentenosmith/skills --skill dbaudit` |
 | | `npx skills add izentenosmith/skills --skill dbdesign` |
@@ -574,7 +594,7 @@ The installer copies each skill folder whole, dereferencing the database and net
    /tdd                   /refactor-review  /devils-advocate  /tyr-verdict
    /dockerfile            /docker-compose   /container-hardening   /container-debug   /docker-swarm
    /hotfix                /incident-fix
-   /release-notes         /post-mortem
+   /release-notes         /post-mortem      /ticket       /backlog
    /dbaudit       /dbdesign       /dbdiagram       /dbpropose       /dbbuild
    /dbarchitect   /dbquery
    /netaudit      /netdesign      /netdiagram      /netpropose      /netblueprint

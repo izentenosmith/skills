@@ -23,7 +23,7 @@ What a band-aid owes, and where every non-blocking review finding goes. **An ite
 
 ## Where it goes
 
-- **A tracker exists** (found from evidence in discovery): create the item there — **after the user confirms** — using the team's labels and conventions. Put its id in the commit message the way the repo's commits already reference tickets.
+- **A tracker exists** (found from evidence in discovery): create the item there — **after the user confirms** — using the team's labels and conventions, and the `follow-up` label. Where [ticket](../ticket/SKILL.md) is installed, hand it the item: it checks for an existing one first and reads the write back. Put its id in the commit message the way the repo's commits already reference tickets.
 - **No tracker**: append it to `.workflow/follow-ups.md` and commit that file with the fix, so the item travels with the code that owes it. Reference it in the commit message as `follow-up: .workflow/follow-ups.md#<heading>`.
 
 Either way, the final checklist names the item.
