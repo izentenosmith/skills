@@ -288,7 +288,7 @@ the **dead/copy-schema** finding and the shadow-table anti-pattern.
 
 A value **captured at event time** — the unit price on an order line, the tax rate applied, the
 address on a shipped invoice — is a fact of the event, not a copy of the current value, and is not an
-SSOT or 2NF defect.
+SSOT or normal-form defect.
 
 **"Consistency" has four meanings — name which one:** (1) ACID consistency, the application invariants
 of §5; (2) replica / eventual consistency, how stale a copy may be; (3) CAP consistency =

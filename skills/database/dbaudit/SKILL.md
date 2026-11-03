@@ -102,8 +102,26 @@ One file, one rubric, one evaluation file. For each:
   against the UID criteria (including intelligent keys and reducible keys), and look for what was never
   modelled — repeating groups, unresolved M:M, arcs and
   subtypes hiding in type columns, EAV and per-value clone tables, stored derived totals, history
-  overwritten in place, model rules no FK can hold. Record the
-  recovered model in the evaluation's notes; dbdesign can use it as redesign evidence.
+  overwritten in place, model rules no FK can hold. **Write the recovered model** as a
+  `## Recovered model` section of the tables evaluation: the predicates, then **two Barker sentences per
+  relationship**, one for each direction, in the template of [er-modeling.md](er-modeling.md) §A1.3,
+  word for word:
+
+  > Each ORDER LINE **must be** part of **one and only one** SALES ORDER.
+  > Each SALES ORDER **may be** composed of **one or more** ORDER LINEs.
+
+  Each sentence opens with *Each*, says *must be* or *may be*, and says *one and only one* or *one or
+  more*. "placed by one customer" is not the template. Cover every relationship, declared or by convention,
+  and mark the ones no FK enforces (a dropped FK, a column that only names its parent). dbdesign uses
+  this model as redesign evidence. An audit without it is incomplete.
+- [ ] **Name the normal form a copied column breaks, and grade it as a candidate.** A parent's non-key
+  column copied beside the FK that reaches it — `customer_name` and `customer_email` next to
+  `sales_order.customer_id` — is a **transitive dependency, a 3NF candidate**
+  (`order_id → customer_id → customer_name`). It is not 2NF, which concerns part of a *composite* key, and a
+  single-column key has no part. The DDL can't settle it: a value captured at event time is legitimate
+  (theory §6). So the row says *3NF candidate (transitive)*, carries ⚠️ (never ✅), names the 🔬 profile
+  that would refute it, and the "snapshot or copy?" question goes to the open questions
+  ([tables.md](tables.md), *A note on normal forms*).
 - [ ] **Cross-file criteria** need both inputs open: FK columns vs. index keys (leading columns
   only); collation across catalogs; a trigger's writes vs. the tables that have triggers; a predicate in
   a view or procedure vs. the index it should use; a `NOT IN` subquery or check-then-act vs. the
@@ -163,6 +181,9 @@ Stop when all hold:
 - [ ] Every finding has confidence, theory, severity and a line reference.
 - [ ] Every score shows `p`, base and cap, and follows the formula.
 - [ ] Every 🔬 flag is listed by name — none silently dropped, none scored.
+- [ ] The tables evaluation has its `## Recovered model`: predicates and two Barker sentences per
+  relationship.
+- [ ] Every copied parent column is reported as a ⚠️ 3NF candidate, not as a graded violation.
 - [ ] Summaries and the synthesis exist for the mode chosen.
 
 Then stop. **More findings in a file that is already capped by a Critical don't change its number or

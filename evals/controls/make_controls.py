@@ -486,7 +486,7 @@ def e17_wrong_dr_copy(run, repo):
 
 # ------------------------------------------------------------------ eval 18: netdiagram
 
-def drawio(topo, view, stage, ids=True):
+def drawio(topo, view, stage, ids=True, badges="inside"):
     name = {"logical": "Logical topology (L3)", "segmentation": "Segmentation (zones and flows)"}[view]
     k = [0]
 
@@ -505,7 +505,11 @@ def drawio(topo, view, stage, ids=True):
                 cells.append(f'<mxCell id="{cid(n["id"])}" value="{n["id"]}" style="shape=mxgraph.azure.firewall;{dash}" vertex="1" parent="1"><mxGeometry as="geometry"/></mxCell>')
     else:
         for z in topo["zones"]:
-            cells.append(f'<mxCell id="{cid(z["id"])}" value="{z["id"]} — trust {z["trust"]}&#xa;default: deny in" vertex="1" parent="1"><mxGeometry as="geometry"/></mxCell>')
+            zid = cid(z["id"])
+            cells.append(f'<mxCell id="{zid}" value="{z["id"]} — trust {z["trust"]}" vertex="1" parent="1"><mxGeometry as="geometry"/></mxCell>')
+            # the badge is a text cell inside the zone; "loose" leaves it on the page, inside no zone
+            parent = zid if badges == "inside" else "1"
+            cells.append(f'<mxCell id="deco-deny-{z["id"]}" value="default: deny in — NSG DenyAllInBound" vertex="1" parent="{parent}"><mxGeometry as="geometry"/></mxCell>')
         for f in topo["flows"]:
             if f["action"] == "allow":
                 cells.append(f'<mxCell id="{cid(f["id"])}" value="{f["proto"]}/{f["ports"]}" edge="1" parent="1" source="{f["from_zone"]}" target="{f["to_zone"]}"><mxGeometry relative="1" as="geometry"/></mxCell>')
@@ -513,12 +517,12 @@ def drawio(topo, view, stage, ids=True):
             + "".join(cells) + "</root></mxGraphModel></diagram></mxfile>\n")
 
 
-def e18_common(run, repo, ids=True, physical=False):
+def e18_common(run, repo, ids=True, physical=False, badges="inside"):
     topo = json.loads((repo / "design/topology.json").read_text())
     for view in ("logical", "segmentation"):
         (repo / "diagrams").mkdir(exist_ok=True)
         (repo / f"diagrams/{'logical-topology' if view == 'logical' else 'segmentation'}.drawio").write_text(
-            drawio(topo, view, "proposed", ids))
+            drawio(topo, view, "proposed", ids, badges))
     if physical:
         (repo / "diagrams/physical-topology.drawio").write_text(
             '<mxfile><diagram name="Physical topology (L1/L2)"><mxGraphModel><root><mxCell id="0"/>'
@@ -536,6 +540,10 @@ def e18_wrong_physical(run, repo):
 
 def e18_wrong_ids(run, repo):
     e18_common(run, repo, ids=False)
+
+
+def e18_wrong_loose_badges(run, repo):
+    e18_common(run, repo, badges="loose")
 
 
 # ------------------------------------------------------------------ eval 19: netpropose
@@ -681,7 +689,8 @@ CONTROLS_NET = {
                "wrong-generated-ids": (e18_wrong_ids, [
                    "every model node is a cell with the same ID on the logical page",
                    "segmentation arrows are exactly allow flows",
-                   "the inferred on-prem node drawn as inferred"])}),
+                   "the inferred on-prem node drawn as inferred"]),
+               "wrong-loose-badges": (e18_wrong_loose_badges, ["every zone drawn with a default-deny badge"])}),
     "eval-19-netpropose-contains-before-restructuring": dict(
         fixture="net-propose", reference=e19_reference,
         free=["audit, design and diagrams left untouched", NO_IAC],

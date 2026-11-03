@@ -57,10 +57,11 @@ Hubs are central. Keep the critical pairs' endpoints visible on the page.
 | Member networks | Small boxes inside each zone, with CIDRs |
 | Allowed flow | Directed arrow, zone to zone, label `proto/ports` (`tcp/443`), one arrow per distinct flow group, its ID equal to the flow ID or `flowgrp-<from>-<to>` |
 | Denied flow worth showing | Red arrow with a bar end, label `deny` + reason |
-| Default-deny | A text badge inside each zone: `default: deny in` / `deny out`, citing the mechanism (`NSG 4096 DenyAll`, `NetworkPolicy default-deny`) |
+| Default-deny | A text badge inside each zone: a cell whose parent is the zone, ID `deco-deny-<zone id>`, label `default: deny in` / `deny out`, citing the mechanism (`NSG 4096 DenyAll`, `NetworkPolicy default-deny`). A default-deny entry in `flows[]` is drawn as this badge, never as an arrow |
 | Management plane | Its own zone, drawn apart (bottom band), with access only from the bastion/jump zone |
 
-Every arrow must correspond to `allow` entries in `flows[]`. Any-any flows, if they exist, are drawn
+Every arrow must correspond to `allow` entries in `flows[]`. A denied flow worth showing uses an ID
+prefixed `deco-`, so the cross-check does not read it as an allow. Any-any flows, if they exist, are drawn
 in red so they cannot be missed.
 
 ## 5. Physical topology (L1/L2)

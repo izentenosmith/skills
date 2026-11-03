@@ -1051,7 +1051,7 @@ def nets(t):
 
 
 def drawio_pages(path_text):
-    """[(page name, {cell id: (value, style, is_edge)})] or None when not well-formed / compressed."""
+    """[(page name, {cell id: (value, style, is_edge, parent id)})] or None when not well-formed / compressed."""
     try:
         root = ET.fromstring(path_text)
     except Exception:
@@ -1069,7 +1069,8 @@ def drawio_pages(path_text):
             inner = el.find("mxCell")
             cell = el if el.tag == "mxCell" or inner is None else inner
             value = el.get("label") if el.tag != "mxCell" else el.get("value")
-            cells[cid] = (re.sub(r"<[^>]+>", " ", value or ""), cell.get("style") or "", cell.get("edge") == "1")
+            cells[cid] = (re.sub(r"<[^>]+>", " ", value or ""), cell.get("style") or "", cell.get("edge") == "1",
+                          cell.get("parent") or "")
         pages.append((d.get("name") or "", cells))
     return pages
 
@@ -1223,13 +1224,16 @@ def eval18(run):
     cidr_bad = [n["id"] for n in topo["networks"] if n["id"] in lcells and n["cidr"] not in lcells[n["id"]][0]]
     zone_ids = [z["id"] for z in topo["zones"]]
     zmiss = [z for z in zone_ids if z not in scells]
-    deny_badges = sum(1 for z in zone_ids if z != "internet" and z in scells and re.search(r"deny", scells[z][0], re.I))
+    # the badge is a text cell inside the zone (diagram-conventions §4), or the zone's own label
+    badged = lambda z: any(re.search(r"deny", v, re.I) for cid, (v, _, e, par) in scells.items()
+                           if not e and (cid == z or par == z))
+    deny_badges = sum(1 for z in zone_ids if z != "internet" and z in scells and badged(z))
     allow_ids = {f["id"] for f in topo["flows"] if f["action"] == "allow"}
-    arrows = [cid for cid, (_, _, e) in scells.items() if e and not cid.startswith("deco-")]
+    arrows = [cid for cid, (_, _, e, _) in scells.items() if e and not cid.startswith("deco-")]
     stray = [a for a in arrows if a not in allow_ids and not a.startswith("flowgrp-")]
-    legend = all(any(re.search(r"Network diagram conventions", v, re.I) for v, _, _ in (cells or {}).values())
+    legend = all(any(re.search(r"Network diagram conventions", v, re.I) for v, *_ in (cells or {}).values())
                  for cells in (lp, sp))
-    onprem = lcells.get("onprem-dc", ("", "", False))[1]
+    onprem = lcells.get("onprem-dc", ("", "", False, ""))[1]
     ok_model, mev = net_unchanged(run, "net-diagram", "design/")
     return [
         # capability
@@ -2881,7 +2885,9 @@ def eval30(run):
     fixture_tables = set(re.findall(r"CREATE TABLE public\.(\w+)", read(FIXTURES / "db-audit/db/schema.sql")))
     new_tables = sorted({n for n in re.findall(r"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(?:\w+\.)?\"?(\w+)", t, re.I)}
                         - fixture_tables)
-    sentences = len(re.findall(r"\bEach \S+(?: \S+){0,2} (?:must|may) be\b[^\n.;]{0,100}?\b(?:one and only one|one or more)\b", t))
+    # sentences are often written with the optionality in bold, as er-modeling §A1.3 prints them (eval 31 does the same)
+    sentences = len(re.findall(r"\bEach \S+(?: \S+){0,2} (?:must|may) be\b[^\n.;]{0,100}?\b(?:one and only one|one or more)\b",
+                               re.sub(r"\*\*|__", "", t)))
     return [
         # capability
         ("an audit with findings was written", len(t) > 1500 and any_of(t, r"finding"), f"{len(t)} chars", C),
@@ -2956,9 +2962,14 @@ def db_ddl_script(run, fixture):
     docs = {f: read(run / "repo" / f) for f in added + modified if f.endswith(".md")}
     docs.update({f"outputs/{p.name}": read(p) for p in (run / "outputs").glob("*.md")})
     # only blocks that hold DDL: a design may also show an example query (an export with a bind
-    # parameter), which is not part of the script and would not run as one
-    ddl_block = lambda b: re.search(r"\b(CREATE|ALTER|DROP|PRAGMA|INSERT)\b", b, re.I)
-    cands = [("\n".join(b for b in re.findall(r"```sql[^\n]*\n(.*?)```", text, re.S | re.I) if ddl_block(b)), name)
+    # parameter), which is not part of the script and would not run as one. dbdesign puts those in a
+    # section of their own after the DDL, so a block under a queries heading is skipped, and a keyword
+    # only in a comment ("-- Create a booking") does not make a block DDL
+    ddl_block = lambda b: re.search(r"\b(CREATE|ALTER|DROP|PRAGMA|INSERT)\b", re.sub(r"--[^\n]*", "", b), re.I)
+    heading = lambda text, at: (re.findall(r"^#{1,6} [^\n]*", text[:at], re.M) or [""])[-1]
+    queries = lambda h: re.search(r"\bquer(y|ies)\b|not part of the DDL", h, re.I)
+    cands = [("\n".join(m.group(1) for m in re.finditer(r"```sql[^\n]*\n(.*?)```", text, re.S | re.I)
+                        if ddl_block(m.group(1)) and not queries(heading(text, m.start()))), name)
              for name, text in docs.items()]
     cands = [c for c in cands if c[0].strip()]
     return max(cands, key=lambda c: len(re.findall(r"CREATE\s+TABLE", c[0], re.I)), default=("", "no DDL found"))
@@ -3000,12 +3011,15 @@ def db_sqlite_catalog(ddl):
 
 
 def db_link_table(info, a, b):
-    """A table with an FK to a table named like `a` and another to one named like `b`, unique on exactly
-    that pair: an intersection table."""
+    """A table with an FK to a table named like `a` and another to one named like `b`, unique on that
+    pair: an intersection table. The unique set may leave out FK columns that are not the parent's key — a
+    subtype discriminator carried in a composite FK (`(member_id, kind) REFERENCES member`) — as long
+    as it takes a column from each side."""
     for t, d in info.items():
         for fa in [f for f in d["fks"] if re.search(a, f["table"], re.I)]:
             for fb in [f for f in d["fks"] if re.search(b, f["table"], re.I) and f is not fa]:
-                if set(fa["from"]) | set(fb["from"]) in d["uniques"]:
+                pair = set(fa["from"]) | set(fb["from"])
+                if any(u <= pair and u & set(fa["from"]) and u & set(fb["from"]) for u in d["uniques"]):
                     return t
     return None
 
@@ -3084,7 +3098,15 @@ def eval31(run):
     birth = db_cols_like(info, r"birth|dob")
     sub_ok, sub_ev = db_subtypes_mapped(info)
     keys = {c: db_alternate_key(info, c) for c in (r"^e.?mail", r"vat", r"member_?(number|no|code)|card_?number")}
-    link = [(t_, c, info[t_]["cols"][c]["notnull"]) for t_, d in info.items() if re.search(r"individual|person|member", t_, re.I)
+    # the employer link is optional either as a nullable FK on the individual, or as a relationship table of
+    # its own (no row = no employer): an FK to the individual side and one to the company side. That table's
+    # NOT NULL columns are its own, not a mandatory employer on the individual
+    side = lambda f, pat: re.search(pat, " ".join(f["from"]) + " " + f["table"], re.I)
+    rel = [t_ for t_, d in info.items() if t_ != attend and not re.search(r"booking|reservation|^(individual|person|member)s?$", t_, re.I)
+           and any(side(f, r"individual|person") for f in d["fks"])
+           and any(side(f, r"compan|organi|employer") and not side(f, r"individual|person") for f in d["fks"])]
+    link = [(t_, c, info[t_]["cols"][c]["notnull"]) for t_, d in info.items()
+            if re.search(r"individual|person|member", t_, re.I) and t_ not in rel
             for f in d["fks"] for c in f["from"] if re.search(r"compan|employ|organi|works_for|billed_to", c, re.I)]
     oq = section(doc, r"open question|unresolved")[:4000]
     stored_total = db_cols_like(info, r"total|cost", r"booking|reservation")
@@ -3124,8 +3146,8 @@ def eval31(run):
         ("natural keys are UNIQUE alternates, not primary keys (email, VAT, member number)",
          all(ok for ok, _ in keys.values()), err or "; ".join(f"{k}: {h}" for k, (_, h) in keys.items())[:200], D),
         ("the freelancer question left open: the company link optional and listed as an open question",
-         bool(link) and not any(nn for *_, nn in link) and any_of(oq, r"freelanc|self.employ|works for|employer|billed to"),
-         err or f"link {link}", D),
+         bool(link or rel) and not any(nn for *_, nn in link) and any_of(oq, r"freelanc|self.employ|works for|employer|billed to"),
+         err or f"link {link} · relationship table {rel}", D),
         ("a Barker conceptual model with two-way relationship sentences", any_of(t, r"Barker") and barker >= 4,
          f"{barker} Barker sentences", D),
         ("functional dependencies and the normal-form rationale stated", fds >= 3 and bool(re.search(r"3NF|BCNF", fd_sec)),
