@@ -172,6 +172,8 @@ If the repo carries the harness, check your append before handing off: `python3 
 
 ## Handoff
 
+Your response is what the user reads; the ledger is what Tyr reads. Both carry the route to proof: **every unproven finding in your response names the run that settles it**, in the same words as its `Would be settled by` line — as a column in a summary table, or a `Settled by:` clause after the finding. "F7 — unproven" with nothing after it tells the user there is a doubt and gives them no way to end it.
+
 After emitting the findings, prompt the user:
 
 > The teardown is complete — <n> findings recorded in `.workflow/ledger.md`, unadjudicated. Run **[tyr-verdict](../tyr-verdict/SKILL.md)** next to weigh each against its evidence, cut the false claims, and turn what survives into fixes.
