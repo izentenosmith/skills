@@ -347,9 +347,9 @@ Each skill carries its own copy of the dispatch contract it needs, so the folder
 
 [`evals/`](evals/README.md) holds the harness that measures it — seeded fixtures with planted defects (a rule that ignores its config, and a vacuous test that hides it), scored assertions, and the recorded result in [evals/benchmark.md](evals/benchmark.md).
 
-Assertions are split: **capability** (does the stage do its job at all) from **delta** (does it do what a change to the skill added). Only the delta column is evidence an edit helped. Against the pre-session baseline over 36 runs: **0.98 vs 0.22** on delta, **0.96 vs 0.92** on capability.
+Assertions are split: **capability** (does the stage do its job at all) from **delta** (does it do what a change to the skill added). Only the delta column is evidence an edit helped. The seven `development` stages were re-run on 2026-11-03, after the security material landed in them. Each eval ran three times with the skill and once against the pre-session baseline, 28 runs in all. They score **0.96 vs 0.25** on delta and **1.00 vs 0.89** on capability.
 
-**Scored: every skill but the three newest container skills.** The six `development` stages carry the recorded n=3 result above. The other skills' first run (2026-10-25) is one with-skill run each — three for evals 11–13 — against a baseline with no skill at all, which is the honest comparison for a skill that did not exist at the baseline ref. The security family's first run (2026-11-02, evals 38–46, one per mode) is the same shape. The database family (evals 30–34, 47–48) was re-run three times each on 2026-11-03, after its 2026-11-02 rework and with dbquery and dbarchitect run for the first time (eval 30 again after a dbaudit fix): **0.96 vs 0.67** on delta, **0.99 vs 0.95** on capability. Across all 46 scored evals: **0.96 vs 0.54** on delta, **0.99 vs 0.89** on capability. Per eval in [evals/benchmark.md](evals/benchmark.md). `container-hardening`, `container-debug` and `docker-swarm` (evals 35–37), added 2026-11-02, have their fixtures, assertions and controls but no scored run yet.
+**Scored: every skill but the three newest container skills.** The seven `development` stages carry the n=3 result above. The other skills' first run (2026-10-25) is one with-skill run each — three for evals 11–13 — against a baseline with no skill at all, which is the honest comparison for a skill that did not exist at the baseline ref. The security family's first run (2026-11-02, evals 38–46, one per mode) is the same shape. The database family (evals 30–34, 47–48) was re-run three times each on 2026-11-03, after its 2026-11-02 rework and with dbquery and dbarchitect run for the first time (eval 30 again after a dbaudit fix): **0.96 vs 0.67** on delta, **0.99 vs 0.95** on capability. Across all 46 scored evals: **0.96 vs 0.54** on delta, **1.00 vs 0.90** on capability. Per eval in [evals/benchmark.md](evals/benchmark.md). `container-hardening`, `container-debug` and `docker-swarm` (evals 35–37), added 2026-11-02, have their fixtures, assertions and controls but no scored run yet.
 
 The fixtures are seeded so a naive answer fails them: a compose fixture with a stale `ELASTICSEARCH_URL`, an incident whose trigger sits nine days before the outage, production levers that are stubs recording their calls (so "took no action without confirmation" is checked, not inferred), networks graded by parsing every CIDR and every draw.io cell, DDL executed in SQLite and probed with rows that must be refused, acceptance tests run against three mutants.
 
@@ -363,6 +363,20 @@ The fixtures are seeded so a naive answer fails them: a compose fixture with a s
 - `dbdesign` **0.87 vs 0.46** (n=3), below its earlier 0.95; its misses vary run by run.
 
 Three skills were fixed after their first run and re-run three times each: `acceptance-tests` **0.75 → 1.00** (criteria that already hold are tested with their contrast; edges tested within seconds; one mapping line per criterion), `dbpropose` **0.61 → 0.92** (a `proposal.md` file, a step table with validation, rollback and blast radius, data before constraints, expand/contract, acceptance before dbbuild), and `dbdesign` **0.69 → 0.95** — most of whose first score was four grader false negatives (bold Barker sentences, a "Normal-form" heading, the intersection table's own column, an age-band lookup), fixed in `grade.py` with every control re-checked.
+
+The 2026-11-03 re-run of the seven `development` stages, before → after:
+
+| eval | skill | delta | cap | cap base |
+|---|---|---|---|---|
+| 0 | architect-deep-dive | 0.91 (n=1) → **1.00** | 1.00 → 1.00 | 1.00 |
+| 1 | agent-brief | 1.00 → **1.00** | 1.00 → 1.00 | 0.86 → 1.00 |
+| 2 | tdd | 1.00 → **1.00** | 0.78 → **1.00** | 0.83 → 1.00 |
+| 27 | acceptance-tests | 1.00 → **0.94** | 1.00 → 1.00 | 0.50 → 0.67 |
+| 3 | refactor-review | 1.00 → **0.88** | 1.00 → 1.00 | 1.00 → 0.75 |
+| 4 | devils-advocate | 0.92 → **0.87** | 1.00 → 1.00 | 1.00 |
+| 5 | tyr-verdict | 1.00 → **1.00** | 1.00 → 1.00 | 0.83 |
+
+tdd's 0.78 came from the grader. Every run wrote a boundary test, but one put it in a new test file the grader didn't read, and a relative venv path failed "suite is green" for every run, the baseline's included. Both are fixed in `grade.py`. tdd also now keeps new tests in the file the brief names. Its delta is 1.00 against a baseline that now scores 1.00 too, so eval 2 no longer measures what tdd adds. Three delta scores dropped: refactor-review's to **0.88**, because one run of three skipped the severity vocabulary, the size calibration and the stopping rule; devils-advocate's to **0.87**, because two of three didn't say what would settle each unproven finding; and acceptance-tests' to **0.94**.
 
 ## How to use
 
