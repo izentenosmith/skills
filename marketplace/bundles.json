@@ -1,4 +1,5 @@
 {
+  "development-workflow": ["architect-deep-dive", "agent-brief", "acceptance-tests", "tdd", "refactor-review", "devils-advocate", "tyr-verdict"],
   "incident-response": ["hotfix", "incident-fix", "post-mortem"],
   "infrastructure-delivery": ["terraform", "pipelines"],
   "security-review": ["threatmodel", "appsec", "hardening"]
