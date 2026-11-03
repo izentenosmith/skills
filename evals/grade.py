@@ -885,12 +885,23 @@ def find_added(run, fixture, pattern):
     return [f for f in added + modified if re.search(pattern, f)]
 
 
-def load_topology(run, fixture, pattern=r"(^|/)topology\.json$", exclude=()):
-    for f in find_added(run, fixture, pattern):
+def find_deliverable(run, fixture, pattern):
+    """Files the run added or changed in the repo, then its outputs/ (as `outputs/<name>`): a prompt that names
+    no location leaves both reasonable, and the run prompt itself points at outputs/."""
+    return find_added(run, fixture, pattern) + [f"outputs/{p.name}" for p in sorted((run / "outputs").glob("*"))
+                                                if p.is_file() and re.search(pattern, p.name)]
+
+
+def at(run, f):
+    return run / f if f.startswith("outputs/") else run / "repo" / f
+
+
+def load_topology(run, fixture, pattern=r"(^|/)topology\.json$", exclude=(), outputs=False):
+    for f in (find_deliverable if outputs else find_added)(run, fixture, pattern):
         if f.startswith(exclude):
             continue
         try:
-            t = json.loads(read(run / "repo" / f))
+            t = json.loads(read(at(run, f)))
         except Exception:
             continue
         if isinstance(t, dict) and isinstance(t.get("networks"), list):
@@ -1001,8 +1012,8 @@ def nd_external(nid, net, n, kinds):
 def eval17(run):
     """netdesign from requirements: an addressing plan that avoids what's in use, zones, flows, pairs."""
     t = everything(run, "net-design")
-    design = "\n".join(read(run / "repo" / f) for f in find_added(run, "net-design", r"design[^/]*\.md$"))
-    tf, topo = load_topology(run, "net-design")
+    design = "\n".join(read(at(run, f)) for f in find_deliverable(run, "net-design", r"design[^/]*\.md$"))
+    tf, topo = load_topology(run, "net-design", outputs=True)
     ns = nets(topo)
     kinds = {n.get("id"): n.get("kind") for n in (topo or {}).get("nodes", [])}
     internal = [n for n in ns if not nd_external(*n, kinds)]
@@ -1117,8 +1128,8 @@ def eval18(run):
 # ---- eval 19: netpropose
 
 def proposal_text(run, fixture):
-    files_ = find_added(run, fixture, r"proposal[^/]*\.md$")
-    return "\n".join(read(run / "repo" / f) for f in files_) or resp(run), files_
+    files_ = find_deliverable(run, fixture, r"proposal[^/]*\.md$")
+    return "\n".join(read(at(run, f)) for f in files_) or resp(run), files_
 
 
 STEP_FIELDS = (r"validat|verif", r"roll ?back", r"blast radius")
@@ -1150,7 +1161,11 @@ def eval19(run):
     p, pf = proposal_text(run, "net-propose")
     m = re.search(r"^#{1,4}[^\n]*(cut-?over|sequenc|migration|order of work|change plan|roll-?out)[^\n]*$", p, re.I | re.M)
     plan = p[m.start():] if m else p
-    first = lambda pat: (re.search(pat, plan, re.I).start() if re.search(pat, plan, re.I) else None)
+    # Order is read from the first step on: a preamble that explains the ordering ("renumbering waits for the
+    # second tunnel") names the renumbering before step 1 without scheduling it first.
+    step = re.search(r"^(#{2,5}[^\n]*\bstep\b|\|\s*(step\s*)?\d+\s*\|)", plan, re.I | re.M)
+    steps = plan[step.start():] if step else plan
+    first = lambda pat: (re.search(pat, steps, re.I).start() if re.search(pat, steps, re.I) else None)
     seg, ren = first(r"NET-SEG-01|allow-ssh-any"), first(r"NET-ADR-01|renumber|10\.3\.0\.0")
     words = {w for w in re.findall(r"\b(Keep|Refactor|Rework|Rebuild|Retire)\b", p)}
     no_iac, iev = iac_written(run, "net-propose")
@@ -1216,8 +1231,9 @@ def eval20(run):
     no_iac, iev = iac_written(run, "net-blueprint")
     ok_in, inev = net_unchanged(run, "net-blueprint", "proposal/", "design/", "diagrams/")
     record = {k: near(r, r"accept", pat, 300) for k, pat in (("who", NB_WHO), ("when", NB_WHEN), ("version", NB_VERSION))}
-    contract = [k for k, pat in (("attrs.platform", r"platform"), ("tunnel crypto profile", r"crypto|IKE|IPsec (policy|profile)"),
-                                 ("secret_ref", r"secret_ref|vault|pre-?shared key|\bPSK\b"))
+    # The contract's own field names: "Platform: Azure" in a quoted header is not a gap in the model.
+    contract = [k for k, pat in (("attrs.platform", r"attrs\.platform"), ("tunnel crypto profile", r"crypto[ _-]?profile"),
+                                 ("secret_ref", r"secret_ref"))
                 if near(r, pat, NB_GAP, 160)]
     unlocks = {"network-design.md": has(r, r"network-design\.md"),
                "blueprint/accepted model": any_of(r, r"meta\.stage", r"stage\W{0,12}blueprint", r"status\W{0,12}accepted"),
@@ -1248,7 +1264,9 @@ def eval20(run):
          all(unlocks.values()), f"missing {[k for k, v in unlocks.items() if not v]}" if not all(unlocks.values()) else "all four", D),
         ("the model checked against the IaC handoff contract: its gaps named", bool(contract),
          f"{contract or 'no platform, crypto-profile or secret_ref gap named'}", D),
-        ("readiness quotes the shipped script's cross-check", near(r, r"netgraph", NB_SCRIPT, 300), "", D),
+        # design.md says "netgraph" in a heading, so the name alone proves nothing: the run must have run it.
+        ("readiness quotes the shipped script's cross-check",
+         near(r, r"netgraph(\.py)?`?\s+(diagrams|analyze)|diagram\(s\) pass", NB_SCRIPT, 300), "", D),
         ("no network-design.md written", not nd, f"{nd or 'none'}", D),
         ("no accepted topology.json written", not accepted, f"{accepted or 'none'}", D),
         ("no diagram marked accepted", not marked, f"{marked or 'none'}", D),

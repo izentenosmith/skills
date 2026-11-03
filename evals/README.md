@@ -104,7 +104,7 @@ One eval per networking skill. Two estates: **Northwind** (eval 16, raw evidence
 | 17 | netdesign | `net-design` | Utrecht owns 10.0.0.0/12, so the habitual `10.0.0.0/16` hub and AKS's default service CIDR both collide; the acquirer's ranges and the staff pool are not ours; DR must get its own space; PCI needs its own zone. Graded by parsing every CIDR in the run's `topology.json` |
 | 18 | netdiagram | `net-diagram` | a cloud-only model with one inferred on-prem node: no physical view may be invented, cell IDs must equal model IDs, the inferred node must be drawn as inferred, and arrows must be exactly the allow flows. The `.drawio` XML is parsed, not grepped |
 | 19 | netpropose | `net-propose` | an uncapped 7.9 hiding one open Critical; a renumbering coupled to an on-prem BI export; a network whose disuse is only the owner's belief; a residual κ=1 the design could not fix. The Critical must be contained before the renumbering, by position in the cut-over |
-| 20 | netblueprint | `net-blueprint` | a complete, consistent proposal marked **Proposed** with no acceptance: the package must not be built |
+| 20 | netblueprint | `net-blueprint` | a complete, consistent proposal marked **Proposed** with no acceptance: the package must not be built. A bare agent refuses too, so the delta is in what the refusal says: the acceptance record (who, when, which version), the κ=1 on-prem pair acceptance must cover, the model's gaps against the IaC handoff contract (no network carries `attrs.platform`; the tunnels carry no crypto profile or `secret_ref`), the shipped script's cross-check, and what acceptance unlocks |
 
 Nothing is executed against a network, and nothing needs setup; eval 18 and the controls use only the standard library's XML and `ipaddress`. The baseline is a no-skill run: none of the five skills existed at the default baseline ref.
 
@@ -128,11 +128,12 @@ Nothing is executed against a network, and nothing needs setup; eval 18 and the 
 | 19 | do-nothing | 2/13 | 2/10 | everything but "inputs untouched" and "no IaC" |
 | 19 | `wrong-structure-first` — same register, SSH rule deleted "with the cleanup" as step 5 | 12/13 | 9/10 | the Critical contained before structural work |
 | 19 | `wrong-no-rollback` — a numbered list with no validation, rollback or blast radius | 12/13 | 9/10 | every step names validation, rollback and blast radius |
-| 20 | reference | 9/9 | 8/8 | — |
-| 20 | do-nothing | 5/9 | 5/8 | asks for acceptance; names where it comes from; says nothing was produced |
-| 20 | `wrong-builds-anyway` — notes the proposal isn't accepted, builds the package anyway | 5/9 | 4/8 | no network-design.md; no accepted topology.json |
+| 20 | reference | 15/15 | 12/12 | — |
+| 20 | do-nothing | 5/15 | 5/12 | everything the refusal has to say |
+| 20 | `wrong-builds-anyway` — notes the proposal isn't accepted, builds the package anyway | 5/15 | 4/12 | no network-design.md; no accepted topology.json |
+| 20 | `wrong-bare-refusal` — a correct refusal that asks for nothing the package needs | 9/15 | 6/12 | the acceptance record; the κ=1 exception; the missing audit; the contract gaps; the script's check; what acceptance unlocks |
 
-Eval 20 is the one where doing nothing scores well: five of its eight delta assertions are "did not build". That is the point of the eval — the skill's job here is to stop — and the three that the do-nothing control fails are the ones a stopping run has to earn by saying why. **First run (n=1):** see [benchmark.md](benchmark.md).
+Eval 20 is the one where doing nothing scores well: five of its twelve delta assertions are "did not build". That is the point of the eval: the skill's job here is to stop. Stopping alone does not separate the skill from no skill, though. The first run scored a bare agent 1.00 against the skill's 1.00, because a capable agent also declines to build on a proposal marked Proposed, and it also asks who accepted it and when. So "asks for explicit acceptance" and "says nothing was produced" are now capability assertions, and the delta asks for what only the skill's procedure produces. A bare agent does not know the package is `network-design.md` plus a `topology.json` with `meta.stage = "blueprint"`, does not check the model against blueprint.md's IaC handoff contract, and has no script to run. Re-graded with these assertions, that first bare run fails exactly those three. Results: [benchmark.md](benchmark.md).
 
 ### `tf-*` and `ci-*`: terraform and pipelines (evals 21–26)
 
@@ -587,6 +588,7 @@ The layout it builds is the one `grade.py` reads:
 What it keeps out of a run's reach:
 
 - **Your setup.** Every run uses `--safe-mode`, so no CLAUDE.md, installed skills, plugins, hooks or MCP servers load. The only skill a run sees is the one its prompt names.
+- **The harness, unless you move it aside.** When this checkout has `harness/`, it is copied next to the staged skills, at the same relative path (minus its tests), and the run gets `--add-dir` for it. A skill that offers the harness as an optional accelerator then finds it as it would in a clone. Move `harness/` out of the checkout to measure the skills on their own: the plan prints `harness (none: …)`. The networking skills (evals 16–20) are measured both ways.
 - **The answer key.** Both skill versions are copied to a temp directory: the current one out of this checkout, the baseline with `git archive <ref>` and `evals/` deleted from it. A run is never one `..` away from `grade.py`. `incident/README.md`, which lists every planted defect, is not copied into the run's repo. Neither is `make-history.sh`.
 - **The fixture names.** `evals.json` still uses the original workspace names (`fixture`, `fixture-tdd`, …); `fixture_dir()` in `run.py` maps them to the folders here (`base`, `tdd`, …).
 
