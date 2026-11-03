@@ -75,6 +75,10 @@ Invoke by name, or let the description trigger it:
 
 Use the built-in for a fast bug-only pass. Use peer-review when the review is the gate.
 
+## Do they work?
+
+One eval per skill (evals 49–54), each run three times against no skill, standalone (only the skill's own folder, as a marketplace install). Delta, out of 1.00: peer-review **1.00** vs 0.29, pr-prep **0.97** vs 0.31, code-xray **1.00** vs 0.40, test-review **1.00** vs 0.20, concurrency-review **1.00** vs 0.39, review-retro **1.00** vs 0.29. The fixtures, the planted traps and the controls are in [evals/README.md](../../evals/README.md#the-review-family-evals-4954).
+
 ## The theory underneath
 
 Every finding cites a principle: R1–R32 ([peer-review](peer-review/theory.md)), PP ([pr-prep](pr-prep/theory.md)),

@@ -49,7 +49,9 @@ IGNORE = [".pytest_cache", "__pycache__"]
 # incident/README.md lists every planted defect — it is the answer key, and
 # release-notes/README.md describes the fixture the same way.
 HARNESS_ONLY = {"incident": ["README.md", "make-history.sh"],
-                "release-notes": ["README.md", "make-history.sh"]}
+                "release-notes": ["README.md", "make-history.sh"],
+                **{f: ["README.md", "make-history.sh"] for f in
+                   ("pr-review", "pr-prep", "code-xray", "test-review", "concurrency")}}
 
 
 def fixture_dir(name):
@@ -160,17 +162,26 @@ def claude_cmd(run, skill_md, prompt, model):
     return cmd + ["--", prompt]
 
 
-def stage_skill(skill_md, dest_root):
+def stage_skill(skill_md, dest_root, standalone=False):
     """Copy the skill's folder out of this checkout, so a run pointed at it is
     not one `..` away from evals/ and the assertions it is graded by.
 
     harness/ goes along when this checkout has it, at the same place relative to
     the skill, so a skill that offers the harness as an optional accelerator finds
-    it as it would in a clone. Move harness/ aside to measure the skills alone."""
+    it as it would in a clone. Move harness/ aside to measure the skills alone.
+
+    `standalone` (an eval's `"standalone": true`) stages the skill's folder and
+    nothing else, in a root of its own: no harness, no sibling skills. That is the
+    install a marketplace buyer gets, so an eval marked standalone proves the skill
+    works without the rest of this repo."""
     rel = skill_md.parent.relative_to(REPO_ROOT)
+    if standalone:
+        dest_root = dest_root.parent / f"{dest_root.name}-standalone"
     dest = dest_root / rel
     if not dest.exists():
         shutil.copytree(skill_md.parent, dest)
+    if standalone:
+        return dest / skill_md.name
     if (REPO_ROOT / "harness").is_dir() and not (dest_root / "harness").exists():
         shutil.copytree(REPO_ROOT / "harness", dest_root / "harness",
                         ignore=shutil.ignore_patterns("tests", "__pycache__"))
@@ -257,7 +268,7 @@ def plan(args, ws_iter, snap_dir, cur_dir):
         current = find_skill(REPO_ROOT, ev["skill"])
         if current is None:
             sys.exit(f"skill {ev['skill']!r} not found in this checkout")
-        current = stage_skill(current, cur_dir)
+        current = stage_skill(current, cur_dir, standalone=ev.get("standalone", False))
         variants = [(ed / "with_skill" / f"rep{i}", current, "with_skill")
                     for i in range(1, args.reps + 1)]
         if snap_dir:
@@ -368,7 +379,7 @@ def print_plan(runs, ws_iter, baseline, args_timeout):
             continue
         print(f"   skill    {r['skill_md'] or '(none: skill absent at baseline ref)'}")
         if r["skill_md"] and r["kind"] == "with_skill":
-            print(f"   harness  {staged_harness(r['skill_md']) or '(none: harness/ absent from this checkout)'}")
+            print(f"   harness  {staged_harness(r['skill_md']) or '(none: a standalone eval, or harness/ absent from this checkout)'}")
         print(f"   cwd      {r['run'] / 'repo'}")
         print(f"   env      {' '.join(f'{k}={v}' for k, v in RUN_ENV.items())}")
         print(f"   command  {shlex.join(r['cmd'][:-1])} <prompt>")
