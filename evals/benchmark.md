@@ -6,11 +6,11 @@
 |---|---|---|---|---|---|---|---|
 | 0-architect-charter-and-options | i7 | 1 | 0.91 ± 0.00 | 0.00 | +0.91 | 1.00 | 1.00 |
 | 1-brief-ordered-criteria | i1 | 3 | 1.00 ± 0.00 | 0.00 | +1.00 | 1.00 | 0.86 |
-| 10-hotfix-script-no-tests | i7 | 1 | 1.00 ± 0.00 | 0.20 | +0.80 | 1.00 | 1.00 |
-| 11-hotfix-routes-outage-out | i10 | 3 | 0.83 ± 0.29 | 0.00 | +0.83 | 1.00 | 1.00 |
-| 12-incident-webapp-contain-by-flag | i10 | 3 | 0.95 ± 0.08 | 0.43 | +0.52 | 1.00 | 0.50 |
-| 13-incident-batch-repair-artifact | i10 | 3 | 0.90 ± 0.17 | 0.60 | +0.30 | 1.00 | 1.00 |
-| 14-incident-library-no-deploy | i7 | 1 | 1.00 ± 0.00 | 0.57 | +0.43 | 1.00 | 1.00 |
+| 10-hotfix-script-no-tests | i20 | 3 | 1.00 ± 0.00 | 0.20 | +0.80 | 1.00 | 1.00 |
+| 11-hotfix-routes-outage-out | i20 | 3 | 1.00 ± 0.00 | 0.00 | +1.00 | 1.00 | 1.00 |
+| 12-incident-webapp-contain-by-flag | i17 | 3 | 1.00 ± 0.00 | 0.43 | +0.57 | 1.00 | 0.50 |
+| 13-incident-batch-repair-artifact | i17 | 3 | 1.00 ± 0.00 | 0.70 | +0.30 | 1.00 | 1.00 |
+| 14-incident-library-no-deploy | i17 | 3 | 1.00 ± 0.00 | 0.57 | +0.43 | 1.00 | 1.00 |
 | 15-harness-loop-closes-teardown | i5 | 1 | 1.00 ± 0.00 | — | — | 1.00 | — |
 | 16-netaudit-hub-spoke-recovers-and-scores | i6 | 1 | 1.00 ± 0.00 | 0.23 | +0.77 | 1.00 | 0.60 |
 | 17-netdesign-plans-around-what-is-in-use | i6 | 1 | 0.90 ± 0.00 | 0.30 | +0.60 | 1.00 | 0.00 |
@@ -46,8 +46,8 @@
 | 5-verdict-cuts-and-slices | i2 | 3 | 1.00 ± 0.00 | 0.40 | +0.60 | 1.00 | 0.83 |
 | 6-compose-detects-real-services | i6 | 1 | 0.89 ± 0.00 | 0.67 | +0.22 | 1.00 | 1.00 |
 | 7-postmortem-widens-range-and-describes | i6 | 1 | 1.00 ± 0.00 | 0.60 | +0.40 | 1.00 | 1.00 |
-| 8-hotfix-node-shared-cause | i7 | 1 | 1.00 ± 0.00 | 0.38 | +0.62 | 1.00 | 1.00 |
-| 9-hotfix-jvm-both-callers | i7 | 1 | 1.00 ± 0.00 | 0.71 | +0.29 | 1.00 | 1.00 |
+| 8-hotfix-node-shared-cause | i20 | 3 | 1.00 ± 0.00 | 0.38 | +0.62 | 1.00 | 1.00 |
+| 9-hotfix-jvm-both-callers | i20 | 3 | 1.00 ± 0.00 | 0.71 | +0.29 | 1.00 | 1.00 |
 
 **Delta — current 0.96 vs baseline 0.52**
 **Capability — current 0.99 vs baseline 0.88**
@@ -69,6 +69,7 @@
 - pausing the job proposed as containment
 - the issued invoices named as a downstream copy
 - a separate repair artifact
+- the repair corrects exactly the affected orders
 
 **eval-14-incident-library-no-deploy**
 - containment fits a library: yank and/or advisory, with a pin
@@ -397,17 +398,6 @@
 - staging verification before production
 
 ## Delta assertions that varied across repetitions
-
-**eval-11-hotfix-routes-outage-out**
-- changes no source or test file (2/3)
-
-**eval-12-incident-webapp-contain-by-flag**
-- no code changed before containment (2/3)
-
-**eval-13-incident-batch-repair-artifact**
-- a reproducible COUNT query (2/3)
-- the repair defaults to a dry run and backs up first (2/3)
-- the repair corrects exactly the affected orders (2/3)
 
 **eval-31-dbdesign-sqlite-from-requirements-traps**
 - the member subtypes mapped deliberately, with the choice stated (1/3)

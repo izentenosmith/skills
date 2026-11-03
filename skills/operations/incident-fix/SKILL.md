@@ -22,6 +22,14 @@ Reference docs, all in this folder:
 - [postmortem-fallback.md](postmortem-fallback.md) — the record, when the post-mortem skill isn't installed
 - [phase-gates.md](phase-gates.md) — the exit condition of each phase, and the fix-review fallback
 
+## ⛔ Hard gates — check them before every action
+
+These are not judgment calls. Before any edit, command or write, check the one that applies; if it doesn't hold, the action doesn't happen.
+
+1. **No code before containment.** Until Phase 1's gate holds and `mitigated` is logged, don't create, edit or delete any file the running system is built from or executes — source, tests, config, job definitions, migrations — not even locally, not even as an undeployed draft. Containment waiting on a confirmation that hasn't come (the user is away, or hasn't answered) means the gate does **not** hold: keep going read-only through Phase 2, and Phase 3's code fix becomes a proposed diff in the incident log and your response, not a change to the tree. Before `mitigated`, only two things may be written: the incident log with its captured evidence, and a data repair artifact (with its fixture test) under gate 3 — a new, standalone file that changes nothing until someone runs it with `--apply`.
+2. **Every impact number comes with its query, written out.** A count goes into the log next to the exact read-only query or command that produced it — the text itself (`SELECT COUNT(*) FROM … WHERE …` → 12), not a description of it and not a pointer to a file holding it. That same query is the repair's selection and its verification.
+3. **A data repair is a dry run by default and backs up before it writes.** Run with no flags, it opens the data read-only, prints what it would change with the count from gate 2, and changes nothing. With `--apply`, it writes its own backup of exactly the rows it will change and reads it back *before* its first write, every time — never a separate step someone can skip. `--apply` is the only switch between the two; it may refuse without the expected count, but a precondition such as pausing a downstream job is its own confirmed step, not another flag. Nothing touches production data until the user confirms that exact command.
+
 ## The rules that hold in every phase
 
 1. **Every production-affecting action needs explicit confirmation, every time** — rollback, scale-down, disabling a job, a flag or config flip, rotating a secret, a deploy, a publish, a data write. A broad "go ahead" earlier does not cover the next action. Propose it, say what it changes and how it's undone, and wait.
@@ -43,11 +51,12 @@ Then classify with [severity.md](severity.md), say the severity and why in one l
 - [ ] **Open the incident item** in the tracker if one exists, with the label the team uses for incident metrics — after confirmation. No tracker: the log is the record.
 - [ ] **Draft the stakeholder update** — what's affected, what's been done, when the next update comes. The user sends it.
 
-**Gate:** user impact has stopped, or is bounded and the user has accepted that. Log `mitigated`. Containment that holds is the goal of this phase — not a fix.
+**Gate:** user impact has stopped, or is bounded and the user has accepted that. Log `mitigated`. Containment that holds is the goal of this phase — not a fix. A recommendation still awaiting confirmation is not containment: hard gate 1 keeps every code file closed until this gate holds.
 
 ## 🔬 Phase 2: Diagnose and size the impact
 
-- [ ] **Root cause from evidence** — logs, metrics, read-only queries, and the git history of the affected code (the triggering change often merged days earlier: widen the range). Find **every caller** of the faulty code — the impact is the union of their paths, not just the one in the alert.- [ ] **Impact assessment**: which users, records or documents; **from when to when**; with a **reproducible query or command** and its counts. Wrong data is the worst case and the easiest to under-count, because it doesn't announce itself.
+- [ ] **Root cause from evidence** — logs, metrics, read-only queries, and the git history of the affected code (the triggering change often merged days earlier: widen the range). Find **every caller** of the faulty code — the impact is the union of their paths, not just the one in the alert.
+- [ ] **Impact assessment**: which users, records or documents; **from when to when**; with a **reproducible query or command** and its counts, the query's text in the log (hard gate 2). Wrong data is the worst case and the easiest to under-count, because it doesn't announce itself.
 - [ ] **Known vs. assumed** for every number. "~2,300 orders (query in log at 15:02); whether refunds were affected is assumed not — no refund path calls this code" is an assessment. "Some orders" is not.
 
 **Gate:** a stated cause with its evidence, and an impact with a reproducible count, both logged.
@@ -56,7 +65,7 @@ Then classify with [severity.md](severity.md), say the severity and why in one l
 
 - [ ] **Design, only if there are real options.** Use [architect-deep-dive](../../development/architect-deep-dive/SKILL.md) where installed; otherwise lay out the options with trade-offs and a recommendation, and let the user pick.
 - [ ] **Build it the full way**: test-first ([tdd](../../development/tdd/SKILL.md)), [refactor-review](../../development/refactor-review/SKILL.md), [devils-advocate](../../development/devils-advocate/SKILL.md), [tyr-verdict](../../development/tyr-verdict/SKILL.md) — delegating to each where installed, and working [phase-gates.md](phase-gates.md)'s fix-review checklist where not. **Tell tyr-verdict the cap is two iterations, not three**; a third NO-GO is the user's decision. Where a closing-loop runner and a red/green checker are available, use them — at the same cap.
-- [ ] **Data repair is its own artifact**, separate from the code fix, under [data-repair.md](data-repair.md): backup first, dry-run mode, before/after counts, idempotent, run in a non-production environment first when one exists, and in production only with explicit confirmation.
+- [ ] **Data repair is its own artifact**, separate from the code fix, under [data-repair.md](data-repair.md) and hard gate 3: dry run by default, its own backup before any write, before/after counts, idempotent, run in a non-production environment first when one exists, and in production only with explicit confirmation.
 - [ ] **Verify, promote, verify.** Pre-production first if it exists, then promote by the repo's convention (confirmed), then verify in production. Each piece of evidence — command, result, commit — goes into the log.
 
 **Gate:** the fix and any repair are verified in production. Log `resolved`. Undo the containment that's no longer needed — confirmed, like any other production action — and log that too.
