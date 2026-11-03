@@ -14,10 +14,10 @@
 | 15-harness-loop-closes-teardown | i5 | 1 | 1.00 ± 0.00 | — | — | 1.00 | — |
 | 16-netaudit-hub-spoke-recovers-and-scores | i21 | 3 | 1.00 ± 0.00 | 0.31 | +0.69 | 1.00 | 0.60 |
 | 17-netdesign-plans-around-what-is-in-use | i21 | 3 | 0.90 ± 0.00 | 0.30 | +0.60 | 1.00 | 0.20 |
-| 18-netdiagram-canonical-views-from-model | i21 | 3 | 0.87 ± 0.06 | 0.20 | +0.67 | 1.00 | 0.00 |
-| 19-netpropose-contains-before-restructuring | i21 | 3 | 1.00 ± 0.00 | 0.70 | +0.30 | 0.78 | 0.67 |
+| 18-netdiagram-canonical-views-from-model | i23 | 3 | 1.00 ± 0.00 | 0.20 | +0.80 | 1.00 | 0.00 |
+| 19-netpropose-contains-before-restructuring | i23 | 3 | 1.00 ± 0.00 | 0.70 | +0.30 | 1.00 | 0.67 |
 | 2-tdd-reads-brief-vertical | i24 | 3 | 1.00 ± 0.00 | 0.00 | +1.00 | 1.00 | 0.88 |
-| 20-netblueprint-waits-for-acceptance | i21 | 3 | 1.00 ± 0.00 | 0.75 | +0.25 | 1.00 | 1.00 |
+| 20-netblueprint-waits-for-acceptance | i23 | 3 | 1.00 ± 0.00 | 0.75 | +0.25 | 1.00 | 1.00 |
 | 21-terraform-review-state-and-secrets | i6 | 1 | 1.00 ± 0.00 | 0.57 | +0.43 | 1.00 | 0.83 |
 | 22-terraform-design-isolates-state | i6 | 1 | 1.00 ± 0.00 | 0.86 | +0.14 | 1.00 | 1.00 |
 | 23-terraform-propose-no-recreate | i6 | 1 | 0.91 ± 0.00 | 0.82 | +0.09 | 1.00 | 1.00 |
@@ -28,8 +28,8 @@
 | 28-dockerfile-repair-pins-and-drops-root | i16 | 3 | 1.00 ± 0.00 | 0.83 | +0.17 | 1.00 | 1.00 |
 | 29-release-notes-translates-drops-and-leads-with-breaking | i6 | 1 | 1.00 ± 0.00 | 0.54 | +0.46 | 1.00 | 0.86 |
 | 3-refactor-promotes-noted-smell | i24 | 3 | 1.00 ± 0.00 | 0.12 | +0.88 | 1.00 | 0.75 |
-| 30-dbaudit-postgres-dump-scored-not-fixed | i22 | 3 | 0.86 ± 0.14 | 0.43 | +0.43 | 1.00 | 1.00 |
-| 31-dbdesign-sqlite-from-requirements-traps | i18 | 3 | 0.87 ± 0.12 | 0.46 | +0.41 | 0.93 | 1.00 |
+| 30-dbaudit-postgres-dump-scored-not-fixed | i23 | 3 | 0.95 ± 0.04 | 0.43 | +0.52 | 1.00 | 1.00 |
+| 31-dbdesign-sqlite-from-requirements-traps | i23 | 3 | 0.97 ± 0.04 | 0.46 | +0.51 | 1.00 | 1.00 |
 | 32-dbdiagram-barker-and-relational-from-design | i18 | 3 | 1.00 ± 0.00 | 0.88 | +0.12 | 1.00 | 1.00 |
 | 33-dbpropose-orphans-before-constraints | i18 | 3 | 0.97 ± 0.04 | 0.54 | +0.44 | 1.00 | 0.80 |
 | 34-dbbuild-executable-ddl-from-accepted-proposal | i18 | 3 | 1.00 ± 0.00 | 0.78 | +0.22 | 1.00 | 1.00 |
@@ -60,8 +60,8 @@
 | 8-hotfix-node-shared-cause | i20 | 3 | 1.00 ± 0.00 | 0.38 | +0.62 | 1.00 | 1.00 |
 | 9-hotfix-jvm-both-callers | i20 | 3 | 1.00 ± 0.00 | 0.71 | +0.29 | 1.00 | 1.00 |
 
-**Delta — current 0.98 vs baseline 0.51**
-**Capability — current 0.99 vs baseline 0.90**
+**Delta — current 0.99 vs baseline 0.51**
+**Capability — current 1.00 vs baseline 0.90**
 
 ## Delta assertions the baseline also passed (still non-discriminating)
 
@@ -104,9 +104,9 @@
 - the model left untouched
 
 **eval-19-netpropose-contains-before-restructuring**
-- the Critical is contained before structural work
 - renumbering sequenced against what depends on it
 - retirement waits for usage confirmation
+- decisions use the band vocabulary
 - connectivity before and after stated
 - the residual on-prem single endpoint carried as open
 - audit, design and diagrams left untouched
@@ -232,10 +232,10 @@
 - evaluates and stops: no target table designed
 
 **eval-31-dbdesign-sqlite-from-requirements-traps**
-- the DDL runs on SQLite, the engine the requirements name
 - plan prices kept as effective-dated history, unique per plan and date (executed)
 - age not stored: a birth date instead (executed)
 - natural keys are UNIQUE alternates, not primary keys (email, VAT, member number)
+- the freelancer question left open: the company link optional and listed as an open question
 - nothing applied: no database file created
 - the requirements left untouched
 
@@ -526,24 +526,16 @@
 
 ## Delta assertions that varied across repetitions
 
-**eval-18-netdiagram-canonical-views-from-model**
-- segmentation arrows are exactly allow flows (2/3)
-
 **eval-27-acceptance-tests-red-for-the-right-reason**
 - every new test is red on the unimplemented code (none passes) (2/3)
 - tier stated (Standard) (2/3)
 
 **eval-30-dbaudit-postgres-dump-scored-not-fixed**
 - runtime facts flagged needs-data, never graded (2/3)
-- the transitive customer_name/customer_email flagged as a 3NF candidate, not graded (1/3)
 - strengths recorded: the payment table (2/3)
-- the recovered model written as relationship sentences (1/3)
 
 **eval-31-dbdesign-sqlite-from-requirements-traps**
 - the member subtypes mapped deliberately, with the choice stated (2/3)
-- the freelancer question left open: the company link optional and listed as an open question (2/3)
-- Codd's rules reviewed (2/3)
-- assumptions kept apart from open questions (1/3)
 
 **eval-33-dbpropose-orphans-before-constraints**
 - the Critical handled before the name split (2/3)

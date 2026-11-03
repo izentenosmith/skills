@@ -146,7 +146,13 @@ Files below the threshold are read in full.
 **File score: <0–10>** (base <b>, cap <c> — reason)
 
 ## Notes
-<patterns specific to this DDL file; reverse-engineered model notes for tables>
+<patterns specific to this DDL file>
+
+## Recovered model (tables evaluation only — er-modeling §A0)
+- Predicates: `<table>`: <one sentence, one placeholder per column>
+- Relationships, two Barker sentences each (er-modeling §A1.3):
+  - Each <CHILD> must be <verb> one and only one <PARENT>. Each <PARENT> may be <verb> one or more <CHILD>s. (declared | by convention — no FK)
+- Never modelled: <repeating groups, unresolved M:M, hidden subtypes/arcs, EAV, stored derived totals>
 ```
 
 ### Per-database summary — `<db>/analysis/summary.md`
