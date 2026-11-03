@@ -40,7 +40,7 @@ This folder makes the referee a program. The model still does every judgment; th
 | [`dbreview.py`](dbreview.py) | DDL or a read-only connection → audit, scored by formula in code → a per-database gate. |
 | [`networkflow.py`](networkflow.py) | existing network → audit and gate → design → diagrams → proposal; new network → design → diagrams → proposal; accepted proposal → blueprint in a separate run. |
 | [`netreview.py`](netreview.py) | network evidence → redaction → audit and recovered `topology.json` → graph metrics, scored by formula in code → a per-network gate. |
-| [`netgraph.py`](netgraph.py) | `topology.json` → components, articulation points, bridges, Menger connectivity per critical pair, betweenness, robustness curves, CIDR overlap and flow exposure. Pure stdlib; usable on its own. |
+| [`netgraph.py`](netgraph.py) | `topology.json` → components, articulation points, bridges, Menger connectivity per critical pair, betweenness, robustness curves, CIDR overlap and flow exposure; `.drawio` views → the conventions cross-check. A symlink to [`skills/networking/netaudit/scripts/netgraph.py`](../skills/networking/netaudit/scripts/netgraph.py): the skills ship it, so they compute the same numbers without this folder. |
 | [`tests/`](tests) | `python3 -m unittest discover harness/tests` — the grammar, the rules, and the whole loop against a stub `claude`. |
 
 Stdlib Python 3.10+, no dependencies. The skills don't need any of this — every skill folder still works copied on its own, in Cursor or Claude Code. The harness is an optional layer that enforces what they ask for when you want it enforced.

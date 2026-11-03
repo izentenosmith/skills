@@ -1181,9 +1181,27 @@ def eval19(run):
 
 
 # ---- eval 20: netblueprint
+#
+# Refusing is not enough to tell the skill from no skill: a bare agent also declines to build on a
+# proposal marked Proposed. What netblueprint adds is what the refusal says: the acceptance record the
+# package's header needs (who, when, which version), the κ=1 exception acceptance has to cover, the
+# inputs the package will lack, the model's gaps against the IaC handoff contract (no network carries
+# attrs.platform; the tunnels carry no crypto profile or secret_ref), the shipped script's cross-check, and
+# what acceptance unlocks (network-design.md, a blueprint/accepted topology.json, the two views).
+
+NB_WHO = r"\bwho\b|by whom|approver|accepted by|\bname\b|\brole\b|signed|sign-?off by"
+NB_WHEN = r"\bwhen\b|\bdate\b|dated|on what day"
+NB_VERSION = r"\bversion\b|\brev(ision)?\b|\bv\d|which (proposal|draft|copy)|as written|with (changes|amendments)|2026-10-23"
+NB_RESIDUAL = r"κ\s*=?\s*1\b|connectivity (of |at |= ?)?1\b|single (on-?prem |VPN )*endpoint|second (on-?prem )?(VPN )?endpoint|lan-onprem"
+NB_COVER = (r"exception|explicitly accept|accept(ed|s)? (the |this |that )?(residual|risk|exception)"
+            r"|(acceptance|approval|sign-?off) (must|should|needs to|has to|will need to) (cover|state|include|record|name|accept)"
+            r"|must (also )?be (explicitly )?accepted|waive")
+NB_GAP = r"missing|lack|\bno\b|absent|without|none of|not (set|present|specified|recorded|carried)|\bgaps?\b|must (add|supply)"
+NB_SCRIPT = r"\bok\b|pass|κ|connectivity|cut set|minimum cut|finding|clean"
+
 
 def eval20(run):
-    """netblueprint on a proposal nobody accepted: stop, ask, build nothing."""
+    """netblueprint on a proposal nobody accepted: stop, build nothing, and say what acceptance must record."""
     r = resp(run)
     nd = find_added(run, "net-blueprint", r"network-design[^/]*\.md$")
     accepted = []
@@ -1197,18 +1215,40 @@ def eval20(run):
     marked = [f for f in find_added(run, "net-blueprint", r"\.drawio$") if re.search(r"accepted", read(run / "repo" / f), re.I)]
     no_iac, iev = iac_written(run, "net-blueprint")
     ok_in, inev = net_unchanged(run, "net-blueprint", "proposal/", "design/", "diagrams/")
+    record = {k: near(r, r"accept", pat, 300) for k, pat in (("who", NB_WHO), ("when", NB_WHEN), ("version", NB_VERSION))}
+    contract = [k for k, pat in (("attrs.platform", r"platform"), ("tunnel crypto profile", r"crypto|IKE|IPsec (policy|profile)"),
+                                 ("secret_ref", r"secret_ref|vault|pre-?shared key|\bPSK\b"))
+                if near(r, pat, NB_GAP, 160)]
+    unlocks = {"network-design.md": has(r, r"network-design\.md"),
+               "blueprint/accepted model": any_of(r, r"meta\.stage", r"stage\W{0,12}blueprint", r"status\W{0,12}accepted"),
+               "logical-topology.drawio": has(r, r"logical-topology\.drawio"),
+               "segmentation.drawio": has(r, r"segmentation\.drawio")}
     return [
+        # capability
         ("recognises the proposal's status",
          any_of(r, r"\bProposed\b|not (yet )?(been )?accepted|awaiting|pending (review|acceptance)|no (record of )?acceptance"), "", C),
         ("asks for explicit acceptance before producing the package",
          any_of(r, r"explicit(ly)?\s+accept", r"accept(ed|ance)[^\n]{0,80}(before|first|required|needed|missing)",
-                r"once[^\n]{0,60}accept", r"confirm[^\n]{0,60}accept"), "", D),
-        ("names where acceptance comes from",
-         near(r, r"accept", r"2026-10-29|change board|\bCAB\b|board|proposal\.md"), "", D),
+                r"once[^\n]{0,60}accept", r"confirm[^\n]{0,60}accept"), "", C),
         ("says plainly that nothing was produced or changed",
          any_of(r, r"nothing (has been|was|is) (built|changed|produced|written|generated)",
                 r"(did not|didn't|have not|haven't|will not|won't) (produce|generate|write|create|build)",
-                r"no (files|package|blueprint)[^\n]{0,30}(written|produced|created|generated)"), "", D),
+                r"no (files|package|blueprint)[^\n]{0,30}(written|produced|created|generated)"), "", C),
+        # delta
+        ("names where acceptance comes from",
+         near(r, r"accept", r"2026-10-29|change board|\bCAB\b|board|proposal\.md"), "", D),
+        ("asks for the acceptance record: who, when and which version",
+         all(record.values()), f"{[k for k, v in record.items() if not v] or 'all three'} missing" if not all(record.values()) else "all three", D),
+        ("the κ=1 on-prem pair named as an exception acceptance must cover",
+         near(r, NB_RESIDUAL, NB_COVER, 200), "", D),
+        ("the missing audit named as a gap for the package",
+         near(r, r"\baudit\b", r"not (included|present|provided|available|here|in (this|the) (workspace|repo))|missing|absent"
+              r"|isn't (in|here|included|present)|no audit|doesn't (exist|contain)", 160), "", D),
+        ("says what acceptance unlocks: network-design.md, the accepted model, both views",
+         all(unlocks.values()), f"missing {[k for k, v in unlocks.items() if not v]}" if not all(unlocks.values()) else "all four", D),
+        ("the model checked against the IaC handoff contract: its gaps named", bool(contract),
+         f"{contract or 'no platform, crypto-profile or secret_ref gap named'}", D),
+        ("readiness quotes the shipped script's cross-check", near(r, r"netgraph", NB_SCRIPT, 300), "", D),
         ("no network-design.md written", not nd, f"{nd or 'none'}", D),
         ("no accepted topology.json written", not accepted, f"{accepted or 'none'}", D),
         ("no diagram marked accepted", not marked, f"{marked or 'none'}", D),

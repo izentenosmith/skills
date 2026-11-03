@@ -3,7 +3,8 @@
 > Criteria for grading who may talk to whom: `zones[]` and `flows[]` in `topology.json`, built from
 > NSGs/security groups, firewall policies, ACLs, zone-based firewalls and Kubernetes NetworkPolicies.
 > Theory is in [`theory.md`](theory.md) §8, §11–§12. Severity follows [`scoring.md`](scoring.md).
-> The harness checks any-any rules, internet-to-management exposure and missing default-deny in code.
+> `scripts/netgraph.py analyze` checks any-any rules, internet-to-management exposure and missing
+> default-deny from `flows[]`. Confirm each hit against the rule it came from.
 
 ## 🟢 Well done
 

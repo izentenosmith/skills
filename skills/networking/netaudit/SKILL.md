@@ -14,9 +14,9 @@ separately.
 ## Where this fits
 
 This skill evaluates and stops. For a redesign, continue with [netdesign](../netdesign/SKILL.md), then
-[netdiagram](../netdiagram/SKILL.md) and [netpropose](../netpropose/SKILL.md). The workflow
-coordinator is [networkflow.py](../../../harness/networkflow.py). The scoring and graph harness is
-[netreview.py](../../../harness/netreview.py).
+[netdiagram](../netdiagram/SKILL.md) and [netpropose](../netpropose/SKILL.md). Each runs on its
+own, and so does this one: everything it computes, it computes with the script in its own folder or by
+hand.
 
 The audit **does not prescribe**. It does not draw a target topology, write IaC, or decide what to
 retire. An audit that also prescribes has an incentive to shape its findings toward the prescription.
@@ -45,6 +45,9 @@ Reference docs, all in this folder:
   per-domain rubrics: 🟢 well done, 🔴 anti-patterns, checklist
 - [detection-signals.md](detection-signals.md) — the grep/regex behind each anti-pattern, with its
   confidence tag and a vendor/platform translation table
+- `scripts/netgraph.py` — validates `topology.json` and computes the graph lens, the address checks and
+  the flow checks from it. Python 3 standard library only; it reads the one file you name and writes
+  nothing.
 
 ---
 
@@ -73,8 +76,9 @@ translates.
   diagrams. If none exists, ask for it.
 - [ ] **Redact secrets before reading further.** Device configs and IaC carry passwords, type-7
   keys, SNMP communities and pre-shared keys. Never copy a secret value into an output. Record the
-  *kind* of secret and where it is (`fw-a.conf:212, SNMPv2c community, default value`). The harness
-  does this in code.
+  *kind* of secret and where it is (`fw-a.conf:212, SNMPv2c community, default value`). The Security
+  signals in [detection-signals.md](detection-signals.md) find them; quote the line number, not the
+  line.
 - [ ] **Count objects per domain** (networks, flows/rules, routing adjacencies and routes, service
   nodes, critical pairs, managed devices). The counts weight the scores.
 - [ ] **Usage status** per network: in use / barely used / decommissioned / duplicate. This is usually
@@ -97,8 +101,21 @@ checklist.
 
 Then compute the graph lens ([graph-theory.md](graph-theory.md)): components, articulation points,
 bridges, node/edge connectivity for each critical pair, betweenness, and robustness under random vs
-targeted removal. **When the harness is available, it computes these in code. Don't eyeball them.**
-By hand, on a small graph, show the cut sets you found.
+targeted removal. **Compute them; don't eyeball them.** Run the script in this skill's folder:
+
+```bash
+python3 <this skill's folder>/scripts/netgraph.py analyze <network>/analysis/topology.json
+```
+
+Exit 1 means `topology.json` breaks the contract: fix what it lists and run it again. Exit 0 prints a
+Markdown report (`--json` for the raw numbers): the metrics, a per-pair table with each minimum cut,
+the robustness table, and ✅/⚠️ findings with IDs (`NG-SPOF-…`, `NG-OVERLAP-…`, `NG-MGMT-…`). Its findings
+join yours. Keep the IDs, check each against its evidence, and paste the report into the summary's
+graph section. Without a Python interpreter, work the graph by hand with the procedures in
+graph-theory.md G4–G9: list each critical pair's cut set, and say that the robustness curve was not
+computed. If the repo carries this family's optional harness, `harness/netreview.py` can run the
+whole audit as a pipeline and calls this same script, so its numbers match yours; nothing here needs
+it.
 
 ## 🔬 Step 2: Evaluate each domain
 

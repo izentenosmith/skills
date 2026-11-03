@@ -4,8 +4,8 @@
 > and links form a graph. A handful of graph quantities answer the resilience questions an audit has
 > to settle: what is a single point of failure, how many failures a service survives, where the
 > chokepoints are, and how the network behaves under random versus targeted failure. Sections G1–G12
-> are cited by the rubrics, especially [`resilience.md`](../netaudit/resilience.md). The harness
-> (`harness/netgraph.py`) computes the metrics from `topology.json`
+> are cited by the rubrics, especially [`resilience.md`](../netaudit/resilience.md). `scripts/netgraph.py`,
+> which ships with every network skill, computes the metrics from `topology.json`
 > ([`topology-modeling.md`](topology-modeling.md)). Networking terms are in
 > [`theory.md`](theory.md).
 >
@@ -220,8 +220,9 @@ below it. A communication network functions while a giant component exists (Newm
   §16.5).
 
 **For a network audit**
-- The harness plots the **robustness curve** — the largest-component fraction, and the share of
-  critical pairs still connected, against the fraction of nodes removed — under three removal orders:
+- Report the **robustness curve** — the largest-component fraction against the fraction of nodes
+  removed (`netgraph.py analyze` tabulates it from 0 to 50%), and which critical pairs are still
+  connected along the way — under three removal orders:
   - **random** (independent hardware failure);
   - **highest-degree first** (an outage or attack on hubs);
   - **highest-betweenness first** (an attack on chokepoints).

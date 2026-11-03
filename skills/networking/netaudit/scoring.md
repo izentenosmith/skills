@@ -7,7 +7,8 @@
 > principle is incomplete.
 >
 > The formula is the same one the database family uses, so scores mean the same thing across both
-> families. The harness (`harness/netreview.py`) applies it in code.
+> families. Apply it by hand and show the arithmetic: two auditors with the same counts land on the
+> same number.
 
 ## Severity taxonomy
 
@@ -34,7 +35,7 @@ Not everything can be proven from configuration text. Every anti-pattern carries
 | ⚠️ **proxy** | A static signal that approximates a concern and needs judgement: rules without descriptions as a proxy for unowned policy, a degree outlier as a proxy for a hub dependency, any element built on `inferred:` evidence | Yes, at reduced weight (below) |
 | 🔬 **needs-data** | Needs runtime state: link utilization, rule hit counts, whether a route is actually installed, whether a device is in use, real failover behaviour, latency | **No.** Recorded as a flag, never scored. |
 
-Graph findings computed by `harness/netgraph.py` inherit the confidence of the evidence they rest on.
+Graph findings computed by `scripts/netgraph.py` inherit the confidence of the evidence they rest on.
 A bridge between two configured interfaces is ✅. A bridge through an `inferred:` node is ⚠️.
 
 ## Scoring model
@@ -169,7 +170,7 @@ only meaningful on the whole graph. Triage limits rule-by-rule reading, not inve
 |---:|---:|---:|---:|---:|---:|---:|
 
 ## Severity tally · Needs-data flags
-## Graph summary (computed by the harness)
+## Graph summary (from scripts/netgraph.py analyze)
 Components, articulation points, bridges, critical-pair connectivity, top betweenness, robustness
 under random vs targeted removal.
 ## Top findings (worst first)

@@ -3,8 +3,8 @@
 > Criteria for grading a network's address plan: `networks[]` in `topology.json`, built from VNet and
 > subnet declarations, interface addresses and IPAM exports. Theory is in [`theory.md`](theory.md)
 > §3–§4. Severity follows [`scoring.md`](scoring.md). Signals and confidence tags are in
-> [`detection-signals.md`](detection-signals.md). The harness checks overlap, containment and
-> duplicates in code (`harness/netgraph.py`).
+> [`detection-signals.md`](detection-signals.md). `scripts/netgraph.py analyze` checks overlap,
+> containment and duplicates with exact prefix arithmetic.
 
 ## 🟢 Well done
 

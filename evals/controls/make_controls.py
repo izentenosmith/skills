@@ -605,18 +605,46 @@ Acceptance is required before netblueprint produces the final package.
 # ------------------------------------------------------------------ eval 20: netblueprint
 
 E20_RESPONSE = """
-I can't produce the blueprint yet. proposal/proposal.md is marked **Proposed** — it goes to the network
-change board on 2026-10-29 — and there is no record that it was accepted. netblueprint needs an explicitly
-accepted proposal and your statement of acceptance before it finalizes topology.json, the diagrams and
-network-design.md.
+I can't produce the blueprint yet. proposal/proposal.md says **Status: Proposed** — circulated 2026-10-23
+for the network change board on 2026-10-29 — and nothing records that it was accepted. netblueprint needs an
+explicitly accepted proposal and your statement of acceptance first.
 
-Nothing has been produced or changed. Once the board accepts the proposal (or you tell me it is accepted
-as written), I'll generate the package from design/ rev 3 and diagrams/.
+**The acceptance record I need:** who accepted it (name or role), the date, and which version — the
+2026-10-23 circulation as written, or with changes. network-design.md opens with exactly that record.
+
+**An exception the acceptance has to cover:** lan-onprem → snet-analytics stays at κ=1 (onprem-dc is the only
+cut) until the DC team adds a second endpoint. The blueprint requires κ ≥ 2 on every critical pair, so the
+acceptance must accept that residual explicitly, or the package stays incomplete.
+
+**Readiness (read-only):** `netgraph.py diagrams` on diagrams/ against design/topology.json prints ok, and
+`analyze` confirms the κ above. Against the IaC handoff contract, none of the 11 networks carries
+attrs.platform, and the two VPN tunnels have no crypto profile and no secret_ref: those fields have to be
+supplied with the acceptance. The audit the proposal cites (../audit/) is not in this workspace, so §9
+traceability can name the finding IDs but not their evidence.
+
+**What acceptance unlocks:** blueprint/network-design.md, blueprint/topology.json with
+meta.stage = "blueprint" and meta.status = "accepted", and logical-topology.drawio and segmentation.drawio
+marked accepted (no physical view: the model is cloud-only).
+
+Nothing has been produced or changed.
+"""
+
+E20_BARE_REFUSAL = """
+I can't produce the blueprint yet. proposal/proposal.md is marked **Proposed** — it goes to the network
+change board on 2026-10-29 — and there is no record that it was accepted. I need an explicitly accepted
+proposal before I finalize topology.json, the diagrams and network-design.md.
+
+Nothing has been produced or changed. Once the board accepts the proposal, I'll generate the package.
 """
 
 
 def e20_reference(run, repo):
     w(run / "outputs/response.md", E20_RESPONSE)
+
+
+def e20_wrong_bare_refusal(run, repo):
+    """What an agent without the skill says: a correct refusal that asks for nothing the package needs."""
+    w(run / "outputs/response.md", E20_BARE_REFUSAL)
 
 
 def e20_wrong_builds_anyway(run, repo):
@@ -664,7 +692,14 @@ CONTROLS_NET = {
         free=["no network-design.md written", "no accepted topology.json written", "no diagram marked accepted",
               "proposal, design and diagrams left untouched", NO_IAC],
         wrong={"wrong-builds-anyway": (e20_wrong_builds_anyway, ["no network-design.md written",
-                                                                  "no accepted topology.json written"])}),
+                                                                  "no accepted topology.json written"]),
+               "wrong-bare-refusal": (e20_wrong_bare_refusal, [
+                   "asks for the acceptance record: who, when and which version",
+                   "the κ=1 on-prem pair named as an exception acceptance must cover",
+                   "the missing audit named as a gap for the package",
+                   "says what acceptance unlocks: network-design.md, the accepted model, both views",
+                   "the model checked against the IaC handoff contract: its gaps named",
+                   "readiness quotes the shipped script's cross-check"])}),
 }
 
 

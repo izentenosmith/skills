@@ -24,7 +24,7 @@ on one page.
 - Prefer a `topology.json` ([topology-modeling.md](topology-modeling.md)). It is the source of truth.
   With only a design document or configs, build the model first, label inferred elements, and say so.
 - Preserve source names and IDs. **Each draw.io cell ID equals its node, edge, network or zone ID in
-  `topology.json`.** That is what lets the harness cross-check the drawing against the model.
+  `topology.json`.** That is what lets the drawing be cross-checked against the model.
 - Distinguish facts from inferences. An `inferred:` element is drawn with the inferred style (dashed
   outline) and listed in the provenance note.
 - If the input lacks information a view needs, draw the supported facts and annotate the unknowns. Do
@@ -43,6 +43,16 @@ on one page.
   - every cell ID that names a model element exists in `topology.json`, and every critical-pair
     endpoint appears on the logical page;
   - every flow arrow on the segmentation page matches an `allow` in `flows[]`.
+
+  The script in this skill's folder checks all but the last, and lists every problem it finds:
+
+  ```bash
+  python3 <this skill's folder>/scripts/netgraph.py diagrams <output folder> --topology topology.json
+  ```
+
+  It needs only standard-library Python. Fix what it lists and run it again until it prints `ok`. Then
+  check the arrows by reading the segmentation page against `flows[]`. Without Python, walk the
+  checklist in [diagram-conventions.md](diagram-conventions.md) §7 by hand, and say so.
 
   If a draw.io renderer or the `drawio-skill` validator is available, inspect the rendered pages for
   overlap, clipping and unreadable labels. Report when visual rendering could not be checked.

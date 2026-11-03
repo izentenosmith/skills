@@ -4,8 +4,9 @@
 > normalized model, `topology.json`. The audit recovers it from evidence, the design writes the target
 > one, the diagrams draw it, the proposal compares the two, and the blueprint hands the accepted one to
 > the IaC skill. Theory terms are defined in [`theory.md`](../netaudit/theory.md) (§N) and
-> [`graph-theory.md`](../netaudit/graph-theory.md) (G-N). The harness (`harness/netgraph.py`) computes graph
-> metrics and address/flow checks from this file, so the shape below is a contract, not a suggestion.
+> [`graph-theory.md`](../netaudit/graph-theory.md) (G-N). `scripts/netgraph.py`, which ships with every network
+> skill, validates this file and computes graph metrics and address/flow checks from it, so the shape
+> below is a contract, not a suggestion.
 
 ## M0. Three views, one model
 
@@ -70,10 +71,10 @@ multigraph of `nodes` and `edges`. Flows are directed and are analysed separatel
 | `networks[]` | Every network also appears as a node with the same `id` (kind `vnet`, `subnet` or `lan`). That is how graph reachability applies to address checks (overlap between *reachable* networks, §3). `parent` names the enclosing network (subnet → VNet). |
 | `zones[].trust` | An integer: 0 = untrusted (internet), higher = more trusted. The segmentation diagram orders zones by it. |
 | `flows[]` | Directed. `proto` is `tcp`, `udp`, `icmp` or `any`. `ports` is `"443"`, `"1024-65535"`, `"22,3389"` or `"*"`. `from_zone`/`to_zone` may be `"*"` (any). `action` is `allow` or `deny`. `priority`: lower is evaluated first (NSG/ACL order). A default-deny is an explicit `deny` flow `* → <zone>` or `<zone> → *` with the lowest precedence, citing where the platform makes it implicit. |
-| `critical_pairs[]` | The source/destination pairs whose reachability *is* the service: users → app, app → database, site → internet, on-prem → cloud. The harness computes node and edge connectivity (G5) for each one. A model with no critical pairs cannot be graded on resilience; say so. |
+| `critical_pairs[]` | The source/destination pairs whose reachability *is* the service: users → app, app → database, site → internet, on-prem → cloud. `netgraph.py` computes node and edge connectivity (G5) for each one. A model with no critical pairs cannot be graded on resilience; say so. |
 | `evidence` | A `file:line` reference into the evidence set, or `inferred: <reason>` when the element is a modelling inference. Inferred elements never ground a ✅ decidable finding. |
-| `attrs.shared_fate` | Groups nodes that fail together despite being separate boxes: an HA pair with one control plane or config sync, two VMs on one host, two tunnels on one gateway. The harness counts a shared-fate group as one node for connectivity. |
-| `attrs.managed_ha` | `true` on a node or edge that the platform makes redundant: a VNet/VPC's implicit router (the `vnet` node), a subnet's attachment edge to its VNet, a zone-redundant managed gateway or firewall with the zones in evidence. The harness never reports these as articulation points or bridges, and never cuts them for connectivity. It is a claim, so it needs `file:line` evidence (the SKU or zones setting). It is ignored on `inferred:` elements. Never set it on customer-run devices (NVAs, VMs, on-prem boxes), whatever their HA configuration — those get `shared_fate` instead. |
+| `attrs.shared_fate` | Groups nodes that fail together despite being separate boxes: an HA pair with one control plane or config sync, two VMs on one host, two tunnels on one gateway. `netgraph.py` counts a shared-fate group as one node for connectivity. |
+| `attrs.managed_ha` | `true` on a node or edge that the platform makes redundant: a VNet/VPC's implicit router (the `vnet` node), a subnet's attachment edge to its VNet, a zone-redundant managed gateway or firewall with the zones in evidence. `netgraph.py` never reports these as articulation points or bridges, and never cuts them for connectivity. It is a claim, so it needs `file:line` evidence (the SKU or zones setting). It is ignored on `inferred:` elements. Never set it on customer-run devices (NVAs, VMs, on-prem boxes), whatever their HA configuration — those get `shared_fate` instead. |
 
 ## M2. Modelling rules
 

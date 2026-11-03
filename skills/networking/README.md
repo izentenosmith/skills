@@ -2,8 +2,12 @@
 
 Five independently usable skills for auditing, designing, diagramming, proposing and blueprinting
 computer networks: cloud networks (Terraform, Bicep, ARM, Azure first), on-prem device configs, and
-container networking. For coordinated work, use [`harness/networkflow.py`](../../harness/networkflow.py).
-The harness lives in `harness/` and calls the skills here.
+container networking. Each skill folder is complete on its own: its references, plus
+`scripts/netgraph.py`, a standard-library Python script that validates `topology.json`, computes the
+graph metrics (articulation points, bridges, critical-pair connectivity, betweenness, robustness),
+checks addresses and flows, and cross-checks draw.io views against the model. A clone of this repo
+also carries an optional coordinator, [`harness/networkflow.py`](../../harness/networkflow.py), that
+chains the five; no skill needs it.
 
 ```text
 Existing network: netaudit → netdesign → netdiagram → netpropose
@@ -38,8 +42,9 @@ Or one at a time:
 | netblueprint | `npx skills add izentenosmith/skills --skill netblueprint` |
 
 The installer dereferences the companion-reference symlinks, so each installed folder is
-self-contained. It installs the skills only: `harness/networkflow.py`, `netreview.py` and
-`netgraph.py` need a clone. Flags (`-a`, `-g`, `-y`) are in the
+self-contained, `scripts/netgraph.py` included: an installed skill computes its own metrics with
+nothing else on the machine but Python 3. Only the optional coordinator (`harness/networkflow.py`,
+`netreview.py`) needs a clone. Flags (`-a`, `-g`, `-y`) are in the
 [root README](../../README.md#install-with-npx).
 
 ## The theory underneath
@@ -59,7 +64,9 @@ Two lenses, as relational theory and ER modelling are for the database family:
 Every finding cites a section from one of the two, and an audit finding without its principle is
 incomplete.
 
-## Coordinated workflow
+## Optional: the coordinated workflow
+
+Nothing in this section is needed to use a skill. It describes what a clone of this repo adds.
 
 Run `python3 harness/networkflow.py --help` for the harness interface. It supports existing-network and
 new-network runs, and partial runs when the prerequisite artifacts are available.
@@ -67,8 +74,9 @@ new-network runs, and partial runs when the prerequisite artifacts are available
 **Existing-network runs** go through `netreview.py` first:
 1. It redacts every secret from the evidence before a model sees it.
 2. It runs one read-only `netaudit` agent per network, which recovers `topology.json`.
-3. `netgraph.py` computes articulation points, bridges, critical-pair connectivity, betweenness,
-   robustness curves, CIDR overlap and flow exposure **in code**.
+3. `netgraph.py` (the same script each skill ships; `harness/netgraph.py` links to it) computes
+   articulation points, bridges, critical-pair connectivity, betweenness, robustness curves, CIDR
+   overlap and flow exposure **in code**.
 4. It scores every domain with the same formula the database family uses.
 
 The **gate** passes a network only when all of these hold:
@@ -80,7 +88,8 @@ The **gate** passes a network only when all of these hold:
 
 The gate and its reasons are recorded. Networks that fail it continue to design, diagrams and proposal.
 
-The harness checks the canonical diagram set:
+The harness checks the canonical diagram set, with the checks a skill runs as
+`scripts/netgraph.py diagrams`:
 - the required files and page names;
 - a visible `Network diagram conventions` legend;
 - every network labelled with its model CIDR;
@@ -105,6 +114,7 @@ outside this repository, dereference the links during copy (for example,
 | Diagram conventions | Canonical in `netdiagram/`, linked from `netpropose/` and `netblueprint/`. The required views, glyphs, IDs and validation. |
 | Proposal | `netpropose/`. Decision rules, posture by score band, cut-over sequencing. |
 | Blueprint | `netblueprint/`. Package layout, the IaC handoff contract, the `network-design.md` template. |
+| `scripts/netgraph.py` | Canonical in `netaudit/scripts/`, linked from each other skill's `scripts/` and from `harness/netgraph.py`. Model validation, the graph lens, address and flow checks, the diagram cross-check. |
 
 ## Measured
 

@@ -7,8 +7,8 @@
 > need a live network.
 >
 > The signals that need a graph or address arithmetic — overlap, containment, articulation points,
-> bridges, connectivity, shadowed rules — are **not grep problems**. Build `topology.json` and let the
-> harness compute them (`harness/netgraph.py`). Grep finds the lines; the graph finds the structure.
+> bridges, connectivity, shadowed rules — are **not grep problems**. Build `topology.json` and run
+> `python3 scripts/netgraph.py analyze topology.json` on it. Grep finds the lines; the graph finds the structure.
 
 ## Platform notes
 
@@ -81,7 +81,7 @@ On another platform the anti-pattern holds; the signal changes.
 | Anti-pattern | Command | Conf. |
 |---|---|---|
 | Telnet / HTTP management | `grep -rnE 'transport input (telnet\|all)\|^ip http server\|set system services telnet' configs/` | ✅ |
-| SNMP v1/v2c | `grep -rnE '^snmp-server community\|set snmp community' configs/` | ✅ (the redactor masks the value) |
+| SNMP v1/v2c | `grep -rnE '^snmp-server community\|set snmp community' configs/` | ✅ (record the line, never the value) |
 | Reversible / cleartext passwords | `grep -rnE 'password 7 \|password 0 \|^username \S+ password ' configs/` | ✅ |
 | Secrets in IaC | `grep -rnE '(shared_key\|admin_password\|pre_shared_key\|client_secret)\s*=\s*"[^$]' --include='*.tf' --include='*.tfvars' .` | ✅ |
 | Weak IKE/IPsec | `grep -rnE 'encryption (des\|3des)\|hash (md5\|sha)$\|group (1\|2\|5)$\|aggressive-mode\|crypto isakmp' configs/`; azurerm `ike_encryption\s*=\s*"(DES\|DES3)"`, `dh_group\s*=\s*"(DHGroup1\|DHGroup2)"` | ✅ |
