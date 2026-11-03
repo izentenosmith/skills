@@ -1,6 +1,6 @@
 # Skills
 
-A collection of repo-agnostic AI coding agent skills — taking a feature from a vague idea to reviewed, tested code, packaging it to run, dealing with it once it's live, grading the database and the network underneath it, reviewing the infrastructure code and pipelines that ship it, and securing all of it — threat model, application code, and the hosts and cloud accounts it runs on. Each skill lives in its own folder as a `SKILL.md` file with YAML frontmatter (`name` + `description`) that the agent loads on demand when the work matches.
+A collection of repo-agnostic AI coding agent skills — taking a feature from a vague idea to reviewed, tested code, packaging it to run, dealing with it once it's live, grading the database and the network underneath it, reviewing the infrastructure code and pipelines that ship it, securing all of it — threat model, application code, and the hosts and cloud accounts it runs on — and reviewing each change as it arrives. Each skill lives in its own folder as a `SKILL.md` file with YAML frontmatter (`name` + `description`) that the agent loads on demand when the work matches.
 
 Works with [Cursor](https://www.cursor.com/) and [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
 
@@ -10,7 +10,7 @@ Inspired by [mattpocock/skills](https://github.com/mattpocock/skills).
 
 ## What's in here
 
-Seven families of skills under `skills/` — the first three in the order work actually moves through them, then the database, the network, the infrastructure code and pipelines underneath, and the security of every layer — plus a harness that runs the development pipeline's closing loop as code, and the evals that measure the skills.
+Eight families of skills under `skills/` — the first three in the order work actually moves through them, then the database, the network, the infrastructure code and pipelines underneath, the security of every layer, and the review of each change as it arrives — plus a harness that runs the development pipeline's closing loop — and one pull request through every review skill — as code, and the evals that measure the skills.
 
 ```
 skills/
@@ -21,6 +21,7 @@ skills/
   networking/       audit, design, diagram, propose, blueprint
   infrastructure/   review, design, propose   terraform · pipelines
   security/         review, design, propose   threatmodel · appsec · hardening
+  review/           judge a change as it arrives   pr-prep · code-xray · peer-review · test-review · concurrency-review · review-retro
 harness/            the skills' rules as code: the closing loop, bug → PR, incident → post-mortem, DB and network audit → proposal
 evals/              seeded fixtures, scored assertions, the recorded benchmark
 marketplace/        packages each skill as a standalone zip for Agensi
@@ -35,8 +36,9 @@ marketplace/        packages each skill as a standalone zip for Agensi
 | **[networking/](skills/networking/README.md)** | [netaudit](skills/networking/netaudit/SKILL.md) · [netdesign](skills/networking/netdesign/SKILL.md) · [netdiagram](skills/networking/netdiagram/SKILL.md) · [netpropose](skills/networking/netpropose/SKILL.md) · [netblueprint](skills/networking/netblueprint/SKILL.md) |
 | **[infrastructure/](skills/infrastructure/README.md)** | [terraform](skills/infrastructure/terraform/SKILL.md) · [pipelines](skills/infrastructure/pipelines/SKILL.md) |
 | **[security/](skills/security/README.md)** | [threatmodel](skills/security/threatmodel/SKILL.md) · [appsec](skills/security/appsec/SKILL.md) · [hardening](skills/security/hardening/SKILL.md) |
+| **[review/](skills/review/README.md)** | [pr-prep](skills/review/pr-prep/SKILL.md) · [code-xray](skills/review/code-xray/SKILL.md) · [peer-review](skills/review/peer-review/SKILL.md) · [test-review](skills/review/test-review/SKILL.md) · [concurrency-review](skills/review/concurrency-review/SKILL.md) · [review-retro](skills/review/review-retro/SKILL.md) |
 
-The families are loosely coupled by design. `development` is a genuine pipeline where each stage checks the one before it; `containers` is an ordered pair (image, then stack) plus three skills for containers once they run — hardening, debugging, and Swarm; `operations` is a response chain — hotfix escalates to incident-fix, which hands its record to post-mortem — plus release-notes, which stands alone; `database` has seven independent skills — five of them coordinated by an optional harness, plus an architecture stage above them and a query review beside them — and `networking` has five coordinated the same way; `infrastructure` has two skills and `security` three, each running review → design → propose as modes of one skill. Every skill also works entirely on its own.
+The families are loosely coupled by design. `development` is a genuine pipeline where each stage checks the one before it; `containers` is an ordered pair (image, then stack) plus three skills for containers once they run — hardening, debugging, and Swarm; `operations` is a response chain — hotfix escalates to incident-fix, which hands its record to post-mortem — plus release-notes, which stands alone; `database` has seven independent skills — five of them coordinated by an optional harness, plus an architecture stage above them and a query review beside them — and `networking` has five coordinated the same way; `infrastructure` has two skills and `security` three, each running review → design → propose as modes of one skill; `review` has six skills around one change as it arrives from anyone — pr-prep before review, code-xray for what the history says, peer-review as the gate with test-review and concurrency-review as its specialists, review-retro after — and `harness/prreview.py` runs all of them on a single pull request. Every skill also works entirely on its own.
 
 **The family directories are scaffolding for reading this repo, nothing more.** The agent never sees them — it selects on each `SKILL.md`'s frontmatter `description`. When you take a skill, you take the skill folder; see [How to use](#how-to-use).
 
@@ -237,6 +239,29 @@ hardening    is the platform locked down   identity · network · data · host �
 
 ---
 
+## review
+
+Six skills for a change as it arrives — a pull request, a branch, a diff — rather than work you are building inside the pipeline. Each works alone; [`harness/prreview.py`](harness/README.md#one-pull-request-through-every-review-skill--prreviewpy) runs them all on one PR.
+
+```
+pr-prep ─► code-xray ─► peer-review ◄─ test-review · concurrency-review · appsec ─► re-review ─► review-retro
+readiness  history      lenses, verify,   specialists for lenses K, G and L          fixes        record, metrics,
+                        report                                                       verified     proposals
+```
+
+| Skill | What it does |
+|-------|--------------|
+| [pr-prep](skills/review/pr-prep/SKILL.md) | The author's side, and a readiness check before anyone reviews. Author mode self-reviews with the omission checklist, checks size and shape (one concern, under ~400 lines), proposes a split, and writes the description: the claim, acceptance criteria, how to verify, risk, a reading order — annotated without priming the reviewer. Readiness mode restates someone's claim, classifies alignment (Exact / Missing / Tangling), lists process gaps, and says Ready, Ready with gaps, or Not ready. |
+| [code-xray](skills/review/code-xray/SKILL.md) | Behavioural code analysis from git history (Tornhill), with a bundled read-only stdlib script: hotspots, rising hotspots, function-level X-rays, complexity trends and growth on a branch, change coupling and the missing co-change, clone twins, code age, and knowledge maps for routing reviews and spotting knowledge loss — never for rating people. PR mode feeds peer-review's risk map; codebase mode ranks refactoring targets by the interest they pay. |
+| [peer-review](skills/review/peer-review/SKILL.md) | A senior-peer review built on Claude Code's built-in `/code-review` recipe (finder angles, a CONFIRMED/PLAUSIBLE/REFUTED verify pass, a gap sweep). It adds what the review literature says reviewers miss: the change against its claim (Exact / Missing / Tangling), omissions including the co-changes `git log` says should travel together, attention ranked by risk and hotspot in review units under 400 lines, security, test, concurrency and data lenses, and evolvability held apart from bugs. Comments state problem, evidence and fix. The report ends with a coverage statement and a recommendation a human makes, and a re-review verifies the fixes. Read-only unless asked to fix or post. |
+| [test-review](skills/review/test-review/SKILL.md) | The specialist for peer-review's test lens: would each test fail if the behaviour broke, and does it test the requirement? Traces every claim and acceptance criterion to its tests (covered / weak / missing), names a mutation for each changed branch and shows whether an assertion catches it, and sweeps edges, error paths, determinism, doubles and clarity. A can't-fail claim is confirmed by a mutation probe in a scratch copy. |
+| [concurrency-review](skills/review/concurrency-review/SKILL.md) | The specialist for peer-review's concurrency lens: shared state and lock scope, check-then-act, atomicity, deadlock, async pitfalls, pools, transactions and isolation, idempotency and at-least-once delivery, distributed locks, schedulers on many instances. Every finding's scenario is an interleaving; CONFIRMED needs a reproduction, re-run, because one green run proves nothing. |
+| [review-retro](skills/review/review-retro/SKILL.md) | After review: a retrievable record of one PR (decisions, final outcomes, deferrals without an issue, answers that belong in the code), and over many reviews, metrics by type, severity, lens and area — never by person — plus checklist, rule and lint proposals a human approves. Nothing is applied. |
+
+**The theory comes from six sources plus the built-in recipe:** *Best Kept Secrets of Peer Code Review* (the Cisco study), *Software Design X-Rays*, the *OWASP Code Review Guide* v2, *Clean Code*, Liddament's *Effective Code Review*, and *Rethinking Code Review in the Age of AI* (2026) — distilled into R1–R32 (peer-review), PP1–PP20 (pr-prep), X1–X22 (code-xray), TR1–TR22 (test-review), CR1–CR23 (concurrency-review) and RR1–RR17 (review-retro), and every finding cites one. No scored eval yet; the harness is tested against a stub model.
+
+---
+
 ## Reference docs
 
 These carry no workflow of their own — the skill in the same folder links into them.
@@ -302,6 +327,32 @@ These carry no workflow of their own — the skill in the same folder links into
 | [scoring](skills/security/threatmodel/scoring.md) · [scoring](skills/security/appsec/scoring.md) · [scoring](skills/security/hardening/scoring.md) | severity, confidence, formula, gate, templates |
 | [design-patterns](skills/security/threatmodel/design-patterns.md) · [design-patterns](skills/security/appsec/design-patterns.md) · [design-patterns](skills/security/hardening/design-patterns.md) | DFD, STRIDE, threat trees, adversary and access-control catalogues; per-stack control patterns; the baseline catalogue with distro and cloud mapping, naming, tagging and exceptions |
 | [proposal](skills/security/threatmodel/proposal.md) · [proposal](skills/security/appsec/proposal.md) · [proposal](skills/security/hardening/proposal.md) | risk treatment; remediation in risk order; the no-lockout rollout |
+| [theory](skills/review/peer-review/theory.md) | peer-review — the principles every finding cites (R1–R32): Cohen, Tornhill, OWASP, Martin, Liddament, Kamalı et al., and the built-in recipe |
+| [lenses](skills/review/peer-review/lenses.md) | peer-review — the sixteen finder lenses A–P, each with what to look for and what it tends to miss; the omission checklist |
+| [history-signals](skills/review/peer-review/history-signals.md) | peer-review — hotspots, change coupling and the missing co-change, clone twins, complexity growth, code age, knowledge maps, from `git log` |
+| [security-lens](skills/review/peer-review/security-lens.md) | peer-review — the security pass every diff gets, the grep table, and the triggers that escalate to appsec |
+| [heuristics](skills/review/peer-review/heuristics.md) | peer-review — Clean Code's chapter-17 heuristics beyond Fowler; the concurrency, failure-path and test checklists; contested advice |
+| [comments](skills/review/peer-review/comments.md) | peer-review — the shape of a finding, labels, the usefulness filter, posting, pushback |
+| [report](skills/review/peer-review/report.md) | peer-review — severity, verdicts, the recommendation rule, caps, the findings-tool mapping, the report and re-review templates |
+| [theory](skills/review/pr-prep/theory.md) | pr-prep — the principles PP1–PP20: author preparation and its priming risk, the claim, size and shape, omissions |
+| [description-template](skills/review/pr-prep/description-template.md) | pr-prep — the PR description template, with a filled example |
+| [splitting](skills/review/pr-prep/splitting.md) | pr-prep — how to split or untangle a change, in which order, and when not to |
+| [self-review](skills/review/pr-prep/self-review.md) | pr-prep — the author's checklist, one item at a time |
+| [theory](skills/review/code-xray/theory.md) | code-xray — the principles X1–X22 from *Software Design X-Rays* |
+| [analyses](skills/review/code-xray/analyses.md) | code-xray — each analysis: what it measures, how the script computes it, thresholds, false readings and data cleaning |
+| [report](skills/review/code-xray/report.md) | code-xray — the PR-signals block and the codebase report with its ranked refactoring targets |
+| [theory](skills/review/test-review/theory.md) | test-review — the principles TR1–TR22: tests as evidence, would it fail, F.I.R.S.T. |
+| [checklist](skills/review/test-review/checklist.md) | test-review — the TQ checks in eight families, one item at a time |
+| [mutation](skills/review/test-review/mutation.md) | test-review — the mutation probe that confirms a test can't fail, and the tools |
+| [smells](skills/review/test-review/smells.md) | test-review — test smells: how to spot each one, why it matters, the fix |
+| [theory](skills/review/concurrency-review/theory.md) | concurrency-review — the principles CR1–CR23: shared state, atomicity, deadlock, delivery, and why one green run proves nothing |
+| [checklist](skills/review/concurrency-review/checklist.md) | concurrency-review — the CK checks, one item at a time |
+| [interleavings](skills/review/concurrency-review/interleavings.md) | concurrency-review — the notation for an interleaving, with worked examples |
+| [languages](skills/review/concurrency-review/languages.md) | concurrency-review — per-language traps and the tools that settle a claim |
+| [theory](skills/review/review-retro/theory.md) | review-retro — the principles RR1–RR17: records, measuring without rating people, improving |
+| [metrics](skills/review/review-retro/metrics.md) | review-retro — each metric: definition, formula, what it tells you, how it's gamed, minimum sample |
+| [record-template](skills/review/review-retro/record-template.md) | review-retro — the PR record and retro report templates |
+| [proposals](skills/review/review-retro/proposals.md) | review-retro — turning recurring findings into checklist items, rules and lint rules, with the human-approval rule |
 
 Each doc lives in the folder of the skill that uses it, and nothing reaches across folders.
 
@@ -340,6 +391,7 @@ Any stage can optionally hand its **read-only or fresh-context** work to a subag
 | threatmodel | evidence gathering from design docs and code | **the threat tree, the risk ratings and the treatment decisions** |
 | appsec | per-module or per-service code reading in a large repo | **scoring, the gate and the remediation order** |
 | hardening | per-account or per-host-role evidence collection | **scoring, the gate, the baseline and the rollout order** |
+| peer-review | **every finder lens and every verifier** — fresh context is the point | **the claim, the risk map, severity, ranking and the recommendation** |
 
 Each skill carries its own copy of the dispatch contract it needs, so the folders stay independently copyable — see [Conventions](#conventions).
 
@@ -347,9 +399,9 @@ Each skill carries its own copy of the dispatch contract it needs, so the folder
 
 [`evals/`](evals/README.md) holds the harness that measures it — seeded fixtures with planted defects (a rule that ignores its config, and a vacuous test that hides it), scored assertions, and the recorded result in [evals/benchmark.md](evals/benchmark.md).
 
-Assertions are split: **capability** (does the stage do its job at all) from **delta** (does it do what a change to the skill added). Only the delta column is evidence an edit helped. Against the pre-session baseline over 36 runs: **0.98 vs 0.22** on delta, **0.96 vs 0.92** on capability.
+Assertions are split: **capability** (does the stage do its job at all) from **delta** (does it do what a change to the skill added). Only the delta column is evidence an edit helped. The seven `development` stages were re-run on 2026-11-03, after the security material landed in them. Each eval ran three times with the skill and once against the pre-session baseline, 28 runs in all. They score **0.96 vs 0.25** on delta and **1.00 vs 0.89** on capability.
 
-**Scored: every skill but the three newest container skills.** The six `development` stages carry the recorded n=3 result above. The other skills' first run (2026-10-25) is one with-skill run each — three for evals 11–13 — against a baseline with no skill at all, which is the honest comparison for a skill that did not exist at the baseline ref. The security family's first run (2026-11-02, evals 38–46, one per mode) is the same shape. The database family (evals 30–34, 47–48) was re-run three times each on 2026-11-03, after its 2026-11-02 rework and with dbquery and dbarchitect run for the first time (eval 30 again after a dbaudit fix): **0.96 vs 0.67** on delta, **0.99 vs 0.95** on capability. Across all 46 scored evals: **0.96 vs 0.54** on delta, **0.99 vs 0.89** on capability. Per eval in [evals/benchmark.md](evals/benchmark.md). `container-hardening`, `container-debug` and `docker-swarm` (evals 35–37), added 2026-11-02, have their fixtures, assertions and controls but no scored run yet.
+**Scored: every skill but the three newest container skills.** The seven `development` stages carry the n=3 result above. The other skills' first run (2026-10-25) is one with-skill run each — three for evals 11–13 — against a baseline with no skill at all, which is the honest comparison for a skill that did not exist at the baseline ref. The security family's first run (2026-11-02, evals 38–46, one per mode) is the same shape. The database family (evals 30–34, 47–48) was re-run three times each on 2026-11-03, after its 2026-11-02 rework and with dbquery and dbarchitect run for the first time (eval 30 again after a dbaudit fix): **0.96 vs 0.67** on delta, **0.99 vs 0.95** on capability. Across all 46 scored evals: **0.96 vs 0.54** on delta, **1.00 vs 0.90** on capability. Per eval in [evals/benchmark.md](evals/benchmark.md). `container-hardening`, `container-debug` and `docker-swarm` (evals 35–37), added 2026-11-02, have their fixtures, assertions and controls but no scored run yet.
 
 The fixtures are seeded so a naive answer fails them: a compose fixture with a stale `ELASTICSEARCH_URL`, an incident whose trigger sits nine days before the outage, production levers that are stubs recording their calls (so "took no action without confirmation" is checked, not inferred), networks graded by parsing every CIDR and every draw.io cell, DDL executed in SQLite and probed with rows that must be refused, acceptance tests run against three mutants.
 
@@ -363,6 +415,20 @@ The fixtures are seeded so a naive answer fails them: a compose fixture with a s
 - `dbdesign` **0.87 vs 0.46** (n=3), below its earlier 0.95; its misses vary run by run.
 
 Three skills were fixed after their first run and re-run three times each: `acceptance-tests` **0.75 → 1.00** (criteria that already hold are tested with their contrast; edges tested within seconds; one mapping line per criterion), `dbpropose` **0.61 → 0.92** (a `proposal.md` file, a step table with validation, rollback and blast radius, data before constraints, expand/contract, acceptance before dbbuild), and `dbdesign` **0.69 → 0.95** — most of whose first score was four grader false negatives (bold Barker sentences, a "Normal-form" heading, the intersection table's own column, an age-band lookup), fixed in `grade.py` with every control re-checked.
+
+The 2026-11-03 re-run of the seven `development` stages, before → after:
+
+| eval | skill | delta | cap | cap base |
+|---|---|---|---|---|
+| 0 | architect-deep-dive | 0.91 (n=1) → **1.00** | 1.00 → 1.00 | 1.00 |
+| 1 | agent-brief | 1.00 → **1.00** | 1.00 → 1.00 | 0.86 → 1.00 |
+| 2 | tdd | 1.00 → **1.00** | 0.78 → **1.00** | 0.83 → 1.00 |
+| 27 | acceptance-tests | 1.00 → **0.94** | 1.00 → 1.00 | 0.50 → 0.67 |
+| 3 | refactor-review | 1.00 → **0.88** | 1.00 → 1.00 | 1.00 → 0.75 |
+| 4 | devils-advocate | 0.92 → **0.87** | 1.00 → 1.00 | 1.00 |
+| 5 | tyr-verdict | 1.00 → **1.00** | 1.00 → 1.00 | 0.83 |
+
+tdd's 0.78 came from the grader. Every run wrote a boundary test, but one put it in a new test file the grader didn't read, and a relative venv path failed "suite is green" for every run, the baseline's included. Both are fixed in `grade.py`. tdd also now keeps new tests in the file the brief names. Its delta is 1.00 against a baseline that now scores 1.00 too, so eval 2 no longer measures what tdd adds. Three delta scores dropped: refactor-review's to **0.88**, because one run of three skipped the severity vocabulary, the size calibration and the stopping rule; devils-advocate's to **0.87**, because two of three didn't say what would settle each unproven finding; and acceptance-tests' to **0.94**.
 
 ## How to use
 
@@ -393,6 +459,9 @@ npx skills add izentenosmith/skills --skill terraform pipelines
 
 # security — threat model, application code, hardening (review, design, propose)
 npx skills add izentenosmith/skills --skill threatmodel appsec hardening
+
+# review — a change as it arrives
+npx skills add izentenosmith/skills --skill pr-prep code-xray peer-review test-review concurrency-review review-retro
 ```
 
 **Everything:**
@@ -438,6 +507,12 @@ npx skills add izentenosmith/skills --skill '*'
 | security | `npx skills add izentenosmith/skills --skill threatmodel` |
 | | `npx skills add izentenosmith/skills --skill appsec` |
 | | `npx skills add izentenosmith/skills --skill hardening` |
+| review | `npx skills add izentenosmith/skills --skill pr-prep` |
+| | `npx skills add izentenosmith/skills --skill code-xray` |
+| | `npx skills add izentenosmith/skills --skill peer-review` |
+| | `npx skills add izentenosmith/skills --skill test-review` |
+| | `npx skills add izentenosmith/skills --skill concurrency-review` |
+| | `npx skills add izentenosmith/skills --skill review-retro` |
 
 Any mix works too — `--skill` takes as many names as you give it.
 

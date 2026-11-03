@@ -1,6 +1,6 @@
 # harness — the rules the skills state, run by code
 
-Six harnesses and the tools they share. Each one runs a skill's judgment through headless `claude -p` calls and enforces in code everything that isn't judgment.
+Eight harnesses and the tools they share. Each one runs a skill's judgment through headless `claude -p` calls and enforces in code everything that isn't judgment.
 
 | Harness | Runs | Returns |
 |---|---|---|
@@ -11,6 +11,7 @@ Six harnesses and the tools they share. Each one runs a skill's judgment through
 | [`dbreview.py`](dbreview.py) | dbaudit's read-only audit and score gate | scored audit files, synthesis, and gate decision; usable directly |
 | [`networkflow.py`](networkflow.py) | coordinates existing/new network workflows across the networking skills | audit gate, design + target topology, canonical draw.io views, proposal, and an acceptance-gated blueprint |
 | [`netreview.py`](netreview.py) | netaudit's read-only audit, graph analysis and gate | redacted evidence, recovered topology, graph results, scored domains, synthesis, gate decision |
+| [`prreview.py`](prreview.py) | one pull request through every `review` skill — pr-prep, code-xray, peer-review, test-review, concurrency-review, appsec, review-retro | a report with a computed recommendation, findings, a COMMENT-review payload; re-review rounds; a PR record, metrics and proposals |
 
 ## The closing loop — `loop.py`
 
@@ -41,6 +42,7 @@ This folder makes the referee a program. The model still does every judgment; th
 | [`networkflow.py`](networkflow.py) | existing network → audit and gate → design → diagrams → proposal; new network → design → diagrams → proposal; accepted proposal → blueprint in a separate run. |
 | [`netreview.py`](netreview.py) | network evidence → redaction → audit and recovered `topology.json` → graph metrics, scored by formula in code → a per-network gate. |
 | [`netgraph.py`](netgraph.py) | `topology.json` → components, articulation points, bridges, Menger connectivity per critical pair, betweenness, robustness curves, CIDR overlap and flow exposure; `.drawio` views → the conventions cross-check. A symlink to [`skills/networking/netaudit/scripts/netgraph.py`](../skills/networking/netaudit/scripts/netgraph.py): the skills ship it, so they compute the same numbers without this folder. |
+| [`prreview.py`](prreview.py) | One PR → readiness, history, finders and specialists, one verifier per candidate, a gap sweep, synthesis → a report whose recommendation is computed. `--re-review` verifies the fixes; `--retro` writes the record. |
 | [`tests/`](tests) | `python3 -m unittest discover harness/tests` — the grammar, the rules, and the whole loop against a stub `claude`. |
 
 Stdlib Python 3.10+, no dependencies. The skills don't need any of this — every skill folder still works copied on its own, in Cursor or Claude Code. The harness is an optional layer that enforces what they ask for when you want it enforced.
@@ -257,6 +259,43 @@ python3 harness/netgraph.py analyze audit-review/audit/prod/topology.json --md
   - usage is neither decommissioned nor duplicate.
 
   Migration intent routes every network to a proposal.
+
+## One pull request through every review skill — `prreview.py`
+
+The `review` skills each work alone. This runs all of them on one change and keeps every rule they state about each other.
+
+```bash
+python3 harness/prreview.py --repo . --pr 482                     # a GitHub PR through gh, read-only
+python3 harness/prreview.py --repo . --base main --body @pr.md     # the current branch as the change
+python3 harness/prreview.py --repo . --pr 482 --post              # + one COMMENT review on the PR
+python3 harness/prreview.py --repo . --pr 482 --re-review         # after new commits: verify each finding
+python3 harness/prreview.py --repo . --pr 482 --retro             # the PR record, metrics, proposals
+python3 harness/prreview.py --repo . --pr 482 --dry-run           # prompts up to the finders, nothing called
+```
+
+| Stage | Who | What code checks |
+|---|---|---|
+| acquire | `gh`, `git` | the PR's head and base, the merge-base, the diff; **meaningful lines** leave out lockfiles, generated, vendored and minified files; PR text, linked issues and threads are kept as **untrusted data** |
+| readiness | **pr-prep**, readiness mode | read-only; returns the claim, acceptance criteria, alignment, concerns, a split plan, a reading order, gaps. Not ready is recorded, never a stop |
+| history | **code-xray**'s script — no model | hotspots, complexity growth on the branch, missing co-changes, clone twins, knowledge loss, suggested reviewers; a failure is a coverage note, never fatal |
+| plan | code | the **tier** from size and the Deep triggers (money, auth, tenancy, personal data, crypto, migrations, concurrency, public API, a hotspot); **review units** ≤ 400 lines with tests beside their code, by risk; **routing**: test-review when code or tests changed, concurrency-review on a concurrency trigger, appsec (PR tier) on an escalation trigger. A missing specialist folds its lens back into peer-review's groups |
+| find | **peer-review** lens groups + the specialists, in parallel | `Read,Grep,Glob` only. Quick is one pass (A, B, I, J, L); Standard is five groups; Deep runs the line-level groups once per unit. A finder that never returns is an **unreviewed surface** |
+| verify | one fresh verifier per candidate | each in a throwaway copy of the head (`--no-exec`: read-only); REFUTED is dropped; PLAUSIBLE stays at Deep, and below Deep only when a maintainer would act on it; a verifier that never returns leaves the candidate **unverified** — in Coverage, never in Findings |
+| gap | peer-review's gap sweep | Standard and Deep; up to 8 new candidates, verified the same way |
+| synthesis | peer-review's main thread | every kept candidate classified exactly once (or merged into a duplicate); each comment opens with its severity label; one correction round |
+| report | code | **PR-n ids**, ranking (severity, then bugs and security first), the **cap** (Quick 5 · Standard 10 · Deep 20 above nit; a blocker is never cut), and the **recommendation by report.md's rule**. The synthesis states one too; if they differ, both are written and the computed one stands |
+
+Facts the harness computes itself become findings without a verifier, because the evidence is the computation: **instruction-like text in the PR text** (a security major — the text was fenced and never obeyed), an empty PR description, and a change over ~400 lines.
+
+**Outputs**, in `--out` (default `<repo>/.review/<pr-n or branch>/` — ignore `.review/` in the host repo): `report.md`, `findings.json`, `comments.json` (the COMMENT review, inline where the line is in the diff), `readiness.json`, `xray.json` / `xray.md`, `plan.json`, every stage's cache, and `runs/<timestamp>/` with each call's prompt and raw output. A re-run on the same head reuses every finished stage; a new head refuses to overwrite the old review until you pass `--re-review` or `--fresh`.
+
+**Re-review.** Every open finding gets one verifier on the new head: fixed, partly fixed, not fixed, withdrawn (with the quoted code that shows it), or deferred — and a deferral without a tracked issue is recorded as **not fixed**. The fix delta goes through the finders again; new defects take new ids, never an old one. `rereview-<sha>.md` holds the table, and `findings.json` keeps each finding's history.
+
+**Retro.** Metrics are computed in code across every review folder in `--out` — findings per kLOC, by type, severity, lens and area, fix-verification and usefulness rates, recurring defect classes (≥ 3 times across ≥ 2 PRs is a candidate) — and never by person: no author is read. review-retro writes the record and the proposals; `proposals.md` says on its first line that nothing is applied.
+
+**Posting** needs `--pr` and `--post`, and happens once per head as a single `COMMENT` review — never an approval or a request for changes. The recommendation is in its text; a person approves and merges.
+
+Exit: 0 Approve or Approve with nits · 1 error · 2 usage · 3 Needs discussion · 4 Request changes — so CI can gate on it, or not.
 
 ## Trade-offs worth knowing
 
