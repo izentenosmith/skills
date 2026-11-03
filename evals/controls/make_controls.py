@@ -2085,9 +2085,10 @@ DB_ER_POS = {"OWNER": (40, 60), "PET": (360, 60), "VET": (680, 60), "APPOINTMENT
              "VACCINATION": (360, 320), "VACCINE": (40, 320), "REMINDER": (40, 560)}
 
 
-def db_er_model(model, ids=lambda c: c, chen=False, inferred=True, rev=3):
+def db_er_model(model, ids=lambda c: c, chen=False, inferred=True, uid_bars=True, rev=3):
     """The Barker ER page. `chen` draws every relationship as a Chen diamond and the vaccination as one
-    four-way diamond; `inferred=False` draws PET – VET as fact; `ids` maps each semantic cell ID."""
+    four-way diamond; `inferred=False` draws PET – VET as fact; `uid_bars=False` leaves out the UID bars;
+    `ids` maps each semantic cell ID."""
     ents = model["entities"] + model["associations"]
     cells = [db_vertex(ids("er-title"), f"PawLedger clinic database — Barker ER Model (design rev {rev})",
                        "text;fontSize=16;fontStyle=1;", 40, 0, 600, 30),
@@ -2128,14 +2129,15 @@ def db_er_model(model, ids=lambda c: c, chen=False, inferred=True, rev=3):
             if r["id"] == "pet-vet" and inferred:
                 role += " (inferred)"
             many_here = r[f"{other}_card"] == "many"
-            mark = "ERmany" if many_here else ("ERone" if r.get("uid") and end == "a" else "none")
+            uid_end = uid_bars and r.get("uid") and end == "a"
+            mark = ("ERoneToMany" if uid_end else "ERmany") if many_here else ("ERone" if uid_end else "none")
             style = (f"html=1;endArrow=none;startArrow={mark};startFill=0;"
                      + ("dashed=1;" if r[f"{end}_opt"] == "may" else "dashed=0;"))
             cells.append(db_edge(ids(f"er-rel-{r['id']}-{end}"), role, style, eid[r[end]], mid))
     return db_mxfile("er", "Barker ER Model", cells)
 
 
-def db_column_label(model, t, c):
+def db_column_label(model, t, c, chip_key=False):
     fks = {(f["table"], f["column"]) for f in model["foreign_keys"]}
     uq = {(u["table"], u["columns"][0]) for u in model["unique"] if len(u["columns"]) == 1}
     ck = {(k["table"], k["column"]): k["rule"] for k in model["checks"]}
@@ -2150,13 +2152,14 @@ def db_column_label(model, t, c):
     if (t["name"], c["name"]) in ck:
         label += f" CK {ck[(t['name'], c['name'])]}"
     if t["name"] == "pet" and c["name"] == "microchip":
-        label += " (uniqueness undecided, Q3)"
+        label = "UQ " + label if chip_key else label + " (uniqueness undecided, Q3)"
     return label
 
 
-def db_relational_model(model, ids=lambda c: c, rev=3):
+def db_relational_model(model, ids=lambda c: c, rev=3, chip_key=False):
     """The relational page: one swimlane per table, one row per column, one edge per FK.
-    rev=2 draws owner with the pre-split full_name column (the mismatch planted for eval 33)."""
+    rev=2 draws owner with the pre-split full_name column (the mismatch planted for eval 33);
+    `chip_key` marks pet.microchip unique although Q3 leaves it undecided."""
     cells = [db_vertex(ids("rel-title"), f"PawLedger clinic database — Relational model (design rev {rev})",
                        "text;fontSize=16;fontStyle=1;", 40, 0, 600, 30),
              db_vertex(ids("rel-legend"), "Legend — relational notation<br>PK primary key · FK foreign key (arrow: child → parent)"
@@ -2173,8 +2176,11 @@ def db_relational_model(model, ids=lambda c: c, rev=3):
         cells.append(db_vertex(tid, t["name"], "swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;"
                                "startSize=26;rounded=0;html=1;", 40 + 300 * (i % 4), 60 + 260 * (i // 4), 260, 26 + 24 * len(cols)))
         for j, c in enumerate(cols):
-            cells.append(db_vertex(ids(f"rel-{t['name']}-{c['name']}"), db_column_label(model, t, c),
+            cells.append(db_vertex(ids(f"rel-{t['name']}-{c['name']}"), db_column_label(model, t, c, chip_key),
                                    "text;align=left;spacingLeft=4;html=1;", 0, 26 + 24 * j, 260, 24, parent=tid))
+        for u in (u for u in model["unique"] if u["table"] == t["name"] and len(u["columns"]) > 1):
+            cells.append(db_vertex(ids(f"rel-{t['name']}-uq"), f"UNIQUE ({', '.join(u['columns'])})",
+                                   "text;align=left;spacingLeft=4;html=1;fontStyle=2;", 0, 26 + 24 * len(cols), 260, 24, parent=tid))
     for f in model["foreign_keys"]:
         cells.append(db_edge(ids(f"rel-fk-{f['table']}-{f['column']}"), f"fk_{f['table']}_{f['column']}",
                              "edgeStyle=entityRelationEdgeStyle;html=1;endArrow=block;",
@@ -2192,13 +2198,14 @@ def generated_ids():
     return lambda c: seen.setdefault(c, f"Zq8-{len(seen) + 2}")
 
 
-def e32_common(run, repo, er_kw=None, rel_ids=None):
+def e32_common(run, repo, er_kw=None, rel_ids=None, rel_kw=None, checks=True):
     model = db_model(repo)
     w(repo / "diagrams/er-model.drawio", db_er_model(model, **(er_kw or {})))
-    w(repo / "diagrams/relational-model.drawio", db_relational_model(model, **({"ids": rel_ids} if rel_ids else {})))
+    w(repo / "diagrams/relational-model.drawio",
+      db_relational_model(model, **({"ids": rel_ids} if rel_ids else {}), **(rel_kw or {})))
     w(run / "outputs/response.md", "Wrote diagrams/er-model.drawio (Barker ER Model) and diagrams/relational-model.drawio. "
-      "Both parse as uncompressed mxfile XML; rendering was not checked (no draw.io renderer here). "
-      "PET – VET is drawn as inferred (Q4).\n")
+      + ("Both parse as uncompressed mxfile XML; rendering was not checked (no draw.io renderer here). " if checks else "")
+      + "PET – VET is drawn as inferred (Q4).\n")
 
 
 def e32_reference(run, repo):
@@ -2217,6 +2224,18 @@ def e32_wrong_invents(run, repo):
     e32_common(run, repo, er_kw={"inferred": False})
 
 
+def e32_wrong_no_uid_bars(run, repo):
+    e32_common(run, repo, er_kw={"uid_bars": False})
+
+
+def e32_wrong_chip_key(run, repo):
+    e32_common(run, repo, rel_kw={"chip_key": True})
+
+
+def e32_wrong_silent(run, repo):
+    e32_common(run, repo, checks=False)
+
+
 def e32_wrong_edits_design(run, repo):
     e32_common(run, repo)
     sub(repo / "design/design.md", "| PET – VET | Each PET **may be** *registered with* one and only one VET. Each VET **may be** the *primary vet of* one or more PETs. | **inferred** — see below |",
@@ -2232,6 +2251,9 @@ CONTROLS_DBDIAGRAM = {
                    "each end's optionality drawn: dashed may-be, solid must-be"]),
                "wrong-generated-ids": (e32_wrong_ids, ["cell IDs are semantic and trace each entity to its table"]),
                "wrong-invents-inferred": (e32_wrong_invents, ["the inferred PET – VET relationship labelled as inferred"]),
+               "wrong-no-uid-bars": (e32_wrong_no_uid_bars, ["a UID bar on each relationship in a UID, and on no other"]),
+               "wrong-invents-microchip-key": (e32_wrong_chip_key, ["microchip not drawn as a key while Q3 is open"]),
+               "wrong-silent-checks": (e32_wrong_silent, ["reports the XML validated and whether the rendering was checked"]),
                "wrong-edits-design": (e32_wrong_edits_design, ["the design left untouched"])}),
 }
 
