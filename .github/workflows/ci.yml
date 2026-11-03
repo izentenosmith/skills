@@ -30,6 +30,10 @@ jobs:
           python-version: "3.14"
       - name: Check skills, links and eval wiring
         run: python3 .github/scripts/check_repo.py
+      - name: Package every skill for Agensi (build and check, write nothing)
+        run: python3 marketplace/agensi.py --check
+      - name: Run the packager's tests
+        run: python3 -m unittest discover marketplace/tests
       - name: Install actionlint (pinned, checksum-verified)
         run: .github/scripts/install_actionlint.sh
       - name: Lint this repo's workflows

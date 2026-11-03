@@ -23,6 +23,7 @@ skills/
   security/         review, design, propose   threatmodel · appsec · hardening
 harness/            the skills' rules as code: the closing loop, bug → PR, incident → post-mortem, DB and network audit → proposal
 evals/              seeded fixtures, scored assertions, the recorded benchmark
+marketplace/        packages each skill as a standalone zip for Agensi
 ```
 
 | Family | Skills |
@@ -502,6 +503,10 @@ The installer copies each skill folder whole, dereferencing the database and net
    ```
 
 Take one skill, take a family, or take them all. Every skill works on its own — `tdd` plans from scratch when there's no brief, `refactor-review` reviews any diff, `devils-advocate` tears down a change it didn't build, `post-mortem` reconstructs an incident in a system it has never seen. Where skills cross-link and the other one isn't installed, the prompt still names it, so you know what would have run.
+
+### Or install from Agensi
+
+[`marketplace/agensi.py`](marketplace/README.md) builds the zips published there: one per skill, with symlinks resolved, reference docs from other skills copied in, and links to other skills turned into their names, so each installs and runs on its own — plus bundles of related skills. A skill lists at $5 and a bundle at $10.
 
 Each family has its own README with more detail: [development](skills/development/README.md) · [containers](skills/containers/README.md) · [operations](skills/operations/README.md) · [database](skills/database/README.md) · [networking](skills/networking/README.md) · [infrastructure](skills/infrastructure/README.md) · [security](skills/security/README.md).
 
