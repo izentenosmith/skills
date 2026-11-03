@@ -61,7 +61,7 @@ Where `.workflow/brief.md` exists, read its **Out of scope** and **Deferred by d
 
 ### Severity — what makes a smell worth acting on
 
-A found smell is not automatically a smell to fix. Rate each one by **what it costs the next change**, not by how much it offends:
+A found smell is not automatically a smell to fix. Rate each one by **what it costs the next change**, not by how much it offends, and use these three words and no others — not high/medium/low, not minor — on every finding, carried smells included, so the ledger, the action items and tyr-verdict all read the same scale:
 
 - **blocking** — the smell will make the next change to this code dangerous or wrong. Change Preventers live here almost by definition (Divergent Change, Shotgun Surgery), as does any smell that hides behavior: a Long Method with several exit paths, a Switch Statement that will need a new arm on every extension, duplication that will silently diverge. Fix before handing off.
 - **worthwhile** — a clear, cheap, behavior-preserving improvement with an obvious treatment. Fix while it stays cheap.
@@ -191,6 +191,12 @@ Worth it on a **large diff**, unnecessary on a small one.
 5. **New code only.** Pre-existing smells outside the diff are out of scope unless they **block** the change — and "blocks" has a test: *the new code cannot be made clean without touching it.* In practice that means one of two things — you would have to duplicate the old code to avoid it, or the new code has to work around it in a way that is itself a smell. Anything else is merely adjacent: name it, record it as `noted`, and leave it. Scope creep dressed as tidiness is the most common way a behavior-preserving refactor stops being behavior-preserving.
 
 ## Handoff
+
+Your response carries three things a reader must not have to infer, whatever else it holds:
+
+- **First line — the pass you ran:** `**Pass:** small diff — one inline pass` or `**Pass:** large diff — by smell category`, with the one-clause reason (what the diff touches).
+- **Every finding with its severity word** — `blocking`, `worthwhile` or `noted` — in the findings and in the action items, even when nothing is blocking.
+- **The stopping rule, checked:** `**Stopping rule:** met —` then the four conditions above, each with its answer (no blocking smell left; every remaining smell recorded with its promotion condition; every carried smell promoted, left or retired; the last pass surfaced no new blocking finding). If one does not hold, say which, and that the pass is not done.
 
 Clean structure on a GREEN suite is not the same as correct behavior. Once the diff is structurally clean, prompt the user:
 
