@@ -6,8 +6,8 @@ description: Prepare a reviewable recommendation for a computer network using au
 # netpropose
 
 Turn evidence and a design into a clear recommendation for decision-makers and implementers. This
-skill can be used on its own when the user supplies the artifacts, or as the final stage of the
-network workflow harness before acceptance.
+skill runs on its own when the user supplies the artifacts. It is also the last stage of the network
+family before acceptance.
 
 ## Inputs
 
@@ -40,7 +40,17 @@ Keep facts, inferences and decisions distinct. A proposal is not authorization: 
 configuration, apply IaC or touch a device as part of this skill.
 
 Confirm that the diagrams follow [diagram-conventions.md](diagram-conventions.md) and match the
-design's `topology.json`: same IDs, same CIDRs, same flows. Describe any mismatch and route it back to
+design's `topology.json`: same IDs, same CIDRs, same flows. `scripts/netgraph.py` in this folder
+does the mechanical part, read-only:
+
+```bash
+python3 <this skill's folder>/scripts/netgraph.py diagrams diagrams/ --topology design/topology.json
+python3 <this skill's folder>/scripts/netgraph.py analyze design/topology.json    # target κ per critical pair
+python3 <this skill's folder>/scripts/netgraph.py analyze audit/topology.json     # today's, for before → after
+```
+
+Quote the connectivity before and after from these runs, not from memory. Without Python, compare
+the IDs, CIDRs and flows by hand and say the check was manual. Describe any mismatch and route it back to
 [netdesign](../netdesign/SKILL.md) or [netdiagram](../netdiagram/SKILL.md). Do not redraw or silently
 repair either artifact.
 

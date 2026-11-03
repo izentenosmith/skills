@@ -1,6 +1,6 @@
 # Phase gates
 
-Each phase ends at a gate. **Don't start a phase's work on top of an open gate** — except that containment may begin before Step 0's discovery is finished, when the damage is spreading and an obvious lever is already known. Tick each item, or write why it doesn't apply.
+Each phase ends at a gate. **Don't start a phase's work on top of an open gate** — except that containment may begin before Step 0's discovery is finished, when the damage is spreading and an obvious lever is already known; and Phase 2's read-only work goes on while containment waits on the user, with no code changed until Phase 1's gate holds (SKILL.md's hard gate 1). Tick each item, or write why it doesn't apply.
 
 ## Step 0 — discovered and classified
 - [ ] `.workflow/env.md` current, including the incident levers, observability and data access mode
@@ -19,7 +19,7 @@ Each phase ends at a gate. **Don't start a phase's work on top of an open gate**
 ## Phase 2 — diagnosed
 - [ ] Cause stated with evidence; git range widened past the incident window
 - [ ] Every caller of the faulty code found
-- [ ] Impact: who / what, from when to when, a reproducible query or command, and counts
+- [ ] Impact: who / what, from when to when, and counts, each beside the text of the read-only query or command that produced it
 - [ ] Every number marked known or assumed
 - [ ] Log committed
 

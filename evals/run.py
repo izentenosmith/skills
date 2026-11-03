@@ -153,6 +153,8 @@ def claude_cmd(run, skill_md, prompt, model):
            "--add-dir", str(run)]
     if skill_md:
         cmd += ["--add-dir", str(skill_md.parent)]
+        if (harness := staged_harness(skill_md)):
+            cmd += ["--add-dir", str(harness)]
     if model:
         cmd += ["--model", model]
     return cmd + ["--", prompt]
@@ -160,12 +162,27 @@ def claude_cmd(run, skill_md, prompt, model):
 
 def stage_skill(skill_md, dest_root):
     """Copy the skill's folder out of this checkout, so a run pointed at it is
-    not one `..` away from evals/ and the assertions it is graded by."""
+    not one `..` away from evals/ and the assertions it is graded by.
+
+    harness/ goes along when this checkout has it, at the same place relative to
+    the skill, so a skill that offers the harness as an optional accelerator finds
+    it as it would in a clone. Move harness/ aside to measure the skills alone."""
     rel = skill_md.parent.relative_to(REPO_ROOT)
     dest = dest_root / rel
     if not dest.exists():
         shutil.copytree(skill_md.parent, dest)
+    if (REPO_ROOT / "harness").is_dir() and not (dest_root / "harness").exists():
+        shutil.copytree(REPO_ROOT / "harness", dest_root / "harness",
+                        ignore=shutil.ignore_patterns("tests", "__pycache__"))
     return dest / skill_md.name
+
+
+def staged_harness(skill_md):
+    """The harness staged beside a current skill copy, or None (absent, or a baseline snapshot)."""
+    for parent in skill_md.parents:
+        if (parent / "harness").is_dir() and (parent / "skills").is_dir():
+            return parent / "harness"
+    return None
 
 
 def stage_harness(src_root, dest_root):
@@ -350,6 +367,8 @@ def print_plan(runs, ws_iter, baseline, args_timeout):
             print()
             continue
         print(f"   skill    {r['skill_md'] or '(none: skill absent at baseline ref)'}")
+        if r["skill_md"] and r["kind"] == "with_skill":
+            print(f"   harness  {staged_harness(r['skill_md']) or '(none: harness/ absent from this checkout)'}")
         print(f"   cwd      {r['run'] / 'repo'}")
         print(f"   env      {' '.join(f'{k}={v}' for k, v in RUN_ENV.items())}")
         print(f"   command  {shlex.join(r['cmd'][:-1])} <prompt>")

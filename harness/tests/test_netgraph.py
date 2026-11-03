@@ -4,6 +4,8 @@ import contextlib
 import io
 import json
 import pathlib
+import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -433,6 +435,45 @@ class CLI(unittest.TestCase):
             self.assertEqual(self.run_cli("analyze", str(pathlib.Path(tmp, "missing.json")))[0], NG.EXIT_USAGE)
             self.assertEqual(self.run_cli("analyze", str(good), "--json", "--md")[0], NG.EXIT_USAGE)
             self.assertEqual(self.run_cli()[0], NG.EXIT_USAGE)
+
+    def test_diagrams_lists_every_problem(self):
+        legend = '<mxCell id="deco-legend" value="Network diagram conventions" vertex="1" parent="1"/>'
+        doc = lambda name, cells: (f'<mxfile><diagram name="{name}"><mxGraphModel><root><mxCell id="0"/>'
+                                   f'<mxCell id="1" parent="0"/>{cells}</root></mxGraphModel></diagram></mxfile>')
+        t = uplink()
+        t["nodes"].append(node("lan", "lan", zone="core"))
+        t["networks"] = [{"id": "lan", "cidr": "10.0.0.0/24", "evidence": "a:1"}]
+        t["zones"] = [{"id": "internet", "trust": 0}, {"id": "core", "trust": 2}]
+        with tempfile.TemporaryDirectory() as tmp:
+            d = pathlib.Path(tmp)
+            (d / "topology.json").write_text(json.dumps(t))
+            (d / "logical-topology.drawio").write_text(doc("Logical topology (L3)", legend + '<mxCell id="stray" vertex="1" parent="1"/>'))
+            (d / "segmentation.drawio").write_text(doc("Page-1", legend))
+            code, out = self.run_cli("diagrams", tmp, "--topology", str(d / "topology.json"))
+            self.assertEqual(code, NG.EXIT_ERROR)
+            for needle in ("cell 'stray' is not a topology.json id", "network 'lan' is not drawn",
+                           "segmentation.drawio needs a page named"):
+                self.assertIn(needle, out)
+            (d / "segmentation.drawio").write_text(doc("Segmentation (zones and flows)", legend))
+            (d / "logical-topology.drawio").write_text(doc("Logical topology (L3)", legend))
+            self.assertEqual(self.run_cli("diagrams", tmp)[0], NG.EXIT_OK)   # no model: structure only
+            self.assertEqual(self.run_cli("diagrams", str(d / "nope"))[0], NG.EXIT_USAGE)
+
+
+class Standalone(unittest.TestCase):
+    """The skills ship this script in their own folder: a copy of one skill, with no harness beside it, runs it."""
+
+    def test_each_network_skill_runs_its_own_copy(self):
+        skills = HERE.parents[1] / "skills" / "networking"
+        for name in ("netaudit", "netdesign", "netdiagram", "netpropose", "netblueprint"):
+            with self.subTest(skill=name), tempfile.TemporaryDirectory() as tmp:
+                skill = pathlib.Path(tmp, name)
+                shutil.copytree(skills / name, skill)            # follows the symlinks, as an installer would
+                (skill / "topology.json").write_text(json.dumps(uplink()))
+                p = subprocess.run([sys.executable, "-I", "scripts/netgraph.py", "analyze", "topology.json", "--json"],
+                                   cwd=skill, capture_output=True, text=True, timeout=60)
+                self.assertEqual(p.returncode, NG.EXIT_OK, p.stderr)
+                self.assertIn("NG-SPOF-r1", p.stdout)
 
 
 if __name__ == "__main__":

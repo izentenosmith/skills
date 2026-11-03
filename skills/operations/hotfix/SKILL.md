@@ -20,6 +20,24 @@ It leans on six reference docs:
 
 **Never push, merge, deploy, publish or create a ticket without the user's confirmation** unless the repo's own instructions authorize that specific action. A confirmation covers one action, not the rest of the lane.
 
+## ⛔ The outage gate — before anything else
+
+Answer this from the report alone, **before Step 0**: before discovery, before reading code, before running anything.
+
+> Is the system **down or degraded**, or is data being **exposed or corrupted**, right now — or is it still getting worse?
+
+"Every checkout returns 500", "customers can't pay", "prod is down" are a yes however the request is worded; "hotfix this NOW" asks for speed, it doesn't make an outage a hotfix. If the report says the system is up and the damage isn't spreading, the gate is a no: go on to Step 0 and work the whole lane as written — its red test and fix go into the repo as usual, and Step 1 still decides strict mode. Nothing below applies to a no.
+
+**A yes ends the lane here, and this run changes nothing:**
+
+- **No file in the repo is created, edited or deleted** — not source, tests, config or docs. That includes an incident log: starting one is incident-fix's first act, not this lane's.
+- **Nothing is run** — no server, no test suite, no local probe.
+- **No incident response from here** — no containment plan, no diagnosis. incident-fix does those under its own rules, starting from your handoff; every one of its production actions waits for the user anyway.
+
+Your whole output is the handoff, and the run ends with it:
+
+> Not a hotfix: `<symptom>` means the system is `<down / degraded / exposing / corrupting>` now, so this goes to **[incident-fix](../incident-fix/SKILL.md)**, which contains first. Known so far: `<what the report says, with times>`. Nothing in the repo or in production was touched.
+
 ## 🔎 Step 0: Discover the environment
 
 Read [discovery.md](discovery.md) and work it. If `.workflow/env.md` exists and is still current, it *is* step 0 — confirm it in one line and move on. Otherwise produce it: the repo's agent and contributor instructions; build, test, lint and type-check commands **as CI runs them**; the merge convention; whether a pre-production environment exists; a tracker, only from evidence; and installed skills that cover a later step.
@@ -30,7 +48,7 @@ Whatever cannot be discovered, ask **once, in a single question**, and offer to 
 
 This lane only works for bugs that can wait an hour. Check, in order, and **stop at the first that holds**:
 
-- **Down, degraded, exposing data, or corrupting data now** → stop. This is an incident: run **[incident-fix](../incident-fix/SKILL.md)**, and hand it whatever you already know.
+- **Down, degraded, exposing data, or corrupting data now** — discovery showed what the report didn't → stop exactly as the outage gate above says: no further file or command, and the handoff to **[incident-fix](../incident-fix/SKILL.md)** is your output.
 - **Real design ambiguity** — several reasonable fixes with different trade-offs, or a fix that needs a new boundary → stop. Recommend the repo's design workflow ([architect-deep-dive](../../development/architect-deep-dive/SKILL.md) → [agent-brief](../../development/agent-brief/SKILL.md) where installed), or a short options-and-trade-offs discussion where not.
 - **The fix touches persistent data, money, permissions or tenancy** — database writes, migrations, financial or inventory figures, file deletion, an authorization check, an isolation boundary → **stay, in strict mode.** Step 4 becomes blocking. These are the failures a green suite is worst at catching, and a two-line diff is perfectly capable of causing one.
 
@@ -52,7 +70,7 @@ Write the note in [root-cause-note.md](root-cause-note.md): **symptom · cause �
 - [ ] **Watch it fail, for the right reason.** A test that fails on an import error or a typo proves nothing about the bug. Where a red/green checker is available (it applies only the new tests to the pre-fix code and runs them), use it; otherwise run the test before writing the fix and keep the output.
 - [ ] **The minimal fix to green**, in the shared place, following the repo's conventions. No adjacent cleanup — that's a separate change.
 - [ ] **The relevant suite, the linter and the type checker** discovered in Step 0, all green.
-- [ ] **No test framework at all?** Write the smallest runnable check that fails without the fix and passes with it — a script, an assertion block, a command with an expected output — **say explicitly that the repo has no tests**, and propose a follow-up for the harness.
+- [ ] **No test framework at all?** Write the smallest runnable check that fails without the fix and passes with it — a script, an assertion block, a command with an expected output — in the repo beside the code it checks, so it ships with the fix; **say explicitly that the repo has no tests**, and propose a follow-up for the harness.
 
 ## 🔥 Step 4: One adversarial review pass
 

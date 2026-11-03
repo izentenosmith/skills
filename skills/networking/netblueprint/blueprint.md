@@ -59,7 +59,7 @@ the three things a reader should notice first.
 ## 3. Critical pairs and failure domains
 | Pair | Why it matters | Node κ | Edge κ | Cut set before → after | Shared fate accepted |
 |------|----------------|-------:|-------:|------------------------|----------------------|
-Graph results from netgraph: articulation points (none expected on critical pairs), top betweenness
+Graph results from `scripts/netgraph.py analyze`: articulation points (none expected on critical pairs), top betweenness
 nodes with their redundancy, robustness under targeted vs random removal (graph-theory G4–G9).
 
 ## 4. Addressing plan
@@ -97,7 +97,7 @@ constraints from the proposal's cut-over plan.
 
 ## 4. Consistency checks before handing over
 
-- [ ] `topology.json` validates, and netgraph reports no Critical/High finding and κ ≥ 2 for every
+- [ ] `topology.json` validates, and `scripts/netgraph.py analyze` reports no Critical/High finding and κ ≥ 2 for every
   critical pair. Any accepted exception is listed in §3 with its acceptance.
 - [ ] Every network, zone, flow and node in the document exists in `topology.json` with identical
   values.

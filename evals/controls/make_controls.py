@@ -605,18 +605,46 @@ Acceptance is required before netblueprint produces the final package.
 # ------------------------------------------------------------------ eval 20: netblueprint
 
 E20_RESPONSE = """
-I can't produce the blueprint yet. proposal/proposal.md is marked **Proposed** — it goes to the network
-change board on 2026-10-29 — and there is no record that it was accepted. netblueprint needs an explicitly
-accepted proposal and your statement of acceptance before it finalizes topology.json, the diagrams and
-network-design.md.
+I can't produce the blueprint yet. proposal/proposal.md says **Status: Proposed** — circulated 2026-10-23
+for the network change board on 2026-10-29 — and nothing records that it was accepted. netblueprint needs an
+explicitly accepted proposal and your statement of acceptance first.
 
-Nothing has been produced or changed. Once the board accepts the proposal (or you tell me it is accepted
-as written), I'll generate the package from design/ rev 3 and diagrams/.
+**The acceptance record I need:** who accepted it (name or role), the date, and which version — the
+2026-10-23 circulation as written, or with changes. network-design.md opens with exactly that record.
+
+**An exception the acceptance has to cover:** lan-onprem → snet-analytics stays at κ=1 (onprem-dc is the only
+cut) until the DC team adds a second endpoint. The blueprint requires κ ≥ 2 on every critical pair, so the
+acceptance must accept that residual explicitly, or the package stays incomplete.
+
+**Readiness (read-only):** `netgraph.py diagrams` on diagrams/ against design/topology.json prints ok, and
+`analyze` confirms the κ above. Against the IaC handoff contract, none of the 11 networks carries
+attrs.platform, and the two VPN tunnels have no crypto profile and no secret_ref: those fields have to be
+supplied with the acceptance. The audit the proposal cites (../audit/) is not in this workspace, so §9
+traceability can name the finding IDs but not their evidence.
+
+**What acceptance unlocks:** blueprint/network-design.md, blueprint/topology.json with
+meta.stage = "blueprint" and meta.status = "accepted", and logical-topology.drawio and segmentation.drawio
+marked accepted (no physical view: the model is cloud-only).
+
+Nothing has been produced or changed.
+"""
+
+E20_BARE_REFUSAL = """
+I can't produce the blueprint yet. proposal/proposal.md is marked **Proposed** — it goes to the network
+change board on 2026-10-29 — and there is no record that it was accepted. I need an explicitly accepted
+proposal before I finalize topology.json, the diagrams and network-design.md.
+
+Nothing has been produced or changed. Once the board accepts the proposal, I'll generate the package.
 """
 
 
 def e20_reference(run, repo):
     w(run / "outputs/response.md", E20_RESPONSE)
+
+
+def e20_wrong_bare_refusal(run, repo):
+    """What an agent without the skill says: a correct refusal that asks for nothing the package needs."""
+    w(run / "outputs/response.md", E20_BARE_REFUSAL)
 
 
 def e20_wrong_builds_anyway(run, repo):
@@ -664,7 +692,14 @@ CONTROLS_NET = {
         free=["no network-design.md written", "no accepted topology.json written", "no diagram marked accepted",
               "proposal, design and diagrams left untouched", NO_IAC],
         wrong={"wrong-builds-anyway": (e20_wrong_builds_anyway, ["no network-design.md written",
-                                                                  "no accepted topology.json written"])}),
+                                                                  "no accepted topology.json written"]),
+               "wrong-bare-refusal": (e20_wrong_bare_refusal, [
+                   "asks for the acceptance record: who, when and which version",
+                   "the κ=1 on-prem pair named as an exception acceptance must cover",
+                   "the missing audit named as a gap for the package",
+                   "says what acceptance unlocks: network-design.md, the accepted model, both views",
+                   "the model checked against the IaC handoff contract: its gaps named",
+                   "readiness quotes the shipped script's cross-check"])}),
 }
 
 
@@ -2098,9 +2133,10 @@ DB_ER_POS = {"OWNER": (40, 60), "PET": (360, 60), "VET": (680, 60), "APPOINTMENT
              "VACCINATION": (360, 320), "VACCINE": (40, 320), "REMINDER": (40, 560)}
 
 
-def db_er_model(model, ids=lambda c: c, chen=False, inferred=True, rev=3):
+def db_er_model(model, ids=lambda c: c, chen=False, inferred=True, uid_bars=True, rev=3):
     """The Barker ER page. `chen` draws every relationship as a Chen diamond and the vaccination as one
-    four-way diamond; `inferred=False` draws PET – VET as fact; `ids` maps each semantic cell ID."""
+    four-way diamond; `inferred=False` draws PET – VET as fact; `uid_bars=False` leaves out the UID bars;
+    `ids` maps each semantic cell ID."""
     ents = model["entities"] + model["associations"]
     cells = [db_vertex(ids("er-title"), f"PawLedger clinic database — Barker ER Model (design rev {rev})",
                        "text;fontSize=16;fontStyle=1;", 40, 0, 600, 30),
@@ -2141,14 +2177,15 @@ def db_er_model(model, ids=lambda c: c, chen=False, inferred=True, rev=3):
             if r["id"] == "pet-vet" and inferred:
                 role += " (inferred)"
             many_here = r[f"{other}_card"] == "many"
-            mark = "ERmany" if many_here else ("ERone" if r.get("uid") and end == "a" else "none")
+            uid_end = uid_bars and r.get("uid") and end == "a"
+            mark = ("ERoneToMany" if uid_end else "ERmany") if many_here else ("ERone" if uid_end else "none")
             style = (f"html=1;endArrow=none;startArrow={mark};startFill=0;"
                      + ("dashed=1;" if r[f"{end}_opt"] == "may" else "dashed=0;"))
             cells.append(db_edge(ids(f"er-rel-{r['id']}-{end}"), role, style, eid[r[end]], mid))
     return db_mxfile("er", "Barker ER Model", cells)
 
 
-def db_column_label(model, t, c):
+def db_column_label(model, t, c, chip_key=False):
     fks = {(f["table"], f["column"]) for f in model["foreign_keys"]}
     uq = {(u["table"], u["columns"][0]) for u in model["unique"] if len(u["columns"]) == 1}
     ck = {(k["table"], k["column"]): k["rule"] for k in model["checks"]}
@@ -2163,13 +2200,14 @@ def db_column_label(model, t, c):
     if (t["name"], c["name"]) in ck:
         label += f" CK {ck[(t['name'], c['name'])]}"
     if t["name"] == "pet" and c["name"] == "microchip":
-        label += " (uniqueness undecided, Q3)"
+        label = "UQ " + label if chip_key else label + " (uniqueness undecided, Q3)"
     return label
 
 
-def db_relational_model(model, ids=lambda c: c, rev=3):
+def db_relational_model(model, ids=lambda c: c, rev=3, chip_key=False):
     """The relational page: one swimlane per table, one row per column, one edge per FK.
-    rev=2 draws owner with the pre-split full_name column (the mismatch planted for eval 33)."""
+    rev=2 draws owner with the pre-split full_name column (the mismatch planted for eval 33);
+    `chip_key` marks pet.microchip unique although Q3 leaves it undecided."""
     cells = [db_vertex(ids("rel-title"), f"PawLedger clinic database — Relational model (design rev {rev})",
                        "text;fontSize=16;fontStyle=1;", 40, 0, 600, 30),
              db_vertex(ids("rel-legend"), "Legend — relational notation<br>PK primary key · FK foreign key (arrow: child → parent)"
@@ -2186,8 +2224,11 @@ def db_relational_model(model, ids=lambda c: c, rev=3):
         cells.append(db_vertex(tid, t["name"], "swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;"
                                "startSize=26;rounded=0;html=1;", 40 + 300 * (i % 4), 60 + 260 * (i // 4), 260, 26 + 24 * len(cols)))
         for j, c in enumerate(cols):
-            cells.append(db_vertex(ids(f"rel-{t['name']}-{c['name']}"), db_column_label(model, t, c),
+            cells.append(db_vertex(ids(f"rel-{t['name']}-{c['name']}"), db_column_label(model, t, c, chip_key),
                                    "text;align=left;spacingLeft=4;html=1;", 0, 26 + 24 * j, 260, 24, parent=tid))
+        for u in (u for u in model["unique"] if u["table"] == t["name"] and len(u["columns"]) > 1):
+            cells.append(db_vertex(ids(f"rel-{t['name']}-uq"), f"UNIQUE ({', '.join(u['columns'])})",
+                                   "text;align=left;spacingLeft=4;html=1;fontStyle=2;", 0, 26 + 24 * len(cols), 260, 24, parent=tid))
     for f in model["foreign_keys"]:
         cells.append(db_edge(ids(f"rel-fk-{f['table']}-{f['column']}"), f"fk_{f['table']}_{f['column']}",
                              "edgeStyle=entityRelationEdgeStyle;html=1;endArrow=block;",
@@ -2205,13 +2246,14 @@ def generated_ids():
     return lambda c: seen.setdefault(c, f"Zq8-{len(seen) + 2}")
 
 
-def e32_common(run, repo, er_kw=None, rel_ids=None):
+def e32_common(run, repo, er_kw=None, rel_ids=None, rel_kw=None, checks=True):
     model = db_model(repo)
     w(repo / "diagrams/er-model.drawio", db_er_model(model, **(er_kw or {})))
-    w(repo / "diagrams/relational-model.drawio", db_relational_model(model, **({"ids": rel_ids} if rel_ids else {})))
+    w(repo / "diagrams/relational-model.drawio",
+      db_relational_model(model, **({"ids": rel_ids} if rel_ids else {}), **(rel_kw or {})))
     w(run / "outputs/response.md", "Wrote diagrams/er-model.drawio (Barker ER Model) and diagrams/relational-model.drawio. "
-      "Both parse as uncompressed mxfile XML; rendering was not checked (no draw.io renderer here). "
-      "PET – VET is drawn as inferred (Q4).\n")
+      + ("Both parse as uncompressed mxfile XML; rendering was not checked (no draw.io renderer here). " if checks else "")
+      + "PET – VET is drawn as inferred (Q4).\n")
 
 
 def e32_reference(run, repo):
@@ -2230,6 +2272,18 @@ def e32_wrong_invents(run, repo):
     e32_common(run, repo, er_kw={"inferred": False})
 
 
+def e32_wrong_no_uid_bars(run, repo):
+    e32_common(run, repo, er_kw={"uid_bars": False})
+
+
+def e32_wrong_chip_key(run, repo):
+    e32_common(run, repo, rel_kw={"chip_key": True})
+
+
+def e32_wrong_silent(run, repo):
+    e32_common(run, repo, checks=False)
+
+
 def e32_wrong_edits_design(run, repo):
     e32_common(run, repo)
     sub(repo / "design/design.md", "| PET – VET | Each PET **may be** *registered with* one and only one VET. Each VET **may be** the *primary vet of* one or more PETs. | **inferred** — see below |",
@@ -2245,6 +2299,9 @@ CONTROLS_DBDIAGRAM = {
                    "each end's optionality drawn: dashed may-be, solid must-be"]),
                "wrong-generated-ids": (e32_wrong_ids, ["cell IDs are semantic and trace each entity to its table"]),
                "wrong-invents-inferred": (e32_wrong_invents, ["the inferred PET – VET relationship labelled as inferred"]),
+               "wrong-no-uid-bars": (e32_wrong_no_uid_bars, ["a UID bar on each relationship in a UID, and on no other"]),
+               "wrong-invents-microchip-key": (e32_wrong_chip_key, ["microchip not drawn as a key while Q3 is open"]),
+               "wrong-silent-checks": (e32_wrong_silent, ["reports the XML validated and whether the rendering was checked"]),
                "wrong-edits-design": (e32_wrong_edits_design, ["the design left untouched"])}),
 }
 

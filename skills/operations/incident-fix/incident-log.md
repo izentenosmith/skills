@@ -28,7 +28,7 @@ Every entry's time is **read from the system clock at the moment of writing** �
 - 2026-10-15T14:14:10Z · mitigated · user impact stopped
 - 2026-10-15T14:20:00Z · phase · diagnose
 - 2026-10-15T13:41:00Z · impact-start · first 5xx in the saved worker logs (backfilled 14:32)
-- 2026-10-15T14:40:00Z · finding · 2,318 orders since 13:41 have a NULL tax total (query in <path>) — known
+- 2026-10-15T14:40:00Z · finding · 2,318 orders since 13:41 have a NULL tax total — known · `SELECT COUNT(*) FROM orders WHERE created_at >= '2026-10-15T13:41:00Z' AND tax_total IS NULL` → 2318
 - …
 - 2026-10-15T17:05:00Z · resolved · fix <sha> and repair <artifact> verified in production
 - 2026-10-17T10:00:00Z · closed · tracker item closed; post-mortem at <link>
