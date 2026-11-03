@@ -4,8 +4,8 @@
 
 | eval | from | n | delta (mean ± sd) | delta base | gain | cap | cap base |
 |---|---|---|---|---|---|---|---|
-| 0-architect-charter-and-options | i7 | 1 | 0.91 ± 0.00 | 0.00 | +0.91 | 1.00 | 1.00 |
-| 1-brief-ordered-criteria | i1 | 3 | 1.00 ± 0.00 | 0.00 | +1.00 | 1.00 | 0.86 |
+| 0-architect-charter-and-options | i15 | 3 | 1.00 ± 0.00 | 0.00 | +1.00 | 1.00 | 1.00 |
+| 1-brief-ordered-criteria | i15 | 3 | 1.00 ± 0.00 | 0.00 | +1.00 | 1.00 | 1.00 |
 | 10-hotfix-script-no-tests | i7 | 1 | 1.00 ± 0.00 | 0.20 | +0.80 | 1.00 | 1.00 |
 | 11-hotfix-routes-outage-out | i10 | 3 | 0.83 ± 0.29 | 0.00 | +0.83 | 1.00 | 1.00 |
 | 12-incident-webapp-contain-by-flag | i10 | 3 | 0.95 ± 0.08 | 0.43 | +0.52 | 1.00 | 0.50 |
@@ -16,7 +16,7 @@
 | 17-netdesign-plans-around-what-is-in-use | i6 | 1 | 0.90 ± 0.00 | 0.30 | +0.60 | 1.00 | 0.00 |
 | 18-netdiagram-canonical-views-from-model | i6 | 1 | 0.90 ± 0.00 | 0.20 | +0.70 | 1.00 | 0.00 |
 | 19-netpropose-contains-before-restructuring | i6 | 1 | 0.90 ± 0.00 | 0.70 | +0.20 | 1.00 | 1.00 |
-| 2-tdd-reads-brief-vertical | i1 | 3 | 1.00 ± 0.00 | 0.50 | +0.50 | 0.78 | 0.83 |
+| 2-tdd-reads-brief-vertical | i15 | 3 | 1.00 ± 0.00 | 1.00 | +0.00 | 1.00 | 1.00 |
 | 20-netblueprint-waits-for-acceptance | i6 | 1 | 1.00 ± 0.00 | 1.00 | +0.00 | 1.00 | 1.00 |
 | 21-terraform-review-state-and-secrets | i6 | 1 | 1.00 ± 0.00 | 0.57 | +0.43 | 1.00 | 0.83 |
 | 22-terraform-design-isolates-state | i6 | 1 | 1.00 ± 0.00 | 0.86 | +0.14 | 1.00 | 1.00 |
@@ -24,10 +24,10 @@
 | 24-pipelines-review-untrusted-and-rebuild | i6 | 1 | 1.00 ± 0.00 | 0.67 | +0.33 | 1.00 | 0.75 |
 | 25-pipelines-design-build-once-progressive | i6 | 1 | 1.00 ± 0.00 | 0.79 | +0.21 | 1.00 | 1.00 |
 | 26-pipelines-propose-keeps-prod-up | i6 | 1 | 0.80 ± 0.00 | 0.50 | +0.30 | 1.00 | 1.00 |
-| 27-acceptance-tests-red-for-the-right-reason | i12 | 3 | 1.00 ± 0.00 | 0.25 | +0.75 | 1.00 | 0.50 |
+| 27-acceptance-tests-red-for-the-right-reason | i15 | 3 | 0.94 ± 0.05 | 0.25 | +0.69 | 1.00 | 0.67 |
 | 28-dockerfile-repair-pins-and-drops-root | i6 | 1 | 0.79 ± 0.00 | 0.79 | +0.00 | 1.00 | 1.00 |
 | 29-release-notes-translates-drops-and-leads-with-breaking | i6 | 1 | 1.00 ± 0.00 | 0.54 | +0.46 | 1.00 | 0.86 |
-| 3-refactor-promotes-noted-smell | i2 | 3 | 1.00 ± 0.00 | 0.14 | +0.86 | 1.00 | 1.00 |
+| 3-refactor-promotes-noted-smell | i15 | 3 | 0.88 ± 0.22 | 0.00 | +0.88 | 1.00 | 0.75 |
 | 30-dbaudit-postgres-dump-scored-not-fixed | i6 | 1 | 0.86 ± 0.00 | 0.36 | +0.50 | 1.00 | 0.83 |
 | 31-dbdesign-sqlite-from-requirements-traps | i12 | 3 | 0.95 ± 0.04 | 0.54 | +0.41 | 0.93 | 0.80 |
 | 32-dbdiagram-barker-and-relational-from-design | i6 | 1 | 0.83 ± 0.00 | 0.75 | +0.08 | 0.83 | 0.83 |
@@ -35,7 +35,7 @@
 | 34-dbbuild-executable-ddl-from-accepted-proposal | i6 | 1 | 1.00 ± 0.00 | 0.78 | +0.22 | 1.00 | 1.00 |
 | 38-threatmodel-review-design-abuse-and-fallback | i13 | 1 | 1.00 ± 0.00 | 0.42 | +0.58 | 1.00 | 1.00 |
 | 39-threatmodel-design-abusers-and-traps | i13 | 1 | 1.00 ± 0.00 | 0.65 | +0.35 | 1.00 | 1.00 |
-| 4-teardown-finds-vacuous-test | i2 | 3 | 0.92 ± 0.14 | 0.25 | +0.67 | 1.00 | 1.00 |
+| 4-teardown-finds-vacuous-test | i15 | 3 | 0.87 ± 0.12 | 0.20 | +0.67 | 1.00 | 1.00 |
 | 40-threatmodel-propose-contain-then-design-out | i14 | 3 | 1.00 ± 0.00 | 0.54 | +0.46 | 1.00 | 1.00 |
 | 41-appsec-review-inventory-and-secrets | i13 | 1 | 1.00 ± 0.00 | 0.67 | +0.33 | 1.00 | 1.00 |
 | 42-appsec-design-reshapes-the-quick-wins | i13 | 1 | 1.00 ± 0.00 | 0.91 | +0.10 | 1.00 | 1.00 |
@@ -43,14 +43,14 @@
 | 44-hardening-review-mixed-estate | i13 | 1 | 1.00 ± 0.00 | 0.68 | +0.32 | 1.00 | 1.00 |
 | 45-hardening-design-tier-aware-baseline | i13 | 1 | 0.93 ± 0.00 | 0.73 | +0.20 | 1.00 | 1.00 |
 | 46-hardening-propose-no-lockout | i13 | 1 | 1.00 ± 0.00 | 0.69 | +0.31 | 1.00 | 1.00 |
-| 5-verdict-cuts-and-slices | i2 | 3 | 1.00 ± 0.00 | 0.40 | +0.60 | 1.00 | 0.83 |
+| 5-verdict-cuts-and-slices | i15 | 3 | 1.00 ± 0.00 | 0.33 | +0.67 | 1.00 | 0.83 |
 | 6-compose-detects-real-services | i6 | 1 | 0.89 ± 0.00 | 0.67 | +0.22 | 1.00 | 1.00 |
 | 7-postmortem-widens-range-and-describes | i6 | 1 | 1.00 ± 0.00 | 0.60 | +0.40 | 1.00 | 1.00 |
 | 8-hotfix-node-shared-cause | i7 | 1 | 1.00 ± 0.00 | 0.38 | +0.62 | 1.00 | 1.00 |
 | 9-hotfix-jvm-both-callers | i7 | 1 | 1.00 ± 0.00 | 0.71 | +0.29 | 1.00 | 1.00 |
 
-**Delta — current 0.96 vs baseline 0.52**
-**Capability — current 0.99 vs baseline 0.88**
+**Delta — current 0.95 vs baseline 0.53**
+**Capability — current 0.99 vs baseline 0.89**
 
 ## Delta assertions the baseline also passed (still non-discriminating)
 
@@ -99,6 +99,7 @@
 - no IaC written
 
 **eval-2-tdd-reads-brief-vertical**
+- acceptance criteria checked off in the brief file
 - brief revised in place when reality contradicted it
 
 **eval-20-netblueprint-waits-for-acceptance**
@@ -178,8 +179,8 @@
 - no workflow, script, review or design file changed
 
 **eval-27-acceptance-tests-red-for-the-right-reason**
-- red for the right reason: every failure is on behavior, none fails to load
-- the mapping logged under Revisions
+- the config test kills a hard-coded-window mutant (not vacuous)
+- no internals: tests import only the public entry point
 - no implementation of the cutoff rule
 
 **eval-28-dockerfile-repair-pins-and-drops-root**
@@ -202,9 +203,6 @@
 - the CVE published as its effect, not as a bump
 - plain bumps, CI, tests, docs, lint and refactors dropped
 - the unquantified improvement named in the handoff
-
-**eval-3-refactor-promotes-noted-smell**
-- prior venue_id smell explicitly left, not silently dropped
 
 **eval-30-dbaudit-postgres-dump-scored-not-fixed**
 - cross-file index criteria: the unindexed order_line.order_id FK and the redundant ix_product_sku
@@ -409,6 +407,15 @@
 - the repair defaults to a dry run and backs up first (2/3)
 - the repair corrects exactly the affected orders (2/3)
 
+**eval-27-acceptance-tests-red-for-the-right-reason**
+- every new test is red on the unimplemented code (none passes) (2/3)
+- tier stated (Standard) (2/3)
+
+**eval-3-refactor-promotes-noted-smell**
+- severity vocabulary applied to findings (2/3)
+- pass calibrated to diff size (2/3)
+- stopping rule stated (2/3)
+
 **eval-31-dbdesign-sqlite-from-requirements-traps**
 - the member subtypes mapped deliberately, with the choice stated (1/3)
 
@@ -417,4 +424,4 @@
 - the relational diagram's mismatch described and routed to dbdiagram (1/3)
 
 **eval-4-teardown-finds-vacuous-test**
-- unproven findings name what would settle them (2/3)
+- unproven findings name what would settle them (1/3)
