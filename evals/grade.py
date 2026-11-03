@@ -157,7 +157,7 @@ def eval1(run):
         ("key interfaces name the public seam",
          any_of(src, r"BookingService\.submit|`submit`"), "", C),
         ("prior art points at the existing test suite",
-         any_of(src, r"test_booking|test_party_size_rule|existing (pytest )?suite"), "", C),
+         any_of(src, r"test_booking|test_party_size_rule|existing\s+(pytest\s+)?suite"), "", C),
         ("deferred decisions carried as explicit constraints",
          any_of(src, r"Deferred by design"), "named section, not prose", D),
         ("out of scope names the excluded adjacent work",
@@ -174,7 +174,16 @@ def eval2(run):
     brief = read(run / "repo/.workflow/brief.md")
     log = read(run / "outputs/cycle-log.md")
     green, eviz = suite_green(run)
-    steps = len(re.findall(r"^\s*(?:\d+[.)]|[-*|])", log, re.M))
+    if log:
+        steps = len(re.findall(r"^\s*(?:\d+[.)]|[-*|])", log, re.M))
+        sev = f"{steps} logged steps"
+    else:
+        # run.py asks only for response.md; there a cycle is a table or list line naming its
+        # test, and the response has to say that tests failed first
+        r = resp(run)
+        rows = re.findall(r"^\s*(?:\d+[.)]|[-*|]).*$", r, re.M)
+        steps = len({t for ln in rows for t in re.findall(r"\btest_\w+", ln)}) if re.search(r"\bfail", r, re.I) else 0
+        sev = f"{steps} tests named in the response's cycle rows (no cycle-log.md)"
     ticked = len(re.findall(r"^\s*-\s*\[x\]", brief, re.M | re.I))
     return [
         ("suite is green", green, eviz, C),
@@ -186,7 +195,7 @@ def eval2(run):
          any_of(tests, r"def test\w*cutoff", r"CUTOFF_WINDOW"), "", C),
         ("boundary case covered", any_of(tests, r"exact|boundary|edge"), "", C),
         ("cycle log shows discrete test-then-implementation steps", steps >= 3,
-         f"{steps} logged steps", C),
+         sev, C),
         ("acceptance criteria checked off in the brief file", ticked >= 3,
          f"{ticked} ticked", D),
         ("brief revised in place when reality contradicted it",
@@ -246,8 +255,8 @@ def eval4(run):
         ("finds the vacuous config test",
          any_of(t, r"test_cutoff_window_reads_from_account_config"), "", C),
         ("argues the vacuity (mutation-surviving)",
-         any_of(t, r"vacuous", r"passes? (even )?(if|when)[^\n]{0,60}(delet|remov|ignor)",
-                r"surviv[^\n]{0,40}mutat"), "", C),
+         any_of(t, r"vacuous", r"passes? (even )?(if|when|though)[^\n]{0,60}(delet|remov|ignor)",
+                r"surviv[^\n]{0,40}mutat", r"mutat[^\n]{0,80}surviv"), "", C),
         ("findings carry evidence", len(re.findall(r"Evidence", t, re.I)) >= 2, "", C),
         ("findings carry a confidence rating", any_of(t, r"proven|unproven"), "", C),
         ("negative results recorded", any_of(t, r"found nothing|nothing found|swept|attacked[^\n]{0,40}nothing"), "", C),
