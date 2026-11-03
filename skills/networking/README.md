@@ -118,4 +118,17 @@ outside this repository, dereference the links during copy (for example,
 
 ## Measured
 
-Each skill has one eval in [`evals/`](../../evals/README.md) (evals 16–20): a Terraform/IOS estate to audit that carries a pre-shared key the audit must never echo; requirements whose habitual address plan collides with what's already in use, graded by parsing every CIDR; a target model to draw, graded by parsing the draw.io XML; a proposal hiding an open Critical under a 7.9; and a blueprint request against an unaccepted proposal. Reference, do-nothing and plausible-but-wrong controls separate as intended (`python3 evals/controls/make_controls.py --only 16 17 18 19 20`). **First runs (n=1), against no skill:** netaudit 1.00 vs 0.23, netdesign 0.90 vs 0.30, netdiagram 0.90 vs 0.20, netpropose 0.90 vs 0.70, netblueprint 1.00 vs 1.00 — its eval checks a refusal a bare agent also makes.
+Each skill has one eval in [`evals/`](../../evals/README.md) (evals 16–20): a Terraform/IOS estate to audit that carries a pre-shared key the audit must never echo; requirements whose habitual address plan collides with what's already in use, graded by parsing every CIDR; a target model to draw, graded by parsing the draw.io XML; a proposal hiding an open Critical under a 7.9; and a blueprint request against an unaccepted proposal, graded on what the refusal asks for, not only that it refuses. Reference, do-nothing and plausible-but-wrong controls separate as intended (`python3 evals/controls/make_controls.py --only 16 17 18 19 20`).
+
+**Standalone, measured both ways (n=3 each, against no skill; delta pass rate).** Once with `harness/` staged beside the skills, once with it moved out of the checkout:
+
+| Skill | With harness | Without harness | No skill |
+|---|---:|---:|---:|
+| netaudit | 1.00 | 1.00 | 0.23 / 0.31 |
+| netdesign | 0.90 | 0.90 | 0.30 |
+| netdiagram | 0.90 | 0.87 | 0.20 |
+| netpropose | 1.00 | 1.00 | 0.70 |
+| netblueprint | 1.00 | 1.00 | 0.75 |
+
+No run's report mentions the harness, and the reports that quote metrics quote the skill's own `scripts/netgraph.py`. The misses are the same in both: netdesign's AKS-range assertion and netdiagram's default-deny badges. The benchmark records the run without the harness.
+

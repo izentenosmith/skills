@@ -1163,7 +1163,7 @@ def eval19(run):
     plan = p[m.start():] if m else p
     # Order is read from the first step on: a preamble that explains the ordering ("renumbering waits for the
     # second tunnel") names the renumbering before step 1 without scheduling it first.
-    step = re.search(r"^(#{2,5}[^\n]*\bstep\b|\|\s*(step\s*)?\d+\s*\|)", plan, re.I | re.M)
+    step = re.search(r"^(#{2,5}[^\n]*\bstep\b|\|\s*(#|step|(step\s*)?\d+)\s*\|)", plan, re.I | re.M)
     steps = plan[step.start():] if step else plan
     first = lambda pat: (re.search(pat, steps, re.I).start() if re.search(pat, steps, re.I) else None)
     seg, ren = first(r"NET-SEG-01|allow-ssh-any"), first(r"NET-ADR-01|renumber|10\.3\.0\.0")
