@@ -185,6 +185,17 @@ def eval2(run):
         steps = len({t for ln in rows for t in re.findall(r"\btest_\w+", ln)}) if re.search(r"\bfail", r, re.I) else 0
         sev = f"{steps} tests named in the response's cycle rows (no cycle-log.md)"
     ticked = len(re.findall(r"^\s*-\s*\[x\]", brief, re.M | re.I))
+    defined = set(re.findall(r"^\s*def (test_\w+)", tests, re.M))
+    crits = criteria(brief)
+    named = [c for c in crits if c[0] and set(re.findall(r"\btest_\w+", c[1])) & defined]
+    log_or_resp = log or resp(run)
+    reds = red_rows(log_or_resp, defined)
+    tracer = next((c for c in crits if re.search(r"tracer", c[1], re.I)), None)
+    tracer_tests = set(re.findall(r"\btest_\w+", tracer[1])) & defined if tracer else set()
+    if not tracer_tests:
+        # the tick doesn't name it: take the cycle row that calls itself the tracer
+        tracer_tests = {t for t, row in reds.items() if re.search(r"tracer", row, re.I)}
+    tracer_red = next((reds[t] for t in sorted(tracer_tests) if t in reds), None)
     return [
         ("suite is green", green, eviz, C),
         ("cutoff rule implemented", any_of(rules, r"cutoff"), "", C),
@@ -196,14 +207,70 @@ def eval2(run):
         ("boundary case covered", any_of(tests, r"exact|boundary|edge"), "", C),
         ("cycle log shows discrete test-then-implementation steps", steps >= 3,
          sev, C),
+        # Capability since iteration 23: the 3b71f54^ skill ticks the brief and logs a
+        # Revisions entry too (iteration 15 baseline), so neither separates the skills.
         ("acceptance criteria checked off in the brief file", ticked >= 3,
-         f"{ticked} ticked", D),
+         f"{ticked} ticked", C),
         ("brief revised in place when reality contradicted it",
          any_of(brief, r"##\s*Revisions") and len(re.findall(
              r"^\s*-\s+\S", brief.split("## Revisions")[-1], re.M)) >= 1
          if "## Revisions" in brief else False,
-         "a logged revision entry", D),
+         "a logged revision entry", C),
+        # delta — what tdd instructs that a bare tick, a bare "it failed" and a post-hoc
+        # table do not show
+        ("each criterion ticked in place, naming the test that verifies it",
+         len(crits) >= 5 and len(named) == len(crits),
+         f"{len(named)}/{len(crits)} criteria ticked with a test the suite defines", D),
+        ("each cycle's red recorded with the failure it showed (vertical slices)",
+         len(reds) >= 3, f"{len(reds)} tests with a quoted failure in their cycle row", D),
+        ("tracer bullet red on the missing behavior, not a load or signature error",
+         bool(tracer_red) and red_for_right_reason(tracer_red),
+         f"tracer test {sorted(tracer_tests) or 'not named in the brief'}"
+         + (f": {tracer_red[:160]!r}" if tracer_red else ": no cycle row"), D),
     ]
+
+
+def criteria(brief):
+    """The brief's acceptance criteria as (ticked, text) — a criterion that wraps
+    keeps its continuation lines, so a test named on its last line still counts."""
+    sec = re.search(r"\*\*Acceptance criteria\*\*.*?\n(.*?)(?=\n\s*\n\*\*|\n##|\Z)", brief, re.S)
+    if not sec:
+        return []
+    items = re.split(r"\n(?=\s*-\s*\[[ xX]\])", "\n" + sec.group(1))
+    return [(bool(re.match(r"\s*-\s*\[[xX]\]", it)), it) for it in items
+            if re.match(r"\s*-\s*\[[ xX]\]", it)]
+
+
+# A failure quoted as pytest prints it: on the behavior, or failing to reach it.
+BEHAVIOR_FAIL = (r"DID NOT RAISE|AssertionError|\bassert\s+\S|Failed:|\bE\s{2,}\S"
+                 r"|expected\b[^\n|]{0,60}\b(got|but|instead)\b")
+LOAD_FAIL = (r"TypeError|ImportError|ModuleNotFoundError|NameError|AttributeError"
+             r"|unexpected keyword|fixture '[^']+' not found|collection error")
+NOT_RED = (r"not (yet )?red|(not|isn'?t|wasn'?t) (yet )?(a )?(real |true |proper )?red"
+           r"|wrong reason|doesn'?t count|does not count|not the behaviou?r|never reached")
+
+
+def red_rows(text, defined):
+    """test name → the cycle row (a table row or list item, plus the lines it wraps
+    onto) that names it with a quoted failure."""
+    rows = re.split(r"\n(?=\s*(?:\||[-*]\s|\d+[.)]\s|#))", text)
+    out = {}
+    for row in rows:
+        if not re.search(BEHAVIOR_FAIL + "|" + LOAD_FAIL, row):
+            continue
+        # the row's own test is the first one it names; later ones are prior art it mirrors
+        t = next((t for t in re.findall(r"\btest_\w+", row) if t in defined), None)
+        if t:
+            out.setdefault(t, row)
+    return out
+
+
+def red_for_right_reason(row):
+    """The row quotes a behavioral failure, and any load or signature error it
+    mentions is marked as not counting as red."""
+    if not re.search(BEHAVIOR_FAIL, row):
+        return False
+    return not re.search(LOAD_FAIL, row) or bool(re.search(NOT_RED, row, re.I))
 
 
 def eval3(run):
@@ -224,10 +291,14 @@ def eval3(run):
          len(re.findall(r"if not isinstance\(", rules)) <= 1,
          f"{len(re.findall(r'if not isinstance.', rules))} coerce blocks left (3 in input)", C),
         # delta — only the current skill instructs these
+        # "blocking" is not required: a pass with nothing blocking rates its findings
+        # worthwhile and noted, and iteration 15 rep2 was failed for exactly that.
         ("severity vocabulary applied to findings",
-         any_of(r, r"blocking") and any_of(r, r"worthwhile") and any_of(r, r"\bnoted\b"),
-         "blocking/worthwhile/noted", D),
-        ("pass calibrated to diff size", any_of(r, r"[Cc]alibrat|small diff|large diff"), "", D),
+         any_of(r, r"\bblocking\b", r"\bworthwhile\b") and any_of(r, r"\bnoted\b"),
+         "blocking or worthwhile, and noted", D),
+        ("pass calibrated to diff size",
+         any_of(r, r"[Cc]alibrat", r"(small|large) diff", r"diff is (small|large)", r"inline pass"),
+         "", D),
         ("prior duplication smell explicitly re-rated (promoted)",
          near(r, dup, r"promot"), "promotion of the carried duplication smell", D),
         ("prior venue_id smell explicitly left, not silently dropped",
@@ -240,6 +311,52 @@ def eval3(run):
          any_of(r, r"\d+\s+noted|noted and carried|carried.{0,20}\d+"), "", D),
         ("ledger appended in the harness grammar", *ledger_shape(run, "refactor"), D),
     ]
+
+
+def settled(ledger, r):
+    """Every unproven finding in the ledger has a `Would be settled by` line, and the
+    response, which is what the user reads, names the settling run too. Before
+    iteration 23 only the response was read, and iteration 15's ledgers carried the
+    field on every unproven finding in all three runs."""
+    blocks = re.split(r"\n(?=####\s)", ledger)
+    if not any(re.search(r"\*\*Confidence:\*\*", b) for b in blocks):
+        return False, "no finding in the ledger carries a confidence"
+    unproven = [b for b in blocks if re.search(r"\*\*Confidence:\*\*\s*unproven", b, re.I)]
+    bare = [re.match(r"####\s*(\S+)", b).group(1) for b in unproven
+            if not re.search(r"\*\*Would be settled by:\*\*\s*\S.{15,}", b)]
+    in_resp = any_of(r, r"settled by", r"would settle", r"settles? (it|this|the)")
+    ok = not bare and (in_resp or not unproven)
+    return ok, (f"{len(unproven)} unproven in the ledger, {len(bare)} without a settling run"
+                + (f" ({', '.join(bare)})" if bare else "")
+                + ("; response names it" if in_resp else "; response does not"))
+
+
+PARTY = r"party.?size|PARTY_TOO_LARGE"
+PARTY_BOUNDARY = r"off.?by.?one|boundar|\b12\b|at the (limit|max)|>="
+CARRY = r"refuted|revisit|re-?report|carr(y|ied|ies)|already|sticky|not (re)?(attack|open)"
+
+
+def party_rereport(ledger, r):
+    """The refuted claim is the party-size *boundary*. A ledger finding re-reports it when
+    its Target or Claim names it (as eval 15 judges it; criterion 5, both codes
+    surfacing, is a legitimate finding) and carries no Reopens field. A response line
+    re-reports it when it presents it as a finding without saying it was refuted and
+    left: saying so is the carry statement the skill asks for, which the proximity
+    check used before iteration 23 failed in two runs."""
+    blocks, _ = ledger_findings(ledger)
+    about = lambda b: "\n".join(re.findall(r"^- \*\*(?:Target|Claim challenged):\*\*.*$", b, re.M))
+    in_ledger = [f for f, b in blocks.items()
+                 if re.search(PARTY, about(b), re.I) and re.search(PARTY_BOUNDARY, about(b), re.I)
+                 and not re.search(r"^- \*\*Reopens:\*\*", b, re.M)]
+    # party size and its boundary close together: a cutoff-boundary line that names
+    # check_party_size as a peer rule is not about the refuted claim
+    subject = (rf"(?:{PARTY})[^\n]{{0,60}}(?:off.?by.?one|boundar)"
+               rf"|(?:off.?by.?one|boundar)[^\n]{{0,60}}(?:{PARTY})")
+    in_resp = [ln.strip()[:80] for ln in r.splitlines()
+               if re.search(subject, ln, re.I)
+               and re.search(r"\bF\d+\b|\bfinding\b", ln, re.I) and not re.search(CARRY, ln, re.I)]
+    bad = in_ledger + in_resp
+    return not bad, f"re-reported: {bad}" if bad else "prior refusal respected"
 
 
 def eval4(run):
@@ -264,11 +381,9 @@ def eval4(run):
          "DEFAULT_CUTOFF_MINUTES" in rules
          and 'config.get("cutoff_minutes"' not in rules, "planted defect still present", C),
         # delta
-        ("does not re-report the refuted party-size finding",
-         not near(t, r"party.?size|PARTY_TOO_LARGE", r"\bfinding\b.{0,60}(off-by-one|boundary)"),
-         "prior refusal respected without a written reopen condition", D),
-        ("unproven findings name what would settle them",
-         any_of(r, r"settled by|would settle"), "", D),
+        ("does not re-report the refuted party-size finding", *party_rereport(ledger, r), D),
+        ("unproven findings name what would settle them, in the ledger and the response",
+         *settled(ledger, r), D),
         ("findings written into .workflow/ledger.md",
          len(ledger) > len(read(FIXTURES / "teardown/.workflow/ledger.md")) + 200,
          f"{len(ledger)} chars in ledger", D),

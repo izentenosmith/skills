@@ -14,7 +14,7 @@ architect-deep-dive → agent-brief → acceptance-tests → tdd → refactor-re
 | [architect-deep-dive](architect-deep-dive/SKILL.md) | Staff-architect design review that resolves the plan one question at a time — options with trade-offs, a recommendation and its reversal cost — against a stated charter and a live question count. Infers answers from the codebase where it can. |
 | [agent-brief](agent-brief/SKILL.md) | Turns the resolved design decisions into the pure-text build plan TDD executes — ordered acceptance criteria, test seams, prior art, and scope. |
 | [acceptance-tests](acceptance-tests/SKILL.md) | Turns the brief's acceptance criteria into executable black-box tests through the outermost boundary — written before any code, each red for the right reason — and maps every criterion to its test. tdd is done when they pass. |
-| [tdd](tdd/SKILL.md) | Test-driven development via the red-green-refactor loop, in vertical slices rather than horizontal layers. |
+| [tdd](tdd/SKILL.md) | Test-driven development via the red-green-refactor loop, in vertical slices rather than horizontal layers. Each test is seen red for the right reason, and each criterion is ticked with the test that proves it. |
 | [refactor-review](refactor-review/SKILL.md) | Reviews the current diff: names the smell, then prescribes a behavior-preserving refactoring. |
 | [devils-advocate](devils-advocate/SKILL.md) | Assumes everything just built is wrong and hunts concrete evidence for each defect. Over-reports on purpose; does not fix or judge. |
 | [tyr-verdict](tyr-verdict/SKILL.md) | Adjudicates the devils-advocate findings, cuts false claims, turns confirmed defects into red→green remediation slices, and issues a go/no-go verdict. |
@@ -39,7 +39,7 @@ Or one stage at a time:
 | devils-advocate | `npx skills add izentenosmith/skills --skill devils-advocate` |
 | tyr-verdict | `npx skills add izentenosmith/skills --skill tyr-verdict` |
 
-The Trivial tier below needs only `--skill tdd refactor-review`. Flags (`-a`, `-g`, `-y`) are in the [root README](../../README.md#install-with-npx).
+The Trivial tier below needs only `--skill tdd refactor-review`. The repo is private: you need read access and GitHub auth first. That setup, and the flags (`-a`, `-g`, `-y`), are in the [root README](../../README.md#install-with-npx).
 
 Or **copy the folders you want into the repo you're working in**, alongside wherever that repo keeps its agent skills. Each folder is self-contained — `SKILL.md` plus every reference doc it needs — so one folder is a complete install of one skill. Nothing here reads a file outside its own directory.
 
@@ -123,4 +123,4 @@ Each lives in the folder of the skill that uses it.
 
 ## Measured
 
-These six carry the repo's deepest scored result — 0.98 vs 0.22 on delta over 36 runs. See [`../evals/`](../../evals/README.md) and [benchmark.md](../../evals/benchmark.md). `acceptance-tests` has eval 27, on the `tdd` fixture: the tests it writes are run against the unchanged code, a correct implementation and three mutants, so a test that is red for the wrong reason or cannot fail is caught by execution, not by reading. Its controls separate as intended. **0.75 against 0.25 for no skill on its first run** — two tests passed on the unimplemented code and the edge had a minute of slack — and **1.00 on all three runs** after the fix: criteria that already hold are tested with their contrast, and edges within seconds.
+The seven stages carry the repo's deepest scored result: **0.99 vs 0.13** on delta and **1.00 vs 0.88** on capability, with three runs per eval against the pre-session skills (iterations 15 and 24). tdd's eval checks what it adds over a capable agent: each criterion ticked with the test that verifies it, each red recorded with the failure it showed, and a tracer bullet that is red on the behavior, not on the seam it needs. See [`../evals/`](../../evals/README.md) and [benchmark.md](../../evals/benchmark.md). `acceptance-tests` has eval 27, on the `tdd` fixture: the tests it writes are run against the unchanged code, a correct implementation and three mutants, so a test that is red for the wrong reason or cannot fail is caught by execution, not by reading. Its controls separate as intended. **0.75 against 0.25 for no skill on its first run** — two tests passed on the unimplemented code and the edge had a minute of slack — and **1.00 on all three runs** after the fix: criteria that already hold are tested with their contrast, and edges within seconds.

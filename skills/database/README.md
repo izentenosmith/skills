@@ -40,7 +40,7 @@ Or one at a time:
 | dbbuild | `npx skills add izentenosmith/skills --skill dbbuild` |
 | dbquery | `npx skills add izentenosmith/skills --skill dbquery` |
 
-The installer dereferences the companion-reference symlinks, so each installed folder is self-contained. It installs the skills only — `harness/dbworkflow.py` needs a clone. Flags (`-a`, `-g`, `-y`) are in the [root README](../../README.md#install-with-npx).
+The installer dereferences the companion-reference symlinks, so each installed folder is self-contained. It installs the skills only — `harness/dbworkflow.py` needs a clone. The repo is private: you need read access and GitHub auth first. That setup, and the flags (`-a`, `-g`, `-y`), are in the [root README](../../README.md#install-with-npx).
 
 ## Coordinated workflow
 
