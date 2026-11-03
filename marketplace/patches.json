@@ -14,13 +14,5 @@
         "new": "ENV API_KEY=<real key>   # visible"
       }
     ]
-  },
-  "netaudit": {
-    "SKILL.md": [
-      {
-        "old": " The workflow\ncoordinator is [networkflow.py](../../../harness/networkflow.py). The scoring and graph harness is\n[netreview.py](../../../harness/netreview.py).",
-        "new": ""
-      }
-    ]
   }
 }

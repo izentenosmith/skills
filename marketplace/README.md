@@ -58,7 +58,7 @@ A problem fails the run and nothing is written:
 - the zip is under Agensi's 50 MB limit
 - every patch applies and names a skill that exists; every bundle names skills that exist
 
-Mentions of "the harness", which no zip ships, are listed as warnings: a sentence like "if the repo carries the harness, run…" is fine without it, and the list shows where a skill may lean on it harder (the networking family).
+Mentions of "the harness", which no zip ships, are listed as warnings: a sentence like "if the repo carries the harness, run…" is fine without it, and the list shows where a skill may lean on it harder. The networking skills ship their own `scripts/netgraph.py` instead, so netaudit's one optional mention is all that family shows.
 
 Tests: `python3 -m unittest discover marketplace/tests`.
 
