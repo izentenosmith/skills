@@ -15,6 +15,10 @@ spec:
     spec:
       nodeSelector:
         kubernetes.io/arch: amd64
+      # billing moves to the restricted Pod Security level; added ahead of the
+      # image, so new rollouts are blocked until the image stops running as root.
+      securityContext:
+        runAsNonRoot: true
       containers:
         - name: invoicer
           image: registry.example.com/billing/invoicer:4f2c91a
