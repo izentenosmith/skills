@@ -1,6 +1,6 @@
 ---
 name: dbdesign
-description: Design a new relational database or revise an existing database design from an audit, requirements, or domain model using relational theory, Codd's rules, normal forms, and physical-design guidance.
+description: Design a new relational database, or redesign an existing one, from requirements, a domain model or a dbaudit report — a requirements dossier with a business-rule catalogue, a Barker conceptual model, functional dependencies, candidate keys and a normal-form assessment per relation, relational tables with keys and constraints, every rule mapped to the mechanism that enforces it, and DDL that runs as written on the target engine. Use when the user wants a schema designed or redesigned, "model this domain", "what tables do we need", a normalization or key review of an existing design, or the step after dbaudit and before dbdiagram. It proposes a design and never applies schema changes or migrations; dbarchitect decides which stores hold the data, dbpropose turns the design into a recommendation, dbbuild writes the accepted DDL.
 ---
 
 # dbdesign
