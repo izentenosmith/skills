@@ -583,8 +583,9 @@ def main(argv=None):
             result = analyse_pr(a)
             md = pr_markdown(result)
         else:
-            result, lines = {"hotspots": cmd_hotspots, "coupling": cmd_coupling, "knowledge": cmd_knowledge,
-                             "xray": cmd_xray, "trend": cmd_trend}[a.cmd](a)
+            handler = {"hotspots": cmd_hotspots, "coupling": cmd_coupling, "knowledge": cmd_knowledge,
+                       "xray": cmd_xray, "trend": cmd_trend}[a.cmd]
+            result, lines = handler(a)
             md = "\n".join(lines) + "\n"
     except Usage as e:
         print(f"xray: {e}", file=sys.stderr)
