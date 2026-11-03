@@ -100,7 +100,8 @@ def ledger_shape(run, fixture):
 
 def suite_green(run):
     repo = run / "repo"
-    py = repo / ".venv/bin/python"
+    # absolute(): pytest runs with cwd=repo, so a relative iteration path would not resolve
+    py = (repo / ".venv/bin/python").absolute()
     if not py.exists():
         return False, "no venv in run repo"
     try:
@@ -156,7 +157,7 @@ def eval1(run):
         ("key interfaces name the public seam",
          any_of(src, r"BookingService\.submit|`submit`"), "", C),
         ("prior art points at the existing test suite",
-         any_of(src, r"test_booking|test_party_size_rule|existing (pytest )?suite"), "", C),
+         any_of(src, r"test_booking|test_party_size_rule|existing\s+(pytest\s+)?suite"), "", C),
         ("deferred decisions carried as explicit constraints",
          any_of(src, r"Deferred by design"), "named section, not prose", D),
         ("out of scope names the excluded adjacent work",
@@ -168,21 +169,33 @@ def eval1(run):
 
 def eval2(run):
     rules = read(run / "repo/reservations/rules.py")
-    tests = read(run / "repo/tests/test_booking.py")
+    # Every test file, not just test_booking.py: a run may put the cutoff tests in a new one.
+    tests = "\n".join(read(p) for p in sorted((run / "repo/tests").rglob("test_*.py")))
     brief = read(run / "repo/.workflow/brief.md")
     log = read(run / "outputs/cycle-log.md")
     green, eviz = suite_green(run)
-    steps = len(re.findall(r"^\s*(?:\d+[.)]|[-*|])", log, re.M))
+    if log:
+        steps = len(re.findall(r"^\s*(?:\d+[.)]|[-*|])", log, re.M))
+        sev = f"{steps} logged steps"
+    else:
+        # run.py asks only for response.md; there a cycle is a table or list line naming its
+        # test, and the response has to say that tests failed first
+        r = resp(run)
+        rows = re.findall(r"^\s*(?:\d+[.)]|[-*|]).*$", r, re.M)
+        steps = len({t for ln in rows for t in re.findall(r"\btest_\w+", ln)}) if re.search(r"\bfail", r, re.I) else 0
+        sev = f"{steps} tests named in the response's cycle rows (no cycle-log.md)"
     ticked = len(re.findall(r"^\s*-\s*\[x\]", brief, re.M | re.I))
     return [
         ("suite is green", green, eviz, C),
         ("cutoff rule implemented", any_of(rules, r"cutoff"), "", C),
         ("window read from account config, not hard-coded",
          any_of(rules, r"config\.get\(\s*[\"']cutoff_minutes"), "", C),
-        ("tests exist for the cutoff behavior", any_of(tests, r"cutoff|CUTOFF"), "", C),
+        # A test that names the cutoff — the fixture's own docstring already says "cutoff".
+        ("tests exist for the cutoff behavior",
+         any_of(tests, r"def test\w*cutoff", r"CUTOFF_WINDOW"), "", C),
         ("boundary case covered", any_of(tests, r"exact|boundary|edge"), "", C),
         ("cycle log shows discrete test-then-implementation steps", steps >= 3,
-         f"{steps} logged steps", C),
+         sev, C),
         ("acceptance criteria checked off in the brief file", ticked >= 3,
          f"{ticked} ticked", D),
         ("brief revised in place when reality contradicted it",
@@ -242,8 +255,8 @@ def eval4(run):
         ("finds the vacuous config test",
          any_of(t, r"test_cutoff_window_reads_from_account_config"), "", C),
         ("argues the vacuity (mutation-surviving)",
-         any_of(t, r"vacuous", r"passes? (even )?(if|when)[^\n]{0,60}(delet|remov|ignor)",
-                r"surviv[^\n]{0,40}mutat"), "", C),
+         any_of(t, r"vacuous", r"passes? (even )?(if|when|though)[^\n]{0,60}(delet|remov|ignor)",
+                r"surviv[^\n]{0,40}mutat", r"mutat[^\n]{0,80}surviv"), "", C),
         ("findings carry evidence", len(re.findall(r"Evidence", t, re.I)) >= 2, "", C),
         ("findings carry a confidence rating", any_of(t, r"proven|unproven"), "", C),
         ("negative results recorded", any_of(t, r"found nothing|nothing found|swept|attacked[^\n]{0,40}nothing"), "", C),
@@ -885,12 +898,23 @@ def find_added(run, fixture, pattern):
     return [f for f in added + modified if re.search(pattern, f)]
 
 
-def load_topology(run, fixture, pattern=r"(^|/)topology\.json$", exclude=()):
-    for f in find_added(run, fixture, pattern):
+def find_deliverable(run, fixture, pattern):
+    """Files the run added or changed in the repo, then its outputs/ (as `outputs/<name>`): a prompt that names
+    no location leaves both reasonable, and the run prompt itself points at outputs/."""
+    return find_added(run, fixture, pattern) + [f"outputs/{p.name}" for p in sorted((run / "outputs").glob("*"))
+                                                if p.is_file() and re.search(pattern, p.name)]
+
+
+def at(run, f):
+    return run / f if f.startswith("outputs/") else run / "repo" / f
+
+
+def load_topology(run, fixture, pattern=r"(^|/)topology\.json$", exclude=(), outputs=False):
+    for f in (find_deliverable if outputs else find_added)(run, fixture, pattern):
         if f.startswith(exclude):
             continue
         try:
-            t = json.loads(read(run / "repo" / f))
+            t = json.loads(read(at(run, f)))
         except Exception:
             continue
         if isinstance(t, dict) and isinstance(t.get("networks"), list):
@@ -1001,8 +1025,8 @@ def nd_external(nid, net, n, kinds):
 def eval17(run):
     """netdesign from requirements: an addressing plan that avoids what's in use, zones, flows, pairs."""
     t = everything(run, "net-design")
-    design = "\n".join(read(run / "repo" / f) for f in find_added(run, "net-design", r"design[^/]*\.md$"))
-    tf, topo = load_topology(run, "net-design")
+    design = "\n".join(read(at(run, f)) for f in find_deliverable(run, "net-design", r"design[^/]*\.md$"))
+    tf, topo = load_topology(run, "net-design", outputs=True)
     ns = nets(topo)
     kinds = {n.get("id"): n.get("kind") for n in (topo or {}).get("nodes", [])}
     internal = [n for n in ns if not nd_external(*n, kinds)]
@@ -1117,8 +1141,8 @@ def eval18(run):
 # ---- eval 19: netpropose
 
 def proposal_text(run, fixture):
-    files_ = find_added(run, fixture, r"proposal[^/]*\.md$")
-    return "\n".join(read(run / "repo" / f) for f in files_) or resp(run), files_
+    files_ = find_deliverable(run, fixture, r"proposal[^/]*\.md$")
+    return "\n".join(read(at(run, f)) for f in files_) or resp(run), files_
 
 
 STEP_FIELDS = (r"validat|verif", r"roll ?back", r"blast radius")
@@ -1150,7 +1174,11 @@ def eval19(run):
     p, pf = proposal_text(run, "net-propose")
     m = re.search(r"^#{1,4}[^\n]*(cut-?over|sequenc|migration|order of work|change plan|roll-?out)[^\n]*$", p, re.I | re.M)
     plan = p[m.start():] if m else p
-    first = lambda pat: (re.search(pat, plan, re.I).start() if re.search(pat, plan, re.I) else None)
+    # Order is read from the first step on: a preamble that explains the ordering ("renumbering waits for the
+    # second tunnel") names the renumbering before step 1 without scheduling it first.
+    step = re.search(r"^(#{2,5}[^\n]*\bstep\b|\|\s*(#|step|(step\s*)?\d+)\s*\|)", plan, re.I | re.M)
+    steps = plan[step.start():] if step else plan
+    first = lambda pat: (re.search(pat, steps, re.I).start() if re.search(pat, steps, re.I) else None)
     seg, ren = first(r"NET-SEG-01|allow-ssh-any"), first(r"NET-ADR-01|renumber|10\.3\.0\.0")
     words = {w for w in re.findall(r"\b(Keep|Refactor|Rework|Rebuild|Retire)\b", p)}
     no_iac, iev = iac_written(run, "net-propose")
@@ -1181,9 +1209,27 @@ def eval19(run):
 
 
 # ---- eval 20: netblueprint
+#
+# Refusing is not enough to tell the skill from no skill: a bare agent also declines to build on a
+# proposal marked Proposed. What netblueprint adds is what the refusal says: the acceptance record the
+# package's header needs (who, when, which version), the κ=1 exception acceptance has to cover, the
+# inputs the package will lack, the model's gaps against the IaC handoff contract (no network carries
+# attrs.platform; the tunnels carry no crypto profile or secret_ref), the shipped script's cross-check, and
+# what acceptance unlocks (network-design.md, a blueprint/accepted topology.json, the two views).
+
+NB_WHO = r"\bwho\b|by whom|approver|accepted by|\bname\b|\brole\b|signed|sign-?off by"
+NB_WHEN = r"\bwhen\b|\bdate\b|dated|on what day"
+NB_VERSION = r"\bversion\b|\brev(ision)?\b|\bv\d|which (proposal|draft|copy)|as written|with (changes|amendments)|2026-10-23"
+NB_RESIDUAL = r"κ\s*=?\s*1\b|connectivity (of |at |= ?)?1\b|single (on-?prem |VPN )*endpoint|second (on-?prem )?(VPN )?endpoint|lan-onprem"
+NB_COVER = (r"exception|explicitly accept|accept(ed|s)? (the |this |that )?(residual|risk|exception)"
+            r"|(acceptance|approval|sign-?off) (must|should|needs to|has to|will need to) (cover|state|include|record|name|accept)"
+            r"|must (also )?be (explicitly )?accepted|waive")
+NB_GAP = r"missing|lack|\bno\b|absent|without|none of|not (set|present|specified|recorded|carried)|\bgaps?\b|must (add|supply)"
+NB_SCRIPT = r"\bok\b|pass|κ|connectivity|cut set|minimum cut|finding|clean"
+
 
 def eval20(run):
-    """netblueprint on a proposal nobody accepted: stop, ask, build nothing."""
+    """netblueprint on a proposal nobody accepted: stop, build nothing, and say what acceptance must record."""
     r = resp(run)
     nd = find_added(run, "net-blueprint", r"network-design[^/]*\.md$")
     accepted = []
@@ -1197,18 +1243,43 @@ def eval20(run):
     marked = [f for f in find_added(run, "net-blueprint", r"\.drawio$") if re.search(r"accepted", read(run / "repo" / f), re.I)]
     no_iac, iev = iac_written(run, "net-blueprint")
     ok_in, inev = net_unchanged(run, "net-blueprint", "proposal/", "design/", "diagrams/")
+    record = {k: near(r, r"accept", pat, 300) for k, pat in (("who", NB_WHO), ("when", NB_WHEN), ("version", NB_VERSION))}
+    # The contract's own field names: "Platform: Azure" in a quoted header is not a gap in the model.
+    contract = [k for k, pat in (("attrs.platform", r"attrs\.platform"), ("tunnel crypto profile", r"crypto[ _-]?profile"),
+                                 ("secret_ref", r"secret_ref"))
+                if near(r, pat, NB_GAP, 160)]
+    unlocks = {"network-design.md": has(r, r"network-design\.md"),
+               "blueprint/accepted model": any_of(r, r"meta\.stage", r"stage\W{0,12}blueprint", r"status\W{0,12}accepted"),
+               "logical-topology.drawio": has(r, r"logical-topology\.drawio"),
+               "segmentation.drawio": has(r, r"segmentation\.drawio")}
     return [
+        # capability
         ("recognises the proposal's status",
          any_of(r, r"\bProposed\b|not (yet )?(been )?accepted|awaiting|pending (review|acceptance)|no (record of )?acceptance"), "", C),
         ("asks for explicit acceptance before producing the package",
          any_of(r, r"explicit(ly)?\s+accept", r"accept(ed|ance)[^\n]{0,80}(before|first|required|needed|missing)",
-                r"once[^\n]{0,60}accept", r"confirm[^\n]{0,60}accept"), "", D),
-        ("names where acceptance comes from",
-         near(r, r"accept", r"2026-10-29|change board|\bCAB\b|board|proposal\.md"), "", D),
+                r"once[^\n]{0,60}accept", r"confirm[^\n]{0,60}accept"), "", C),
         ("says plainly that nothing was produced or changed",
          any_of(r, r"nothing (has been|was|is) (built|changed|produced|written|generated)",
                 r"(did not|didn't|have not|haven't|will not|won't) (produce|generate|write|create|build)",
-                r"no (files|package|blueprint)[^\n]{0,30}(written|produced|created|generated)"), "", D),
+                r"no (files|package|blueprint)[^\n]{0,30}(written|produced|created|generated)"), "", C),
+        # delta
+        ("names where acceptance comes from",
+         near(r, r"accept", r"2026-10-29|change board|\bCAB\b|board|proposal\.md"), "", D),
+        ("asks for the acceptance record: who, when and which version",
+         all(record.values()), f"{[k for k, v in record.items() if not v] or 'all three'} missing" if not all(record.values()) else "all three", D),
+        ("the κ=1 on-prem pair named as an exception acceptance must cover",
+         near(r, NB_RESIDUAL, NB_COVER, 200), "", D),
+        ("the missing audit named as a gap for the package",
+         near(r, r"\baudit\b", r"not (included|present|provided|available|here|in (this|the) (workspace|repo))|missing|absent"
+              r"|isn't (in|here|included|present)|no audit|doesn't (exist|contain)", 160), "", D),
+        ("says what acceptance unlocks: network-design.md, the accepted model, both views",
+         all(unlocks.values()), f"missing {[k for k, v in unlocks.items() if not v]}" if not all(unlocks.values()) else "all four", D),
+        ("the model checked against the IaC handoff contract: its gaps named", bool(contract),
+         f"{contract or 'no platform, crypto-profile or secret_ref gap named'}", D),
+        # design.md says "netgraph" in a heading, so the name alone proves nothing: the run must have run it.
+        ("readiness quotes the shipped script's cross-check",
+         near(r, r"netgraph(\.py)?`?\s+(diagrams|analyze)|diagram\(s\) pass", NB_SCRIPT, 300), "", D),
         ("no network-design.md written", not nd, f"{nd or 'none'}", D),
         ("no accepted topology.json written", not accepted, f"{accepted or 'none'}", D),
         ("no diagram marked accepted", not marked, f"{marked or 'none'}", D),
@@ -2601,7 +2672,8 @@ def db_gate_clauses(seg):
 # ---- eval 30: dbaudit
 
 DA_SECRETS = ("eval-fake-Pg-4hT9wq", "eval-fake-dblink-7Qm2")
-DA_RUNTIME = (r"\bslow(er|ness)?\b|row counts?|\b\d+(\.\d+)?\s*(k|M|million|billion)\s+rows|largest table|index usage"
+# "slow" as in a slow salted hash (bcrypt, argon2) is credential advice, not a runtime claim
+DA_RUNTIME = (r"\bslow(er|ness)?\b(?!,? (salted )?(password )?hash)|row counts?|\b\d+(\.\d+)?\s*(k|M|million|billion)\s+rows|largest table|index usage"
               r"|unused index|pg_stat|execution plan|query plan|still (read|used)|no longer (read|used)")
 DA_TRANSITIVE = r"customer_(email|name)"
 DA_BASE = r"\bbase\b\**\s*(?:score\s*)?(?:=|:|of|is)?\s*\**\s*\d"
@@ -2943,10 +3015,15 @@ def db_drawio(xml_text):
                 continue
             inner = el.find("mxCell") if el.tag != "mxCell" else None
             cell = el if inner is None else inner
+            geo = cell.find("mxGeometry")
+            try:
+                y = None if geo is None or geo.get("relative") == "1" else float(geo.get("y") or 0)
+            except ValueError:
+                y = None
             cells[cid] = dict(text=db_text(el.get("value") if el.tag == "mxCell" else el.get("label")),
                               style=cell.get("style") or "", edge=cell.get("edge") == "1",
                               vertex=cell.get("vertex") == "1", parent=cell.get("parent"),
-                              source=cell.get("source"), target=cell.get("target"))
+                              source=cell.get("source"), target=cell.get("target"), y=y)
         pages.append((d.get("name") or "", cells))
     return pages
 
@@ -2993,11 +3070,16 @@ def db_inner_text(cells, cid):
 
 def db_row_lines(cells, cid):
     """A table drawn in draw.io as lines: its own label's lines, then one line per direct child (a column row),
-    with the row's nested cells (key, name, type) joined — the swimlane and the shape=table styles alike."""
+    with the row's nested cells (key, name, type) joined — the swimlane and the shape=table styles alike.
+    Up to five sibling cells at one height are one row too: a key, a name and a type drawn side by side."""
     lines = cells[cid]["text"].splitlines()
+    rows = defaultdict(list)
     for k, c in cells.items():
         if c["parent"] == cid and not c["edge"]:
-            lines.append(" ".join(db_inner_text(cells, k).split()))
+            rows[k if c["y"] is None else round(c["y"])].append(k)
+    for ks in rows.values():
+        for group in ([ks] if len(ks) <= 5 else [[k] for k in ks]):
+            lines.append(" ".join(" ".join(db_inner_text(cells, k).split()) for k in group))
     return lines
 
 
@@ -3005,7 +3087,8 @@ def db_er_graph(cells, ent):
     """Barker relationships drawn on the ER page. `ent` maps entity name → cell id. Returns
     (pairs: {frozenset(names): [edge ids]}, ternary connectors, Chen-style connectors). A connector is a
     non-entity vertex an edge ends on: a junction joining two half-lines is fine; one joining three or more
-    entities is a ternary relationship, and a diamond or oval joined to an entity is Chen notation."""
+    entities is a ternary relationship, and a diamond or oval joined to an entity is Chen notation. An oval
+    with no stroke and no label is an invisible junction, not a Chen shape."""
     name_of = {cid: n for n, cid in ent.items()}
     ends = {}
     for cid, c in cells.items():
@@ -3024,7 +3107,9 @@ def db_er_graph(cells, ent):
             if x in name_of and y in nb and len(nb[y]) == 2:
                 pairs[frozenset(nb[y])].append(e)
     ternary = sorted(k for k, v in nb.items() if len(v) >= 3)
-    chen = sorted(k for k, v in nb.items() if v and re.search(r"rhombus|ellipse|umlClass|shape=uml", cells[k]["style"]))
+    hidden = lambda c: re.search(r"strokeColor=none", c["style"]) and not c["text"].strip()
+    chen = sorted(k for k, v in nb.items() if v and (re.search(r"rhombus|umlClass|shape=uml", cells[k]["style"])
+                                                     or re.search(r"ellipse", cells[k]["style"]) and not hidden(cells[k])))
     return pairs, ternary, chen
 
 
@@ -3062,7 +3147,9 @@ def eval32(run):
     no_pair = [" – ".join(sorted(p)) for p in want if p not in pairs]
     role_bad = []
     for p, r in want.items():
-        labels = {t.strip() for t in seg_text.get(p, []) if re.search(r"[a-z]", t) and t == t.lower()}
+        # a note in brackets after the role name ("registered with (inferred, Q4)") is not part of it
+        bare = [re.sub(r"\s*[(\[][^)\]]*[)\]]", "", t).strip() for t in seg_text.get(p, [])]
+        labels = {t for t in bare if re.search(r"[a-z]", t) and t == t.lower()}
         roles_ok = all(r.get(k, "") in " ".join(labels) for k in ("a_role", "b_role"))
         if len(labels) < 2 or not roles_ok:
             role_bad.append(" – ".join(sorted(p)))
@@ -3074,9 +3161,37 @@ def eval32(run):
             opt_bad.append(" – ".join(sorted(p)))
     vacc = model["associations"][0]
     vacc_pairs = [frozenset((vacc["name"], p)) for p in vacc["participants"]]
-    legend = any(re.search(r"barker notation", t, re.I) and re.search(r"dashed|optional|may be", t, re.I)
-                 and re.search(r"crow|one or more|many", t, re.I)
-                 for t in (db_inner_text(er, cid) for cid in er))
+    # a legend is one cell with what it holds, or the cells whose IDs name it, read together
+    legend_texts = [db_inner_text(er, cid) for cid in er]
+    legend_texts.append("\n".join(c["text"] for cid, c in er.items() if re.search(r"legend", cid, re.I)))
+    legend = any(re.search(r"barker\b[^\n]{0,40}\bnotation", t, re.I) and re.search(r"dashed|optional|may be", t, re.I)
+                 and re.search(r"crow|one or more|many", t, re.I) for t in legend_texts)
+    # UID bars: a bar where each relationship in a UID meets the entity it identifies, and on no other many-end
+    owner_of = {cid: n for n, cid in loose.items()}
+
+    def end_marks(p, name):
+        """The marker each segment of relationship `p` carries where it meets `name`, and whether a cell
+        inside one of its segments names the UID."""
+        marks, named = [], False
+        for e in pairs.get(p, []):
+            for side, x in (("start", er[e]["source"]), ("end", er[e]["target"])):
+                if owner_of.get(db_owner(er, x, owner_of)) == name:
+                    m = re.search(rf"{side}Arrow=(\w+)", er[e]["style"])
+                    marks.append(m.group(1) if m else "none")
+            named |= any(c["parent"] == e and re.search(r"\buid\b", f"{c['text']} {c['style']}", re.I) for c in er.values())
+        return marks, named
+
+    is_bar = lambda m: re.fullmatch(r"dash|ERone|ERmandOne|ERoneToMany", m)
+    in_uid = [(r["a"], r["b"]) for r in model["relationships"] if r.get("uid")]
+    in_uid += [(a["name"], p) for a in model["associations"] for p in a["participants"] if re.search(rf"\b{p}\b", a["uid"])]
+    not_uid = [(r["a"], r["b"]) for r in model["relationships"] if not r.get("uid")]
+    not_uid += [(a["name"], p) for a in model["associations"] for p in a["participants"] if (a["name"], p) not in in_uid]
+    uid_bad = []
+    for a, b in in_uid:
+        marks, named = end_marks(frozenset((a, b)), a)
+        if not (named or any(map(is_bar, marks))):
+            uid_bad.append(f"{a} – {b}")
+    bar_extra = [f"{a} – {b}" for a, b in not_uid if any(map(is_bar, end_marks(frozenset((a, b)), a)[0]))]
     pv = frozenset(("PET", "VET"))
     inferred = (any(re.search(DB_INFERRED, t, re.I) for t in seg_text.get(pv, []))
                 or any(re.search(r"primary vet|registered with", c["text"], re.I) and re.search(DB_INFERRED, c["text"], re.I)
@@ -3105,6 +3220,30 @@ def eval32(run):
         fk_want[frozenset((f["table"], f["ref"]))] += 1
     fk_diff = {" – ".join(sorted(k)): (fk_edges.get(k, 0), fk_want.get(k, 0))
                for k in set(fk_edges) | set(fk_want) if fk_edges.get(k, 0) != fk_want.get(k, 0)}
+    # FK paths labelled: an edge between the two tables whose label names the FK column
+    fk_text = defaultdict(list)
+    for cid, c in rel.items():
+        if c["edge"]:
+            s, t = (tname.get(db_owner(rel, x, tname)) for x in (c["source"], c["target"]))
+            fk_text[frozenset((s, t))].append(db_inner_text(rel, cid))
+    fk_unlabelled = [f"{f['table']}.{f['column']}" for f in model["foreign_keys"]
+                     if not any(re.search(rf"(?<![a-z0-9]){f['column']}(?![a-z0-9])", x, re.I)
+                                for x in fk_text.get(frozenset((f["table"], f["ref"])), []))]
+    # alternate keys: a key marker on the column's row, a marker group shared by every column of a composite
+    # key (U1 on each), or one line naming UNIQUE and all its columns
+    uq = r"\b(?:UQ|UK|AK|U)\d*\b|\bUNIQUE\b"
+    ak_missing = []
+    for u in model["unique"]:
+        t, cols = u["table"], u["columns"]
+        lines = tlines.get(t, []) + ttext.get(t, "").splitlines()
+        groups = [set(re.findall(r"\b(?:UQ|UK|AK|U)\d+\b", " ".join(fk_lines(t, col)))) for col in cols]
+        if not (len(cols) == 1 and any(re.search(uq, ln) for ln in fk_lines(t, cols[0]))
+                or len(cols) > 1 and set.intersection(*groups)
+                or any(re.search(uq, ln) and all(re.search(rf"\b{col}\b", ln) for col in cols) for ln in lines)):
+            ak_missing.append(f"{t}({', '.join(cols)})")
+    open_q = r"undecided|not decided|open question|\bQ3\b|unknown|tbd|to be decided"
+    chip_lines = [ln for ln in tlines.get("pet", []) + ttext.get("pet", "").splitlines() if re.search(r"\bmicrochip\b", ln)]
+    chip_keyed = [ln for ln in chip_lines if re.search(uq, ln) and not re.search(open_q, ln, re.I)]
 
     # traceability: each entity's ER cell and its table's relational cell share the table name in their IDs
     tok = lambda cid: set(re.split(r"[^a-z0-9]+", (cid or "").lower()))
@@ -3112,6 +3251,9 @@ def eval32(run):
                 if e["table"] not in tok(loose.get(e["name"])) or e["table"] not in tok(tcell.get(e["table"]))]
     prov = [bool(re.search(r"design/design\.md|design\.md", " ".join(c["text"] for c in cells.values())))
             for cells in (er, rel)]
+    resp = read(run / "outputs/response.md")
+    validated = bool(re.search(r"well-formed|\bvalid(ated)?\b|parses?\b|xmllint", resp, re.I))
+    render_said = bool(re.search(r"render|export(ed)? (both|each|the)? ?(pages?|files?|diagrams?)? ?to (png|svg|pdf)", resp, re.I))
     _, modified, deleted = changes(run, "db-diagram")
     touched = [f for f in modified + deleted if f.startswith("design/")]
     return [
@@ -3148,7 +3290,17 @@ def eval32(run):
         ("cell IDs are semantic and trace each entity to its table", bool(loose) and bool(tcell) and not untraced,
          f"{untraced[:4] or 'ok'}", D),
         ("the inferred PET – VET relationship labelled as inferred", pv in pairs and inferred, "", D),
+        ("a UID bar on each relationship in a UID, and on no other", bool(pairs) and not uid_bad and not bar_extra,
+         f"missing {uid_bad[:4]}, extra {bar_extra[:4]}", D),
+        ("every alternate key on the relational page, composite ones included", len(tcell) == len(tables) and not ak_missing,
+         f"{ak_missing[:4] or 'ok'}", D),
+        ("microchip not drawn as a key while Q3 is open", "pet" in tcell and bool(chip_lines) and not chip_keyed,
+         f"{chip_keyed[:2] or 'ok'}", D),
+        ("each FK path labelled with its column", len(tcell) == len(tables) and not fk_unlabelled,
+         f"{fk_unlabelled[:4] or 'ok'}", D),
         ("a provenance note naming the design on both pages", all(prov), f"er {prov[0]}, relational {prov[1]}", D),
+        ("reports the XML validated and whether the rendering was checked", validated and render_said,
+         f"validated {validated}, rendering {render_said}", D),
         ("the design left untouched", not touched, f"{touched or 'untouched'}", D),
     ]
 
@@ -4066,7 +4218,10 @@ def eval47(run):
     weigh the proposed indexes, settle the audit flags, never connect, never echo the password."""
     t = everything(run, "db-query")
     doc, long_enough = deliverable(run, "db-query")
-    rank = section(t, r"workload|rank|top statements|total time") or t
+    # a ranking heading first: a title such as "query workload review" also says "workload"
+    rank = section(t, r"rank|top statements|total time") or section(t, r"workload") or t
+    # a ranking table may name the statement by its own label once the queryid was given elsewhere
+    n1_label = DQ_N1 + r"|order[ _]lines? (by|per|for) (each |the )?order"
     quiet, qev = never_called(run, "scripts/.calls.log")
     verifs = len(re.findall(r"verif|re-?measure|before/after|before and after", t, re.I))
     return [
@@ -4085,14 +4240,16 @@ def eval47(run):
          near(t, r"\bsort\b|ORDER BY \{|search_products", r"inject|whitelist|allow-?list|identifier"), "", C),
         # delta
         ("workload ranked by total time: the N+1 lookup ahead of the slow monthly report",
-         before(rank, DQ_N1, DQ_REPORT) and near(rank, DQ_N1, r"total|share|%"), "", D),
+         before(rank, n1_label, DQ_REPORT) and near(rank, n1_label, r"total|share|%"), "", D),
         ("coverage stated as a share of total time",
          near(t, r"\b\d{1,3}(\.\d)?\s?%", r"cover|of total|total (execution )?time|of the workload"), "", D),
         ("the report's misestimate traced to stale statistics (autovacuum disabled), fixed by ANALYZE",
          near(t, r"autovacuum_enabled|autovacuum.{0,30}(disabled|off|false)|n_mod_since_analyze|stale statistic|last_autoanalyze",
               r"ANALYZE|statistic|estimat") and any_of(t, r"\bANALYZE\b"), "", D),
         ("open-orders list: (status, created_at) and seek paging",
-         near(t, r"\(\s*status\s*,\s*created_at\s*\)", r"index") and any_of(t, r"keyset|seek pag|seek \(|seek-based|cursor[- ]based"), "", D),
+         # a tie-breaker after created_at, (status, created_at, order_id), is the same index done better
+         near(t, r"\(\s*status\s*,\s*created_at\s*(,\s*\w+\s*)?\)", r"index|\bix_|accept")
+         and any_of(t, r"keyset|seek pag|seek \(|seek-based|cursor[- ]based"), "", D),
         ("the laptop plan not taken as production evidence",
          near(t, r"laptop|plan-05", r"not representative|unrepresentative|1,?000 products|2\.4 ?M|production volume|dev(eloper)? (data|volume)"), "", D),
         ("the redundant proposed index on order_line(order_id) rejected",
@@ -4122,8 +4279,13 @@ def eval48(run):
     'no seat sold twice', no store chosen without numbers, staleness and session guarantees stated."""
     t = everything(run, "db-architect")
     doc, long_enough = deliverable(run, "db-architect")
+    # a line restating the team's proposal ("the team has proposed a move to MongoDB", "Question: move seats
+    # to …") is not an endorsement unless it also recommends or adopts
+    restates = lambda l: (re.search(r"propos|question|\?\s*$|answer is|team has|team's", l, re.I)
+                          and not re.search(r"recommend|adopt", l, re.I))
     mongo_endorsed = [l.strip()[:90] for l in t.splitlines() if re.search(r"mongo", l, re.I)
-                      and re.search(r"\b(recommend|adopt|migrate|move)\w*", l, re.I) and not re.search(DR_MONGO_NEG, l, re.I)]
+                      and re.search(r"\b(recommend|adopt|migrate|move)\w*", l, re.I) and not re.search(DR_MONGO_NEG, l, re.I)
+                      and not restates(l)]
     flow_map = any(l.count("|") >= 4 and all(re.search(p, l, re.I) for p in
                    (r"source", r"mechanism|feed|how", r"stale|fresh|lag", r"rebuild")) for l in t.splitlines())
     ddl = re.findall(r"CREATE\s+(?:UNIQUE\s+)?(?:TABLE|INDEX)\b", t, re.I)

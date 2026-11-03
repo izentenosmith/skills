@@ -85,7 +85,7 @@ Stages 1–3 already resolved the interface, chose and prioritized the behaviors
 
 - [ ] **The interface** ← **Key interfaces (test seams)**. Test through the highest seam it names.
 - [ ] **The build order** ← **Acceptance criteria**, top to bottom, first as the tracer bullet.
-- [ ] **The conventions** ← **Test seams & prior art**. Mirror what it points at.
+- [ ] **The conventions** ← **Test seams & prior art**. Mirror what it points at — new tests go in the test file it names, in the style it names, not a new file of your own. Every criterion marked **Edge case** gets its own test, named for the edge it pins (`…_boundary_is_exclusive`, `…_both_codes_surface`), so the suite reads as the brief's checklist.
 - [ ] **The limits** ← **Out of scope** and **Deferred by design**. A deferred detail stays deferred; do not let a test commit to it.
 - [ ] **The finish line** ← **Acceptance tests**: run the command once now and see every mapped test red. A tracer bullet that turns its criterion's acceptance test green is the clearest progress signal you have.
 

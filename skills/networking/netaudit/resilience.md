@@ -1,8 +1,8 @@
 # Resilience — Failure Domains and the Graph
 
 > Criteria for grading how the network survives failure. This is where network science is the main
-> lens: [`graph-theory.md`](graph-theory.md) G4–G10 define the metrics, and the harness computes them
-> from `topology.json` (`harness/netgraph.py`). [`theory.md`](theory.md) §8–§9 cover STP and fabric
+> lens: [`graph-theory.md`](graph-theory.md) G4–G10 define the metrics, and `scripts/netgraph.py` (shipped
+> with this skill, stdlib Python) computes them from `topology.json`. [`theory.md`](theory.md) §8–§9 cover STP and fabric
 > topologies. Severity follows [`scoring.md`](scoring.md).
 
 ## 🟢 Well done
@@ -30,7 +30,7 @@
 the pair's node or edge connectivity is 1.
 **Why:** By Menger's theorem the number of disjoint paths *is* the number of failures the pair
 survives (G5). Connectivity 1 means one failure is an outage.
-**Detect:** computed by the harness. ✅ when the elements rest on configured evidence; ⚠️ when they
+**Detect:** `scripts/netgraph.py analyze` (by hand on a small graph: show the cut set). ✅ when the elements rest on configured evidence; ⚠️ when they
 rest on `inferred:` nodes.
 **Severity:** High.
 
@@ -49,7 +49,7 @@ attributes; physical paths are 🔬.
 redundant.
 **Why:** Its failure, compromise or misconfiguration has the largest blast radius. It is the target a
 targeted failure or attack would pick (G6, G9).
-**Detect:** betweenness and hub concentration computed by the harness. ⚠️ proxy, since high
+**Detect:** betweenness and hub concentration from `scripts/netgraph.py analyze`. ⚠️ proxy, since high
 betweenness can be intended. Report it with the design intent.
 **Severity:** Medium; High when it is also a SPOF.
 
@@ -58,7 +58,7 @@ betweenness can be intended. Report it with the design intent.
 collapses the largest component, while random removal of the same number does not.
 **Why:** This is the hub-dominated signature (G9). Random hardware failure is survived, but
 coordinated failure (a bad config push to the core, an attack on the hubs) is not.
-**Detect:** robustness curves from the harness. ⚠️ proxy. On networks under ~20 nodes, report the
+**Detect:** robustness curves from `scripts/netgraph.py analyze`. ⚠️ proxy. On networks under ~20 nodes, report the
 specific nodes, not the curve (G12).
 **Severity:** Medium.
 

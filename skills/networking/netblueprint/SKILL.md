@@ -22,6 +22,38 @@ If the proposal, the design and the diagrams disagree, **stop** and describe the
 decision the package needs is missing (a CIDR, a zone's trust level, a flow's ports, a critical pair),
 ask for it, or mark the package incomplete. Never fill a structural gap silently.
 
+`scripts/netgraph.py` in this folder validates the model and cross-checks the diagrams against it. It
+needs only standard-library Python and writes nothing, so it is safe to run on the inputs before
+acceptance too.
+
+## When acceptance is missing
+
+A proposal marked Proposed, Draft or In review, or one with nothing recording its acceptance, is not
+accepted. That holds however complete it is, however close its review date, and whatever the request
+implies. Do not draft the package "ready for acceptance", do not mark anything accepted, and do not
+edit the proposal's status. **Write no package file and touch no input.** Reply with these six
+things, then stop:
+
+1. **Status and source.** The proposal's status as written, its version or date, and where acceptance
+   would come from: the board, meeting or approver it names.
+2. **The acceptance record you need.** Who accepted it, on what date, which version or revision, and
+   whether as written or with changes. `network-design.md` opens with exactly this record, so ask for
+   each part.
+3. **The exceptions acceptance must cover.** Anything the package would otherwise fail on
+   ([blueprint.md](blueprint.md) §4): a critical pair the proposal leaves below κ 2, an open 🔬 flag
+   that a decision depends on, a deferred retirement. Name each, with its κ or flag, and say the
+   acceptance has to state it explicitly.
+4. **Readiness, checked read-only.** Whether the proposal, the design and the diagrams agree: run
+   `scripts/netgraph.py diagrams` and `analyze` on the inputs and quote the result. Check the target
+   model against the IaC handoff contract ([blueprint.md](blueprint.md) §2) rule by rule, and list
+   the elements that break each one: they are the fields acceptance time will have to supply,
+   because the IaC skill must never guess. Name any input the package will need that the workspace
+   lacks, such as an audit that the traceability table (§9) would cite.
+5. **What acceptance unlocks.** The package you will produce: `network-design.md`, `topology.json`
+   with `meta.stage = "blueprint"` and `meta.status = "accepted"`, and which `.drawio` views, marked
+   accepted, this model needs.
+6. **Nothing produced.** Say plainly that nothing was written or changed.
+
 ## Produce and iterate
 
 1. **Confirm versions.** The accepted proposal, the design, the target `topology.json` and the
@@ -31,11 +63,16 @@ ask for it, or mark the package incomplete. Never fill a structural gap silently
    - Set `meta.stage = "blueprint"`, `meta.status = "accepted"`, and add the proposal path and the
      acceptance date.
    - Apply only the decisions the proposal records. Keep every ID stable.
-   - Validate it: schema, no overlap, every zone default-deny, every critical pair κ ≥ 2. With the
-     harness, run `harness/netgraph.py analyze` and include the output.
+   - Validate it: schema, no overlap, every zone default-deny, every critical pair κ ≥ 2. Run
+     `python3 <this skill's folder>/scripts/netgraph.py analyze topology.json` (standard-library
+     Python) and put its critical-pair table and findings in `network-design.md` §3. Exit 1 lists
+     schema errors: the package is not ready until there are none. Without Python, validate by hand
+     and say so.
 3. **Finalize the diagrams** in the convention of [diagram-conventions.md](diagram-conventions.md),
    marked `accepted`, with cell IDs equal to the final model's IDs. Reuse the proposal's diagrams
    wherever they already match. Redraw only what the accepted decisions changed, and say what changed.
+   Check them with `python3 <this skill's folder>/scripts/netgraph.py diagrams <out>/blueprint
+   --topology <out>/blueprint/topology.json` until it prints `ok`.
 4. **Write `network-design.md`**, the companion that explains the diagrams, from the template in
    [blueprint.md](blueprint.md). It is written for the engineers who will build and operate the network
    and for the IaC skill that will implement it: every table matches `topology.json`, and every

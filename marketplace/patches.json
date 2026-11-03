@@ -1,0 +1,18 @@
+{
+  "dbaudit": {
+    "SKILL.md": [
+      {
+        "old": "The workflow coordinator is [dbworkflow.py](../../../harness/dbworkflow.py). ",
+        "new": ""
+      }
+    ]
+  },
+  "dockerfile": {
+    "optimization.md": [
+      {
+        "old": "ENV API_KEY=sk-live-...  # visible",
+        "new": "ENV API_KEY=<real key>   # visible"
+      }
+    ]
+  }
+}
