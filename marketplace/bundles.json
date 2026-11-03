@@ -1,0 +1,5 @@
+{
+  "incident-response": ["hotfix", "incident-fix", "post-mortem"],
+  "infrastructure-delivery": ["terraform", "pipelines"],
+  "security-review": ["threatmodel", "appsec", "hardening"]
+}
