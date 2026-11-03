@@ -54,6 +54,17 @@ the IDs, CIDRs and flows by hand and say the check was manual. Describe any mism
 [netdesign](../netdesign/SKILL.md) or [netdiagram](../netdiagram/SKILL.md). Do not redraw or silently
 repair either artifact.
 
+## Write `proposal.md` — a required step
+
+The deliverable is a file, not a chat message. **Write `proposal.md`** in the structure in
+[proposal.md](proposal.md), ending with the acceptance line, to the path the user names or, by
+default, next to the inputs: the folder that holds `audit/`, `design/` and `diagrams/`, never inside
+them. Then read the file back to confirm it is on disk and complete. The work is not done until it is,
+even when you have already drafted the whole proposal in your reply.
+
+Your reply summarizes the recommendation and gives the path to `proposal.md`. The proposal never lives
+only in the chat. netblueprint and the change board read it from the file.
+
 ## Handoff
 
 For an existing network, the usual sequence is [netaudit](../netaudit/SKILL.md) →

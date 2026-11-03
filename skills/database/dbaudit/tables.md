@@ -413,7 +413,9 @@ non-atomic / CSV / polymorphic columns, EAV and numbered column families show up
 **2NF, 3NF, BCNF, 4NF and 5NF** violations are violations of *dependencies the business asserts*
 (theory §2): data profiling can **refute** a suspected dependency or suggest one, but only the business
 rule confirms it. Flag the likely candidate as ⚠️ from the DDL (a `dept_name` next to a `dept_code`; a
-parent's non-key column copied beside the FK that reaches it); a profile that would refute it is 🔬;
+parent's non-key column copied beside the FK that reaches it). Name the normal form it breaks: a
+dependency on a non-key column is **transitive, a 3NF candidate**. 2NF applies only when the column
+depends on part of a composite key. A profile that would refute it is 🔬;
 confirmation is an open question for the domain owner, carried by dbpropose. The exception is a
 dependency implied by **declared** constraints — a reducible key — which is ✅.
 

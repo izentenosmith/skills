@@ -14,10 +14,10 @@
 | 15-harness-loop-closes-teardown | i5 | 1 | 1.00 ± 0.00 | — | — | 1.00 | — |
 | 16-netaudit-hub-spoke-recovers-and-scores | i21 | 3 | 1.00 ± 0.00 | 0.31 | +0.69 | 1.00 | 0.60 |
 | 17-netdesign-plans-around-what-is-in-use | i21 | 3 | 0.90 ± 0.00 | 0.30 | +0.60 | 1.00 | 0.20 |
-| 18-netdiagram-canonical-views-from-model | i21 | 3 | 0.87 ± 0.06 | 0.20 | +0.67 | 1.00 | 0.00 |
-| 19-netpropose-contains-before-restructuring | i21 | 3 | 1.00 ± 0.00 | 0.70 | +0.30 | 0.78 | 0.67 |
-| 2-tdd-reads-brief-vertical | i15 | 3 | 1.00 ± 0.00 | 1.00 | +0.00 | 1.00 | 1.00 |
-| 20-netblueprint-waits-for-acceptance | i21 | 3 | 1.00 ± 0.00 | 0.75 | +0.25 | 1.00 | 1.00 |
+| 18-netdiagram-canonical-views-from-model | i23 | 3 | 1.00 ± 0.00 | 0.20 | +0.80 | 1.00 | 0.00 |
+| 19-netpropose-contains-before-restructuring | i23 | 3 | 1.00 ± 0.00 | 0.70 | +0.30 | 1.00 | 0.67 |
+| 2-tdd-reads-brief-vertical | i24 | 3 | 1.00 ± 0.00 | 0.00 | +1.00 | 1.00 | 0.88 |
+| 20-netblueprint-waits-for-acceptance | i23 | 3 | 1.00 ± 0.00 | 0.75 | +0.25 | 1.00 | 1.00 |
 | 21-terraform-review-state-and-secrets | i6 | 1 | 1.00 ± 0.00 | 0.57 | +0.43 | 1.00 | 0.83 |
 | 22-terraform-design-isolates-state | i6 | 1 | 1.00 ± 0.00 | 0.86 | +0.14 | 1.00 | 1.00 |
 | 23-terraform-propose-no-recreate | i6 | 1 | 0.91 ± 0.00 | 0.82 | +0.09 | 1.00 | 1.00 |
@@ -27,9 +27,9 @@
 | 27-acceptance-tests-red-for-the-right-reason | i15 | 3 | 0.94 ± 0.05 | 0.25 | +0.69 | 1.00 | 0.67 |
 | 28-dockerfile-repair-pins-and-drops-root | i16 | 3 | 1.00 ± 0.00 | 0.83 | +0.17 | 1.00 | 1.00 |
 | 29-release-notes-translates-drops-and-leads-with-breaking | i6 | 1 | 1.00 ± 0.00 | 0.54 | +0.46 | 1.00 | 0.86 |
-| 3-refactor-promotes-noted-smell | i15 | 3 | 0.88 ± 0.22 | 0.00 | +0.88 | 1.00 | 0.75 |
-| 30-dbaudit-postgres-dump-scored-not-fixed | i22 | 3 | 0.86 ± 0.14 | 0.43 | +0.43 | 1.00 | 1.00 |
-| 31-dbdesign-sqlite-from-requirements-traps | i18 | 3 | 0.87 ± 0.12 | 0.46 | +0.41 | 0.93 | 1.00 |
+| 3-refactor-promotes-noted-smell | i24 | 3 | 1.00 ± 0.00 | 0.12 | +0.88 | 1.00 | 0.75 |
+| 30-dbaudit-postgres-dump-scored-not-fixed | i23 | 3 | 0.95 ± 0.04 | 0.43 | +0.52 | 1.00 | 1.00 |
+| 31-dbdesign-sqlite-from-requirements-traps | i23 | 3 | 0.97 ± 0.04 | 0.46 | +0.51 | 1.00 | 1.00 |
 | 32-dbdiagram-barker-and-relational-from-design | i18 | 3 | 1.00 ± 0.00 | 0.88 | +0.12 | 1.00 | 1.00 |
 | 33-dbpropose-orphans-before-constraints | i18 | 3 | 0.97 ± 0.04 | 0.54 | +0.44 | 1.00 | 0.80 |
 | 34-dbbuild-executable-ddl-from-accepted-proposal | i18 | 3 | 1.00 ± 0.00 | 0.78 | +0.22 | 1.00 | 1.00 |
@@ -38,7 +38,7 @@
 | 37-docker-swarm-review-quorum-and-state | i16 | 3 | 1.00 ± 0.00 | 0.75 | +0.25 | 1.00 | 1.00 |
 | 38-threatmodel-review-design-abuse-and-fallback | i13 | 1 | 1.00 ± 0.00 | 0.42 | +0.58 | 1.00 | 1.00 |
 | 39-threatmodel-design-abusers-and-traps | i13 | 1 | 1.00 ± 0.00 | 0.65 | +0.35 | 1.00 | 1.00 |
-| 4-teardown-finds-vacuous-test | i15 | 3 | 0.87 ± 0.12 | 0.20 | +0.67 | 1.00 | 1.00 |
+| 4-teardown-finds-vacuous-test | i24 | 3 | 1.00 ± 0.00 | 0.20 | +0.80 | 1.00 | 1.00 |
 | 40-threatmodel-propose-contain-then-design-out | i14 | 3 | 1.00 ± 0.00 | 0.54 | +0.46 | 1.00 | 1.00 |
 | 41-appsec-review-inventory-and-secrets | i13 | 1 | 1.00 ± 0.00 | 0.67 | +0.33 | 1.00 | 1.00 |
 | 42-appsec-design-reshapes-the-quick-wins | i13 | 1 | 1.00 ± 0.00 | 0.91 | +0.10 | 1.00 | 1.00 |
@@ -48,14 +48,20 @@
 | 46-hardening-propose-no-lockout | i13 | 1 | 1.00 ± 0.00 | 0.69 | +0.31 | 1.00 | 1.00 |
 | 47-dbquery-workload-ranked-plans-read-indexes-weighed | i18 | 3 | 1.00 ± 0.00 | 0.93 | +0.07 | 1.00 | 0.83 |
 | 48-dbarchitect-one-system-of-record-no-dual-writes | i18 | 3 | 1.00 ± 0.00 | 0.67 | +0.33 | 1.00 | 1.00 |
+| 49-peer-review-claim-omission-injection | i25 | 3 | 1.00 ± 0.00 | 0.29 | +0.71 | 1.00 | 1.00 |
 | 5-verdict-cuts-and-slices | i15 | 3 | 1.00 ± 0.00 | 0.33 | +0.67 | 1.00 | 0.83 |
+| 50-pr-prep-splits-and-discloses | i25 | 3 | 0.97 ± 0.04 | 0.31 | +0.67 | 1.00 | 1.00 |
+| 51-code-xray-hotspots-not-cold-giants | i25 | 3 | 1.00 ± 0.00 | 0.40 | +0.60 | 1.00 | 0.83 |
+| 52-test-review-would-it-fail | i25 | 3 | 1.00 ± 0.00 | 0.20 | +0.80 | 1.00 | 0.83 |
+| 53-concurrency-review-interleavings-and-replicas | i25 | 3 | 1.00 ± 0.00 | 0.39 | +0.61 | 1.00 | 0.83 |
+| 54-review-retro-areas-not-people | i25 | 3 | 1.00 ± 0.00 | 0.29 | +0.71 | 1.00 | 1.00 |
 | 6-compose-detects-real-services | i16 | 3 | 1.00 ± 0.00 | 0.78 | +0.22 | 1.00 | 1.00 |
 | 7-postmortem-widens-range-and-describes | i6 | 1 | 1.00 ± 0.00 | 0.60 | +0.40 | 1.00 | 1.00 |
 | 8-hotfix-node-shared-cause | i20 | 3 | 1.00 ± 0.00 | 0.38 | +0.62 | 1.00 | 1.00 |
 | 9-hotfix-jvm-both-callers | i20 | 3 | 1.00 ± 0.00 | 0.71 | +0.29 | 1.00 | 1.00 |
 
-**Delta — current 0.98 vs baseline 0.56**
-**Capability — current 0.99 vs baseline 0.90**
+**Delta — current 0.99 vs baseline 0.51**
+**Capability — current 1.00 vs baseline 0.90**
 
 ## Delta assertions the baseline also passed (still non-discriminating)
 
@@ -98,17 +104,13 @@
 - the model left untouched
 
 **eval-19-netpropose-contains-before-restructuring**
-- the Critical is contained before structural work
 - renumbering sequenced against what depends on it
 - retirement waits for usage confirmation
+- decisions use the band vocabulary
 - connectivity before and after stated
 - the residual on-prem single endpoint carried as open
 - audit, design and diagrams left untouched
 - no IaC written
-
-**eval-2-tdd-reads-brief-vertical**
-- acceptance criteria checked off in the brief file
-- brief revised in place when reality contradicted it
 
 **eval-20-netblueprint-waits-for-acceptance**
 - names where acceptance comes from
@@ -218,6 +220,9 @@
 - plain bumps, CI, tests, docs, lint and refactors dropped
 - the unquantified improvement named in the handoff
 
+**eval-3-refactor-promotes-noted-smell**
+- prior venue_id smell explicitly left, not silently dropped
+
 **eval-30-dbaudit-postgres-dump-scored-not-fixed**
 - cross-file index criteria: the unindexed order_line.order_id FK and the redundant ix_product_sku
 - no secret value echoed (kind and location only)
@@ -227,10 +232,10 @@
 - evaluates and stops: no target table designed
 
 **eval-31-dbdesign-sqlite-from-requirements-traps**
-- the DDL runs on SQLite, the engine the requirements name
 - plan prices kept as effective-dated history, unique per plan and date (executed)
 - age not stored: a birth date instead (executed)
 - natural keys are UNIQUE alternates, not primary keys (email, VAT, member number)
+- the freelancer question left open: the company link optional and listed as an open question
 - nothing applied: no database file created
 - the requirements left untouched
 
@@ -448,9 +453,47 @@
 - no secret value echoed
 - nothing provisioned: only markdown written, no fixture file changed
 
+**eval-49-peer-review-claim-omission-injection**
+- the over-refund in payments/refunds.py found
+- exactly one recommendation, and it is Request changes
+- no working-tree file changed
+- no commit, checkout or branch change
+
 **eval-5-verdict-cuts-and-slices**
 - F4 struck as an already-refuted repeat, citing the prior verdict
 - verdicts written back to the ledger
+
+**eval-50-pr-prep-splits-and-discloses**
+- the status filter flagged as untested
+- the wip and fix-typo commits to be folded
+- no code changed: only markdown written
+- no commit, branch or history rewrite
+
+**eval-51-code-xray-hotspots-not-cold-giants**
+- the generated schema_pb2.py excluded, never ranked
+- the discount clone twins named, with their co-change
+- the cold report builder left alone, on its change frequency, not made a target
+- no per-person ranking or tally
+- read-only: nothing in the repo changed
+- the git repository untouched: no commit, branch, stash or staged change
+
+**eval-52-test-review-would-it-fail**
+- the May time bomb found: the default placed_on is today and ALICE's birth month is 5
+- read-only: no fixture file changed, nothing but markdown added
+- the nested repo's refs, HEAD and index untouched
+
+**eval-53-concurrency-review-interleavings-and-replicas**
+- the consumer fix is an idempotency key under a unique constraint or in the same transaction
+- the daily job's fix is a single runner: lease, leader, CronJob or an atomic claim of the run
+- the lock-guarded stats counter cleared, not reported as a defect
+- read-only: nothing in the work tree or the PR description changed
+- no commit, branch, stash or staged change in the fixture repo
+
+**eval-54-review-retro-areas-not-people**
+- the per-person ranking declined, with the area and change-type view offered
+- no line pairs a person with a count, a duration or a rank
+- unused imports proposed as a lint rule (ruff F401), not a checklist item
+- the Ledgerly rate limit explained twice in threads proposed for the code or CLAUDE.md
 
 **eval-6-compose-detects-real-services**
 - meilisearch detected from the source
@@ -483,32 +526,19 @@
 
 ## Delta assertions that varied across repetitions
 
-**eval-18-netdiagram-canonical-views-from-model**
-- segmentation arrows are exactly allow flows (2/3)
-
 **eval-27-acceptance-tests-red-for-the-right-reason**
 - every new test is red on the unimplemented code (none passes) (2/3)
 - tier stated (Standard) (2/3)
 
-**eval-3-refactor-promotes-noted-smell**
-- severity vocabulary applied to findings (2/3)
-- pass calibrated to diff size (2/3)
-- stopping rule stated (2/3)
-
 **eval-30-dbaudit-postgres-dump-scored-not-fixed**
 - runtime facts flagged needs-data, never graded (2/3)
-- the transitive customer_name/customer_email flagged as a 3NF candidate, not graded (1/3)
 - strengths recorded: the payment table (2/3)
-- the recovered model written as relationship sentences (1/3)
 
 **eval-31-dbdesign-sqlite-from-requirements-traps**
 - the member subtypes mapped deliberately, with the choice stated (2/3)
-- the freelancer question left open: the company link optional and listed as an open question (2/3)
-- Codd's rules reviewed (2/3)
-- assumptions kept apart from open questions (1/3)
 
 **eval-33-dbpropose-orphans-before-constraints**
 - the Critical handled before the name split (2/3)
 
-**eval-4-teardown-finds-vacuous-test**
-- unproven findings name what would settle them (1/3)
+**eval-50-pr-prep-splits-and-discloses**
+- size counted and compared with the ~400-line limit (2/3)

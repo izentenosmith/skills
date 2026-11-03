@@ -1,0 +1,572 @@
+[
+  {
+    "number": 414,
+    "title": "Zero-rated tax for export invoices",
+    "state": "MERGED",
+    "baseRefName": "main",
+    "labels": [
+      "feature"
+    ],
+    "closingIssuesReferences": [
+      "BILL-202"
+    ],
+    "author": {
+      "login": "tferreira"
+    },
+    "reviewRequests": [
+      {
+        "login": "dokafor"
+      },
+      {
+        "login": "review-bot"
+      }
+    ],
+    "createdAt": "2026-07-06T09:12:00Z",
+    "firstHumanReviewAt": "2026-07-06T15:30:00Z",
+    "mergedAt": "2026-07-08T16:40:00Z",
+    "additions": 156,
+    "deletions": 24,
+    "files": [
+      {
+        "path": "src/billing/invoice.py",
+        "additions": 62,
+        "deletions": 18
+      },
+      {
+        "path": "src/billing/tax.py",
+        "additions": 40,
+        "deletions": 6
+      },
+      {
+        "path": "tests/billing/test_invoice_tax.py",
+        "additions": 54,
+        "deletions": 0
+      }
+    ]
+  },
+  {
+    "number": 416,
+    "title": "Retry payout webhooks on provider timeouts",
+    "state": "MERGED",
+    "baseRefName": "main",
+    "labels": [
+      "fix"
+    ],
+    "closingIssuesReferences": [
+      "BILL-210"
+    ],
+    "author": {
+      "login": "mtanaka"
+    },
+    "reviewRequests": [
+      {
+        "login": "lbrandt"
+      },
+      {
+        "login": "review-bot"
+      }
+    ],
+    "createdAt": "2026-07-09T10:05:00Z",
+    "firstHumanReviewAt": "2026-07-13T11:20:00Z",
+    "mergedAt": "2026-07-14T09:15:00Z",
+    "additions": 128,
+    "deletions": 22,
+    "files": [
+      {
+        "path": "src/payouts/webhooks.py",
+        "additions": 58,
+        "deletions": 22
+      },
+      {
+        "path": "src/payouts/retry.py",
+        "additions": 30,
+        "deletions": 0
+      },
+      {
+        "path": "tests/payouts/test_webhook_retry.py",
+        "additions": 40,
+        "deletions": 0
+      }
+    ]
+  },
+  {
+    "number": 420,
+    "title": "Waivable payout fees",
+    "state": "MERGED",
+    "baseRefName": "main",
+    "labels": [
+      "feature"
+    ],
+    "closingIssuesReferences": [
+      "BILL-214"
+    ],
+    "author": {
+      "login": "dokafor"
+    },
+    "reviewRequests": [
+      {
+        "login": "priya-n"
+      },
+      {
+        "login": "review-bot"
+      }
+    ],
+    "createdAt": "2026-07-15T13:40:00Z",
+    "firstHumanReviewAt": "2026-07-15T17:05:00Z",
+    "mergedAt": "2026-07-17T10:30:00Z",
+    "additions": 184,
+    "deletions": 26,
+    "files": [
+      {
+        "path": "src/payouts/fees.py",
+        "additions": 48,
+        "deletions": 12
+      },
+      {
+        "path": "src/api/schemas/payout.py",
+        "additions": 20,
+        "deletions": 4
+      },
+      {
+        "path": "src/payouts/models.py",
+        "additions": 16,
+        "deletions": 2
+      },
+      {
+        "path": "tests/payouts/test_fees.py",
+        "additions": 100,
+        "deletions": 8
+      }
+    ]
+  },
+  {
+    "number": 425,
+    "title": "Ledgerly settlement client",
+    "state": "MERGED",
+    "baseRefName": "main",
+    "labels": [
+      "feature"
+    ],
+    "closingIssuesReferences": [
+      "BILL-223"
+    ],
+    "author": {
+      "login": "tferreira"
+    },
+    "reviewRequests": [
+      {
+        "login": "dokafor"
+      },
+      {
+        "login": "review-bot"
+      }
+    ],
+    "createdAt": "2026-07-21T08:30:00Z",
+    "firstHumanReviewAt": "2026-07-21T14:10:00Z",
+    "mergedAt": "2026-07-24T15:00:00Z",
+    "additions": 310,
+    "deletions": 10,
+    "files": [
+      {
+        "path": "src/payouts/ledgerly_client.py",
+        "additions": 142,
+        "deletions": 0
+      },
+      {
+        "path": "src/payouts/settlement.py",
+        "additions": 38,
+        "deletions": 10
+      },
+      {
+        "path": "tests/payouts/test_ledgerly_client.py",
+        "additions": 130,
+        "deletions": 0
+      }
+    ]
+  },
+  {
+    "number": 427,
+    "title": "Daily settlement report",
+    "state": "MERGED",
+    "baseRefName": "main",
+    "labels": [
+      "feature"
+    ],
+    "closingIssuesReferences": [
+      "BILL-227"
+    ],
+    "author": {
+      "login": "priya-n"
+    },
+    "reviewRequests": [
+      {
+        "login": "lbrandt"
+      },
+      {
+        "login": "review-bot"
+      }
+    ],
+    "createdAt": "2026-07-28T09:00:00Z",
+    "firstHumanReviewAt": "2026-07-31T16:45:00Z",
+    "mergedAt": "2026-08-03T11:10:00Z",
+    "additions": 234,
+    "deletions": 6,
+    "files": [
+      {
+        "path": "src/reports/daily.py",
+        "additions": 96,
+        "deletions": 0
+      },
+      {
+        "path": "src/reports/queries.py",
+        "additions": 34,
+        "deletions": 6
+      },
+      {
+        "path": "tests/reports/test_daily.py",
+        "additions": 104,
+        "deletions": 0
+      }
+    ]
+  },
+  {
+    "number": 429,
+    "title": "Split ledger posting into journal and accounts",
+    "state": "MERGED",
+    "baseRefName": "main",
+    "labels": [
+      "refactor"
+    ],
+    "closingIssuesReferences": [
+      "BILL-229"
+    ],
+    "author": {
+      "login": "lbrandt"
+    },
+    "reviewRequests": [
+      {
+        "login": "mtanaka"
+      },
+      {
+        "login": "review-bot"
+      }
+    ],
+    "createdAt": "2026-08-04T10:20:00Z",
+    "firstHumanReviewAt": "2026-08-05T09:40:00Z",
+    "mergedAt": "2026-08-07T17:20:00Z",
+    "additions": 524,
+    "deletions": 456,
+    "files": [
+      {
+        "path": "src/ledger/posting.py",
+        "additions": 310,
+        "deletions": 288
+      },
+      {
+        "path": "src/ledger/journal.py",
+        "additions": 122,
+        "deletions": 96
+      },
+      {
+        "path": "src/ledger/accounts.py",
+        "additions": 48,
+        "deletions": 40
+      },
+      {
+        "path": "tests/ledger/test_posting.py",
+        "additions": 44,
+        "deletions": 32
+      }
+    ]
+  },
+  {
+    "number": 430,
+    "title": "CSV export of the settlement report",
+    "state": "MERGED",
+    "baseRefName": "main",
+    "labels": [
+      "feature"
+    ],
+    "closingIssuesReferences": [
+      "BILL-233"
+    ],
+    "author": {
+      "login": "priya-n"
+    },
+    "reviewRequests": [
+      {
+        "login": "tferreira"
+      },
+      {
+        "login": "review-bot"
+      }
+    ],
+    "createdAt": "2026-08-11T14:00:00Z",
+    "firstHumanReviewAt": "2026-08-11T16:30:00Z",
+    "mergedAt": "2026-08-13T10:00:00Z",
+    "additions": 188,
+    "deletions": 2,
+    "files": [
+      {
+        "path": "src/reports/export_csv.py",
+        "additions": 88,
+        "deletions": 0
+      },
+      {
+        "path": "src/api/routes/reports.py",
+        "additions": 22,
+        "deletions": 2
+      },
+      {
+        "path": "tests/reports/test_export_csv.py",
+        "additions": 78,
+        "deletions": 0
+      }
+    ]
+  },
+  {
+    "number": 431,
+    "title": "Upgrade httpx to 0.28 and pydantic to 2.9",
+    "state": "MERGED",
+    "baseRefName": "main",
+    "labels": [
+      "dependencies"
+    ],
+    "closingIssuesReferences": [
+      "BILL-236"
+    ],
+    "author": {
+      "login": "mtanaka"
+    },
+    "reviewRequests": [
+      {
+        "login": "priya-n"
+      },
+      {
+        "login": "review-bot"
+      }
+    ],
+    "createdAt": "2026-08-18T09:30:00Z",
+    "firstHumanReviewAt": "2026-08-18T11:00:00Z",
+    "mergedAt": "2026-08-18T15:20:00Z",
+    "additions": 1506,
+    "deletions": 506,
+    "files": [
+      {
+        "path": "pyproject.toml",
+        "additions": 6,
+        "deletions": 6
+      },
+      {
+        "path": "poetry.lock",
+        "additions": 1420,
+        "deletions": 440
+      },
+      {
+        "path": "src/api/schemas/base.py",
+        "additions": 36,
+        "deletions": 28
+      },
+      {
+        "path": "src/payouts/ledgerly_client.py",
+        "additions": 12,
+        "deletions": 10
+      },
+      {
+        "path": "tests/api/test_schemas.py",
+        "additions": 32,
+        "deletions": 22
+      }
+    ]
+  },
+  {
+    "number": 433,
+    "title": "Paginated invoice list endpoint",
+    "state": "MERGED",
+    "baseRefName": "main",
+    "labels": [
+      "feature"
+    ],
+    "closingIssuesReferences": [
+      "BILL-240"
+    ],
+    "author": {
+      "login": "dokafor"
+    },
+    "reviewRequests": [
+      {
+        "login": "lbrandt"
+      },
+      {
+        "login": "review-bot"
+      }
+    ],
+    "createdAt": "2026-08-25T10:15:00Z",
+    "firstHumanReviewAt": "2026-08-28T13:00:00Z",
+    "mergedAt": "2026-09-01T09:45:00Z",
+    "additions": 162,
+    "deletions": 8,
+    "files": [
+      {
+        "path": "src/api/routes/invoices.py",
+        "additions": 64,
+        "deletions": 8
+      },
+      {
+        "path": "src/api/pagination.py",
+        "additions": 30,
+        "deletions": 0
+      },
+      {
+        "path": "api/openapi.yaml",
+        "additions": 24,
+        "deletions": 0
+      },
+      {
+        "path": "tests/api/test_invoice_list.py",
+        "additions": 44,
+        "deletions": 0
+      }
+    ]
+  },
+  {
+    "number": 434,
+    "title": "Merchant self-serve settings API",
+    "state": "MERGED",
+    "baseRefName": "main",
+    "labels": [
+      "feature"
+    ],
+    "closingIssuesReferences": [
+      "BILL-247"
+    ],
+    "author": {
+      "login": "tferreira"
+    },
+    "reviewRequests": [
+      {
+        "login": "dokafor"
+      },
+      {
+        "login": "review-bot"
+      }
+    ],
+    "createdAt": "2026-09-02T08:45:00Z",
+    "firstHumanReviewAt": "2026-09-03T10:30:00Z",
+    "mergedAt": "2026-09-04T18:05:00Z",
+    "additions": 1136,
+    "deletions": 104,
+    "files": [
+      {
+        "path": "src/api/routes/merchants.py",
+        "additions": 412,
+        "deletions": 20
+      },
+      {
+        "path": "src/billing/merchant_settings.py",
+        "additions": 268,
+        "deletions": 44
+      },
+      {
+        "path": "src/api/schemas/merchant.py",
+        "additions": 156,
+        "deletions": 0
+      },
+      {
+        "path": "tests/api/test_merchants.py",
+        "additions": 300,
+        "deletions": 40
+      }
+    ]
+  },
+  {
+    "number": 436,
+    "title": "Batch Ledgerly payouts per merchant",
+    "state": "MERGED",
+    "baseRefName": "main",
+    "labels": [
+      "feature"
+    ],
+    "closingIssuesReferences": [
+      "BILL-251"
+    ],
+    "author": {
+      "login": "tferreira"
+    },
+    "reviewRequests": [
+      {
+        "login": "mtanaka"
+      },
+      {
+        "login": "review-bot"
+      }
+    ],
+    "createdAt": "2026-09-14T11:00:00Z",
+    "firstHumanReviewAt": "2026-09-14T15:20:00Z",
+    "mergedAt": "2026-09-16T12:30:00Z",
+    "additions": 210,
+    "deletions": 20,
+    "files": [
+      {
+        "path": "src/payouts/batcher.py",
+        "additions": 118,
+        "deletions": 14
+      },
+      {
+        "path": "src/payouts/ledgerly_client.py",
+        "additions": 18,
+        "deletions": 6
+      },
+      {
+        "path": "tests/payouts/test_batcher.py",
+        "additions": 74,
+        "deletions": 0
+      }
+    ]
+  },
+  {
+    "number": 437,
+    "title": "Post refund reversals with the right sign",
+    "state": "MERGED",
+    "baseRefName": "main",
+    "labels": [
+      "fix"
+    ],
+    "closingIssuesReferences": [
+      "BILL-255"
+    ],
+    "author": {
+      "login": "lbrandt"
+    },
+    "reviewRequests": [
+      {
+        "login": "priya-n"
+      },
+      {
+        "login": "review-bot"
+      }
+    ],
+    "createdAt": "2026-09-22T13:30:00Z",
+    "firstHumanReviewAt": "2026-09-22T16:00:00Z",
+    "mergedAt": "2026-09-24T10:10:00Z",
+    "additions": 104,
+    "deletions": 16,
+    "files": [
+      {
+        "path": "src/ledger/reversal.py",
+        "additions": 44,
+        "deletions": 12
+      },
+      {
+        "path": "src/ledger/posting.py",
+        "additions": 10,
+        "deletions": 4
+      },
+      {
+        "path": "tests/ledger/test_reversal.py",
+        "additions": 50,
+        "deletions": 0
+      }
+    ]
+  }
+]

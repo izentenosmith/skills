@@ -44,7 +44,7 @@ Or one at a time:
 The installer dereferences the companion-reference symlinks, so each installed folder is
 self-contained, `scripts/netgraph.py` included: an installed skill computes its own metrics with
 nothing else on the machine but Python 3. Only the optional coordinator (`harness/networkflow.py`,
-`netreview.py`) needs a clone. Flags (`-a`, `-g`, `-y`) are in the
+`netreview.py`) needs a clone. The repo is private: you need read access and GitHub auth first. That setup, and the flags (`-a`, `-g`, `-y`), are in the
 [root README](../../README.md#install-with-npx).
 
 ## The theory underneath
@@ -130,5 +130,7 @@ Each skill has one eval in [`evals/`](../../evals/README.md) (evals 16–20): a 
 | netpropose | 1.00 | 1.00 | 0.70 |
 | netblueprint | 1.00 | 1.00 | 0.75 |
 
-No run's report mentions the harness, and the reports that quote metrics quote the skill's own `scripts/netgraph.py`. The misses are the same in both: netdesign's AKS-range assertion and netdiagram's default-deny badges. The benchmark records the run without the harness.
+No run's report mentions the harness, and the reports that quote metrics quote the skill's own `scripts/netgraph.py`. The misses are the same in both: netdesign's AKS-range assertion and netdiagram's default-deny badges. The badge miss turned out to be the grader's, which read only the zone's label while every run drew the badge as a cell inside the zone.
+
+**Re-run (iteration 23, 2026-11-03, n=3, harness staged):** after the badge assertion was fixed and netpropose made writing `proposal.md` a required step (two of three earlier runs had left it in the reply only), netdiagram, netpropose and netblueprint all score **1.00** on delta and capability, against 0.20, 0.70 and 0.75 for no skill. The benchmark records this run for evals 18–20 and the run without the harness for 16–17.
 

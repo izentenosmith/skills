@@ -109,6 +109,11 @@ evals/fixtures/*/.pytest_cache/
 evals/fixtures/*/.venv/
 evals/fixtures/incident/repo/
 evals/fixtures/release-notes/repo/
+evals/fixtures/pr-review/repo/
+evals/fixtures/pr-prep/repo/
+evals/fixtures/code-xray/repo/
+evals/fixtures/test-review/repo/
+evals/fixtures/concurrency/repo/
 
 # --- marketplace: built zips and their manifest ---
 dist/

@@ -1,6 +1,6 @@
 ---
 name: netdiagram
-description: Generate editable draw.io network topology diagrams — the logical L3 topology, the segmentation (zones and flows) view, and the physical L1/L2 view when on-prem evidence exists — from a network design, an audit's recovered topology.json, or other network structure, in one canonical convention with stable IDs.
+description: Generate editable draw.io network topology diagrams — the logical L3 topology, the segmentation (zones and flows) view, and the physical L1/L2 view when on-prem evidence exists — from a network design, an audit's recovered topology.json, or other network structure, in one canonical convention with stable IDs. Use when the user wants a network drawn or redrawn — "diagram this network", "draw the topology", "show the zones and flows", a draw.io file for a VNet/VPC or on-prem estate — or as the step after netdesign or netaudit and before netpropose. It draws the model it is given and never changes the design or configures anything.
 ---
 
 # netdiagram
@@ -42,7 +42,8 @@ on one page.
   - every network container's label contains a CIDR that parses;
   - every cell ID that names a model element exists in `topology.json`, and every critical-pair
     endpoint appears on the logical page;
-  - every flow arrow on the segmentation page matches an `allow` in `flows[]`.
+  - every flow arrow on the segmentation page matches an `allow` in `flows[]`, and every zone carries
+    its default-deny badge: a `deco-deny-<zone id>` text cell inside the zone, never an arrow.
 
   The script in this skill's folder checks all but the last, and lists every problem it finds:
 
@@ -51,7 +52,7 @@ on one page.
   ```
 
   It needs only standard-library Python. Fix what it lists and run it again until it prints `ok`. Then
-  check the arrows by reading the segmentation page against `flows[]`. Without Python, walk the
+  check the arrows and badges by reading the segmentation page against `flows[]`. Without Python, walk the
   checklist in [diagram-conventions.md](diagram-conventions.md) §7 by hand, and say so.
 
   If a draw.io renderer or the `drawio-skill` validator is available, inspect the rendered pages for

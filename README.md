@@ -267,7 +267,7 @@ readiness  history      lenses, verify,   specialists for lenses K, G and L     
 | [concurrency-review](skills/review/concurrency-review/SKILL.md) | The specialist for peer-review's concurrency lens: shared state and lock scope, check-then-act, atomicity, deadlock, async pitfalls, pools, transactions and isolation, idempotency and at-least-once delivery, distributed locks, schedulers on many instances. Every finding's scenario is an interleaving; CONFIRMED needs a reproduction, re-run, because one green run proves nothing. |
 | [review-retro](skills/review/review-retro/SKILL.md) | After review: a retrievable record of one PR (decisions, final outcomes, deferrals without an issue, answers that belong in the code), and over many reviews, metrics by type, severity, lens and area — never by person — plus checklist, rule and lint proposals a human approves. Nothing is applied. |
 
-**The theory comes from six sources plus the built-in recipe:** *Best Kept Secrets of Peer Code Review* (the Cisco study), *Software Design X-Rays*, the *OWASP Code Review Guide* v2, *Clean Code*, Liddament's *Effective Code Review*, and *Rethinking Code Review in the Age of AI* (2026) — distilled into R1–R32 (peer-review), PP1–PP20 (pr-prep), X1–X22 (code-xray), TR1–TR22 (test-review), CR1–CR23 (concurrency-review) and RR1–RR17 (review-retro), and every finding cites one. No scored eval yet; the harness is tested against a stub model.
+**The theory comes from six sources plus the built-in recipe:** *Best Kept Secrets of Peer Code Review* (the Cisco study), *Software Design X-Rays*, the *OWASP Code Review Guide* v2, *Clean Code*, Liddament's *Effective Code Review*, and *Rethinking Code Review in the Age of AI* (2026) — distilled into R1–R32 (peer-review), PP1–PP20 (pr-prep), X1–X22 (code-xray), TR1–TR22 (test-review), CR1–CR23 (concurrency-review) and RR1–RR17 (review-retro), and every finding cites one. **First run (n=3, 2026-11-03), out of 1.00 on delta:** peer-review **1.00** vs 0.29 with no skill, pr-prep **0.97** vs 0.31, code-xray **1.00** vs 0.40, test-review **1.00** vs 0.20, concurrency-review **1.00** vs 0.39, review-retro **1.00** vs 0.29. Every eval is standalone: the run sees only the skill's own folder, with no harness and no sibling skills, as a marketplace install does. `harness/prreview.py` is tested against a stub model.
 
 ---
 
@@ -417,9 +417,9 @@ Each skill carries its own copy of the dispatch contract it needs, so the folder
 
 [`evals/`](evals/README.md) holds the harness that measures it — seeded fixtures with planted defects (a rule that ignores its config, and a vacuous test that hides it), scored assertions, and the recorded result in [evals/benchmark.md](evals/benchmark.md).
 
-Assertions are split: **capability** (does the stage do its job at all) from **delta** (does it do what a change to the skill added). Only the delta column is evidence an edit helped. The seven `development` stages were re-run on 2026-11-03, after the security material landed in them. Each eval ran three times with the skill and once against the pre-session baseline, 28 runs in all. They score **0.96 vs 0.25** on delta and **1.00 vs 0.89** on capability.
+Assertions are split: **capability** (does the stage do its job at all) from **delta** (does it do what a change to the skill added). Only the delta column is evidence an edit helped. The seven `development` stages were re-run on 2026-11-03, after the security material landed in them. Each eval ran three times with the skill and once against the pre-session baseline, 28 runs in all. tdd, refactor-review and devils-advocate were then fixed and evals 2–4 re-run the same way (12 runs). The seven now score **0.99 vs 0.13** on delta and **1.00 vs 0.88** on capability.
 
-**Scored: every skill.** The seven `development` stages carry the n=3 result above. The other skills' first run (2026-10-25) is one with-skill run each — three for evals 11–13, and evals 8–14 were re-run three times on 2026-11-03 — against a baseline with no skill at all, which is the honest comparison for a skill that did not exist at the baseline ref. The security family's first run (2026-11-02, evals 38–46, one per mode) is the same shape. The database family (evals 30–34, 47–48) was re-run three times each on 2026-11-03, after its 2026-11-02 rework and with dbquery and dbarchitect run for the first time (eval 30 again after a dbaudit fix): **0.96 vs 0.67** on delta, **0.99 vs 0.95** on capability. The container family (2026-11-03, evals 6, 28 and 35–37) has three with-skill runs per eval. Every run scored 1.00 on delta, against **0.75** on average for no skill. Across all 49 scored evals: **0.98 vs 0.56** on delta, **0.99 vs 0.90** on capability. Per eval in [evals/benchmark.md](evals/benchmark.md).
+**Scored: every skill.** The seven `development` stages carry the n=3 result above. The other skills' first run (2026-10-25) is one with-skill run each — three for evals 11–13, and evals 8–14 were re-run three times on 2026-11-03 — against a baseline with no skill at all, which is the honest comparison for a skill that did not exist at the baseline ref. The security family's first run (2026-11-02, evals 38–46, one per mode) is the same shape. The database family (evals 30–34, 47–48) was re-run three times each on 2026-11-03, after its 2026-11-02 rework and with dbquery and dbarchitect run for the first time (eval 30 again after a dbaudit fix, and evals 30–31 once more after dbaudit and dbdesign fixes): **0.99 vs 0.67** on delta, **1.00 vs 0.95** on capability. The container family (2026-11-03, evals 6, 28 and 35–37) has three with-skill runs per eval. Every run scored 1.00 on delta, against **0.75** on average for no skill. The review family (2026-11-03, evals 49–54) has three standalone with-skill runs per eval, against no skill: **0.99 vs 0.31** on delta, **1.00 vs 0.92** on capability. Across all 55 scored evals: **0.99 vs 0.51** on delta, **1.00 vs 0.90** on capability. Per eval in [evals/benchmark.md](evals/benchmark.md).
 
 The fixtures are seeded so a naive answer fails them: a compose fixture with a stale `ELASTICSEARCH_URL`, an incident whose trigger sits nine days before the outage, production levers that are stubs recording their calls (so "took no action without confirmation" is checked, not inferred), networks graded by parsing every CIDR and every draw.io cell, DDL executed in SQLite and probed with rows that must be refused, acceptance tests run against three mutants.
 
@@ -429,32 +429,42 @@ The fixtures are seeded so a naive answer fails them: a compose fixture with a s
 - `netblueprint` scores **1.00 vs 1.00**: its eval checks that it refuses an unaccepted proposal, which a bare agent also does.
 - `dbquery` **1.00 vs 0.93** (n=3): a bare agent already ranks by total time, finds the N+1 and weighs the indexes; the skill adds the 0–10 score with its base and cap, and a complete review every time.
 - `dbdiagram` **1.00 vs 0.88** (n=3): the design it is handed is already written in Barker, so a bare agent draws most of it. Its first run's 0.83 was mostly grader false negatives (an invisible junction read as a Chen oval, a legend split across cells, key cells side by side). The skill now carries draw.io conventions, and the eval also checks UID bars, alternate keys, labelled FK paths and the validation report. Its notation-translation rules are not exercised by this fixture.
-- `dbaudit` **0.86 vs 0.43** (n=3, up from 0.83 after a fix). In the first re-run it stated the gate's conditions together and incompletely in all three runs. It now has an explicit four-line gate block, which all three runs of the second re-run followed. The remaining misses vary by run: a High finding resting on a needs-data claim, loose relationship sentences, the copied customer columns called 2NF.
-- `dbdesign` **0.87 vs 0.46** (n=3), below its earlier 0.95; its misses vary run by run.
+- `dbaudit` **0.95 vs 0.43** (n=3, up from 0.83 and 0.86 after two fixes). The first re-run stated the gate's conditions together and incompletely, so the skill now has an explicit four-line gate block. The second wrote loose relationship sentences and called the copied customer columns 2NF. The skill now requires a recovered-model section of Barker sentences and names that copy a ⚠️ 3NF candidate. All three runs of the third re-run did both. What still varies by run: a High finding resting on a needs-data claim, and the payment table's strength left out.
+- `dbdesign` **0.97 vs 0.46** (n=3, up from 0.87). Its assumptions and open questions now sit in two separate lists, and all three runs kept them apart. Its earlier capability dip (0.93 against the baseline's 1.00) was a grader false negative, now fixed. One run still maps the subtypes without naming the choice.
 
 Two safety-critical skills had a safety rule slip in one of three runs, and now make those rules hard gates checked before any other action: `hotfix` routes an outage to incident-fix and writes nothing (eval 11 **0.83 → 1.00**), and `incident-fix` changes no code before containment (eval 12 **0.95 → 1.00**) and writes its impact query into the log, with a repair that is a dry run by default and backs itself up before any write (eval 13 **0.90 → 1.00**). Evals 8–10 and 14 held at 1.00 over three runs each.
 
 Three skills were fixed after their first run and re-run three times each: `acceptance-tests` **0.75 → 1.00** (criteria that already hold are tested with their contrast; edges tested within seconds; one mapping line per criterion), `dbpropose` **0.61 → 0.92** (a `proposal.md` file, a step table with validation, rollback and blast radius, data before constraints, expand/contract, acceptance before dbbuild), and `dbdesign` **0.69 → 0.95** — most of whose first score was four grader false negatives (bold Barker sentences, a "Normal-form" heading, the intersection table's own column, an age-band lookup), fixed in `grade.py` with every control re-checked.
 
-The 2026-11-03 re-run of the seven `development` stages, before → after:
+The 2026-11-03 re-runs of the seven `development` stages, before → after (evals 2–4 from the second re-run):
 
 | eval | skill | delta | cap | cap base |
 |---|---|---|---|---|
 | 0 | architect-deep-dive | 0.91 (n=1) → **1.00** | 1.00 → 1.00 | 1.00 |
 | 1 | agent-brief | 1.00 → **1.00** | 1.00 → 1.00 | 0.86 → 1.00 |
-| 2 | tdd | 1.00 → **1.00** | 0.78 → **1.00** | 0.83 → 1.00 |
+| 2 | tdd | 1.00 → **1.00**, new assertions; baseline 1.00 → 0.00 | 0.78 → **1.00** | 0.83 → 0.88 |
 | 27 | acceptance-tests | 1.00 → **0.94** | 1.00 → 1.00 | 0.50 → 0.67 |
-| 3 | refactor-review | 1.00 → **0.88** | 1.00 → 1.00 | 1.00 → 0.75 |
-| 4 | devils-advocate | 0.92 → **0.87** | 1.00 → 1.00 | 1.00 |
+| 3 | refactor-review | 1.00 → 0.88 → **1.00** | 1.00 → 1.00 | 1.00 → 0.75 |
+| 4 | devils-advocate | 0.92 → 0.87 → **1.00** | 1.00 → 1.00 | 1.00 |
 | 5 | tyr-verdict | 1.00 → **1.00** | 1.00 → 1.00 | 0.83 |
 
-tdd's 0.78 came from the grader. Every run wrote a boundary test, but one put it in a new test file the grader didn't read, and a relative venv path failed "suite is green" for every run, the baseline's included. Both are fixed in `grade.py`. tdd also now keeps new tests in the file the brief names. Its delta is 1.00 against a baseline that now scores 1.00 too, so eval 2 no longer measures what tdd adds. Three delta scores dropped: refactor-review's to **0.88**, because one run of three skipped the severity vocabulary, the size calibration and the stopping rule; devils-advocate's to **0.87**, because two of three didn't say what would settle each unproven finding; and acceptance-tests' to **0.94**.
+tdd's 0.78 came from the grader. Every run wrote a boundary test, but one put it in a new test file the grader didn't read, and a relative venv path failed "suite is green" for every run, the baseline's included. Both are fixed in `grade.py`. After that fix, eval 2 no longer separated tdd from its baseline: the old skill also ticked the brief and logged a revision. Those checks are now capability. The delta now asks for what tdd instructs and a capable agent skips: each criterion ticked in place and naming the test that verifies it, each cycle's red recorded with the failure it showed, and the tracer bullet red on the missing behavior rather than a `TypeError` from the clock seam it needs. The old skill and a no-skill run both score 0/3 on these. refactor-review's 0.88 was one run that skipped the stopping rule, plus two grader false negatives ("the diff is small" wasn't read as calibration, and `blocking` was demanded of a pass with nothing blocking). devils-advocate's 0.87 was two runs whose ledgers named the settling run for every unproven finding but whose responses didn't. Both skills now state what the response must carry, and both are **1.00** over three runs. See [evals/README.md](evals/README.md#the-pipeline-fixture-evals-05). acceptance-tests stays at **0.94**.
 
 ## How to use
 
 ### Install with `npx`
 
 Every skill installs by name through the [`skills` CLI](https://github.com/vercel-labs/skills) — nothing to clone. The CLI finds each `SKILL.md` in this repo by its frontmatter `name`, so commands name skills, never family folders. Run them from the root of the repo you want the skills in.
+
+**This repo is private, so authenticate first.** Your GitHub account needs read access to `izentenosmith/skills` (ask the owner to add you as a collaborator). The commands don't change. The CLI clones with your own git credentials. If that fails, it retries through `gh repo clone` and then over SSH. So any one of these is enough:
+
+| Setup | Check |
+|---|---|
+| GitHub CLI signed in: `gh auth login` (then `gh auth setup-git` so plain `git` uses it too) | `gh repo view izentenosmith/skills` |
+| An SSH key on your GitHub account | `ssh -T git@github.com` |
+| A git credential helper holding a token with `repo` scope (e.g. macOS Keychain) | `git ls-remote https://github.com/izentenosmith/skills.git` |
+
+If a check fails, the install fails too, with `Authentication failed` or `Repository not found`. For an SSH-only machine, give the CLI the SSH URL directly: `npx skills add git@github.com:izentenosmith/skills.git --skill <name>`. In CI, export `GH_TOKEN` (or `GITHUB_TOKEN`) with read access to this repo. `npx skills update` uses it to check for new versions.
 
 **A whole workflow** — one command per family:
 
@@ -553,10 +563,11 @@ The installer copies each skill folder whole, dereferencing the database and net
 
 ### Or copy by hand
 
-1. **Clone or browse the repo.**
+1. **Clone the repo** — it is private, so this needs the same access as above.
 
    ```bash
-   git clone https://github.com/izentenosmith/skills.git
+   gh repo clone izentenosmith/skills
+   # or: git clone git@github.com:izentenosmith/skills.git
    ```
 
 2. **Copy the skill folders you want** into wherever the target repo keeps its agent skills — `.claude/skills/` for Claude Code, `.cursor/skills/` for Cursor, or your user-level skills directory.

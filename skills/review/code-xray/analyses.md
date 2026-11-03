@@ -73,6 +73,7 @@ everywhere else. A re-run on the same commits gives the same answer, however muc
 | Hotspots, coupling | 12 months | `--months 12` (default) | XR p.100–101 |
 | Rising hotspots | the same window, compared with one shifted back two months | fixed in the script | XR p.181 |
 | Knowledge, fragmentation | about 3 months, or since the last reorganisation | `knowledge --months 3` | XR p.121, p.128 |
+| Knowledge loss | the hotspot window: the main developer must still have commits in it | `knowledge` (12 months) | XR p.189 |
 | Complexity growth (PR) | branch point to head | `pr` does it | XR p.180 |
 | Complexity trend | the file's whole history | `trend` does it | XR p.104 |
 | Active author | committed within 90 days of the analysed commit | `--active-days 90` | practical guidance (not from the sources) |

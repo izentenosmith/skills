@@ -44,7 +44,7 @@ python3 harness/prreview.py --repo . --pr 482
 npx skills add izentenosmith/skills --skill pr-prep code-xray peer-review test-review concurrency-review review-retro
 ```
 
-Flags (`-a`, `-g`, `-y`) are in the [root README](../../README.md#install-with-npx). Or copy the
+The repo is private: you need read access and GitHub auth first. That setup, and the flags (`-a`, `-g`, `-y`), are in the [root README](../../README.md#install-with-npx). Or copy the
 folders. Each is self-contained: `SKILL.md` plus its reference docs (and code-xray's script), no symlinks.
 
 Invoke by name, or let the description trigger it:
@@ -74,6 +74,10 @@ Invoke by name, or let the description trigger it:
 | After | `--fix`, `--comment` | the same (posting confirms first), plus a **re-review** verification round and **review-retro** |
 
 Use the built-in for a fast bug-only pass. Use peer-review when the review is the gate.
+
+## Do they work?
+
+One eval per skill (evals 49–54), each run three times against no skill, standalone (only the skill's own folder, as a marketplace install). Delta, out of 1.00: peer-review **1.00** vs 0.29, pr-prep **0.97** vs 0.31, code-xray **1.00** vs 0.40, test-review **1.00** vs 0.20, concurrency-review **1.00** vs 0.39, review-retro **1.00** vs 0.29. The fixtures, the planted traps and the controls are in [evals/README.md](../../evals/README.md#the-review-family-evals-4954).
 
 ## The theory underneath
 

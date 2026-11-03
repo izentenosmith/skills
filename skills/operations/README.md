@@ -46,7 +46,7 @@ Or one at a time:
 | ticket | `npx skills add izentenosmith/skills --skill ticket` |
 | backlog | `npx skills add izentenosmith/skills --skill backlog` |
 
-Flags (`-a`, `-g`, `-y`) are in the [root README](../../README.md#install-with-npx). The harnesses below are not skills and need a clone.
+The repo is private: you need read access and GitHub auth first. That setup, and the flags (`-a`, `-g`, `-y`), are in the [root README](../../README.md#install-with-npx). The harnesses below are not skills and need a clone.
 
 Or **copy the folder you want into the repo you're working in**, alongside wherever that repo keeps its agent skills. Each folder is self-contained — `SKILL.md` plus its reference docs — so one folder is a complete install of one skill.
 
