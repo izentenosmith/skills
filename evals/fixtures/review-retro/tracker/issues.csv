@@ -1,0 +1,18 @@
+key,summary,status,resolution,created,resolved
+BILL-198,Credit notes on invoices,Done,Fixed,2026-06-11,2026-06-30
+BILL-202,Zero-rated tax for export customers,Done,Fixed,2026-06-24,2026-07-08
+BILL-210,Payout webhook deliveries fail on provider timeouts,Done,Fixed,2026-07-01,2026-07-14
+BILL-214,Merchants can have payout fees waived,Done,Fixed,2026-07-03,2026-07-17
+BILL-219,Upgrade boto3 to 1.35,Closed,Won't Do,2026-07-04,2026-07-20
+BILL-223,Ledgerly settlement client,Done,Fixed,2026-07-10,2026-07-24
+BILL-227,Daily settlement report,Done,Fixed,2026-07-14,2026-08-03
+BILL-229,Split ledger posting into journal and accounts,Done,Fixed,2026-07-20,2026-08-07
+BILL-233,CSV export of the settlement report,Done,Fixed,2026-07-29,2026-08-13
+BILL-236,Upgrade httpx to 0.28 and pydantic to 2.9,Done,Fixed,2026-08-05,2026-08-18
+BILL-240,Paginated invoice list endpoint,Done,Fixed,2026-08-12,2026-09-01
+BILL-244,Rate-limit GET /v1/invoices (from the #433 review: PR-3),Open,,2026-08-29,
+BILL-247,Merchant self-serve settings API,Done,Fixed,2026-08-20,2026-09-04
+BILL-251,Batch Ledgerly payouts per merchant,Done,Fixed,2026-09-01,2026-09-16
+BILL-255,Refund reversals post with the wrong sign,Done,Fixed,2026-09-19,2026-09-24
+BILL-258,Dunning emails for overdue invoices,Open,,2026-09-25,
+BILL-260,Move the PDF renderer off the API pods,Open,,2026-09-29,

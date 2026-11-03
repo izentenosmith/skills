@@ -98,7 +98,8 @@ python3 -I $X pr --repo . --base origin/main [--head HEAD] [--author "Name"] --j
 # Codebase mode
 python3 -I $X hotspots  --repo . [--top 20]
 python3 -I $X coupling  --repo . [--min-shared 20 --min-degree 0.5]
-python3 -I $X knowledge --repo . --months 3 [--no-names]
+python3 -I $X knowledge --repo . --months 3 [--no-names]   # who owns it now
+python3 -I $X knowledge --repo . [--no-names]               # 12 months: knowledge loss
 python3 -I $X xray  path/to/hotspot.py --repo .       # functions inside one file
 python3 -I $X trend path/to/hotspot.py --repo . [--samples 12]
 ```
@@ -168,8 +169,11 @@ them is in [analyses.md](analyses.md#9-component-level-coupling-and-hotspots-cod
   cross-layer, cross-language, test-to-test, near-identical files (X9, X11). At Deep, run the
   component snippet and read the component-pair coupling against XR's 30–70% layer anchors (X13).
   On a small repo, lower `--min-shared` only with a weak-signal label.
-- [ ] **5. Knowledge** (Deep, unless social data was dropped). Run `knowledge --months 3`. Find
-  knowledge loss on hotspots first, then hotspots with high fragmentation and no owner (X14, X16,
+- [ ] **5. Knowledge** (Deep, unless social data was dropped). Run `knowledge --months 3` for
+  current ownership and fragmentation, and `knowledge` on the default 12-month window for
+  knowledge loss: an author inactive for `--active-days` (90) has no commits in a 3-month window,
+  so the short window can never show them as a main developer who left. Find knowledge loss on
+  hotspots first, then hotspots with high fragmentation and no owner (X14, X16,
   X17). With a team map, find the components many teams change and the coupled components owned by
   different teams. Run the loss check as a simulation when someone is known to be leaving (X16).
 - [ ] **6. Rank the targets.** Build the target table per
