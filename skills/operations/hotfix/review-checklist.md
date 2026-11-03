@@ -14,6 +14,7 @@ For each item: **found nothing** (say what you checked), or a **finding** with e
 - [ ] **Data written** — anything persisted, sent, or deleted: is it correct for records created *before* the fix? Is the write idempotent if retried? **Strict mode lives here.**
 - [ ] **Permissions and isolation** — can the changed path now be reached by someone who couldn't before, or see data across a boundary?
 - [ ] **Backward compatibility** — interfaces, outputs, config or stored formats that a caller depends on.
+- [ ] **Fails safe on bad input** — does empty, missing or truncated input now mean "everything" (an empty filter that deletes all rows, a missing tenant id that matches every tenant)? When the fix meets an implausible value — a config with zero entries, a total ten times yesterday's — does it keep the last good state and say so, rather than acting on it?
 - [ ] **What the fix hides** — a clamp, default or catch that makes the symptom disappear while the cause stays. If so, it's a band-aid: Step 5 applies.
 
 ## Turning findings into actions

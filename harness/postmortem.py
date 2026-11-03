@@ -279,6 +279,18 @@ def main(argv=None):
             loop.log(f"spent ${ctx.cost:.2f} this run")
 
 
+def follow_up_type(repo, default="Task"):
+    """The work item type the ticket skill's profile maps follow-ups to, or `default` without one."""
+    profile = pathlib.Path(repo) / ".workflow" / "tracker.md"
+    if not profile.exists():
+        return default
+    for line in profile.read_text().splitlines():
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) >= 2 and cells[0].lower() == "follow-up" and cells[1] and not cells[1].startswith("<"):
+            return re.split(r"\s+\+\s+", cells[1])[0].strip("` ")
+    return default
+
+
 def create_items(repo, log):
     remote = subprocess.run(["git", "remote", "get-url", "origin"], cwd=repo, capture_output=True, text=True)
     tool = fix.pr_tool(remote.stdout) if remote.returncode == 0 else None
@@ -286,7 +298,7 @@ def create_items(repo, log):
         title, body = f["detail"].split(" — ")[0].replace("follow-up: ", ""), f"{f['factor']}\n\n{f['detail']}"
         cmd = {"gh": ["gh", "issue", "create", "--title", title, "--body", body],
                "glab": ["glab", "issue", "create", "--title", title, "--description", body, "--yes"],
-               "az": ["az", "boards", "work-item", "create", "--type", "Task", "--title", title,
+               "az": ["az", "boards", "work-item", "create", "--type", follow_up_type(repo), "--title", title,
                       "--description", body]}.get(tool)
         if not cmd:
             loop.log(f"no tracker CLI for this remote — create by hand: {title}")

@@ -45,6 +45,19 @@ class IncidentLog(unittest.TestCase):
         errors, _ = I.verify(I.parse(example))
         self.assertEqual([I.fmt(e) for e in errors], [])
 
+    def test_roles_handoffs_and_checkpoints_are_entries_and_resolving_wants_exit_criteria(self):
+        for kind, text in (("role", "commander: user · operations: user · planning: agent"),
+                           ("checkpoint", "approach still right; no more people needed"),
+                           ("handoff", "commander: user → on-call, acknowledged")):
+            self.assertEqual(self.log(kind, text)[0], 0, kind)
+        self.log("mitigated", "5xx back to baseline")
+        self.log("resolved", "fix verified in production")
+        _, warnings = I.verify(I.parse(self.text()))
+        self.assertIn("W03", [w[0] for w in warnings])
+        criteria = self.text().replace("to be stated before resolved", "5xx < 0.5% for 30 min")
+        _, warnings = I.verify(I.parse(criteria))
+        self.assertNotIn("W03", [w[0] for w in warnings])
+
     def test_new_stamps_detection_from_the_clock(self):
         entry = I.parse(self.text()).entries[0]
         self.assertEqual(entry.kind, "detected")

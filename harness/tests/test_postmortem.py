@@ -144,6 +144,14 @@ class PostmortemTest(unittest.TestCase):
             os.environ["PATH"] = old
         self.assertEqual((bindir / "gh.calls").read_text().count("issue create"), 2)
 
+    def test_follow_up_type_comes_from_the_ticket_profile(self):
+        self.assertEqual(PM.follow_up_type(self.repo), "Task")
+        (self.repo / ".workflow").mkdir(exist_ok=True)
+        (self.repo / ".workflow" / "tracker.md").write_text(
+            "## Kinds → types\n| Kind | Type | Notes |\n|---|---|---|\n"
+            "| bug | Defect | |\n| follow-up | Improvement + label `follow-up` | |\n")
+        self.assertEqual(PM.follow_up_type(self.repo), "Improvement")
+
 
 if __name__ == "__main__":
     unittest.main()

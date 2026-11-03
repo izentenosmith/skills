@@ -1,6 +1,6 @@
 ---
 name: hotfix
-description: A fast, still-disciplined lane for an urgent bug in a running system that is NOT an incident — the system is up, nothing is being corrupted or exposed right now. Discovers the repo's own build, test, review and ship conventions, proves the bug with a red test, fixes it at the shared cause, runs one adversarial review pass, and ships with recorded evidence in about an hour of agent time. Use for "hotfix", "urgent fix", "quick fix", "bug in prod but not down", "fix urgente", "arreglo rápido". Not for outages, data corruption, security exposure or anything still getting worse — that is incident-fix.
+description: A fast, still-disciplined lane for an urgent bug in a running system that is NOT an incident — the system is up, nothing is being corrupted or exposed right now. Discovers the repo's own build, test, review and ship conventions, proves the bug with a red test, fixes it at the shared cause, runs one adversarial review pass, and ships with recorded evidence in about an hour of agent time. Use for "hotfix", "urgent fix", "quick fix", "bug in prod but not down", "patch this today". Not for outages, data corruption, security exposure or anything still getting worse — that is incident-fix.
 ---
 
 # 🩹 Hotfix
@@ -49,6 +49,7 @@ Whatever cannot be discovered, ask **once, in a single question**, and offer to 
 This lane only works for bugs that can wait an hour. Check, in order, and **stop at the first that holds**:
 
 - **Down, degraded, exposing data, or corrupting data now** — discovery showed what the report didn't → stop exactly as the outage gate above says: no further file or command, and the handoff to **[incident-fix](../incident-fix/SKILL.md)** is your output.
+- **It needs a second team** — fixing or containing it takes people or access outside this team → hand it to **[incident-fix](../incident-fix/SKILL.md)** the same way. That's one of the declare-early signals ([severity.md](../incident-fix/severity.md)): the coordination an incident brings is the point, even when nothing is down. A bug customers can see is still a hotfix while the system is up and the damage isn't spreading.
 - **Real design ambiguity** — several reasonable fixes with different trade-offs, or a fix that needs a new boundary → stop. Recommend the repo's design workflow ([architect-deep-dive](../../development/architect-deep-dive/SKILL.md) → [agent-brief](../../development/agent-brief/SKILL.md) where installed), or a short options-and-trade-offs discussion where not.
 - **The fix touches persistent data, money, permissions or tenancy** — database writes, migrations, financial or inventory figures, file deletion, an authorization check, an isolation boundary → **stay, in strict mode.** Step 4 becomes blocking. These are the failures a green suite is worst at catching, and a two-line diff is perfectly capable of causing one.
 
@@ -59,6 +60,8 @@ Say which way the gate went, and why, in one line.
 ## 🧭 Step 2: Root cause — in three lines
 
 Write the note in [root-cause-note.md](root-cause-note.md): **symptom · cause · why no existing test caught it.** If you cannot write the cause line from evidence, you have not found it — and a fix for a cause you have guessed is a second bug.
+
+**Start with what changed.** Before reading the code path, list what touched the system recently: deploys and merges, config and flag changes, scheduled jobs, dependency or vendor updates, and shifts in data volume or traffic mix. A bug that appeared without a code change usually arrived with one of the others.
 
 **When the code and the report don't hand you the cause** — it resists a first read, it's intermittent, it's a slowdown, or it appeared somewhere between two known-good states — work [diagnosis.md](diagnosis.md) before writing the cause line: a command that goes red on this bug first, then hypotheses. Its minimised reproduction becomes Step 3's red test.
 
@@ -82,11 +85,13 @@ Scoped to **the diff only**, and **one pass — no loop**. Where [devils-advocat
 
 ## 🧷 Step 5: Owe the proper fix, if this is a band-aid
 
-A band-aid is fine; an unrecorded one is not. If the fix guards a symptom rather than removing the cause — a clamp, a retry, a special case, a disabled path — create the follow-up in [follow-up.md](follow-up.md): the proper fix, why it wasn't done now, a target date. In the tracker if one exists (with confirmation), otherwise in the local log. **Reference it in the commit message** using the repo's convention.
+A band-aid is fine; an unrecorded one is not. If the fix guards a symptom rather than removing the cause — a clamp, a retry, a special case, a disabled path — create the follow-up in [follow-up.md](follow-up.md): the proper fix, why it wasn't done now, a target date. In the tracker if one exists (with confirmation, through [ticket](../ticket/SKILL.md) where installed), otherwise in the local log. **Reference it in the commit message** using the repo's convention.
 
 ## 🚀 Step 6: Ship by the repo's convention
 
 PR or direct merge, protected branches, required checks — whatever Step 0 found, not what's common. **Confirm before each outward action.**
+
+**Know the way back before going forward.** Name the rollback for this change — revert and redeploy, the previous version, a flag — and confirm it works now (the deploy path is green, no forward-only migration ships with the fix). A hotfix judged too small to need a canary is exactly the change that skips the check that would have caught it: where the repo has a staged or canary rollout, the hotfix goes through it too.
 
 If a pre-production environment exists, **verify there before promoting**: the automated suite, plus one manual hit of the affected behavior — the request, command or page that showed the bug, now showing the fix. Then promote, and repeat the hit in production when that's reachable. **Record each as evidence**: what was run, what came back, at which commit.
 
@@ -99,6 +104,7 @@ Fill [final-checklist.md](final-checklist.md) and tick every item: root-cause no
 The lane's speed is a budget, not a promise. Leave it, saying which exit fired:
 
 - **The cause isn't clear** after the evidence you can reasonably gather — no red loop can be built, or every hypothesis in [diagnosis.md](diagnosis.md) is contradicted — escalate to the user with what you've ruled out, or to incident-fix if it's getting worse.
+- **An hour of focused work hasn't found it**, and users are still affected → it's an incident by the declare-early rule; hand it to incident-fix with what you've ruled out.
 - **The fix spreads** past one module or across a boundary, or the caller sweep finds callers that need different behavior — that's a design question.
 - **Strict mode turned up a blocker** that can't be fixed in the lane — hand it to the full pipeline.
 
