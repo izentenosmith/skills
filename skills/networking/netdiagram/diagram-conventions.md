@@ -1,7 +1,8 @@
 # Diagram Conventions — The Canonical Network Views
 
 > The network family's equivalent of Barker notation: one convention, enforced across every stage and
-> checked by the harness (`harness/networkflow.py`). The model is
+> checked by `python3 scripts/netgraph.py diagrams <folder> --topology topology.json`, which ships with
+> every skill that draws or reads these views. The model is
 > [`topology-modeling.md`](topology-modeling.md). These rules say how to draw it.
 
 ## 1. Required files and pages
@@ -83,7 +84,9 @@ in red so they cannot be missed.
 - No decorative imagery that obscures CIDRs, protocols or flow labels.
 - No secrets anywhere: no PSKs, communities or passwords in labels or notes.
 
-## 7. Validation checklist (also enforced by the harness)
+## 7. Validation checklist
+
+`scripts/netgraph.py diagrams` checks every line but the last; read the segmentation page for that one.
 
 - [ ] Required files present, with exact names. Each is uncompressed, well-formed `mxfile`.
 - [ ] The required page name is present in each file.

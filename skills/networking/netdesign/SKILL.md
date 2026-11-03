@@ -27,6 +27,7 @@ runtime properties (throughput, latency, failover time) from static evidence.
 1. **Read the companion references**: [theory.md](theory.md) and [graph-theory.md](graph-theory.md)
    for the principles, [topology-modeling.md](topology-modeling.md) for the model contract, and
    [design-patterns.md](design-patterns.md) for the patterns and the addressing method.
+   `scripts/netgraph.py` in this folder checks the model and computes the graph lens.
 2. **State requirements, assumptions and open questions.** Cover sites and regions, workloads and
    their tiers, users and partners, compliance zones, growth horizon, availability objectives per
    service, and the target platform(s). Never silently turn an assumption into a constraint.
@@ -46,9 +47,12 @@ runtime properties (throughput, latency, failover time) from static evidence.
 7. **Services.** DNS (resolvers, private zones, forwarding), DHCP, egress/NAT, load balancing, private
    endpoints and gateways, each redundant across failure domains or with the risk stated.
 8. **Failure domains and resilience.** Make every critical pair reach node connectivity ≥ 2 with
-   independent fate. Keep hub concentration and betweenness on critical paths deliberate. When the
-   harness is available, run `harness/netgraph.py` on the target `topology.json` and include its
-   output (G4–G9).
+   independent fate. Keep hub concentration and betweenness on critical paths deliberate. Measure it:
+   run `python3 <this skill's folder>/scripts/netgraph.py analyze topology.json` on the target model
+   (standard-library Python; exit 1 lists the schema errors to fix first). Include its critical-pair
+   table, articulation points and any finding in the design, and revise until no critical pair is
+   below 2 or the exception is stated. Without Python, show each pair's disjoint paths by hand
+   (G4–G9).
 9. **For an audited redesign**, map each material change to its audit finding ID, and separate
    preserved behaviour from intentional behaviour change.
 10. **Validation checklist**: no overlap, every flow justified, every zone default-deny, every

@@ -12,12 +12,12 @@
 | 13-incident-batch-repair-artifact | i10 | 3 | 0.90 ± 0.17 | 0.60 | +0.30 | 1.00 | 1.00 |
 | 14-incident-library-no-deploy | i7 | 1 | 1.00 ± 0.00 | 0.57 | +0.43 | 1.00 | 1.00 |
 | 15-harness-loop-closes-teardown | i5 | 1 | 1.00 ± 0.00 | — | — | 1.00 | — |
-| 16-netaudit-hub-spoke-recovers-and-scores | i6 | 1 | 1.00 ± 0.00 | 0.23 | +0.77 | 1.00 | 0.60 |
-| 17-netdesign-plans-around-what-is-in-use | i6 | 1 | 0.90 ± 0.00 | 0.30 | +0.60 | 1.00 | 0.00 |
-| 18-netdiagram-canonical-views-from-model | i6 | 1 | 0.90 ± 0.00 | 0.20 | +0.70 | 1.00 | 0.00 |
-| 19-netpropose-contains-before-restructuring | i6 | 1 | 0.90 ± 0.00 | 0.70 | +0.20 | 1.00 | 1.00 |
+| 16-netaudit-hub-spoke-recovers-and-scores | i21 | 3 | 1.00 ± 0.00 | 0.31 | +0.69 | 1.00 | 0.60 |
+| 17-netdesign-plans-around-what-is-in-use | i21 | 3 | 0.90 ± 0.00 | 0.30 | +0.60 | 1.00 | 0.20 |
+| 18-netdiagram-canonical-views-from-model | i21 | 3 | 0.87 ± 0.06 | 0.20 | +0.67 | 1.00 | 0.00 |
+| 19-netpropose-contains-before-restructuring | i21 | 3 | 1.00 ± 0.00 | 0.70 | +0.30 | 0.78 | 0.67 |
 | 2-tdd-reads-brief-vertical | i15 | 3 | 1.00 ± 0.00 | 1.00 | +0.00 | 1.00 | 1.00 |
-| 20-netblueprint-waits-for-acceptance | i6 | 1 | 1.00 ± 0.00 | 1.00 | +0.00 | 1.00 | 1.00 |
+| 20-netblueprint-waits-for-acceptance | i21 | 3 | 1.00 ± 0.00 | 0.75 | +0.25 | 1.00 | 1.00 |
 | 21-terraform-review-state-and-secrets | i6 | 1 | 1.00 ± 0.00 | 0.57 | +0.43 | 1.00 | 0.83 |
 | 22-terraform-design-isolates-state | i6 | 1 | 1.00 ± 0.00 | 0.86 | +0.14 | 1.00 | 1.00 |
 | 23-terraform-propose-no-recreate | i6 | 1 | 0.91 ± 0.00 | 0.82 | +0.09 | 1.00 | 1.00 |
@@ -52,7 +52,7 @@
 | 9-hotfix-jvm-both-callers | i7 | 1 | 1.00 ± 0.00 | 0.71 | +0.29 | 1.00 | 1.00 |
 
 **Delta — current 0.96 vs baseline 0.54**
-**Capability — current 1.00 vs baseline 0.90**
+**Capability — current 0.99 vs baseline 0.90**
 
 ## Delta assertions the baseline also passed (still non-discriminating)
 
@@ -79,6 +79,7 @@
 - why the tests missed it
 
 **eval-16-netaudit-hub-spoke-recovers-and-scores**
+- no secret value reproduced anywhere
 - secrets recorded by kind and location
 - evidence given as file:line
 - no IaC or device config written or changed
@@ -93,6 +94,7 @@
 - the model left untouched
 
 **eval-19-netpropose-contains-before-restructuring**
+- the Critical is contained before structural work
 - renumbering sequenced against what depends on it
 - retirement waits for usage confirmation
 - connectivity before and after stated
@@ -105,9 +107,10 @@
 - brief revised in place when reality contradicted it
 
 **eval-20-netblueprint-waits-for-acceptance**
-- asks for explicit acceptance before producing the package
 - names where acceptance comes from
-- says plainly that nothing was produced or changed
+- asks for the acceptance record: who, when and which version
+- the κ=1 on-prem pair named as an exception acceptance must cover
+- the missing audit named as a gap for the package
 - no network-design.md written
 - no accepted topology.json written
 - no diagram marked accepted
@@ -445,6 +448,9 @@
 - a reproducible COUNT query (2/3)
 - the repair defaults to a dry run and backs up first (2/3)
 - the repair corrects exactly the affected orders (2/3)
+
+**eval-18-netdiagram-canonical-views-from-model**
+- segmentation arrows are exactly allow flows (2/3)
 
 **eval-27-acceptance-tests-red-for-the-right-reason**
 - every new test is red on the unimplemented code (none passes) (2/3)

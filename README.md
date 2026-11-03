@@ -181,7 +181,7 @@ Running workload:  dbquery  (settles dbaudit's needs-data flags; index changes �
 
 ## networking
 
-Five independent skills, coordinated by [`harness/networkflow.py`](harness/networkflow.py) when the user wants a full or partial workflow.
+Five independent skills. Each ships `scripts/netgraph.py`, a standard-library Python script that computes the graph metrics and the address, flow and diagram checks, so an installed skill needs nothing from this repo. A clone adds an optional coordinator, [`harness/networkflow.py`](harness/networkflow.py), for a full or partial workflow.
 
 ```
 Existing network: netaudit → netdesign → netdiagram (L3 + zones/flows [+ L1/L2]) → netpropose
@@ -197,7 +197,7 @@ Accepted proposal:                                                    netbluepri
 | [netpropose](skills/networking/netpropose/SKILL.md) | Assembles the recommendation, with cut-over sequencing, validation and rollback. |
 | [netblueprint](skills/networking/netblueprint/SKILL.md) | After acceptance, produces the final diagrams, a companion `network-design.md`, and the accepted `topology.json` for a separate IaC skill. Writes no IaC. |
 
-**Two lenses carry the theory:** computer networking (Kurose & Ross; Tanenbaum & Wetherall) and network science (Newman; Barabási) — articulation points, Menger connectivity, betweenness and percolation make "single point of failure" and "blast radius" computable. The harness redacts secrets before any model reads evidence, computes the graph metrics and address/flow checks in code (`netgraph.py`), scores by the database family's formula, and gates on score, open Critical/High findings, critical-pair connectivity ≥ 2, the 🔬 ratio, and usage. Blueprints need an explicitly accepted proposal, in a separate run.
+**Two lenses carry the theory:** computer networking (Kurose & Ross; Tanenbaum & Wetherall) and network science (Newman; Barabási) — articulation points, Menger connectivity, betweenness and percolation make "single point of failure" and "blast radius" computable, and each skill computes them with its own `scripts/netgraph.py`. The optional harness adds secret redaction before any model reads evidence, runs the same script, scores by the database family's formula, and gates on score, open Critical/High findings, critical-pair connectivity ≥ 2, the 🔬 ratio, and usage. Blueprints need an explicitly accepted proposal, in a separate run.
 
 ---
 
@@ -527,7 +527,7 @@ Useful flags:
 
 `npx skills update` pulls newer versions of what you installed; `npx skills remove <name>` takes one out.
 
-The installer copies each skill folder whole, dereferencing the database and networking skills' shared-doc symlinks, so every installed folder is self-contained. **It installs skills, not the [harness](harness/README.md)** — the Python orchestration in `harness/` (including `dbworkflow.py` and `networkflow.py`) needs a clone.
+The installer copies each skill folder whole, dereferencing the database and networking skills' shared-doc symlinks, so every installed folder is self-contained. **It installs skills, not the [harness](harness/README.md)** — the Python orchestration in `harness/` (including `dbworkflow.py` and `networkflow.py`) needs a clone. The networking skills carry their one script, `scripts/netgraph.py`, inside each folder.
 
 ### Or copy by hand
 

@@ -17,8 +17,6 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
-import html
-import ipaddress
 import json
 import os
 import pathlib
@@ -26,7 +24,6 @@ import re
 import shutil
 import subprocess
 import sys
-import xml.etree.ElementTree as ET
 
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -37,13 +34,6 @@ EXIT_OK, EXIT_ERROR, EXIT_USAGE = 0, 1, 2
 STAGES = ("audit", "design", "diagram", "propose", "blueprint")
 FILES_SCHEMA = loop._obj({"files": {"type": "array", "items": loop._obj({"name": {"type": "string"},
                                                                            "content": {"type": "string"}})}})
-VIEWS = {  # file name → required page name
-    "logical-topology.drawio": "Logical topology (L3)",
-    "segmentation.drawio": "Segmentation (zones and flows)",
-    "physical-topology.drawio": "Physical topology (L1/L2)",
-}
-LEGEND = "network diagram conventions"
-FREE_IDS = ("deco-", "flowgrp-")
 
 
 class Usage(Exception):
@@ -97,85 +87,14 @@ def load_topology(path: pathlib.Path, *, error_type=loop.HarnessError, status=No
     return topo
 
 
-def model_ids(topo):
-    ids = set()
-    for key in ("nodes", "edges", "networks", "zones", "flows"):
-        ids |= {x["id"] for x in topo.get(key) or [] if "id" in x}
-    return ids
-
-
-def strip_label(value: str) -> str:
-    return re.sub(r"<[^>]+>", " ", html.unescape(value or ""))
-
-
 def validate_diagram_set(paths, topo=None, *, error_type=loop.HarnessError):
-    """Require the canonical views, their page names and legend, and — with a model — IDs and CIDRs that agree."""
-    by_name = {}
-    for p in paths:
-        name = p.name.casefold()
-        if name not in VIEWS:
-            raise error_type(f"diagram must be one of {', '.join(VIEWS)}: {p.name}")
-        if name in by_name:
-            raise error_type(f"duplicate diagram: {p.name}")
-        by_name[name] = p
-    required = ["logical-topology.drawio", "segmentation.drawio"]
-    if topo and any(e.get("kind") == "l2-link" for e in topo.get("edges") or []):
-        required.append("physical-topology.drawio")      # on-prem L2 evidence exists, so the physical view is owed
-    missing = [r for r in required if r not in by_name]
-    if missing:
-        raise error_type(f"missing required diagram(s): {', '.join(missing)}")
-
-    ids = model_ids(topo) if topo else None
-    cidrs = {n["id"]: n["cidr"] for n in (topo or {}).get("networks") or []}
-    for name, path in by_name.items():
-        try:
-            root = ET.fromstring(path.read_text(errors="replace"))
-        except (ET.ParseError, OSError) as exc:
-            raise error_type(f"invalid draw.io XML in {path}: {exc}")
-        if root.tag.rsplit("}", 1)[-1] != "mxfile":
-            raise error_type(f"{path.name} must have an mxfile root element")
-        pages = [n for n in root.iter() if n.tag.rsplit("}", 1)[-1] == "diagram"]
-        page = next((pg for pg in pages if pg.attrib.get("name", "").strip() == VIEWS[name]), None)
-        if page is None:
-            raise error_type(f"{path.name} needs a page named {VIEWS[name]!r}")
-        cells = [c for c in page.iter() if c.tag.rsplit("}", 1)[-1] == "mxCell"]
-        if not cells:
-            raise error_type(f"{path.name}: page {VIEWS[name]!r} has no cells — save it uncompressed")
-        labels = {c.attrib.get("id", ""): strip_label(c.attrib.get("value", "")) for c in cells}
-        if not any(LEGEND in v.casefold() for v in labels.values()):
-            raise error_type(f"{path.name}: page {VIEWS[name]!r} needs a visible legend naming 'Network diagram conventions'")
-        if ids is None:
-            continue
-        edge_ids = {c.attrib.get("id") for c in cells if c.attrib.get("edge") == "1"}
-        for c in cells:
-            cid, parent = c.attrib.get("id", ""), c.attrib.get("parent")
-            if cid in ("0", "1") or cid.startswith(FREE_IDS) or parent in edge_ids:
-                continue
-            if cid not in ids:
-                raise error_type(f"{path.name}: cell {cid!r} is not a topology.json id (prefix decorative cells 'deco-')")
-        if name == "logical-topology.drawio":
-            for nid, cidr in cidrs.items():
-                if nid not in labels:
-                    raise error_type(f"{path.name}: network {nid!r} is not drawn")
-                found = re.findall(r"[0-9A-Fa-f:.]+/\d{1,3}", labels[nid])
-                if not any(_same_net(f, cidr) for f in found):
-                    raise error_type(f"{path.name}: network {nid!r} must be labelled with its CIDR {cidr}")
-            for pair in topo.get("critical_pairs") or []:
-                for end in (pair.get("from"), pair.get("to")):
-                    if end in {n["id"] for n in topo.get("nodes") or []} and end not in labels:
-                        raise error_type(f"{path.name}: critical-pair endpoint {end!r} is not drawn")
-        if name == "segmentation.drawio":
-            for z in topo.get("zones") or []:
-                if z["id"] not in labels:
-                    raise error_type(f"{path.name}: zone {z['id']!r} is not drawn")
-    return [by_name[n] for n in VIEWS if n in by_name]
-
-
-def _same_net(a, b):
-    try:
-        return ipaddress.ip_network(a, strict=False) == ipaddress.ip_network(b, strict=False)
-    except ValueError:
-        return False
+    """Require the canonical views, their page names and legend, and — with a model — IDs and CIDRs that agree.
+    The checks are netgraph.check_diagrams, the same ones the skills run standalone; the first problem raises."""
+    problems = netgraph.check_diagrams(paths, topo)
+    if problems:
+        raise error_type(problems[0])
+    by_name = {p.name.casefold(): p for p in paths}
+    return [by_name[n] for n in netgraph.VIEWS if n in by_name]
 
 
 def design_artifacts(path: pathlib.Path, *, error_type=Usage):
