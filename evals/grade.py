@@ -100,7 +100,8 @@ def ledger_shape(run, fixture):
 
 def suite_green(run):
     repo = run / "repo"
-    py = repo / ".venv/bin/python"
+    # absolute(): pytest runs with cwd=repo, so a relative iteration path would not resolve
+    py = (repo / ".venv/bin/python").absolute()
     if not py.exists():
         return False, "no venv in run repo"
     try:
@@ -168,7 +169,8 @@ def eval1(run):
 
 def eval2(run):
     rules = read(run / "repo/reservations/rules.py")
-    tests = read(run / "repo/tests/test_booking.py")
+    # Every test file, not just test_booking.py: a run may put the cutoff tests in a new one.
+    tests = "\n".join(read(p) for p in sorted((run / "repo/tests").rglob("test_*.py")))
     brief = read(run / "repo/.workflow/brief.md")
     log = read(run / "outputs/cycle-log.md")
     green, eviz = suite_green(run)
@@ -179,7 +181,9 @@ def eval2(run):
         ("cutoff rule implemented", any_of(rules, r"cutoff"), "", C),
         ("window read from account config, not hard-coded",
          any_of(rules, r"config\.get\(\s*[\"']cutoff_minutes"), "", C),
-        ("tests exist for the cutoff behavior", any_of(tests, r"cutoff|CUTOFF"), "", C),
+        # A test that names the cutoff — the fixture's own docstring already says "cutoff".
+        ("tests exist for the cutoff behavior",
+         any_of(tests, r"def test\w*cutoff", r"CUTOFF_WINDOW"), "", C),
         ("boundary case covered", any_of(tests, r"exact|boundary|edge"), "", C),
         ("cycle log shows discrete test-then-implementation steps", steps >= 3,
          f"{steps} logged steps", C),
