@@ -35,7 +35,7 @@ Or one at a time:
 | container-debug | `npx skills add izentenosmith/skills --skill container-debug` |
 | docker-swarm | `npx skills add izentenosmith/skills --skill docker-swarm` |
 
-Flags (`-a`, `-g`, `-y`) are in the [root README](../../README.md#install-with-npx).
+The repo is private: you need read access and GitHub auth first. That setup, and the flags (`-a`, `-g`, `-y`), are in the [root README](../../README.md#install-with-npx).
 
 Or **copy the folders you want into the repo you're working in**, alongside wherever that repo keeps its agent skills. Each folder is self-contained — `SKILL.md` plus its reference docs — so one folder is a complete install of one skill.
 
