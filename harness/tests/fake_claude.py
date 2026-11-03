@@ -47,6 +47,18 @@ networkflow.py's stages (FAKE_NF):
   badcidr        the diagram labels the networks with the wrong CIDR
   nolegend       the diagram has no 'Network diagram conventions' legend
 
+prreview.py's stages (FAKE_PR; the diff is a tiny `app.py` with a discount bug on line 2):
+  bug (default)  the line-level finder reports the bug, the verifier confirms it → a major → Request changes
+  clean          no finder reports anything → Approve
+  refuted        the bug is reported, the verifier refutes it → nothing kept → Approve
+  plausible      the verifier calls it PLAUSIBLE and not actionable → dropped below Deep
+  partial        the security / quick finder never returns → partial coverage → Needs discussion
+  dup            two finders report the same defect → one finding, the other lens in `also`
+  badsynth       the first synthesis forgets the comment label; the correction round fixes it
+  many           twelve candidates: seven blockers and five minors → the cap never cuts a blocker
+  tangled        readiness says Tangling and nothing is found → Needs discussion
+  FAKE_PR_STATUS (re-review): fixed (default) · deferred (with an issue) · deferred-noissue · withdrawn
+
 Every call is appended to FAKE_CLAUDE_LOG as one JSON line: stage, iteration, argv, cwd.
 """
 import json
@@ -332,6 +344,76 @@ elif stage.startswith(("net-", "nf-")):
         out = {"files": [{"name": "network-design.md", "content": "# Network design (accepted)\n"},
                          {"name": "topology.json", "content": json.dumps(final)},
                          *({"name": k, "content": v} for k, v in drawio(final).items())]}
+    else:
+        sys.exit(f"fake_claude: unknown stage {stage}")
+
+elif stage.startswith("pr-"):
+    PR = os.environ.get("FAKE_PR", "bug")
+    label = re.search(r"HARNESS-DELEGATE: (\S+)", prompt).group(1)
+    BUG = {"file": "app.py", "line": 2, "claim": "a 0% discount skips rounding", "lens": "A",
+           "scenario": "percent=0, price=19.999 → returns 19.999 unrounded; expected 20.0",
+           "evidence": "if not percent: return price", "type": "bug", "severity_hint": "major", "principle": "R24"}
+    empty = {"candidates": [], "swept": [{"lens": label, "note": "found nothing"}], "not_covered": []}
+    if stage == "pr-readiness":
+        out = {"claim": "Applies a percentage discount to a price, rounded to cents.", "claim_source": "pr-body",
+               "acceptance_criteria": [{"id": "AC-1", "text": "the discounted price is rounded to cents",
+                                        "source": "pr-body"}],
+               "alignment": "Tangling" if PR == "tangled" else "Exact", "alignment_detail": "",
+               "concerns": [{"name": "discount", "files": ["app.py"], "hunks": "the rule"}], "split_plan": "",
+               "reading_order": [{"file": "app.py", "why": "the rule"}], "gaps": [], "injection": [],
+               "verdict": "Ready"}
+    elif stage == "pr-find":
+        if PR == "partial" and label in ("security", "quick"):
+            sys.exit("fake_claude: this delegate never returns")
+        line_level = label == "quick" or label.startswith("correctness")
+        out = dict(empty)
+        if PR == "many" and line_level:
+            out = {**empty, "candidates": [dict(BUG, line=10 * n, claim=f"{w} defect")
+                                           for n, w in enumerate("alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu".split(), 1)]}
+        elif PR in ("bug", "refuted", "plausible", "badsynth", "dup") and line_level:
+            out = {**empty, "candidates": [BUG]}
+        elif PR == "dup" and label.startswith("quality"):
+            out = {**empty, "candidates": [dict(BUG, lens="N", scenario="short")]}
+        if label == "test-review":
+            out["traceability"] = [{"criterion": "AC-1", "tests": "test_app.py::test_discount", "status": "weak",
+                                    "note": "no 0% case"}]
+        if label == "concurrency-review":
+            out["topology_questions"] = ["how many workers consume the queue?"]
+    elif stage == "pr-gap":
+        out = {"candidates": [], "swept": [{"lens": "J", "note": "nothing new"}], "not_covered": []}
+    elif stage == "pr-verify":
+        verdict = {"refuted": "REFUTED", "plausible": "PLAUSIBLE"}.get(PR, "CONFIRMED")
+        out = {"verdict": verdict, "reason": "traced", "evidence": "if not percent: return price",
+               "trigger": "percent=0", "would_confirm": "", "actionable": PR != "plausible", "ran": "python3 -c …"}
+    elif stage == "pr-synth":
+        rows = json.loads(prompt.split("Findings (JSON):\n", 1)[1].split("\n<<<END FINDINGS>>>", 1)[0])
+        retry = "Your previous answer was" in prompt
+        classified = []
+        for i, r in enumerate(rows):
+            sev = ("blocker" if i < 7 else "minor") if PR == "many" else "major"
+            label_ = "" if PR == "badsynth" and not retry else f"{sev}: "
+            classified.append({"key": r["key"], "severity": sev, "type": r["type"], "principle": r["principle"],
+                               "title": r["claim"], "comment_md": f"{label_}{r['claim']}.\n\n{r['scenario']}",
+                               "merge_into": "", "drop_reason": ""})
+        out = {"classified": classified, "claim": "Applies a percentage discount, rounded to cents.",
+               "alignment": "Exact", "alignment_detail": "", "contradictions": [],
+               "questions": [{"question": "Should 0% skip rounding?", "changes": "whether PR-1 is a bug",
+                              "decides_defect": False}],
+               "whats_good": ["the rounding helper is shared"], "escalations": [],
+               "stated_recommendation": "Request changes", "recommendation_reason": "a major is open"}
+    elif stage == "pr-status":
+        st = os.environ.get("FAKE_PR_STATUS", "fixed")
+        out = {"status": "deferred" if st.startswith("deferred") else st, "evidence": "if percent is None",
+               "note": "the 0% case now rounds", "issue": "#99" if st == "deferred" else ""}
+    elif stage == "pr-retro":
+        out = {"summary_md": "# PR record\n\nThe discount rule.", "decisions": [
+                   {"decision": "0% rounds like any other", "reason": "PR-1", "where": "app.py"}],
+               "knowledge_to_code": [], "deferred_without_issue": [],
+               "checklist_candidates": [{"defect_class": "falsy zero", "evidence_ids": ["PR-1"],
+                                         "item_text": "A 0 takes the same path as any other number."}],
+               "rule_proposals": [{"target_file": "CLAUDE.md",
+                                   "proposed_text": "Check numbers for None, not for falsiness.",
+                                   "evidence_ids": ["PR-1"], "rationale": "falsy-zero bugs recur"}]}
     else:
         sys.exit(f"fake_claude: unknown stage {stage}")
 
