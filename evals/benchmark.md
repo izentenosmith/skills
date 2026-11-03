@@ -28,7 +28,7 @@
 | 28-dockerfile-repair-pins-and-drops-root | i6 | 1 | 0.79 ± 0.00 | 0.79 | +0.00 | 1.00 | 1.00 |
 | 29-release-notes-translates-drops-and-leads-with-breaking | i6 | 1 | 1.00 ± 0.00 | 0.54 | +0.46 | 1.00 | 0.86 |
 | 3-refactor-promotes-noted-smell | i2 | 3 | 1.00 ± 0.00 | 0.14 | +0.86 | 1.00 | 1.00 |
-| 30-dbaudit-postgres-dump-scored-not-fixed | i18 | 3 | 0.83 ± 0.08 | 0.43 | +0.41 | 1.00 | 1.00 |
+| 30-dbaudit-postgres-dump-scored-not-fixed | i22 | 3 | 0.86 ± 0.14 | 0.43 | +0.43 | 1.00 | 1.00 |
 | 31-dbdesign-sqlite-from-requirements-traps | i18 | 3 | 0.87 ± 0.12 | 0.46 | +0.41 | 0.93 | 1.00 |
 | 32-dbdiagram-barker-and-relational-from-design | i18 | 3 | 1.00 ± 0.00 | 0.88 | +0.12 | 1.00 | 1.00 |
 | 33-dbpropose-orphans-before-constraints | i18 | 3 | 0.97 ± 0.04 | 0.54 | +0.44 | 1.00 | 0.80 |
@@ -452,6 +452,7 @@
 - runtime facts flagged needs-data, never graded (2/3)
 - the transitive customer_name/customer_email flagged as a 3NF candidate, not graded (1/3)
 - strengths recorded: the payment table (2/3)
+- the recovered model written as relationship sentences (1/3)
 
 **eval-31-dbdesign-sqlite-from-requirements-traps**
 - the member subtypes mapped deliberately, with the choice stated (2/3)
