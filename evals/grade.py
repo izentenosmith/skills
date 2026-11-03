@@ -4146,7 +4146,10 @@ def eval47(run):
     weigh the proposed indexes, settle the audit flags, never connect, never echo the password."""
     t = everything(run, "db-query")
     doc, long_enough = deliverable(run, "db-query")
-    rank = section(t, r"workload|rank|top statements|total time") or t
+    # a ranking heading first: a title such as "query workload review" also says "workload"
+    rank = section(t, r"rank|top statements|total time") or section(t, r"workload") or t
+    # a ranking table may name the statement by its own label once the queryid was given elsewhere
+    n1_label = DQ_N1 + r"|order[ _]lines? (by|per|for) (each |the )?order"
     quiet, qev = never_called(run, "scripts/.calls.log")
     verifs = len(re.findall(r"verif|re-?measure|before/after|before and after", t, re.I))
     return [
@@ -4165,14 +4168,16 @@ def eval47(run):
          near(t, r"\bsort\b|ORDER BY \{|search_products", r"inject|whitelist|allow-?list|identifier"), "", C),
         # delta
         ("workload ranked by total time: the N+1 lookup ahead of the slow monthly report",
-         before(rank, DQ_N1, DQ_REPORT) and near(rank, DQ_N1, r"total|share|%"), "", D),
+         before(rank, n1_label, DQ_REPORT) and near(rank, n1_label, r"total|share|%"), "", D),
         ("coverage stated as a share of total time",
          near(t, r"\b\d{1,3}(\.\d)?\s?%", r"cover|of total|total (execution )?time|of the workload"), "", D),
         ("the report's misestimate traced to stale statistics (autovacuum disabled), fixed by ANALYZE",
          near(t, r"autovacuum_enabled|autovacuum.{0,30}(disabled|off|false)|n_mod_since_analyze|stale statistic|last_autoanalyze",
               r"ANALYZE|statistic|estimat") and any_of(t, r"\bANALYZE\b"), "", D),
         ("open-orders list: (status, created_at) and seek paging",
-         near(t, r"\(\s*status\s*,\s*created_at\s*\)", r"index") and any_of(t, r"keyset|seek pag|seek \(|seek-based|cursor[- ]based"), "", D),
+         # a tie-breaker after created_at, (status, created_at, order_id), is the same index done better
+         near(t, r"\(\s*status\s*,\s*created_at\s*(,\s*\w+\s*)?\)", r"index|\bix_|accept")
+         and any_of(t, r"keyset|seek pag|seek \(|seek-based|cursor[- ]based"), "", D),
         ("the laptop plan not taken as production evidence",
          near(t, r"laptop|plan-05", r"not representative|unrepresentative|1,?000 products|2\.4 ?M|production volume|dev(eloper)? (data|volume)"), "", D),
         ("the redundant proposed index on order_line(order_id) rejected",
@@ -4202,8 +4207,13 @@ def eval48(run):
     'no seat sold twice', no store chosen without numbers, staleness and session guarantees stated."""
     t = everything(run, "db-architect")
     doc, long_enough = deliverable(run, "db-architect")
+    # a line restating the team's proposal ("the team has proposed a move to MongoDB", "Question: move seats
+    # to …") is not an endorsement unless it also recommends or adopts
+    restates = lambda l: (re.search(r"propos|question|\?\s*$|answer is|team has|team's", l, re.I)
+                          and not re.search(r"recommend|adopt", l, re.I))
     mongo_endorsed = [l.strip()[:90] for l in t.splitlines() if re.search(r"mongo", l, re.I)
-                      and re.search(r"\b(recommend|adopt|migrate|move)\w*", l, re.I) and not re.search(DR_MONGO_NEG, l, re.I)]
+                      and re.search(r"\b(recommend|adopt|migrate|move)\w*", l, re.I) and not re.search(DR_MONGO_NEG, l, re.I)
+                      and not restates(l)]
     flow_map = any(l.count("|") >= 4 and all(re.search(p, l, re.I) for p in
                    (r"source", r"mechanism|feed|how", r"stale|fresh|lag", r"rebuild")) for l in t.splitlines())
     ddl = re.findall(r"CREATE\s+(?:UNIQUE\s+)?(?:TABLE|INDEX)\b", t, re.I)

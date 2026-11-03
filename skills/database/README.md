@@ -15,9 +15,9 @@ Running workload:  dbquery — settles dbaudit's needs-data flags; index changes
 | [dbarchitect](dbarchitect/SKILL.md) | Decide the data stores and the dataflow: system of record per fact, derived stores fed by CDC or an outbox, data model per store, replication, partitioning and the consistency each workflow needs. Decision records and a dataflow map; Review mode grades an existing architecture against A1–A12. |
 | [dbaudit](dbaudit/SKILL.md) | Evidence-based assessment of an existing database, with findings, strengths, weaknesses, improvements, and a reproducible 0–10 score. |
 | [dbdesign](dbdesign/SKILL.md) | Design a new database or revise an audited one using relational theory, Codd’s rules, normal forms, and the companion references. |
-| [dbdiagram](dbdiagram/SKILL.md) | Produce editable draw.io ER and relational models from a design or database structure. |
+| [dbdiagram](dbdiagram/SKILL.md) | Produce editable draw.io ER (Barker) and relational models from a design or database structure, with semantic cell IDs, UID bars, alternate keys and inferred semantics labelled. |
 | [dbpropose](dbpropose/SKILL.md) | Assemble the recommendation, incorporating audit evidence, design decisions, and diagrams. |
-| [dbbuild](dbbuild/SKILL.md) | After explicit proposal acceptance, generate reviewable DDL from the approved design. |
+| [dbbuild](dbbuild/SKILL.md) | After explicit proposal acceptance, generate reviewable DDL from the approved design; stops on an unaccepted proposal, mismatched inputs or an open structural decision. PostgreSQL and SQLite targets. |
 | [dbquery](dbquery/SKILL.md) | Review query text, execution plans and workload statistics: rank statements by total time, read plans by access vs filter predicates and estimated vs actual rows, find wrong results, races and injection, and prescribe rewrites and index changes weighed against write cost. Scored 0–10 with dbaudit's formula. |
 
 ## Install

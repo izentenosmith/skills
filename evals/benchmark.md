@@ -28,11 +28,11 @@
 | 28-dockerfile-repair-pins-and-drops-root | i6 | 1 | 0.79 ± 0.00 | 0.79 | +0.00 | 1.00 | 1.00 |
 | 29-release-notes-translates-drops-and-leads-with-breaking | i6 | 1 | 1.00 ± 0.00 | 0.54 | +0.46 | 1.00 | 0.86 |
 | 3-refactor-promotes-noted-smell | i2 | 3 | 1.00 ± 0.00 | 0.14 | +0.86 | 1.00 | 1.00 |
-| 30-dbaudit-postgres-dump-scored-not-fixed | i6 | 1 | 0.86 ± 0.00 | 0.36 | +0.50 | 1.00 | 0.83 |
-| 31-dbdesign-sqlite-from-requirements-traps | i12 | 3 | 0.95 ± 0.04 | 0.54 | +0.41 | 0.93 | 0.80 |
-| 32-dbdiagram-barker-and-relational-from-design | i6 | 1 | 0.83 ± 0.00 | 0.75 | +0.08 | 0.83 | 0.83 |
-| 33-dbpropose-orphans-before-constraints | i12 | 3 | 0.92 ± 0.00 | 0.46 | +0.46 | 1.00 | 0.80 |
-| 34-dbbuild-executable-ddl-from-accepted-proposal | i6 | 1 | 1.00 ± 0.00 | 0.78 | +0.22 | 1.00 | 1.00 |
+| 30-dbaudit-postgres-dump-scored-not-fixed | i18 | 3 | 0.83 ± 0.08 | 0.43 | +0.41 | 1.00 | 1.00 |
+| 31-dbdesign-sqlite-from-requirements-traps | i18 | 3 | 0.87 ± 0.12 | 0.46 | +0.41 | 0.93 | 1.00 |
+| 32-dbdiagram-barker-and-relational-from-design | i18 | 3 | 1.00 ± 0.00 | 0.88 | +0.12 | 1.00 | 1.00 |
+| 33-dbpropose-orphans-before-constraints | i18 | 3 | 0.97 ± 0.04 | 0.54 | +0.44 | 1.00 | 0.80 |
+| 34-dbbuild-executable-ddl-from-accepted-proposal | i18 | 3 | 1.00 ± 0.00 | 0.78 | +0.22 | 1.00 | 1.00 |
 | 38-threatmodel-review-design-abuse-and-fallback | i13 | 1 | 1.00 ± 0.00 | 0.42 | +0.58 | 1.00 | 1.00 |
 | 39-threatmodel-design-abusers-and-traps | i13 | 1 | 1.00 ± 0.00 | 0.65 | +0.35 | 1.00 | 1.00 |
 | 4-teardown-finds-vacuous-test | i2 | 3 | 0.92 ± 0.14 | 0.25 | +0.67 | 1.00 | 1.00 |
@@ -43,14 +43,16 @@
 | 44-hardening-review-mixed-estate | i13 | 1 | 1.00 ± 0.00 | 0.68 | +0.32 | 1.00 | 1.00 |
 | 45-hardening-design-tier-aware-baseline | i13 | 1 | 0.93 ± 0.00 | 0.73 | +0.20 | 1.00 | 1.00 |
 | 46-hardening-propose-no-lockout | i13 | 1 | 1.00 ± 0.00 | 0.69 | +0.31 | 1.00 | 1.00 |
+| 47-dbquery-workload-ranked-plans-read-indexes-weighed | i18 | 3 | 1.00 ± 0.00 | 0.93 | +0.07 | 1.00 | 0.83 |
+| 48-dbarchitect-one-system-of-record-no-dual-writes | i18 | 3 | 1.00 ± 0.00 | 0.67 | +0.33 | 1.00 | 1.00 |
 | 5-verdict-cuts-and-slices | i2 | 3 | 1.00 ± 0.00 | 0.40 | +0.60 | 1.00 | 0.83 |
 | 6-compose-detects-real-services | i6 | 1 | 0.89 ± 0.00 | 0.67 | +0.22 | 1.00 | 1.00 |
 | 7-postmortem-widens-range-and-describes | i6 | 1 | 1.00 ± 0.00 | 0.60 | +0.40 | 1.00 | 1.00 |
 | 8-hotfix-node-shared-cause | i7 | 1 | 1.00 ± 0.00 | 0.38 | +0.62 | 1.00 | 1.00 |
 | 9-hotfix-jvm-both-callers | i7 | 1 | 1.00 ± 0.00 | 0.71 | +0.29 | 1.00 | 1.00 |
 
-**Delta — current 0.96 vs baseline 0.52**
-**Capability — current 0.99 vs baseline 0.88**
+**Delta — current 0.96 vs baseline 0.54**
+**Capability — current 0.99 vs baseline 0.89**
 
 ## Delta assertions the baseline also passed (still non-discriminating)
 
@@ -210,6 +212,7 @@
 - cross-file index criteria: the unindexed order_line.order_id FK and the redundant ix_product_sku
 - no secret value echoed (kind and location only)
 - both credentials recorded by kind and location
+- every cited line exists and the evidence points at the planted defects
 - no DDL, migration or config file changed
 - evaluates and stops: no target table designed
 
@@ -218,23 +221,32 @@
 - plan prices kept as effective-dated history, unique per plan and date (executed)
 - age not stored: a birth date instead (executed)
 - natural keys are UNIQUE alternates, not primary keys (email, VAT, member number)
-- the freelancer question left open: the company link optional and listed as an open question
 - nothing applied: no database file created
 - the requirements left untouched
 
 **eval-32-dbdiagram-barker-and-relational-from-design**
+- files named for er-model and relational-model
+- the ER page titled Barker ER Model
+- a legend naming Barker notation and explaining its glyphs
 - entities named singular UPPERCASE in soft-cornered boxes
 - every attribute carries its # / * / o mark
+- the three-way association drawn as an intersection entity with three binary relationships
+- every relationship carries a lowercase role name at each end
 - each end's optionality drawn: dashed may-be, solid must-be
 - cell IDs are semantic and trace each entity to its table
-- the inferred PET – VET relationship labelled as inferred
+- a UID bar on each relationship in a UID, and on no other
+- every alternate key on the relational page, composite ones included
+- microchip not drawn as a key while Q3 is open
+- each FK path labelled with its column
 - a provenance note naming the design on both pages
 - the design left untouched
 
 **eval-33-dbpropose-orphans-before-constraints**
-- the Critical handled before the name split
+- the full_name split is expand/contract, contract gated on the Reports add-on
+- the reminder table marked as having no audit finding
 - no finding id invented
 - the design and both diagrams cited by path
+- needs-data flags carried as open questions
 - audit, design and diagrams untouched, nothing redrawn
 - nothing applied to a database
 
@@ -364,6 +376,33 @@
 - every step has verification and rollback
 - evidence, review and baseline untouched
 
+**eval-47-dbquery-workload-ranked-plans-read-indexes-weighed**
+- workload ranked by total time: the N+1 lookup ahead of the slow monthly report
+- coverage stated as a share of total time
+- the report's misestimate traced to stale statistics (autovacuum disabled), fixed by ANALYZE
+- open-orders list: (status, created_at) and seek paging
+- the laptop plan not taken as production evidence
+- the redundant proposed index on order_line(order_id) rejected
+- the note index rejected on write cost
+- product search needs a trigram (or full-text) index, not a B-tree on name
+- prescriptions name how to verify them
+- the dbaudit flags settled by id
+- no secret value echoed
+- never connected: no psql-staging call
+- read-only: nothing but markdown written, no fixture file changed
+
+**eval-48-dbarchitect-one-system-of-record-no-dual-writes**
+- seat state has one system of record with a uniqueness constraint
+- MongoDB not adopted on a proposal with no numbers
+- derived stores fed by an outbox or CDC
+- My tickets gets read-your-writes
+- payment webhooks made idempotent
+- zero lost paid orders met by synchronous replication
+- dashboard staleness of 15 minutes stated
+- unknown search load carried as an open question
+- no secret value echoed
+- nothing provisioned: only markdown written, no fixture file changed
+
 **eval-5-verdict-cuts-and-slices**
 - F4 struck as an already-refuted repeat, citing the prior verdict
 - verdicts written back to the ledger
@@ -409,12 +448,19 @@
 - the repair defaults to a dry run and backs up first (2/3)
 - the repair corrects exactly the affected orders (2/3)
 
+**eval-30-dbaudit-postgres-dump-scored-not-fixed**
+- runtime facts flagged needs-data, never graded (2/3)
+- the transitive customer_name/customer_email flagged as a 3NF candidate, not graded (1/3)
+- strengths recorded: the payment table (2/3)
+
 **eval-31-dbdesign-sqlite-from-requirements-traps**
-- the member subtypes mapped deliberately, with the choice stated (1/3)
+- the member subtypes mapped deliberately, with the choice stated (2/3)
+- the freelancer question left open: the company link optional and listed as an open question (2/3)
+- Codd's rules reviewed (2/3)
+- assumptions kept apart from open questions (1/3)
 
 **eval-33-dbpropose-orphans-before-constraints**
-- orphan rows resolved before the foreign keys are declared (2/3)
-- the relational diagram's mismatch described and routed to dbdiagram (1/3)
+- the Critical handled before the name split (2/3)
 
 **eval-4-teardown-finds-vacuous-test**
 - unproven findings name what would settle them (2/3)
