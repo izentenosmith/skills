@@ -1244,12 +1244,12 @@ WORKDIR /app
 RUN groupadd --system --gid 10001 app \
  && useradd --system --uid 10001 --gid app --home-dir /app app \
  && mkdir -p /app/data && chown app:app /app/data
-COPY --from=build --chown=app:app /app/node_modules ./node_modules
-COPY --from=build --chown=app:app /app/dist ./dist
-COPY --chown=app:app package.json ./
-COPY --chown=app:app migrations ./migrations
-COPY --chown=app:app templates ./templates
-USER app
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/dist ./dist
+COPY package.json ./
+COPY migrations ./migrations
+COPY templates ./templates
+USER 10001:10001
 EXPOSE 8080
 CMD ["node", "dist/server.js"]
 """
@@ -1313,12 +1313,14 @@ E28_FIX = f"""
   `COPY src` down only.
 - The runtime stage gets `dist/`, production `node_modules` (`pnpm prune --prod`), `migrations/` and `templates/` —
   `db.ts` and `render.ts` read those two relative to `dist/`, so a dist-only copy crashes at startup.
-- User `app` (uid 10001) owns `/app/data`, where the SQLite cache is written.
+- User `app` (uid 10001) owns `/app/data`, where the SQLite cache is written; the code stays root-owned and only
+  readable. `USER 10001:10001` is numeric because the pod sets `runAsNonRoot: true`, which cannot verify a name.
 - No HEALTHCHECK, deliberately: the cluster's readiness and liveness probes on `/healthz` (deploy/k8s/deployment.yaml)
   own health, and two health systems is one too many.
 - Base not pinned by digest: no registry access from here. Resolve it with
   `docker buildx imagetools inspect node:20.11.1-bookworm-slim` and append `@sha256:…` to both FROM lines before
-  this ships.
+  this ships. Nothing in the repo bumps a digest (no Renovate, no Dependabot): add one, or the pin freezes today's
+  CVEs in place.
 - `PDF_RENDER_API_KEY` and `INVOICE_SIGNING_SECRET` come in at run time from the `invoicer-secrets` Secret, as the
   manifest already does.
 
@@ -1344,9 +1346,9 @@ run. Each one, with the command that settles it:
 |---|---|---|
 | builds | `make image` (`docker build --platform linux/amd64 -t invoicer .`) | exit 0 |
 | runs | `docker run -d -p 8080:8080 --env-file .env invoicer && curl -fsS localhost:8080/healthz` | `{"ok":true}` |
-| rebuilds cheaply | `touch src/server.ts && make image` | the install layer reported CACHED |
+| rebuilds cheaply | `echo '// cache probe' >> src/server.ts && make image; git checkout -- src/server.ts` | the install layer reported CACHED |
 | architecture | `docker image inspect invoicer --format '{{.Os}}/{{.Architecture}}'` | linux/amd64 |
-| not root | `docker run --rm invoicer id` | uid 10001 |
+| not root | `docker run --rm --entrypoint "" invoicer id` | uid 10001 |
 | no secret in layers | `docker history --no-trunc invoicer` | no PDF_RENDER_API_KEY |
 | size | `docker images invoicer` | a few hundred MB at most, down from over 1 GB |
 | context | `du -sh .`, then the first line of `docker build` (transferring context) | before vs after |
@@ -1401,7 +1403,7 @@ CONTROLS_DOCKERFILE = {
     "eval-28-dockerfile-repair-pins-and-drops-root": dict(
         fixture="dockerfile", reference=e28_build(), free=["planted secret values never echoed"],
         wrong={
-            "wrong-runs-as-root": (e28_build(dockerfile=E28_DOCKERFILE.replace("USER app\n", "")),
+            "wrong-runs-as-root": (e28_build(dockerfile=E28_DOCKERFILE.replace("USER 10001:10001\n", "")),
                                    ["runs as a non-root user that owns its data directory, USER before CMD"]),
             "wrong-source-before-install": (e28_build(dockerfile=E28_DOCKERFILE
                                                       .replace("COPY package.json pnpm-lock.yaml ./", "COPY . .")
@@ -1423,8 +1425,8 @@ CONTROLS_DOCKERFILE = {
             "wrong-uses-latest": (e28_build(dockerfile=E28_DOCKERFILE.replace("node:20.11.1-bookworm-slim", "node:lts-slim")),
                                   ["pinned to what the repo declares: node 20.11 in every stage, pnpm 9.12.3, digest or its absence recorded"]),
             "wrong-dist-only": (e28_build(dockerfile=E28_DOCKERFILE
-                                          .replace("COPY --chown=app:app migrations ./migrations\n", "")
-                                          .replace("COPY --chown=app:app templates ./templates\n", "")),
+                                          .replace("COPY migrations ./migrations\n", "")
+                                          .replace("COPY templates ./templates\n", "")),
                                 ["runtime ships only dist, production deps, migrations/ and templates/: no source, no toolchain"]),
             "wrong-buildplatform-deps": (e28_build(dockerfile=E28_DOCKERFILE.replace(
                 "FROM node:20.11.1-bookworm-slim AS deps", "FROM --platform=$BUILDPLATFORM node:20.11.1-bookworm-slim AS deps")),
@@ -1437,6 +1439,17 @@ CONTROLS_DOCKERFILE = {
                                                 + "\nAlso replaced the old base, the root user and the shell-form CMD.\n"),
                                       ["the existing Dockerfile's defects named before the fix"]),
             "wrong-env-star": (e28_env_star, [".dockerignore: .env and .env.* out, .env.example in, node_modules and dist out"]),
+            "wrong-named-user": (e28_build(dockerfile=E28_DOCKERFILE.replace("USER 10001:10001\n", "USER app\n")),
+                                 ["USER is a numeric uid, which the pod's runAsNonRoot can verify"]),
+            "wrong-chowns-code": (e28_build(dockerfile=E28_DOCKERFILE
+                                            .replace("COPY --from=build /app/", "COPY --from=build --chown=10001:10001 /app/")),
+                                  ["application code stays root-owned: only the data directory is the runtime user's"]),
+            "wrong-digest-no-updater": (e28_build(response=E28_RESPONSE.replace(
+                " Nothing in the repo bumps a digest (no Renovate, no Dependabot): add one, or the pin freezes today's\n  CVEs in place.", "")),
+                ["the digest's updater named: Renovate or Dependabot added, or its absence stated"]),
+            "wrong-touch-cache": (e28_build(response=E28_RESPONSE.replace(
+                "`echo '// cache probe' >> src/server.ts && make image; git checkout -- src/server.ts`", "`touch src/server.ts && make image`")),
+                ["the cache check changes a source file's content, not its mtime"]),
             "wrong-echoes-secret": (e28_build(response=E28_RESPONSE.replace("(value not reproduced)", "(`eval-fake-pdfrender-key-0042`)")),
                                     ["planted secret values never echoed"]),
         }),

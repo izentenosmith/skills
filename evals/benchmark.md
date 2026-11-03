@@ -25,7 +25,7 @@
 | 25-pipelines-design-build-once-progressive | i6 | 1 | 1.00 ± 0.00 | 0.79 | +0.21 | 1.00 | 1.00 |
 | 26-pipelines-propose-keeps-prod-up | i6 | 1 | 0.80 ± 0.00 | 0.50 | +0.30 | 1.00 | 1.00 |
 | 27-acceptance-tests-red-for-the-right-reason | i12 | 3 | 1.00 ± 0.00 | 0.25 | +0.75 | 1.00 | 0.50 |
-| 28-dockerfile-repair-pins-and-drops-root | i6 | 1 | 0.79 ± 0.00 | 0.79 | +0.00 | 1.00 | 1.00 |
+| 28-dockerfile-repair-pins-and-drops-root | i16 | 3 | 1.00 ± 0.00 | 0.83 | +0.17 | 1.00 | 1.00 |
 | 29-release-notes-translates-drops-and-leads-with-breaking | i6 | 1 | 1.00 ± 0.00 | 0.54 | +0.46 | 1.00 | 0.86 |
 | 3-refactor-promotes-noted-smell | i2 | 3 | 1.00 ± 0.00 | 0.14 | +0.86 | 1.00 | 1.00 |
 | 30-dbaudit-postgres-dump-scored-not-fixed | i6 | 1 | 0.86 ± 0.00 | 0.36 | +0.50 | 1.00 | 0.83 |
@@ -33,6 +33,9 @@
 | 32-dbdiagram-barker-and-relational-from-design | i6 | 1 | 0.83 ± 0.00 | 0.75 | +0.08 | 0.83 | 0.83 |
 | 33-dbpropose-orphans-before-constraints | i12 | 3 | 0.92 ± 0.00 | 0.46 | +0.46 | 1.00 | 0.80 |
 | 34-dbbuild-executable-ddl-from-accepted-proposal | i6 | 1 | 1.00 ± 0.00 | 0.78 | +0.22 | 1.00 | 1.00 |
+| 35-container-hardening-review-socket-and-firewall | i16 | 3 | 1.00 ± 0.00 | 0.57 | +0.43 | 1.00 | 1.00 |
+| 36-container-debug-oom-localhost-crlf | i16 | 3 | 1.00 ± 0.00 | 0.82 | +0.18 | 1.00 | 1.00 |
+| 37-docker-swarm-review-quorum-and-state | i16 | 3 | 1.00 ± 0.00 | 0.75 | +0.25 | 1.00 | 1.00 |
 | 38-threatmodel-review-design-abuse-and-fallback | i13 | 1 | 1.00 ± 0.00 | 0.42 | +0.58 | 1.00 | 1.00 |
 | 39-threatmodel-design-abusers-and-traps | i13 | 1 | 1.00 ± 0.00 | 0.65 | +0.35 | 1.00 | 1.00 |
 | 4-teardown-finds-vacuous-test | i2 | 3 | 0.92 ± 0.14 | 0.25 | +0.67 | 1.00 | 1.00 |
@@ -44,13 +47,13 @@
 | 45-hardening-design-tier-aware-baseline | i13 | 1 | 0.93 ± 0.00 | 0.73 | +0.20 | 1.00 | 1.00 |
 | 46-hardening-propose-no-lockout | i13 | 1 | 1.00 ± 0.00 | 0.69 | +0.31 | 1.00 | 1.00 |
 | 5-verdict-cuts-and-slices | i2 | 3 | 1.00 ± 0.00 | 0.40 | +0.60 | 1.00 | 0.83 |
-| 6-compose-detects-real-services | i6 | 1 | 0.89 ± 0.00 | 0.67 | +0.22 | 1.00 | 1.00 |
+| 6-compose-detects-real-services | i16 | 3 | 1.00 ± 0.00 | 0.78 | +0.22 | 1.00 | 1.00 |
 | 7-postmortem-widens-range-and-describes | i6 | 1 | 1.00 ± 0.00 | 0.60 | +0.40 | 1.00 | 1.00 |
 | 8-hotfix-node-shared-cause | i7 | 1 | 1.00 ± 0.00 | 0.38 | +0.62 | 1.00 | 1.00 |
 | 9-hotfix-jvm-both-callers | i7 | 1 | 1.00 ± 0.00 | 0.71 | +0.29 | 1.00 | 1.00 |
 
-**Delta — current 0.96 vs baseline 0.52**
-**Capability — current 0.99 vs baseline 0.88**
+**Delta — current 0.97 vs baseline 0.54**
+**Capability — current 0.99 vs baseline 0.89**
 
 ## Delta assertions the baseline also passed (still non-discriminating)
 
@@ -187,8 +190,13 @@
 - the existing Dockerfile's defects named before the fix
 - pinned to what the repo declares: node 20.11 in every stage, pnpm 9.12.3, digest or its absence recorded
 - frozen install against pnpm-lock.yaml under a cache mount
+- runtime ships only dist, production deps, migrations/ and templates/: no source, no toolchain
 - better-sqlite3 installed on the target platform and libc, not the build host's
+- port and health from the source: EXPOSE 8080, /healthz with a tool the runtime has (or left to the k8s probes)
 - runs as a non-root user that owns its data directory, USER before CMD
+- USER is a numeric uid, which the pod's runAsNonRoot can verify
+- application code stays root-owned: only the data directory is the runtime user's
+- the cache check changes a source file's content, not its mtime
 - no secret in ENV, ARG or a copied env file
 - built for linux/amd64 from Apple Silicon: stated, and --platform pinned in what the team runs
 - .dockerignore extended, every curated entry kept
@@ -246,6 +254,41 @@
 - no credential from config/app.ini anywhere
 - the SQL never run: no database tool call, no database file
 - proposal, design, diagrams and config untouched
+
+**eval-35-container-hardening-review-socket-and-firewall**
+- rotation for the committed key
+- the read-only socket mount rated Critical, :ro called no protection
+- Postgres on all interfaces bypasses ufw
+- the privileged worker's replacement named (/dev/dri)
+- mutable :latest references found
+- the hardened proxy recorded as what works
+- image findings handed to dockerfile
+- no compose file, manifest, Dockerfile or script changed
+
+**eval-36-container-debug-oom-localhost-crlf**
+- no secret value echoed (kind and location only)
+- OOMKilled read from the runtime, not inferred from 137
+- the limit raised from the measured working set, not removed
+- why localhost fails inside a container explained
+- the Redis URL fixed to the service name
+- the worker's identical Redis URL noticed
+- CRLF line endings named as the migrate cause
+- recurrence prevented with .gitattributes
+- nothing claimed verified on the VM
+
+**eval-37-docker-swarm-review-quorum-and-state**
+- no secret value echoed (kind and location only)
+- rotation to a new secret, not deletion
+- two managers called no better than one (quorum)
+- Postgres replicas on node-local volumes found
+- depends_on ignored by stack deploy
+- .env not read by stack deploy
+- the default update config named (pause / stop-first) and rollback prescribed
+- the routing mesh breaks the per-client rate limit
+- registry auth missing from the deploy
+- the gate stated failing with its conditions
+- the worker recorded as what works
+- no stack file, script, config or secret changed
 
 **eval-38-threatmodel-review-design-abuse-and-fallback**
 - the self-grantable delegation found (S25)
@@ -374,6 +417,7 @@
 - pg_isready probe names user and database
 - dependencies gated on health, not just start
 - migrations gated as a one-shot dependency
+- connection strings use service names, not localhost
 - verification from a cold start stated
 
 **eval-7-postmortem-widens-range-and-describes**

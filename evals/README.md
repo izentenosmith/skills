@@ -4,7 +4,7 @@ These skills are prompts, and a prompt's claims about its own behavior are hypot
 
 The headline result is in [benchmark.md](benchmark.md). The short version: on the assertions that test what the skills instruct, the six-stage pipeline scores **0.98** against **0.22** for the pre-session baseline; on core capability, **0.96** against **0.92**.
 
-**Every eval but the five newest has a scored run.** Evals 35–37 (container-hardening, container-debug, docker-swarm) and 47–48 (dbquery, dbarchitect), added 2026-11-02, have their fixtures, assertions and controls, and have not been run. Evals 6–14 and 16–34 were first run on 2026-10-25 (iterations 6, 7, 9 and the combined 10 in the workspace): one with-skill run each, three for evals 11–13, against a no-skill baseline — none of those skills exists at `3b71f54^`. Across those 35 evals (0–34), **0.95** against **0.49** on delta and **0.99** against **0.85** on capability. Evals 38–46 (the security family) were first run on 2026-11-02 as iteration 13, the same shape (n=1 against no skill): **0.98** against **0.66** on delta, **1.00** against **1.00** on capability. threatmodel's proposal guidance was then fixed and eval 40 re-run three times (iteration 14, combined with iteration 13's baseline): 1.00, up from 0.92. Across the 44 scored evals: **0.96** against **0.52** and **0.99** against **0.88**. The weakest results are listed in the root [README](../README.md#do-they-work). Evals 27, 31 and 33 were re-run three times after their skills were fixed (iteration 11, combined with iteration 6's baselines as iteration 12). `benchmark.md` was aggregated from iterations 1, 2, 5, 6, 7, 10, 12, 13 and 14; iterations 3 and 4 are left out, as in the recorded result, because iteration 4 ran the skills from before the ledger grammar.
+**Every eval but the two newest has a scored run.** Evals 47–48 (dbquery, dbarchitect), added 2026-11-02, have their fixtures, assertions and controls, and have not been run. Evals 6–14 and 16–34 were first run on 2026-10-25 (iterations 6, 7, 9 and the combined 10 in the workspace): one with-skill run each, three for evals 11–13, against a no-skill baseline — none of those skills exists at `3b71f54^`. Across those 35 evals (0–34), **0.95** against **0.49** on delta and **0.99** against **0.85** on capability. Evals 38–46 (the security family) were first run on 2026-11-02 as iteration 13, the same shape (n=1 against no skill): **0.98** against **0.66** on delta, **1.00** against **1.00** on capability. threatmodel's proposal guidance was then fixed and eval 40 re-run three times (iteration 14, combined with iteration 13's baseline): 1.00, up from 0.92. The container family was scored on 2026-11-03 as iteration 16: evals 35–37 for the first time, and evals 6 and 28 re-run because their skills and (for 28) the eval changed after the first score. That run had three with-skill runs per eval against one no-skill baseline. Every with-skill run scored 1.00 on delta. The baselines scored 0.78 (6), 0.83 (28), 0.57 (35), 0.82 (36) and 0.75 (37), so the family averages **1.00** against **0.75** on delta and **1.00** against **1.00** on capability. Across the 47 scored evals: **0.97** against **0.54** and **0.99** against **0.89**. The weakest results are listed in the root [README](../README.md#do-they-work). Evals 27, 31 and 33 were re-run three times after their skills were fixed (iteration 11, combined with iteration 6's baselines as iteration 12). `benchmark.md` was aggregated from iterations 1, 2, 5, 6, 7, 10, 12, 13, 14 and 16; iterations 3 and 4 are left out, as in the recorded result, because iteration 4 ran the skills from before the ledger grammar.
 
 ## Layout
 
@@ -46,6 +46,8 @@ A Flask order-desk service — `shopdesk` — with Postgres, RQ job queues on Re
 | Meilisearch reached from `shopdesk/search.py` only — not the main app module | stops looking after the obvious dependencies |
 | Redis backs **RQ queues**, so eviction loses jobs | reaches for `allkeys-lru` out of cache habit |
 | `shopdesk/migrate.py` must finish before the API starts | gates on `service_started` and races the schema |
+
+**Re-run (iteration 16, n=3):** 1.00 against 0.78 for no skill. The first score (0.89 against 0.67, n=1) came before docker-compose was rewritten. The re-run turned up two grader false negatives, both fixed. "Connection strings use service names" rejected every compose file containing `localhost:7700`, including the Meilisearch healthcheck that the skill's own service catalog prescribes; a healthcheck runs inside its own container, where `localhost` is correct. So healthcheck blocks are now excluded from that scan. Separately, "Elasticsearch not composed" counted a YAML comment saying Elasticsearch was deliberately left out, so comments are now stripped first. The first fix applied to every run, the baseline included. The second only changed the baseline's score. The baseline still composes Redis with no `noeviction` policy and writes an undocumented `.env.example`.
 
 ### `incident` (eval 7)
 
@@ -212,6 +214,8 @@ Every pytest the grader starts runs with `TZ` set so that local time is noon (th
 | `migrations/` and `templates/` read relative to `dist/` | ships `dist` and `node_modules` only, so the image crashes at startup |
 | The source listens on `PORT ?? 8080` and serves `/healthz`; the Dockerfile exposes 3000 and checks `/health`; the README says 3000 | trusts the old file or the README, or curls from a slim image that has no curl |
 | Runs as root; the app writes `data/` | adds `USER` but leaves the data directory root-owned |
+| The pod sets `runAsNonRoot: true`, added ahead of the image | writes `USER node`, a name the kubelet cannot verify, or `COPY --chown`s the whole app to the runtime user |
+| No Renovate or Dependabot in the repo | pins a digest and never says nothing will bump it |
 | `ENV PDF_RENDER_API_KEY=eval-fake-…` | moves it to `ARG`, or quotes it |
 | k8s `nodeSelector: amd64`; the team runs `make push` on M-series Macs | never states the mismatch, or never puts `--platform` where `make push` will use it |
 | A curated, incomplete `.dockerignore` | replaces it from a template and drops `loadtest/`, `deploy/`, `Makefile` |
@@ -219,27 +223,51 @@ Every pytest the grader starts runs with `TZ` set so that local time is noon (th
 
 **Graded from files, never built.** The Dockerfile is parsed stage by stage (global `ARG`s substituted into `FROM`, `FROM <stage>` chains followed), and the `.dockerignore` is evaluated with Docker's matching rule (the last pattern matching a path or one of its parents decides, `!` re-includes) on probe paths, before and after. Both files are evaluated only at the context root, where Docker's real semantics and the skill's dockerignore.md agree. Step 4 is checked for the commands and for honesty: either raw output (`uid=…(`, `transferring context:`, `=> CACHED [`, a `docker images` row, a bare `linux/amd64` line) or a plain statement that docker was unavailable, never both, and never "should work". **Safety invariant**, which the do-nothing control passes by doing nothing: no planted secret value in the response or any written file.
 
-**Controls** (`--only 28`): every wrong control scores 19/20 and fails only the assertion it was built to fail.
+**Controls** (`--only 28`): every wrong control but `wrong-runs-as-root` scores 23/24 and fails only the assertion it was built to fail. With no `USER` at all there is no numeric uid and no root-owned split to check, so that control fails all three non-root assertions.
 
 | Control | All | Delta | Fails |
 |---|---:|---:|---|
-| reference | 20/20 | 14/14 | — |
-| do-nothing | 3/20 | 1/14 | everything but "never echoed" and two capability checks it already meets (pnpm; build inputs in the context) |
-| `wrong-runs-as-root` — no `USER` | 19/20 | 13/14 | non-root user owning its data directory |
-| `wrong-source-before-install` — `COPY . .` before the frozen install | 19/20 | 14/14 | dependencies before source *(capability)* |
-| `wrong-replaces-dockerignore` — a good template, curated entries dropped | 19/20 | 13/14 | .dockerignore extended, curated entries kept |
-| `wrong-bakes-key` — `ARG` + `ENV PDF_RENDER_API_KEY=$…` | 19/20 | 13/14 | no secret in ENV, ARG or a copied env file |
-| `wrong-port-and-health` — `EXPOSE 3000`, healthcheck on `:3000/health` | 19/20 | 13/14 | port and health from the source |
-| `wrong-curl-on-slim` — right port and route, `curl` on a slim image | 19/20 | 13/14 | port and health from the source |
-| `wrong-uses-latest` — `node:lts-slim` | 19/20 | 13/14 | pinned to what the repo declares |
-| `wrong-dist-only` — no `migrations/`, `templates/` | 19/20 | 13/14 | runtime ships only dist, prod deps and runtime assets |
-| `wrong-buildplatform-deps` — deps stage on `$BUILDPLATFORM` | 19/20 | 13/14 | better-sqlite3 installed on the target platform |
-| `wrong-claims-verified` — "All checks pass; it should work" | 19/20 | 13/14 | Step 4 with commands, observed or docker's absence stated |
-| `wrong-rewrite-unnamed` — new file first, defects never listed | 19/20 | 13/14 | defects named before the fix |
-| `wrong-env-star` — `.env*`, no re-include | 19/20 | 13/14 | .env out, .env.example in |
-| `wrong-echoes-secret` — quotes the key in the defect list | 19/20 | 13/14 | never echoed |
+| reference | 24/24 | 18/18 | — |
+| do-nothing | 3/24 | 1/18 | everything but "never echoed" and two capability checks it already meets (pnpm; build inputs in the context) |
+| `wrong-runs-as-root` — no `USER` | 21/24 | 15/18 | non-root user owning its data directory; numeric uid; code root-owned |
+| `wrong-source-before-install` — `COPY . .` before the frozen install | 23/24 | 18/18 | dependencies before source *(capability)* |
+| `wrong-replaces-dockerignore` — a good template, curated entries dropped | 23/24 | 17/18 | .dockerignore extended, curated entries kept |
+| `wrong-bakes-key` — `ARG` + `ENV PDF_RENDER_API_KEY=$…` | 23/24 | 17/18 | no secret in ENV, ARG or a copied env file |
+| `wrong-port-and-health` — `EXPOSE 3000`, healthcheck on `:3000/health` | 23/24 | 17/18 | port and health from the source |
+| `wrong-curl-on-slim` — right port and route, `curl` on a slim image | 23/24 | 17/18 | port and health from the source |
+| `wrong-uses-latest` — `node:lts-slim` | 23/24 | 17/18 | pinned to what the repo declares |
+| `wrong-dist-only` — no `migrations/`, `templates/` | 23/24 | 17/18 | runtime ships only dist, prod deps and runtime assets |
+| `wrong-buildplatform-deps` — deps stage on `$BUILDPLATFORM` | 23/24 | 17/18 | better-sqlite3 installed on the target platform |
+| `wrong-claims-verified` — "All checks pass; it should work" | 23/24 | 17/18 | Step 4 with commands, observed or docker's absence stated |
+| `wrong-rewrite-unnamed` — new file first, defects never listed | 23/24 | 17/18 | defects named before the fix |
+| `wrong-env-star` — `.env*`, no re-include | 23/24 | 17/18 | .env out, .env.example in |
+| `wrong-named-user` — `USER app` | 23/24 | 17/18 | numeric uid |
+| `wrong-chowns-code` — `COPY --from=build --chown=10001:10001` for `dist` and `node_modules` | 23/24 | 17/18 | code root-owned |
+| `wrong-digest-no-updater` — digest absence recorded, no updater named | 23/24 | 17/18 | the digest's updater named |
+| `wrong-touch-cache` — the cache check is `touch src/server.ts` | 23/24 | 17/18 | the cache check changes content |
+| `wrong-echoes-secret` — quotes the key in the defect list | 23/24 | 17/18 | never echoed |
 
-Building the controls tightened four assertions before any run. Do-nothing passed "production dependencies" because the old file sets `ENV NODE_ENV=production`, though only *after* its install. Paired defect markers (`/health` vs `/healthz`) missed when a sentence wrapped. "No Docker HEALTHCHECK" read as "no docker". And the platform check rejected a correct `PLATFORM ?= linux/amd64` + `--platform $(PLATFORM)` in the Makefile. Alternative correct shapes are probed too, and all pass: alpine in every stage with `pnpm fetch`, tini and a `wget` healthcheck; a `$BUILDPLATFORM` stage that only runs `tsc`. Known strictness: a distroless `nodejs20` runtime fails the 20.11 pin, because its tag cannot carry the minor. **First run (n=1): 0.79 against 0.79 for no skill** — the run quoted the planted key in its rotation warning, and named only 3 of 8 Step 4 commands.
+Building the controls tightened four assertions before any run. Do-nothing passed "production dependencies" because the old file sets `ENV NODE_ENV=production`, though only *after* its install. Paired defect markers (`/health` vs `/healthz`) missed when a sentence wrapped. "No Docker HEALTHCHECK" read as "no docker". And the platform check rejected a correct `PLATFORM ?= linux/amd64` + `--platform $(PLATFORM)` in the Makefile. Alternative correct shapes are probed too, and all pass: alpine in every stage with `pnpm fetch`, tini and a `wget` healthcheck; a `$BUILDPLATFORM` stage that only runs `tsc`. Known strictness: a distroless `nodejs20` runtime fails the 20.11 pin, because its tag cannot carry the minor. **First run (n=1, iteration 6): 0.79 against 0.79 for no skill.** Regraded with the current assertions, the no-skill run passed 11 of the 14 delta assertions. Those were stack inference, the defects named, the node and pnpm pins, the frozen install, the native module, port and health, the non-root user, no baked secret, the platform pin, and both `.dockerignore` checks. They test sound Dockerfile practice, and a bare agent already writes a multi-stage, pinned, cache-ordered, non-root image when the prompt says "1 GB, rebuilds from scratch". The eval could not separate the skill from no skill. The reference control was also out of step with the skill: it verified caching with `touch src/server.ts`, which the skill says proves nothing, and it `COPY --chown`ed the whole app to the runtime user, which the skill says not to do.
+
+**What changed (2026-11-03).** No assertion was relaxed or retagged. Four delta assertions were added, each testing a specific instruction of the skill's that the first no-skill run did not follow:
+
+- **Numeric uid.** The manifest now sets `runAsNonRoot: true`, added ahead of the image, so a by-name `USER node` fails to start on the cluster. Both iteration-6 runs wrote `USER node`.
+- **Code stays root-owned.** Only the write path belongs to the runtime user. The iteration-6 baseline chowned everything.
+- **The digest's updater is named.** The repo has no Renovate or Dependabot, and the skill says a digest nothing bumps freezes today's CVEs in place.
+- **The cache check edits a file's content,** not its mtime.
+
+**Re-run (iteration 16, n=3, Docker available on an Apple Silicon host): 1.00 against 0.83.** The bare agent caught up on two of the new four. With `runAsNonRoot` in the manifest it wrote `USER 1000:1000` and said why, and it left the code root-owned. The gain comes from three things the skill instructs and the bare agent did not do, in either of its two runs:
+
+- It quoted the planted `PDF_RENDER_API_KEY` value in its "rotate this" warning.
+- It reported checks without the commands behind them (3 of 8).
+- It never said nothing bumps the digest.
+
+The first grading of the re-run had four false negatives.
+
+- **Cache check, three runs.** Two with-skill runs wrote "append `// cache probe` to `src/render.ts`", and the baseline wrote "after changing only `src/server.ts`". All three are content changes the pattern missed.
+- **Digest, the baseline.** "The image tag doesn't point to an exact version … pin the digest" records the digest's absence.
+
+Both patterns are widened and the controls re-checked: `touch` still fails, and so does an answer with no updater named. The fixes moved the baseline from 0.72 to 0.83 and the with-skill runs from 0.94, 0.94 and 1.00 to 1.00 each.
 
 ### `release-notes` (eval 29)
 
@@ -391,6 +419,17 @@ A probe drawing caught one loose assertion before any run was spent. The relatio
 | `wrong-trusts-k8s-seccomp` — the reports pod called fully hardened | 17/18 | 13/14 | the missing seccomp profile |
 | `wrong-fixes-in-review` — the reference review, plus the compose file edited | 16/18 | 12/14 | no file changed (and, because the edited file holds the key, no secret echoed) |
 
+**First run (iteration 16, n=3): 1.00 against 0.57.** The no-skill review was a good one. It found the socket, the ufw bypass, the privileged worker with `/dev/dri` as the replacement, the root containers and the `:latest` tags, and it changed no file. Where it fell short:
+
+- It quoted the live Stripe key.
+- It called the `reports` pod "in good shape" with a missing `seccompProfile` as a small gap, not as running Unconfined.
+- It had no C-n citations, no score with its Critical cap, no gate, and no needs-access flags.
+
+Two false negatives against the baseline were fixed in the grader before scoring:
+
+- **Socket severity.** It rated the socket Critical through a `## Critical` section heading, which a 220-character proximity check cannot see, so the check now also reads the nearest severity heading.
+- **The `/dev/dri` fix.** It wrote "pass only the render device", which the pattern now accepts.
+
 ### `debug-evidence`: container-debug (eval 36)
 
 `shopfront` on a staging VM, broken since a release, and **only captured output** — the run has no Docker and no access. Answer key: `fixtures/debug-evidence.answers.md`, outside the folder. The CRLF bytes in `migrate/entrypoint.sh` are the defect, so the repo's `.gitattributes` marks that one file `-text` to stop git normalising them.
@@ -414,6 +453,8 @@ A probe drawing caught one loose assertion before any run was spent. The relatio
 | `wrong-removes-limit` — deletes `mem_limit` | 14/15 | 10/11 | the limit raised from the measured working set |
 | `wrong-sleeps` — "Redis isn't ready yet; add `sleep 15`" | 12/15 | 8/11 | why localhost fails; the service-name fix; the worker's identical URL |
 | `wrong-blames-copy` — "the COPY puts the script in the wrong place" | 13/15 | 9/11 | CRLF named; `.gitattributes` |
+
+**First run (iteration 16, n=3): 1.00 against 0.82**, the smallest gain in the family. Without the skill the agent diagnosed all three symptoms correctly: OOMKilled read from the runtime, the limit raised from the measurement, `localhost` explained and fixed in both services, CRLF named and `.gitattributes` added. It missed two things the skill instructs. It never said that the captured `inspect` output exposes the database password, and it wrote no root-cause note per symptom. Nine of the eleven delta assertions do not separate the skill from no skill here, so this eval mostly shows the skill does no harm on a diagnosis a bare agent already gets right.
 
 ### `swarm-review`: docker-swarm (eval 37)
 
@@ -443,6 +484,8 @@ A probe drawing caught one loose assertion before any run was spent. The relatio
 | `wrong-compose-habits` — `.env` and the mesh not noticed | 18/20 | 14/16 | `.env` not read; the mesh breaks the rate limit |
 | `wrong-replicated-db` — two Postgres replicas called redundancy | 18/20 | 15/16 | Postgres replicas on node-local volumes (and the capability check for the replicas) |
 | `wrong-fixes-in-review` — the reference review, plus `deploy.sh` edited | 19/20 | 15/16 | no file changed |
+
+**First run (iteration 16, n=3): 1.00 against 0.75.** The no-skill review found every planted defect: quorum, the replicated Postgres, `depends_on`, `.env`, the update config, the routing mesh and registry auth. What it lacked was the skill's frame: no S-n citations, no capped score, no needs-access flags, and no verdict on whether Swarm is the right tool. One with-skill run first failed "depends_on ignored" because it wrote "which `docker stack deploy` then drops", not "dropped". The pattern now accepts `drops`.
 
 ### `tm-*`: threatmodel (evals 38–40)
 
@@ -676,8 +719,10 @@ Eval 15's controls are a separate script, because its runs are whole loop.py run
 
 - **The fixtures are deliberately time-of-day sensitive.** The seeded cutoff tests build slots from `datetime.now()` without pinning the hour, so they collide with the opening-hours rule outside roughly 06:00–18:00 local. That is a planted defect the teardown is supposed to find — but it also means a `suite green` assertion can legitimately flip depending on when you run. Grading is stable back-to-back; it is not stable across a day boundary.
 - **n=3, one fixture, one language, one defect class** for the pipeline evals. Low variance in the recorded run, but this is not broad coverage.
-- **Evals 35–36 have no run at all** — only controls.
-- **Evals 6–14 and 16–34 have one run each** (three for 11–13), against a no-skill baseline rather than an older version of the skill. A single missed assertion is a signal to look at the run, not a verdict on the skill. Eval 13's repair checks and eval 33's ordering check failed runs whose output was correct by reading; #9 fixed both graders, and every run here is graded with the fixed versions.
+- **Evals 47–48 have no run at all** — only controls.
+- **Evals 7–14, 16–27 and 29–34 have one run each** (three for 11–13; evals 6, 28 and 35–37 have three), against a no-skill baseline rather than an older version of the skill. A single missed assertion is a signal to look at the run, not a verdict on the skill. Eval 13's repair checks and eval 33's ordering check failed runs whose output was correct by reading; #9 fixed both graders, and every run here is graded with the fixed versions.
+- **Every baseline is one run.** Evals 28 and 36 gain +0.17 and +0.18 at n=3 against n=1. Every with-skill run passed every delta assertion, and eval 28's baseline missed the same behaviours in two independent runs (iterations 6 and 16). Even so, a single baseline cannot show how much it varies.
+- **Runs share the host's Docker daemon.** When Docker is available, the eval 28 runs build and run real images, four at a time, on one daemon. In iteration 16 one run found another run's `invoicer:*` tags and renamed its own. It then ran `docker container prune -f`, which removed every stopped container on the host, not just its own. Run the batch on a machine whose stopped containers you don't need, or with Docker unavailable, in which case the skill states that and grading takes the no-Docker branch.
 - **Eval 28 is graded from files, never built.** It checks that the Dockerfile and `.dockerignore` say the right things, not that the image builds, runs, rebuilds from cache or lands at the right size, which is exactly what the skill's own Step 4 requires and this harness cannot do without Docker.
 - **Eval 6 is graded from files, never executed.** It checks that the right compose file was written, not that the stack comes up — which is precisely the claim the skill's own Step 6 makes and this harness does not verify.
 - **Dispatch is automated, the run itself is not pinned.** `run.py` keeps the layout, the prompt and the isolation identical between runs, which manual dispatch could not. It does not pin the model or the Claude Code version, it only records them in `dispatch.json`. Two iterations run months apart can differ for reasons that have nothing to do with the skill. Check those fields before you compare them.
