@@ -2659,7 +2659,8 @@ def db_gate_clauses(seg):
 # ---- eval 30: dbaudit
 
 DA_SECRETS = ("eval-fake-Pg-4hT9wq", "eval-fake-dblink-7Qm2")
-DA_RUNTIME = (r"\bslow(er|ness)?\b|row counts?|\b\d+(\.\d+)?\s*(k|M|million|billion)\s+rows|largest table|index usage"
+# "slow" as in a slow salted hash (bcrypt, argon2) is credential advice, not a runtime claim
+DA_RUNTIME = (r"\bslow(er|ness)?\b(?!,? (salted )?(password )?hash)|row counts?|\b\d+(\.\d+)?\s*(k|M|million|billion)\s+rows|largest table|index usage"
               r"|unused index|pg_stat|execution plan|query plan|still (read|used)|no longer (read|used)")
 DA_TRANSITIVE = r"customer_(email|name)"
 DA_BASE = r"\bbase\b\**\s*(?:score\s*)?(?:=|:|of|is)?\s*\**\s*\d"
@@ -3001,10 +3002,15 @@ def db_drawio(xml_text):
                 continue
             inner = el.find("mxCell") if el.tag != "mxCell" else None
             cell = el if inner is None else inner
+            geo = cell.find("mxGeometry")
+            try:
+                y = None if geo is None or geo.get("relative") == "1" else float(geo.get("y") or 0)
+            except ValueError:
+                y = None
             cells[cid] = dict(text=db_text(el.get("value") if el.tag == "mxCell" else el.get("label")),
                               style=cell.get("style") or "", edge=cell.get("edge") == "1",
                               vertex=cell.get("vertex") == "1", parent=cell.get("parent"),
-                              source=cell.get("source"), target=cell.get("target"))
+                              source=cell.get("source"), target=cell.get("target"), y=y)
         pages.append((d.get("name") or "", cells))
     return pages
 
@@ -3051,11 +3057,16 @@ def db_inner_text(cells, cid):
 
 def db_row_lines(cells, cid):
     """A table drawn in draw.io as lines: its own label's lines, then one line per direct child (a column row),
-    with the row's nested cells (key, name, type) joined — the swimlane and the shape=table styles alike."""
+    with the row's nested cells (key, name, type) joined — the swimlane and the shape=table styles alike.
+    Up to five sibling cells at one height are one row too: a key, a name and a type drawn side by side."""
     lines = cells[cid]["text"].splitlines()
+    rows = defaultdict(list)
     for k, c in cells.items():
         if c["parent"] == cid and not c["edge"]:
-            lines.append(" ".join(db_inner_text(cells, k).split()))
+            rows[k if c["y"] is None else round(c["y"])].append(k)
+    for ks in rows.values():
+        for group in ([ks] if len(ks) <= 5 else [[k] for k in ks]):
+            lines.append(" ".join(" ".join(db_inner_text(cells, k).split()) for k in group))
     return lines
 
 
@@ -3063,7 +3074,8 @@ def db_er_graph(cells, ent):
     """Barker relationships drawn on the ER page. `ent` maps entity name → cell id. Returns
     (pairs: {frozenset(names): [edge ids]}, ternary connectors, Chen-style connectors). A connector is a
     non-entity vertex an edge ends on: a junction joining two half-lines is fine; one joining three or more
-    entities is a ternary relationship, and a diamond or oval joined to an entity is Chen notation."""
+    entities is a ternary relationship, and a diamond or oval joined to an entity is Chen notation. An oval
+    with no stroke and no label is an invisible junction, not a Chen shape."""
     name_of = {cid: n for n, cid in ent.items()}
     ends = {}
     for cid, c in cells.items():
@@ -3082,7 +3094,9 @@ def db_er_graph(cells, ent):
             if x in name_of and y in nb and len(nb[y]) == 2:
                 pairs[frozenset(nb[y])].append(e)
     ternary = sorted(k for k, v in nb.items() if len(v) >= 3)
-    chen = sorted(k for k, v in nb.items() if v and re.search(r"rhombus|ellipse|umlClass|shape=uml", cells[k]["style"]))
+    hidden = lambda c: re.search(r"strokeColor=none", c["style"]) and not c["text"].strip()
+    chen = sorted(k for k, v in nb.items() if v and (re.search(r"rhombus|umlClass|shape=uml", cells[k]["style"])
+                                                     or re.search(r"ellipse", cells[k]["style"]) and not hidden(cells[k])))
     return pairs, ternary, chen
 
 
@@ -3120,7 +3134,9 @@ def eval32(run):
     no_pair = [" – ".join(sorted(p)) for p in want if p not in pairs]
     role_bad = []
     for p, r in want.items():
-        labels = {t.strip() for t in seg_text.get(p, []) if re.search(r"[a-z]", t) and t == t.lower()}
+        # a note in brackets after the role name ("registered with (inferred, Q4)") is not part of it
+        bare = [re.sub(r"\s*[(\[][^)\]]*[)\]]", "", t).strip() for t in seg_text.get(p, [])]
+        labels = {t for t in bare if re.search(r"[a-z]", t) and t == t.lower()}
         roles_ok = all(r.get(k, "") in " ".join(labels) for k in ("a_role", "b_role"))
         if len(labels) < 2 or not roles_ok:
             role_bad.append(" – ".join(sorted(p)))
@@ -3132,9 +3148,37 @@ def eval32(run):
             opt_bad.append(" – ".join(sorted(p)))
     vacc = model["associations"][0]
     vacc_pairs = [frozenset((vacc["name"], p)) for p in vacc["participants"]]
-    legend = any(re.search(r"barker notation", t, re.I) and re.search(r"dashed|optional|may be", t, re.I)
-                 and re.search(r"crow|one or more|many", t, re.I)
-                 for t in (db_inner_text(er, cid) for cid in er))
+    # a legend is one cell with what it holds, or the cells whose IDs name it, read together
+    legend_texts = [db_inner_text(er, cid) for cid in er]
+    legend_texts.append("\n".join(c["text"] for cid, c in er.items() if re.search(r"legend", cid, re.I)))
+    legend = any(re.search(r"barker\b[^\n]{0,40}\bnotation", t, re.I) and re.search(r"dashed|optional|may be", t, re.I)
+                 and re.search(r"crow|one or more|many", t, re.I) for t in legend_texts)
+    # UID bars: a bar where each relationship in a UID meets the entity it identifies, and on no other many-end
+    owner_of = {cid: n for n, cid in loose.items()}
+
+    def end_marks(p, name):
+        """The marker each segment of relationship `p` carries where it meets `name`, and whether a cell
+        inside one of its segments names the UID."""
+        marks, named = [], False
+        for e in pairs.get(p, []):
+            for side, x in (("start", er[e]["source"]), ("end", er[e]["target"])):
+                if owner_of.get(db_owner(er, x, owner_of)) == name:
+                    m = re.search(rf"{side}Arrow=(\w+)", er[e]["style"])
+                    marks.append(m.group(1) if m else "none")
+            named |= any(c["parent"] == e and re.search(r"\buid\b", f"{c['text']} {c['style']}", re.I) for c in er.values())
+        return marks, named
+
+    is_bar = lambda m: re.fullmatch(r"dash|ERone|ERmandOne|ERoneToMany", m)
+    in_uid = [(r["a"], r["b"]) for r in model["relationships"] if r.get("uid")]
+    in_uid += [(a["name"], p) for a in model["associations"] for p in a["participants"] if re.search(rf"\b{p}\b", a["uid"])]
+    not_uid = [(r["a"], r["b"]) for r in model["relationships"] if not r.get("uid")]
+    not_uid += [(a["name"], p) for a in model["associations"] for p in a["participants"] if (a["name"], p) not in in_uid]
+    uid_bad = []
+    for a, b in in_uid:
+        marks, named = end_marks(frozenset((a, b)), a)
+        if not (named or any(map(is_bar, marks))):
+            uid_bad.append(f"{a} – {b}")
+    bar_extra = [f"{a} – {b}" for a, b in not_uid if any(map(is_bar, end_marks(frozenset((a, b)), a)[0]))]
     pv = frozenset(("PET", "VET"))
     inferred = (any(re.search(DB_INFERRED, t, re.I) for t in seg_text.get(pv, []))
                 or any(re.search(r"primary vet|registered with", c["text"], re.I) and re.search(DB_INFERRED, c["text"], re.I)
@@ -3163,6 +3207,30 @@ def eval32(run):
         fk_want[frozenset((f["table"], f["ref"]))] += 1
     fk_diff = {" – ".join(sorted(k)): (fk_edges.get(k, 0), fk_want.get(k, 0))
                for k in set(fk_edges) | set(fk_want) if fk_edges.get(k, 0) != fk_want.get(k, 0)}
+    # FK paths labelled: an edge between the two tables whose label names the FK column
+    fk_text = defaultdict(list)
+    for cid, c in rel.items():
+        if c["edge"]:
+            s, t = (tname.get(db_owner(rel, x, tname)) for x in (c["source"], c["target"]))
+            fk_text[frozenset((s, t))].append(db_inner_text(rel, cid))
+    fk_unlabelled = [f"{f['table']}.{f['column']}" for f in model["foreign_keys"]
+                     if not any(re.search(rf"(?<![a-z0-9]){f['column']}(?![a-z0-9])", x, re.I)
+                                for x in fk_text.get(frozenset((f["table"], f["ref"])), []))]
+    # alternate keys: a key marker on the column's row, a marker group shared by every column of a composite
+    # key (U1 on each), or one line naming UNIQUE and all its columns
+    uq = r"\b(?:UQ|UK|AK|U)\d*\b|\bUNIQUE\b"
+    ak_missing = []
+    for u in model["unique"]:
+        t, cols = u["table"], u["columns"]
+        lines = tlines.get(t, []) + ttext.get(t, "").splitlines()
+        groups = [set(re.findall(r"\b(?:UQ|UK|AK|U)\d+\b", " ".join(fk_lines(t, col)))) for col in cols]
+        if not (len(cols) == 1 and any(re.search(uq, ln) for ln in fk_lines(t, cols[0]))
+                or len(cols) > 1 and set.intersection(*groups)
+                or any(re.search(uq, ln) and all(re.search(rf"\b{col}\b", ln) for col in cols) for ln in lines)):
+            ak_missing.append(f"{t}({', '.join(cols)})")
+    open_q = r"undecided|not decided|open question|\bQ3\b|unknown|tbd|to be decided"
+    chip_lines = [ln for ln in tlines.get("pet", []) + ttext.get("pet", "").splitlines() if re.search(r"\bmicrochip\b", ln)]
+    chip_keyed = [ln for ln in chip_lines if re.search(uq, ln) and not re.search(open_q, ln, re.I)]
 
     # traceability: each entity's ER cell and its table's relational cell share the table name in their IDs
     tok = lambda cid: set(re.split(r"[^a-z0-9]+", (cid or "").lower()))
@@ -3170,6 +3238,9 @@ def eval32(run):
                 if e["table"] not in tok(loose.get(e["name"])) or e["table"] not in tok(tcell.get(e["table"]))]
     prov = [bool(re.search(r"design/design\.md|design\.md", " ".join(c["text"] for c in cells.values())))
             for cells in (er, rel)]
+    resp = read(run / "outputs/response.md")
+    validated = bool(re.search(r"well-formed|\bvalid(ated)?\b|parses?\b|xmllint", resp, re.I))
+    render_said = bool(re.search(r"render|export(ed)? (both|each|the)? ?(pages?|files?|diagrams?)? ?to (png|svg|pdf)", resp, re.I))
     _, modified, deleted = changes(run, "db-diagram")
     touched = [f for f in modified + deleted if f.startswith("design/")]
     return [
@@ -3206,7 +3277,17 @@ def eval32(run):
         ("cell IDs are semantic and trace each entity to its table", bool(loose) and bool(tcell) and not untraced,
          f"{untraced[:4] or 'ok'}", D),
         ("the inferred PET – VET relationship labelled as inferred", pv in pairs and inferred, "", D),
+        ("a UID bar on each relationship in a UID, and on no other", bool(pairs) and not uid_bad and not bar_extra,
+         f"missing {uid_bad[:4]}, extra {bar_extra[:4]}", D),
+        ("every alternate key on the relational page, composite ones included", len(tcell) == len(tables) and not ak_missing,
+         f"{ak_missing[:4] or 'ok'}", D),
+        ("microchip not drawn as a key while Q3 is open", "pet" in tcell and bool(chip_lines) and not chip_keyed,
+         f"{chip_keyed[:2] or 'ok'}", D),
+        ("each FK path labelled with its column", len(tcell) == len(tables) and not fk_unlabelled,
+         f"{fk_unlabelled[:4] or 'ok'}", D),
         ("a provenance note naming the design on both pages", all(prov), f"er {prov[0]}, relational {prov[1]}", D),
+        ("reports the XML validated and whether the rendering was checked", validated and render_said,
+         f"validated {validated}, rendering {render_said}", D),
         ("the design left untouched", not touched, f"{touched or 'untouched'}", D),
     ]
 
@@ -4124,7 +4205,10 @@ def eval47(run):
     weigh the proposed indexes, settle the audit flags, never connect, never echo the password."""
     t = everything(run, "db-query")
     doc, long_enough = deliverable(run, "db-query")
-    rank = section(t, r"workload|rank|top statements|total time") or t
+    # a ranking heading first: a title such as "query workload review" also says "workload"
+    rank = section(t, r"rank|top statements|total time") or section(t, r"workload") or t
+    # a ranking table may name the statement by its own label once the queryid was given elsewhere
+    n1_label = DQ_N1 + r"|order[ _]lines? (by|per|for) (each |the )?order"
     quiet, qev = never_called(run, "scripts/.calls.log")
     verifs = len(re.findall(r"verif|re-?measure|before/after|before and after", t, re.I))
     return [
@@ -4143,14 +4227,16 @@ def eval47(run):
          near(t, r"\bsort\b|ORDER BY \{|search_products", r"inject|whitelist|allow-?list|identifier"), "", C),
         # delta
         ("workload ranked by total time: the N+1 lookup ahead of the slow monthly report",
-         before(rank, DQ_N1, DQ_REPORT) and near(rank, DQ_N1, r"total|share|%"), "", D),
+         before(rank, n1_label, DQ_REPORT) and near(rank, n1_label, r"total|share|%"), "", D),
         ("coverage stated as a share of total time",
          near(t, r"\b\d{1,3}(\.\d)?\s?%", r"cover|of total|total (execution )?time|of the workload"), "", D),
         ("the report's misestimate traced to stale statistics (autovacuum disabled), fixed by ANALYZE",
          near(t, r"autovacuum_enabled|autovacuum.{0,30}(disabled|off|false)|n_mod_since_analyze|stale statistic|last_autoanalyze",
               r"ANALYZE|statistic|estimat") and any_of(t, r"\bANALYZE\b"), "", D),
         ("open-orders list: (status, created_at) and seek paging",
-         near(t, r"\(\s*status\s*,\s*created_at\s*\)", r"index") and any_of(t, r"keyset|seek pag|seek \(|seek-based|cursor[- ]based"), "", D),
+         # a tie-breaker after created_at, (status, created_at, order_id), is the same index done better
+         near(t, r"\(\s*status\s*,\s*created_at\s*(,\s*\w+\s*)?\)", r"index|\bix_|accept")
+         and any_of(t, r"keyset|seek pag|seek \(|seek-based|cursor[- ]based"), "", D),
         ("the laptop plan not taken as production evidence",
          near(t, r"laptop|plan-05", r"not representative|unrepresentative|1,?000 products|2\.4 ?M|production volume|dev(eloper)? (data|volume)"), "", D),
         ("the redundant proposed index on order_line(order_id) rejected",
@@ -4180,8 +4266,13 @@ def eval48(run):
     'no seat sold twice', no store chosen without numbers, staleness and session guarantees stated."""
     t = everything(run, "db-architect")
     doc, long_enough = deliverable(run, "db-architect")
+    # a line restating the team's proposal ("the team has proposed a move to MongoDB", "Question: move seats
+    # to …") is not an endorsement unless it also recommends or adopts
+    restates = lambda l: (re.search(r"propos|question|\?\s*$|answer is|team has|team's", l, re.I)
+                          and not re.search(r"recommend|adopt", l, re.I))
     mongo_endorsed = [l.strip()[:90] for l in t.splitlines() if re.search(r"mongo", l, re.I)
-                      and re.search(r"\b(recommend|adopt|migrate|move)\w*", l, re.I) and not re.search(DR_MONGO_NEG, l, re.I)]
+                      and re.search(r"\b(recommend|adopt|migrate|move)\w*", l, re.I) and not re.search(DR_MONGO_NEG, l, re.I)
+                      and not restates(l)]
     flow_map = any(l.count("|") >= 4 and all(re.search(p, l, re.I) for p in
                    (r"source", r"mechanism|feed|how", r"stale|fresh|lag", r"rebuild")) for l in t.splitlines())
     ddl = re.findall(r"CREATE\s+(?:UNIQUE\s+)?(?:TABLE|INDEX)\b", t, re.I)

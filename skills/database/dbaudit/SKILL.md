@@ -5,7 +5,7 @@ description: Audit a relational database, legacy or current, from its DDL or sup
 
 # 🔎 dbaudit
 
-Give a balanced assessment: what is working well, what is deficient, and what could improve. A score of 9.0 or more is the score threshold for “good,” but do not call a database unconditionally good when the workflow gate finds open Critical/High findings, unused/copy status, or an excessive unresolved needs-data flag ratio. State the score-based result and those risk conditions separately.
+Give a balanced assessment: what is working well, what is deficient, and what could improve. A score of 9.0 or more is the score threshold for “good,” but do not call a database unconditionally good when the workflow gate finds open Critical/High findings, unused/copy status, or more than 10 % of its objects carrying unresolved needs-data flags. State the score-based result and those risk conditions separately, in the gate block ([🚦 The gate](#-the-gate)).
 
 ## Where this fits
 
@@ -135,6 +135,25 @@ prioritized themes each tied to its theory. The coupling edge list is what dbpro
 topology from; give it counts, not adjectives.
 
 ---
+
+## 🚦 The gate
+
+Every database's summary, and the estate synthesis, ends with the gate: **four conditions, one line
+each, with the measured value and a pass or fail**, then the verdict. Never fold them into one sentence
+or leave one out because another already fails: the next stage needs to know everything that stands
+between this database and "good enough".
+
+```
+Gate — <db>: does not pass | passes
+- Score ≥ 9.0: <x.x> (base <b>, capped by <finding>) — ❌ / ✅
+- No open Critical or High: <c> Critical, <h> High — ❌ / ✅
+- Not unused or a copy: <used | barely used | unused | copy | 🔬 unknown> — ❌ / ✅ / 🔬
+- 🔬 flags ≤ 10 % of objects: <k> of <N> (<r> %) — ❌ / ✅
+```
+
+Where the repo carries the workflow harness, `harness/dbreview.py` applies the same four conditions to
+decide whether a database goes on to a proposal, so an audit run alone and one run by the harness reach
+the same verdict.
 
 ## 🛑 Stopping rule
 
