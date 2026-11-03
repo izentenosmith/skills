@@ -39,7 +39,7 @@ Or one stage at a time:
 | devils-advocate | `npx skills add izentenosmith/skills --skill devils-advocate` |
 | tyr-verdict | `npx skills add izentenosmith/skills --skill tyr-verdict` |
 
-The Trivial tier below needs only `--skill tdd refactor-review`. Flags (`-a`, `-g`, `-y`) are in the [root README](../../README.md#install-with-npx).
+The Trivial tier below needs only `--skill tdd refactor-review`. The repo is private: you need read access and GitHub auth first. That setup, and the flags (`-a`, `-g`, `-y`), are in the [root README](../../README.md#install-with-npx).
 
 Or **copy the folders you want into the repo you're working in**, alongside wherever that repo keeps its agent skills. Each folder is self-contained — `SKILL.md` plus every reference doc it needs — so one folder is a complete install of one skill. Nothing here reads a file outside its own directory.
 

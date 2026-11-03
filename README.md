@@ -438,6 +438,16 @@ tdd's 0.78 came from the grader. Every run wrote a boundary test, but one put it
 
 Every skill installs by name through the [`skills` CLI](https://github.com/vercel-labs/skills) — nothing to clone. The CLI finds each `SKILL.md` in this repo by its frontmatter `name`, so commands name skills, never family folders. Run them from the root of the repo you want the skills in.
 
+**This repo is private, so authenticate first.** Your GitHub account needs read access to `izentenosmith/skills` (ask the owner to add you as a collaborator). The commands don't change. The CLI clones with your own git credentials. If that fails, it retries through `gh repo clone` and then over SSH. So any one of these is enough:
+
+| Setup | Check |
+|---|---|
+| GitHub CLI signed in: `gh auth login` (then `gh auth setup-git` so plain `git` uses it too) | `gh repo view izentenosmith/skills` |
+| An SSH key on your GitHub account | `ssh -T git@github.com` |
+| A git credential helper holding a token with `repo` scope (e.g. macOS Keychain) | `git ls-remote https://github.com/izentenosmith/skills.git` |
+
+If a check fails, the install fails too, with `Authentication failed` or `Repository not found`. For an SSH-only machine, give the CLI the SSH URL directly: `npx skills add git@github.com:izentenosmith/skills.git --skill <name>`. In CI, export `GH_TOKEN` (or `GITHUB_TOKEN`) with read access to this repo. `npx skills update` uses it to check for new versions.
+
 **A whole workflow** — one command per family:
 
 ```bash
@@ -533,10 +543,11 @@ The installer copies each skill folder whole, dereferencing the database and net
 
 ### Or copy by hand
 
-1. **Clone or browse the repo.**
+1. **Clone the repo** — it is private, so this needs the same access as above.
 
    ```bash
-   git clone https://github.com/izentenosmith/skills.git
+   gh repo clone izentenosmith/skills
+   # or: git clone git@github.com:izentenosmith/skills.git
    ```
 
 2. **Copy the skill folders you want** into wherever the target repo keeps its agent skills — `.claude/skills/` for Claude Code, `.cursor/skills/` for Cursor, or your user-level skills directory.

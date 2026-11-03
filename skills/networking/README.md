@@ -44,7 +44,7 @@ Or one at a time:
 The installer dereferences the companion-reference symlinks, so each installed folder is
 self-contained, `scripts/netgraph.py` included: an installed skill computes its own metrics with
 nothing else on the machine but Python 3. Only the optional coordinator (`harness/networkflow.py`,
-`netreview.py`) needs a clone. Flags (`-a`, `-g`, `-y`) are in the
+`netreview.py`) needs a clone. The repo is private: you need read access and GitHub auth first. That setup, and the flags (`-a`, `-g`, `-y`), are in the
 [root README](../../README.md#install-with-npx).
 
 ## The theory underneath
