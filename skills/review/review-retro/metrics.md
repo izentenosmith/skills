@@ -4,10 +4,10 @@
 > one gives a **definition**, a **formula**, **what it tells you**, **how it gets gamed**, and the
 > **minimum sample** before it means anything. Principles are in [theory.md](theory.md).
 >
-> Under the PR harness, the harness computes these in code and hands you a table. **Don't recompute
-> it, round it, or edit it.** Paste it as given. If a number looks wrong, say so in a note under the
-> table. Without the harness, compute them yourself from the rows below, and show every numerator
-> and denominator.
+> Compute them yourself from the rows below, and show every numerator and denominator. The one
+> exception: when a review pipeline has already computed a metrics table and hands it to you, **don't
+> recompute it, round it, or edit it.** Paste it as given. If a number looks wrong, say so in a note
+> under the table.
 
 ---
 
@@ -32,7 +32,7 @@ Normalise the input into two tables first. Every metric is a count or a ratio ov
 | `outcome` | `fixed` · `partly fixed` · `not fixed` · `withdrawn` · `deferred` · `open` | see §0.1 |
 | `verified` | `yes` when a re-review checked the outcome, `no` otherwise | |
 | `issue` | the tracked issue id for a deferral, or `none` | |
-| `source` | `report`, `harness`, or `thread` (a human comment the retro classified) | thread rows carry lower confidence; say how many there are |
+| `source` | `report` (a review report or re-review), `findings-file` (structured findings a tool wrote), or `thread` (a human comment the retro classified) | thread rows carry lower confidence; say how many there are |
 
 **A review row**, one per PR: `pr`, `areas`, `change_type`, `meaningful_lines` (production and test
 code; lockfiles, generated, vendored and snapshot files left out), `rounds` (review iterations),

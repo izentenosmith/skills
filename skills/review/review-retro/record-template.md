@@ -27,9 +27,8 @@ message. Write for that search.
   does.
 - **No names as blame.** Decisions link to the comment where they were made, and the link carries
   who said it. Findings describe code.
-- **The file.** Without the harness, print the record and offer to save it as
-  `docs/reviews/pr-<n>.md`, or wherever the user keeps them. Under the harness, it goes in
-  `.review/pr-<n>/`.
+- **The file.** Print the record and offer to save it as `docs/reviews/pr-<n>.md`, or wherever the
+  user keeps them. A pipeline that called the skill saves it where it keeps its review files.
 
 ---
 
@@ -42,7 +41,7 @@ message. Write for that search.
 **State:** <merged <date> into `<base>` @ `<full sha>` | closed unmerged <date> | open (provisional record)>
 **Issues:** <#n, ENG-n | none linked>   **Areas:** `<path/>`, `<path/>`   **Change type:** <feature | fix | …>
 **Size:** <m> meaningful lines in <f> files (<excluded: lockfiles, generated…>)
-**Review:** <tier>, <r> rounds, re-review: <yes @ <sha> | no>. **Sources:** <report.md, findings.json, rereview-<sha>.md, thread, …>
+**Review:** <tier>, <r> rounds, re-review: <yes @ <sha> | no>. **Sources:** <review report, re-review @ <sha>, findings file, thread, …>
 
 ## Claim
 <One or two sentences: what the change does and why, with its source (PR body / issue / derived from
@@ -81,16 +80,16 @@ re-review checked. Nits: one grouped line.>
 
 ## For the next person touching this code
 - <An invariant this change established, and the test that guards it: `tests/…::test_…`>
-- <A fragile spot or hotspot (from the xray, if it ran), and what makes it fragile>
+- <A fragile spot or hotspot (from code-xray or `git log` change frequency), and what makes it fragile>
 - <Files that change with these: `<a>` usually changes with `<b>`>
 - <What was deliberately not done, and where that decision lives>
 - <Open deferrals with their issue ids>
 
 ## Metrics
-<Under the harness: its table, pasted unchanged, with any note below it. Without it: findings by
-severity and outcome, usefulness and fix-verification counts for this PR, size, rounds, time to first
-review and to merge, each with its numerator and denominator. One PR is below every rate's floor, so
-show counts, not percentages.>
+<Computed from this PR's rows (metrics.md): findings by severity and outcome, usefulness and
+fix-verification counts, size, rounds, time to first review and to merge, each with its numerator and
+denominator. One PR is below every rate's floor, so show counts, not percentages. If a pipeline handed
+you a table it computed, paste that unchanged instead, with any note below it.>
 
 ## Sources
 <Report and re-review files with their SHAs, the PR URL, the issue URLs, the commands that fetched the
