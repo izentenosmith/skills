@@ -798,9 +798,14 @@ backend.
 - `prevent_destroy` and `deletion_protection` on every stateful resource (T17).
 - Network IDs published to SSM Parameter Store for services to read (T9).
 - A reusable service module so a new service is a thin root in under a day.
+- Environments differ only by input values (tfvars and backend config); no environment conditionals in modules (T21).
+
+## Validation checklist
+- No shared state across prod and non-prod; every root has a lock; every stateful resource protected; every
+  version pinned; no secret in code or plain outputs; open questions listed.
 
 ## Open questions
-- DR in eu-central-1: a region dimension now, or later?
+- DR in eu-central-1: a region dimension now, or later? Blocks the region level of the layout.
 """
 
 E23_REFERENCE = """
@@ -823,16 +828,22 @@ Target layout from docs/design.md: one root, per-environment backend.hcl, databa
 1. **Containment (first change window).** TF-SEC-01: rotate (deactivate) the static key in IAM, then remove it
    from code. TF-SEC-02: remove the 0.0.0.0/0 rule. Validation: key inactive, rule gone. Rollback: none needed
    for the key (one-way); re-add the rule if the vendor breaks.
-2. **Protection.** TF-CHG-02: deletion_protection and prevent_destroy on prod databases. Validation: plan shows
-   in-place updates only. Rollback: revert the commit.
+2. **Protection.** TF-CHG-02: deletion_protection and prevent_destroy on prod databases. Pre-check: lock free.
+   Expected plan: in-place updates only. Validation: that plan. Rollback: revert the commit. Blast radius: the prod
+   databases' settings.
 3. **State migration.** TF-STA-01/02: take a state backup (S3 object version), create per-account buckets with
-   use_lockfile, migrate with removed and import blocks. Validation: empty plan. Rollback: restore the state version.
+   use_lockfile, migrate with removed and import blocks. Pre-check: backup taken, no pending changes. Expected plan:
+   empty. Validation: empty plan. Rollback: restore the state version. Blast radius: both environments' state.
 4. **Identity moves.** TF-CHG-01: moved blocks from aws_db_instance.db[0] to module.database.aws_db_instance.this["orders"]
-   and so on. Expected plan: 0 to add, 0 to change, 0 to destroy. Validation: that plan. Rollback: revert.
+   and so on. Pre-check: protection from step 2 applied. Expected plan: 0 to add, 0 to change, 0 to destroy.
+   Validation: that plan. Rollback: revert. Blast radius: every database, per environment.
 5. **Apply path.** TF-DEL-01: saved plans in CI — the pipeline design goes to the pipelines skill.
+6. **Cleanup.** Remove the moved blocks only after every environment has applied them.
 
 ## Open questions
 - 🔬 Which environment the shared state reflects today (needs `terraform state list`).
+
+Nothing here is applied until this proposal is accepted; each step's plan is reviewed in its own pull request.
 """
 
 E24_REFERENCE = """
@@ -893,7 +904,9 @@ stage) → staging → prod eu-west-1 → prod us-east-1.
 - Migrations expand/contract, backward compatible (P21). Feature flags decouple release (P11).
 - The approval meeting before every deployment is declined: peer review before merge, plus a prod-only approval
   where the author cannot approve their own change (P16).
-- OIDC with a role per environment (staging, prod). Actions pinned by commit SHA (P18).
+- OIDC with a role per environment (staging, prod). Actions pinned by commit SHA (P18). Fork and untrusted PR
+  triggers run without secrets: no cloud role, a read-only token.
+- Flaky tests are quarantined out of the gate with an owner and a 14-day deadline (P6).
 - Terraform: plan on the pull request, `terraform plan -out`, saved plan applied from CI (P22).
 - Deployment markers and an audit trail; lead time and deployment frequency tracked (P20).
 
@@ -975,6 +988,12 @@ CONTROLS_INFRA = {
                                             .replace("per-account bucket", "shared bucket, workspace per env")),
                                         ["leadership's one-bucket workspaces ask declined with a reason",
                                          "prod state isolated from non-prod"]),
+            "wrong-env-conditionals": (e2x(E22_REFERENCE.replace("## Validation checklist", """## Database module
+```hcl
+backup_retention_period = var.environment == "prod" ? 35 : 7
+```
+
+## Validation checklist""")), ["environments differ only by inputs, no environment conditionals"]),
             "wrong-builds-it": (lambda run, repo: (e2x(E22_REFERENCE)(run, repo), w(repo / "live/prod/network/main.tf", """
                 resource "aws_vpc" "main" {
                   cidr_block = "10.30.0.0/16"
@@ -3533,6 +3552,9 @@ default. Checking the tenant in the SPA is not a control, and sequential IDs are
 | send invoice | 401 | allow | allow | 403 | 404 | 403 | 403 |
 | void sent invoice | 401 | allow | 403 | 403 | 404 | 403 | 403 |
 
+Each row is verified A-B-A: user A creates, user B tries to read, change and delete, then A re-reads and confirms
+nothing changed.
+
 ## CSRF, CORS, cookie scope
 Double-submit cookies are declined: a sibling subdomain can set the cookie, so the token is forgeable. The CSRF
 token is bound to the session, plus SameSite (A12, A31). CORS `*` is declined: partners call server to server and
@@ -3552,7 +3574,12 @@ Partner API keys go in the Authorization header, never the query string, where t
 Keys are hashed at rest and shown once; support cannot read them out, only rotate them (A17). Rate limits and quotas
 are keyed on the partner key and tenant, not IP, returning 429 with Retry-After (A42). GraphQL introspection and
 GraphiQL are off in production; depth and complexity limits apply (A43). Versions are listed in the inventory; a
-retired version gets a sunset date and then 410 (A40). Webhooks are signed with HMAC and a timestamp.
+retired version gets a sunset date and then 410 (A40). Webhooks are signed with HMAC and a timestamp. The inventory
+is generated from the code's route table and diffed against the spec: a route missing from the spec fails the build
+(shadow API gate).
+
+## Dependencies
+Lockfiles and SCA in CI; a licence allow-list for a hosted SaaS, where AGPL needs a decision before it ships.
 
 ## Support access
 "Log in as tenant" becomes time-bound, audited impersonation with a recorded reason, visible to the customer,
