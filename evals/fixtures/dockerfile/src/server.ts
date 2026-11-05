@@ -1,4 +1,6 @@
 import express from "express";
+import fs from "node:fs";
+import path from "node:path";
 import { openDb } from "./db";
 import { renderInvoice } from "./render";
 import { renderPdf } from "./pdf";
@@ -6,6 +8,15 @@ import { renderPdf } from "./pdf";
 const app = express();
 app.use(express.json());
 const db = openDb();
+
+// One line per request, kept for support tickets.
+const accessLogPath = process.env.ACCESS_LOG ?? path.join(process.cwd(), "logs", "access.log");
+fs.mkdirSync(path.dirname(accessLogPath), { recursive: true });
+const accessLog = fs.createWriteStream(accessLogPath, { flags: "a" });
+app.use((req, res, next) => {
+  res.on("finish", () => accessLog.write(`${new Date().toISOString()} ${req.method} ${req.originalUrl} ${res.statusCode}\n`));
+  next();
+});
 
 // Readiness: migrations have run and the database answers. The k8s probes hit this.
 app.get("/healthz", (_req, res) => {

@@ -7,6 +7,8 @@ COPY . .
 RUN npm install -g pnpm && pnpm install
 RUN pnpm build
 
+VOLUME /app/data
+
 ENV NODE_ENV=production
 ENV PDF_RENDER_API_KEY=eval-fake-pdfrender-key-0042
 

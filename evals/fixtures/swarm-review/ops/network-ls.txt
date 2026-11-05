@@ -1,0 +1,12 @@
+# captured 2026-10-29 on mgr-1
+$ docker network inspect ingress shoplane_frontend shoplane_backend --format '{{.Name}} {{.Driver}} {{range .IPAM.Config}}{{.Subnet}}{{end}}'
+ingress overlay 10.0.0.0/24
+shoplane_frontend overlay 10.0.1.0/24
+shoplane_backend overlay 10.0.2.0/24
+
+$ docker node inspect --format '{{.Description.Hostname}} {{.Status.Addr}}' $(docker node ls -q)
+mgr-1 10.0.0.2
+mgr-2 10.0.0.3
+wrk-1 10.0.0.4
+wrk-2 10.0.0.5
+wrk-3 10.0.0.6

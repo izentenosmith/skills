@@ -6,7 +6,10 @@ Order and catalogue API for the shop. We go live on our own Docker Swarm cluster
 
 - Five Hetzner VMs: `mgr-1` and `mgr-2` are managers (two, so the cluster stays up if one fails),
   `wrk-1`..`wrk-3` are workers. Captured state in `ops/`.
+- The nodes talk over a Hetzner private network, `10.0.0.0/16`. The api sends order mail through the relay
+  at `10.0.2.15:25` on that network.
 - Deploys run from CI with `scripts/deploy.sh`.
+- Before a flash sale we scale up with `scripts/flash-sale.sh up`, and back down afterwards.
 
 ## Stack (`stack.yml`)
 
