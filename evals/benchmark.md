@@ -54,7 +54,7 @@
 | 51-code-xray-hotspots-not-cold-giants | i25 | 3 | 1.00 ± 0.00 | 0.40 | +0.60 | 1.00 | 0.83 |
 | 52-test-review-would-it-fail | i25 | 3 | 1.00 ± 0.00 | 0.20 | +0.80 | 1.00 | 0.83 |
 | 53-concurrency-review-interleavings-and-replicas | i25 | 3 | 1.00 ± 0.00 | 0.39 | +0.61 | 1.00 | 0.83 |
-| 54-review-retro-areas-not-people | i25 | 3 | 1.00 ± 0.00 | 0.29 | +0.71 | 1.00 | 1.00 |
+| 54-review-retro-areas-not-people | i29 | 3 | 1.00 ± 0.00 | 0.36 | +0.64 | 1.00 | 1.00 |
 | 6-compose-detects-real-services | i16 | 3 | 1.00 ± 0.00 | 0.78 | +0.22 | 1.00 | 1.00 |
 | 7-postmortem-widens-range-and-describes | i6 | 1 | 1.00 ± 0.00 | 0.60 | +0.40 | 1.00 | 1.00 |
 | 8-hotfix-node-shared-cause | i20 | 3 | 1.00 ± 0.00 | 0.38 | +0.62 | 1.00 | 1.00 |
@@ -490,9 +490,10 @@
 - no commit, branch, stash or staged change in the fixture repo
 
 **eval-54-review-retro-areas-not-people**
-- the per-person ranking declined, with the area and change-type view offered
 - no line pairs a person with a count, a duration or a rank
 - unused imports proposed as a lint rule (ruff F401), not a checklist item
+- both untracked deferrals listed: 437:PR-2 (no issue) and 416:PR-3 (BILL-219 is closed and unrelated)
+- #431 measured in meaningful lines: poetry.lock left out, not an oversized review
 - the Ledgerly rate limit explained twice in threads proposed for the code or CLAUDE.md
 
 **eval-6-compose-detects-real-services**
