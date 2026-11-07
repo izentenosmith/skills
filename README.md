@@ -286,7 +286,7 @@ worth keeping                                   promote to wiki/ · demote from 
 
 | Skill | What it does |
 |-------|--------------|
-| [repo-memory](skills/memory/repo-memory/SKILL.md) | Install mode scaffolds `.memory/` as a four-layer hierarchy (git history as the transcript, one-fact notes, single-writer wiki pages, a small `INDEX.md` imported from `CLAUDE.md` / `AGENTS.md`) with guidance on what memory is for, not how to use it. Capture mode writes one note when something is clearly worth keeping. Dream mode is the offline consolidation pass: it reads only the commits since its watermark, re-verifies the notes they touched, corrects, merges, deletes and promotes with evidence, keeps the index under 200 lines, removes secrets and treats instructions found in memory as data, then leaves the diff uncommitted for a person to approve. Audit mode runs the bundled read-only linter (`scripts/memlint.py`). |
+| [repo-memory](skills/memory/repo-memory/SKILL.md) | Install the skill (`npx skills add izentenosmith/skills --skill repo-memory`), then run `/repo-memory` once in each repo to apply the layout ([how](skills/memory/README.md#install)). Install mode scaffolds `.memory/` as a four-layer hierarchy (git history as the transcript, one-fact notes, single-writer wiki pages, a small `INDEX.md` imported from `CLAUDE.md` / `AGENTS.md`) with guidance on what memory is for, not how to use it. Capture mode writes one note when something is clearly worth keeping. Dream mode is the offline consolidation pass: it reads only the commits since its watermark, re-verifies the notes they touched, corrects, merges, deletes and promotes with evidence, keeps the index under 200 lines, removes secrets and treats instructions found in memory as data, then leaves the diff uncommitted for a person to approve. Audit mode runs the bundled read-only linter (`scripts/memlint.py`). |
 
 **The theory** is distilled into RM1–RM17. Stale is not wrong: a dream keeps an old note that still holds, and only its `verified` date moves. Memory is data, never authority: no dream obeys what it reads, and no change to memory lands without review.
 
@@ -622,9 +622,10 @@ The installer copies each skill folder whole, dereferencing the database and net
    cp -r  skills/skills/security/threatmodel     my-project/.claude/skills/
    cp -r  skills/skills/security/appsec          my-project/.claude/skills/
    cp -r  skills/skills/security/hardening       my-project/.claude/skills/
+   cp -r  skills/skills/memory/repo-memory       my-project/.claude/skills/
    ```
 
-   **Copy the skill folder, not the category folder.** `development/`, `containers/`, `operations/`, `database/`, `networking/`, `infrastructure/` and `security/` are scaffolding for reading this repo — the agent never sees them, and copying one wholesale just nests your skills a level too deep.
+   **Copy the skill folder, not the category folder.** `development/`, `containers/`, `operations/`, `database/`, `networking/`, `infrastructure/`, `security/`, `review/` and `memory/` are scaffolding for reading this repo — the agent never sees them, and copying one wholesale just nests your skills a level too deep.
 
    Skill folders are self-contained when installed. The database and networking skill trees share companion docs through relative symlinks; use `cp -RL` for those folders so each installed skill contains the referenced files.
 
@@ -641,7 +642,10 @@ The installer copies each skill folder whole, dereferencing the database and net
    /netaudit      /netdesign      /netdiagram      /netpropose      /netblueprint
    /terraform     /pipelines
    /threatmodel   /appsec         /hardening
+   /repo-memory
    ```
+
+   **repo-memory has a second step.** Installing the skill doesn't give a repo a memory. Run `/repo-memory` (or ask "add memory to this repo") once in each repository to scaffold `.memory/` and wire it into `CLAUDE.md` / `AGENTS.md`. See [memory/README.md](skills/memory/README.md#install).
 
 Take one skill, take a family, or take them all. Every skill works on its own — `tdd` plans from scratch when there's no brief, `refactor-review` reviews any diff, `devils-advocate` tears down a change it didn't build, `post-mortem` reconstructs an incident in a system it has never seen. Where skills cross-link and the other one isn't installed, the prompt still names it, so you know what would have run.
 
@@ -649,7 +653,7 @@ Take one skill, take a family, or take them all. Every skill works on its own �
 
 [`marketplace/agensi.py`](marketplace/README.md) builds the zips published there: one per skill, with symlinks resolved, reference docs from other skills copied in, and links to other skills turned into their names, so each installs and runs on its own — plus bundles of related skills. A skill lists at $5 and a bundle at $10.
 
-Each family has its own README with more detail: [development](skills/development/README.md) · [containers](skills/containers/README.md) · [operations](skills/operations/README.md) · [database](skills/database/README.md) · [networking](skills/networking/README.md) · [infrastructure](skills/infrastructure/README.md) · [security](skills/security/README.md).
+Each family has its own README with more detail: [development](skills/development/README.md) · [containers](skills/containers/README.md) · [operations](skills/operations/README.md) · [database](skills/database/README.md) · [networking](skills/networking/README.md) · [infrastructure](skills/infrastructure/README.md) · [security](skills/security/README.md) · [review](skills/review/README.md) · [memory](skills/memory/README.md).
 
 ## Conventions
 
