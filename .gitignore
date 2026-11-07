@@ -114,6 +114,7 @@ evals/fixtures/pr-prep/repo/
 evals/fixtures/code-xray/repo/
 evals/fixtures/test-review/repo/
 evals/fixtures/concurrency/repo/
+evals/fixtures/repo-memory/repo/
 
 # --- marketplace: built zips and their manifest ---
 dist/
