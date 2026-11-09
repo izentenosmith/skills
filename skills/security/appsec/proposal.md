@@ -71,8 +71,8 @@ Order the work:
    session handling first (everything else trusts them), then the central authorisation layer, then
    the query layer and output encoding, then crypto and secrets.
 3. **Guardrails.** Lint and SAST rules for each fixed class, secret scanning, SCA gate, the
-   route-enumeration authorisation test — so the class can't come back. Coordinate CI changes with
-   [pipelines](../../infrastructure/pipelines/SKILL.md).
+   route-enumeration authorisation test — so the class can't come back. Hand the CI changes to the
+   [pipelines](../../infrastructure/pipelines/SKILL.md) skill, and say so in the step.
 4. **Configuration.** Production config review, error handling, security headers (CSP report-only
    first, then enforce), management endpoints off.
 5. **Dependencies and licences.** Lockfiles and pins, EOL upgrades (one major at a time, tests green),

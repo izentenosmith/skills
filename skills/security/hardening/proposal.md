@@ -111,6 +111,11 @@ Respect the **trust graph** from R5: harden the account or host that others trus
 provider, bastion, CI runner, backup account) before the ones that trust it, and never cut a
 cross-account role before its replacement works.
 
+**Cite the principle behind each decision and each ordering constraint** (H-N, [theory.md](theory.md)):
+why containment goes first, why the private path is live before public SSH closes, why a credential
+is rotated before it is removed, why an irreversible lock goes last. A sequence without its reasons
+can only be accepted or rejected whole; one with them can be argued step by step.
+
 ## Proposal skeleton — `analysis/hardening/proposal.md`
 
 ```markdown
@@ -122,7 +127,7 @@ Score <x> (<band>), gate <pass/fail — failing conditions>. <n> Critical, <n> H
 Recommendation in one paragraph.
 
 ## Decisions per domain
-| Domain | Score | Decision | Reason (finding IDs) |
+| Domain | Score | Decision | Reason (finding IDs, principle H-N) |
 |---|---:|---|---|
 
 ## Containment (first change window)
