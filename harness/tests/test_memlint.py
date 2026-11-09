@@ -198,6 +198,21 @@ class Delta(Tree):
         self.assertEqual(d["captured"], [".memory/notes/fresh.md"])
         self.assertIn("raise retries to 7", ML.md_delta(d))
 
+    def test_delta_lists_design_records_since_the_watermark(self):
+        self.git("init", "-q", "-b", "main")
+        self.w("docs/adr/0001-old.md", "# 1. Old\n")
+        base = self.commit("initial")
+        self.w(".memory/.dream-state", f"watermark: {base}\ndreamed: 2026-11-01\n")
+        self.w("docs/adr/0002-queue.md", "# 2. Queue\n")
+        self.w("docs/adr/0001-old.md", "# 1. Old\n\n**Status:** Superseded by 0002\n")
+        self.w("GLOSSARY.md", "**Slot** — a bookable interval\n")
+        self.w("docs/guide.md", "not a record\n")
+        self.commit("design review: queue")
+        d = ML.delta(ML.Memory(self.root), TODAY)
+        self.assertEqual([(r["path"], r["status"]) for r in d["records"]],
+                         [("GLOSSARY.md", "A"), ("docs/adr/0001-old.md", "M"), ("docs/adr/0002-queue.md", "A")])
+        self.assertIn("## Design records since the last dream (3)", ML.md_delta(d))
+
     def test_no_watermark_means_verify_everything(self):
         self.git("init", "-q", "-b", "main")
         self.commit("initial")

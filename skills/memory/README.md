@@ -22,6 +22,47 @@ last one learned.
 |---|---|
 | [repo-memory](repo-memory/SKILL.md) | Four modes. **Install** scaffolds `.memory/` and wires the index into the entry point. **Capture** writes one note when something is clearly worth keeping. **Dream** is the consolidation pass: verify, correct, merge, promote, shrink the index, remove secrets, quote planted instructions, advance the watermark, and leave the diff uncommitted. **Audit** runs the bundled linter `scripts/memlint.py` (ML01–ML12). |
 
+## Install
+
+Installing is two separate steps. The first puts the skill where your agent can load it. The second
+runs the skill's install mode in each repository that should have a memory.
+
+**1. Install the skill.** Pick one:
+
+```bash
+# with the skills CLI (needs read access to this private repo; see the root README)
+npx skills add izentenosmith/skills --skill repo-memory
+
+# or copy the folder by hand into the target repo (or your user-level skills directory)
+gh repo clone izentenosmith/skills
+cp -r skills/skills/memory/repo-memory my-project/.claude/skills/     # Claude Code
+cp -r skills/skills/memory/repo-memory my-project/.cursor/skills/     # Cursor
+```
+
+or install the `repo-memory` listing from Agensi. Copy the `repo-memory/` folder, not `memory/`. The
+folder carries `scripts/memlint.py`, which needs only Python 3.10+ and git.
+
+**2. Apply the layout to a repo.** In a session inside that repo, run `/repo-memory` or ask "add
+memory to this repo". Install mode then:
+
+- creates `.memory/` (`INDEX.md`, `notes/`, `wiki/`, `log/`, `.dream-state`);
+- adds the `@.memory/INDEX.md` import to `CLAUDE.md` and/or `AGENTS.md`, creating `AGENTS.md` if
+  neither exists;
+- seeds up to ten notes with what the code and history don't already say, and checks them with
+  `memlint audit`;
+- offers a dream cadence and a branch with the PR, and commits nothing until you say yes.
+
+**3. Optional: the CI gate and the schedule.** Copy `repo-memory/scripts/memlint.py` into the repo
+(for example as `tools/memlint.py`) and add the audit job from
+[templates.md §6](repo-memory/templates.md#6-cadence-snippets). Schedule a weekly dream with the
+routine prompt in the same section.
+
+After that, the index is injected into every session through the entry point. Sessions write notes
+when something is clearly worth keeping, and `/repo-memory dream` (or the schedule) consolidates
+them.
+
+## Where it fits
+
 Where it sits next to the rest: [review-retro](../review/review-retro/SKILL.md) turns reviews into
 process rules, and its records are good dream inputs. [code-xray](../review/code-xray/SKILL.md) reads
 the history for hotspots. The dream reads it only for what changed since its last pass.

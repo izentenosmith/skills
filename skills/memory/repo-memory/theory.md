@@ -36,6 +36,10 @@ In a repository, the transcript layer already exists: `git log`, the PRs and the
 25 KB of its index (CAM). Longer instruction files reduce adherence (CAM, citing the Claude Code
 docs). Injected notes use up tokens, and an incorrect note gets carried into every session (CAM). So
 the index lists and links, holds the detail one layer down, and is the first thing a dream shrinks.
+Dreaming moves "some details down the hierarchy" and leaves "links behind" (CAM). That is how this
+skill treats the repo's own design records: one index line for the ADR folder and the glossary, and
+each ADR linked from the page of the area it concerns. Nothing is copied. In CAM's wiki run, dreaming
+also checked "claims against the sources", which is why a note an ADR contradicts gets corrected.
 
 **RM4. Store what the environment doesn't show.** In CAM's Pokémon runs, the notes worth having
 were the ones the screen couldn't show. Recording what was readable anyway was waste. Sonnet 3.7
