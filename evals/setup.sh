@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Prepare the eval fixtures. Run once after cloning.
 #   - the five pipeline fixtures get a virtualenv with pytest (build output, gitignored)
-#   - the incident, release-notes and review fixtures get their git history built (nested repos, gitignored)
+#   - the incident, release-notes, review and repo-memory fixtures get their git history built (nested repos, gitignored)
 #   - the compose fixture needs nothing: it is graded from files, never executed
 set -euo pipefail
 cd "$(dirname "$0")/fixtures"
@@ -32,6 +32,10 @@ for f in pr-review pr-prep code-xray test-review concurrency; do
   ./$f/make-history.sh
   echo "$(git -C $f/repo rev-list --all --count) commits"
 done
+
+echo
+echo "== repo-memory fixture (eval 55) =="
+./repo-memory/make-history.sh
 
 echo
 echo "== compose fixture =="
