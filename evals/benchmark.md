@@ -55,12 +55,13 @@
 | 52-test-review-would-it-fail | i25 | 3 | 1.00 ± 0.00 | 0.20 | +0.80 | 1.00 | 0.83 |
 | 53-concurrency-review-interleavings-and-replicas | i25 | 3 | 1.00 ± 0.00 | 0.39 | +0.61 | 1.00 | 0.83 |
 | 54-review-retro-areas-not-people | i25 | 3 | 1.00 ± 0.00 | 0.29 | +0.71 | 1.00 | 1.00 |
+| 55-repo-memory-dream-true-and-small | i31 | 3 | 1.00 ± 0.00 | 0.85 | +0.15 | 1.00 | 1.00 |
 | 6-compose-detects-real-services | i27 | 3 | 1.00 ± 0.00 | 0.44 | +0.56 | 1.00 | 1.00 |
 | 7-postmortem-widens-range-and-describes | i6 | 1 | 1.00 ± 0.00 | 0.60 | +0.40 | 1.00 | 1.00 |
 | 8-hotfix-node-shared-cause | i20 | 3 | 1.00 ± 0.00 | 0.38 | +0.62 | 1.00 | 1.00 |
 | 9-hotfix-jvm-both-callers | i20 | 3 | 1.00 ± 0.00 | 0.71 | +0.29 | 1.00 | 1.00 |
 
-**Delta — current 0.99 vs baseline 0.49**
+**Delta — current 0.99 vs baseline 0.50**
 **Capability — current 1.00 vs baseline 0.90**
 
 ## Delta assertions the baseline also passed (still non-discriminating)
@@ -498,6 +499,19 @@
 - no line pairs a person with a count, a duration or a rank
 - unused imports proposed as a lint rule (ruff F401), not a checklist item
 - the Ledgerly rate limit explained twice in threads proposed for the code or CLAUDE.md
+
+**eval-55-repo-memory-dream-true-and-small**
+- memlint audit: no errors after the dream
+- the index within budget, its copied tables and diary demoted
+- the stale-but-true UTC note kept and re-verified
+- the duplicate utc-storage merged into the older timestamps-utc
+- the orphaned deploy-freeze convention linked from the index
+- the staging password appears nowhere: not in memory, not in the report
+- rotation of the exposed credential called for
+- the credential's value removed, where it lives kept
+- the watermark advanced to HEAD
+- the report cites the commits behind the corrections (retry raise, rename)
+- only .memory/ changed, nothing committed
 
 **eval-6-compose-detects-real-services**
 - meilisearch detected from the source

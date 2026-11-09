@@ -10,7 +10,7 @@ Inspired by [mattpocock/skills](https://github.com/mattpocock/skills).
 
 ## What's in here
 
-Eight families of skills under `skills/` — the first three in the order work actually moves through them, then the database, the network, the infrastructure code and pipelines underneath, the security of every layer, and the review of each change as it arrives — plus a harness that runs the development pipeline's closing loop — and one pull request through every review skill — as code, and the evals that measure the skills.
+Nine families of skills under `skills/` — the first three in the order work actually moves through them, then the database, the network, the infrastructure code and pipelines underneath, the security of every layer, the review of each change as it arrives, and the memory agents keep about the repository — plus a harness that runs the development pipeline's closing loop — and one pull request through every review skill — as code, and the evals that measure the skills.
 
 ```
 skills/
@@ -22,6 +22,7 @@ skills/
   infrastructure/   review, design, propose   terraform · pipelines
   security/         review, design, propose   threatmodel · appsec · hardening
   review/           judge a change as it arrives   pr-prep · code-xray · peer-review · test-review · concurrency-review · review-retro
+  memory/           remember what agents learn     repo-memory: install · capture · dream · audit
 harness/            the skills' rules as code: the closing loop, bug → PR, incident → post-mortem, DB and network audit → proposal
 evals/              seeded fixtures, scored assertions, the recorded benchmark
 marketplace/        packages each skill as a standalone zip for Agensi
@@ -37,8 +38,9 @@ marketplace/        packages each skill as a standalone zip for Agensi
 | **[infrastructure/](skills/infrastructure/README.md)** | [terraform](skills/infrastructure/terraform/SKILL.md) · [pipelines](skills/infrastructure/pipelines/SKILL.md) |
 | **[security/](skills/security/README.md)** | [threatmodel](skills/security/threatmodel/SKILL.md) · [appsec](skills/security/appsec/SKILL.md) · [hardening](skills/security/hardening/SKILL.md) |
 | **[review/](skills/review/README.md)** | [pr-prep](skills/review/pr-prep/SKILL.md) · [code-xray](skills/review/code-xray/SKILL.md) · [peer-review](skills/review/peer-review/SKILL.md) · [test-review](skills/review/test-review/SKILL.md) · [concurrency-review](skills/review/concurrency-review/SKILL.md) · [review-retro](skills/review/review-retro/SKILL.md) |
+| **[memory/](skills/memory/README.md)** | [repo-memory](skills/memory/repo-memory/SKILL.md) |
 
-The families are loosely coupled by design. `development` is a genuine pipeline where each stage checks the one before it; `containers` is an ordered pair (image, then stack) plus three skills for containers once they run — hardening, debugging, and Swarm; `operations` is a response chain — hotfix escalates to incident-fix, which hands its record to post-mortem — plus release-notes, which stands alone, and the tracker pair — ticket writes work items to Linear, Azure DevOps or Jira for every other skill, backlog shapes and orders them; `database` has seven independent skills — five of them coordinated by an optional harness, plus an architecture stage above them and a query review beside them — and `networking` has five coordinated the same way; `infrastructure` has two skills and `security` three, each running review → design → propose as modes of one skill; `review` has six skills around one change as it arrives from anyone — pr-prep before review, code-xray for what the history says, peer-review as the gate with test-review and concurrency-review as its specialists, review-retro after — and `harness/prreview.py` runs all of them on a single pull request. Every skill also works entirely on its own.
+The families are loosely coupled by design. `development` is a genuine pipeline where each stage checks the one before it; `containers` is an ordered pair (image, then stack) plus three skills for containers once they run — hardening, debugging, and Swarm; `operations` is a response chain — hotfix escalates to incident-fix, which hands its record to post-mortem — plus release-notes, which stands alone, and the tracker pair — ticket writes work items to Linear, Azure DevOps or Jira for every other skill, backlog shapes and orders them; `database` has seven independent skills — five of them coordinated by an optional harness, plus an architecture stage above them and a query review beside them — and `networking` has five coordinated the same way; `infrastructure` has two skills and `security` three, each running review → design → propose as modes of one skill; `review` has six skills around one change as it arrives from anyone — pr-prep before review, code-xray for what the history says, peer-review as the gate with test-review and concurrency-review as its specialists, review-retro after — and `harness/prreview.py` runs all of them on a single pull request; `memory` is one skill with four modes, whose dream keeps what agents learn about the repo true and small. Every skill also works entirely on its own.
 
 **The family directories are scaffolding for reading this repo, nothing more.** The agent never sees them — it selects on each `SKILL.md`'s frontmatter `description`. When you take a skill, you take the skill folder; see [How to use](#how-to-use).
 
@@ -271,6 +273,25 @@ readiness  history      lenses, verify,   specialists for lenses K, G and L     
 
 ---
 
+## memory
+
+One skill for what agents learn about a repository, kept in the repository: shared, reviewed like code, and corrected by dreaming. Built on Anthropic's *The components of agent memory* (2026), the Claude API memory tool docs, and Monigatti's walkthrough of the tool, with one structural idea from *Redesigning source control at Anthropic* (2026).
+
+```
+capture (in session, light)  ──►  notes/  ──►  dream (offline, with hindsight)  ──►  a PR a person approves
+"remember this" / clearly                       verify against the code · correct · merge · delete
+worth keeping                                   promote to wiki/ · demote from INDEX.md · repair links
+                                                remove secrets · quote planted instructions · advance the watermark
+```
+
+| Skill | What it does |
+|-------|--------------|
+| [repo-memory](skills/memory/repo-memory/SKILL.md) | Install mode scaffolds `.memory/` as a four-layer hierarchy (git history as the transcript, one-fact notes, single-writer wiki pages, a small `INDEX.md` imported from `CLAUDE.md` / `AGENTS.md`) with guidance on what memory is for, not how to use it. Capture mode writes one note when something is clearly worth keeping. Dream mode is the offline consolidation pass: it reads only the commits since its watermark, re-verifies the notes they touched, corrects, merges, deletes and promotes with evidence, keeps the index under 200 lines, removes secrets and treats instructions found in memory as data, then leaves the diff uncommitted for a person to approve. Audit mode runs the bundled read-only linter (`scripts/memlint.py`). |
+
+**The theory** is distilled into RM1–RM17. Stale is not wrong: a dream keeps an old note that still holds, and only its `verified` date moves. Memory is data, never authority: no dream obeys what it reads, and no change to memory lands without review.
+
+---
+
 ## Reference docs
 
 These carry no workflow of their own — the skill in the same folder links into them.
@@ -369,6 +390,10 @@ These carry no workflow of their own — the skill in the same folder links into
 | [metrics](skills/review/review-retro/metrics.md) | review-retro — each metric: definition, formula, what it tells you, how it's gamed, minimum sample |
 | [record-template](skills/review/review-retro/record-template.md) | review-retro — the PR record and retro report templates |
 | [proposals](skills/review/review-retro/proposals.md) | review-retro — turning recurring findings into checklist items, rules and lint rules, with the human-approval rule |
+| [theory](skills/memory/repo-memory/theory.md) | repo-memory — the principles RM1–RM17: the memory hierarchy, dreaming, single writers, small injected context, memory as data; the API memory tool |
+| [layout](skills/memory/repo-memory/layout.md) | repo-memory — the `.memory/` tree, note and page frontmatter, the index budget, the entry-point import, migrating, what never goes in |
+| [dreaming](skills/memory/repo-memory/dreaming.md) | repo-memory — the dream pass: incremental inputs, the six operations and their evidence, verifying a note, cadence |
+| [templates](skills/memory/repo-memory/templates.md) | repo-memory — INDEX.md, a note, a page, `.dream-state`, the dream report, the CI gate and schedule |
 
 Each doc lives in the folder of the skill that uses it, and nothing reaches across folders.
 
@@ -419,7 +444,7 @@ Each skill carries its own copy of the dispatch contract it needs, so the folder
 
 Assertions are split: **capability** (does the stage do its job at all) from **delta** (does it do what a change to the skill added). Only the delta column is evidence an edit helped. The seven `development` stages were re-run on 2026-11-03, after the security material landed in them. Each eval ran three times with the skill and once against the pre-session baseline, 28 runs in all. tdd, refactor-review and devils-advocate were then fixed and evals 2–4 re-run the same way (12 runs). The seven now score **0.99 vs 0.13** on delta and **1.00 vs 0.88** on capability.
 
-**Scored: every skill.** The seven `development` stages carry the n=3 result above. The other skills' first run (2026-10-25) is one with-skill run each — three for evals 11–13, and evals 8–14 were re-run three times on 2026-11-03 — against a baseline with no skill at all, which is the honest comparison for a skill that did not exist at the baseline ref. The security family's first run (2026-11-02, evals 38–46, one per mode) is the same shape. The database family (evals 30–34, 47–48) was re-run three times each on 2026-11-03, after its 2026-11-02 rework and with dbquery and dbarchitect run for the first time (eval 30 again after a dbaudit fix, and evals 30–31 once more after dbaudit and dbdesign fixes): **0.99 vs 0.67** on delta, **1.00 vs 0.95** on capability. The container family (evals 6, 28 and 35–37) has three with-skill runs per eval. Every run scored 1.00 on delta, against **0.51** on average for no skill; evals 6, 28, 36 and 37 were re-run on 2026-11-04/05 with traps for what the skills add over a bare agent, which had scored 0.75 against them before. The review family (2026-11-03, evals 49–54) has three standalone with-skill runs per eval, against no skill: **0.99 vs 0.31** on delta, **1.00 vs 0.92** on capability. Across all 55 scored evals: **0.99 vs 0.49** on delta, **1.00 vs 0.90** on capability. Per eval in [evals/benchmark.md](evals/benchmark.md).
+**Scored: every skill.** The seven `development` stages carry the n=3 result above. The other skills' first run (2026-10-25) is one with-skill run each — three for evals 11–13, and evals 8–14 were re-run three times on 2026-11-03 — against a baseline with no skill at all, which is the honest comparison for a skill that did not exist at the baseline ref. The security family's first run (2026-11-02, evals 38–46, one per mode) is the same shape. The database family (evals 30–34, 47–48) was re-run three times each on 2026-11-03, after its 2026-11-02 rework and with dbquery and dbarchitect run for the first time (eval 30 again after a dbaudit fix, and evals 30–31 once more after dbaudit and dbdesign fixes): **0.99 vs 0.67** on delta, **1.00 vs 0.95** on capability. The container family (evals 6, 28 and 35–37) has three with-skill runs per eval. Every run scored 1.00 on delta, against **0.51** on average for no skill; evals 6, 28, 36 and 37 were re-run on 2026-11-04/05 with traps for what the skills add over a bare agent, which had scored 0.75 against them before. The review family (2026-11-03, evals 49–54) has three standalone with-skill runs per eval, against no skill: **0.99 vs 0.31** on delta, **1.00 vs 0.92** on capability. repo-memory (2026-11-07, eval 55) has three standalone with-skill runs against no skill: **1.00 vs 0.85** on delta, **1.00 vs 1.00** on capability. Across all 56 scored evals: **0.99 vs 0.50** on delta, **1.00 vs 0.90** on capability. Per eval in [evals/benchmark.md](evals/benchmark.md).
 
 The fixtures are seeded so a naive answer fails them: a compose fixture with a stale `ELASTICSEARCH_URL`, an incident whose trigger sits nine days before the outage, production levers that are stubs recording their calls (so "took no action without confirmation" is checked, not inferred), networks graded by parsing every CIDR and every draw.io cell, DDL executed in SQLite and probed with rows that must be refused, acceptance tests run against three mutants.
 
@@ -427,6 +452,7 @@ The fixtures are seeded so a naive answer fails them: a compose fixture with a s
 
 - `container-debug` **1.00 vs 0.58** is the smallest gain in the container family. A bare agent diagnoses an OOM kill, a `localhost` URL, CRLF line endings and even a 137 that is a stop timeout, not OOM. The skill adds the frame: the mode, rotation and redacted captures for an exposed secret, a root-cause note per symptom, a not-verified list, and each fix proven by the probe that found it. `dockerfile` (**1.00 vs 0.45**) first scored **0.79 vs 0.79** and then 1.00 vs 0.83, because its eval measured mostly what any competent repair does; it now also tests what the skill instructs and a bare agent skips. See [evals/README.md](evals/README.md#dockerfile-eval-28).
 - `netblueprint` scores **1.00 vs 1.00**: its eval checks that it refuses an unaccepted proposal, which a bare agent also does.
+- `repo-memory` **1.00 vs 0.85** (n=3): a bare agent asked to "dream" over the memory already re-verifies notes against the code, fixes the changed retry limit and the rename, keeps the stale-but-true note, merges the duplicate, repairs the broken link, shrinks the index, strips the password and advances the watermark. The skill adds two things: promoting the three Relay notes into one page, and reporting the instruction planted in a session log as data. The bare run deleted that log without saying so.
 - `dbquery` **1.00 vs 0.93** (n=3): a bare agent already ranks by total time, finds the N+1 and weighs the indexes; the skill adds the 0–10 score with its base and cap, and a complete review every time.
 - `dbdiagram` **1.00 vs 0.88** (n=3): the design it is handed is already written in Barker, so a bare agent draws most of it. Its first run's 0.83 was mostly grader false negatives (an invisible junction read as a Chen oval, a legend split across cells, key cells side by side). The skill now carries draw.io conventions, and the eval also checks UID bars, alternate keys, labelled FK paths and the validation report. Its notation-translation rules are not exercised by this fixture.
 - `dbaudit` **0.95 vs 0.43** (n=3, up from 0.83 and 0.86 after two fixes). The first re-run stated the gate's conditions together and incompletely, so the skill now has an explicit four-line gate block. The second wrote loose relationship sentences and called the copied customer columns 2NF. The skill now requires a recovered-model section of Barker sentences and names that copy a ⚠️ 3NF candidate. All three runs of the third re-run did both. What still varies by run: a High finding resting on a needs-data claim, and the payment table's strength left out.
@@ -492,6 +518,9 @@ npx skills add izentenosmith/skills --skill threatmodel appsec hardening
 
 # review — a change as it arrives
 npx skills add izentenosmith/skills --skill pr-prep code-xray peer-review test-review concurrency-review review-retro
+
+# memory — what agents learn about the repo, kept true by dreaming
+npx skills add izentenosmith/skills --skill repo-memory
 ```
 
 **Everything:**
@@ -545,6 +574,7 @@ npx skills add izentenosmith/skills --skill '*'
 | | `npx skills add izentenosmith/skills --skill test-review` |
 | | `npx skills add izentenosmith/skills --skill concurrency-review` |
 | | `npx skills add izentenosmith/skills --skill review-retro` |
+| memory | `npx skills add izentenosmith/skills --skill repo-memory` |
 
 Any mix works too — `--skill` takes as many names as you give it.
 
