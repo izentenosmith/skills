@@ -5914,6 +5914,7 @@ E56_CHANGES = """
 | 4 | Create | Story | The day schedule CSV lists each appointment's practitioner | Component Reporting · no sprint · Relates FH-198 | — |
 | 5 | Comment | — | on FH-219 | iPadOS 18.0 also affected (bug bash 2026-11-06) | — |
 | 6 | Link and comment | — | FH-221 duplicates FH-205 | the bug bash repro, on FH-205 | — |
+| 7 | Create | Task | A mailer that can't send alerts within 15 minutes | Component Notifications · no sprint · Relates the incident | follow-up, action:mitigate |
 """
 E56_DUPES_ROWS = """| 7 | Create | Bug | Reminder SMS shows the wrong hour | Component Notifications · Clinic impact One clinic · Sprint FH Sprint 46 (425) | — |
 | 8 | Create | Bug | Cancel button does nothing on iPad | Component Patient app · Clinic impact All clinics · Sprint FH Sprint 46 (425) | — |
@@ -5923,6 +5924,7 @@ E56_INCIDENT = """
 
 ### 1 · Payment confirmation emails are sent again (Bug, incident)
 - **Labels:** incident:prod · **Component:** Notifications · **Clinic impact:** All clinics · **Sprint:** FH Sprint 46
+- **Incident severity:** left unset: the incident commander sets it from the on-call matrix, which isn't in this repo. Who is commanding?
 
 h3. Symptom and severity
 No payment confirmation emails (and no booking confirmations) since last night, at every clinic. Card payments succeed. Support severity S2 (ESC-5531).
@@ -5954,6 +5956,7 @@ E56_STORIES = """
 
 **Who:** receptionists taking a booking by phone. **What:** the patient's number of missed appointments next to their name. **Why:** to ask for a deposit under the manager's policy (FH-224).
 **Acceptance criteria:** a patient with 3 missed appointments shows "3 no-shows"; a new patient shows none.
+**Demo:** book by phone at Providencia for a test patient with three no-shows.
 **Open question:** over what period? (clinic manager)
 
 ### 4 · The day schedule CSV lists each appointment's practitioner (Story)
@@ -5961,6 +5964,21 @@ E56_STORIES = """
 
 **Who:** front desk. **What:** a practitioner column right after the start time. **Why:** each physio gets their own list.
 **Acceptance criteria:** the export for Tuesday at Providencia has a practitioner column after start time.
+**Demo:** export Tuesday at Providencia and open it in Excel.
+"""
+E56_FOLLOWUP = """
+### 7 · A mailer that can't send alerts within 15 minutes (Task, follow-up)
+- **Labels:** follow-up, action:mitigate · **Component:** Notifications · **Origin:** ESC-5531 and the incident above
+
+**Outcome:** when the mailer can't deliver for 15 minutes, on-call is paged; support no longer finds out from patients.
+**Meanwhile:** support watches the mailer error count by hand each morning.
+**Owner:** to be named by the team · **Due:** to be set at planning (proposed 2026-11-24)
+"""
+E56_FOLLOWUP_BARE = """
+### 7 · A mailer that can't send alerts within 15 minutes (Task, follow-up)
+- **Labels:** follow-up · **Component:** Notifications
+
+Add alerting to the mailer.
 """
 E56_RESPONSE = """Jira can't be reached from here (no `JIRA_PAT`, and the host doesn't resolve), so nothing was written.
 The reconciled change set is in `.workflow/ticket-pending.md`: 4 items to create (the payment-email incident
@@ -5970,10 +5988,16 @@ Restore Jira access, then confirm the set and I'll write it and read every item 
 
 
 def e56(head=E56_HEAD + E56_SPRINT, reconcile=E56_RECONCILE, changes=E56_CHANGES, incident=E56_INCIDENT,
-        waitlist=E56_WAITLIST, stories=E56_STORIES, response=E56_RESPONSE, path=".workflow/ticket-pending.md"):
+        waitlist=E56_WAITLIST, stories=E56_STORIES, followup=E56_FOLLOWUP, response=E56_RESPONSE,
+        path=".workflow/ticket-pending.md", profile=True):
     def build(run, repo):
-        w(repo / path, head + reconcile + changes + incident + waitlist + stories)
+        w(repo / path, head + reconcile + changes + incident + waitlist + stories + followup)
         w(run / "outputs/response.md", response)
+        if profile:
+            sub(repo / ".workflow/tracker.md", "current: **FH Sprint 44** (id 412)",
+                "current: **FH Sprint 46** (id 425), re-resolved 2026-11-09 from the board's sprint report")
+            prof = repo / ".workflow/tracker.md"
+            prof.write_text(prof.read_text() + "- The cached sprint goes stale every two weeks: re-resolve it before every write.\n")
     return build
 
 
@@ -6007,6 +6031,21 @@ CONTROLS_TICKET = {
                                            "| 4 | Create | Story | The day schedule CSV lists each appointment's practitioner | Component Reporting · no sprint · Relates FH-198 | — |\n", ""),
                                        stories=E56_STORIES.split("### 4 ·")[0]),
                                    ["the practitioner column a new item linked to FH-198, which is not reopened"]),
+            # maps support's S2 onto the engineering severity the incident commander owns
+            "wrong-picks-severity": (e56(incident=E56_INCIDENT.replace(
+                "- **Incident severity:** left unset: the incident commander sets it from the on-call matrix, which isn't in this repo. Who is commanding?",
+                "- **Incident severity:** SEV-2 (support rated it S2)")),
+                ["the incident severity left to the incident commander, not mapped from support's S2"]),
+            # stories with criteria but no demo line
+            "wrong-no-demo": (e56(stories="".join(l for l in E56_STORIES.splitlines(True) if not l.startswith("**Demo:**"))),
+                              ["both new stories carry a demo line"]),
+            # the follow-up as a bare reminder: no action type, no date, nothing about the meantime
+            "wrong-bare-followup": (e56(followup=E56_FOLLOWUP_BARE,
+                                        changes=E56_CHANGES.replace("follow-up, action:mitigate", "follow-up")),
+                                    ["the follow-up support asked for has an action type, a due date and what's in place meanwhile"]),
+            # re-resolves the sprint for the drafts but leaves the cached value in the profile
+            "wrong-profile-untouched": (e56(profile=False),
+                                        ["the profile kept true: the stale sprint corrected and a known trap recorded"]),
             # copies the QA notes' titles, prefixes and all
             "wrong-prefixed-titles": (e56(changes=E56_CHANGES.replace(
                 "| Patients without an email can join the waitlist |", "| BUG: Waitlist — \"Something went wrong\" when joining |")),

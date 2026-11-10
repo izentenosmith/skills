@@ -360,10 +360,10 @@
     },
     "eval-56-ticket-reconcile-before-filing": {
       "skill": "ticket",
-      "iteration": "iteration-35",
+      "iteration": "iteration-36",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "package",
+      "skill_hash": "96e6dbd09e1539d84a7ccd849d5df7f13ec60169d2b7585a1c118a565485bcaf"
     },
     "eval-57-backlog-health-and-order-by-policy": {
       "skill": "backlog",
