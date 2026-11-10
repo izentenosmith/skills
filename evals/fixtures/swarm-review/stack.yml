@@ -7,9 +7,19 @@ services:
     configs:
       - source: edge_conf_v3
         target: /etc/nginx/nginx.conf
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 30s
     networks: [frontend]
     deploy:
       replicas: 2
+      update_config:
+        order: start-first
+        failure_action: rollback
+        monitor: 15s
 
   api:
     image: registry.example.com/shoplane/api:${API_TAG}
@@ -17,6 +27,7 @@ services:
       DB_HOST: postgres
       DB_PASSWORD_FILE: /run/secrets/db_password
       LOG_LEVEL: ${LOG_LEVEL}
+      SMTP_HOST: 10.0.2.15
     secrets: [db_password]
     depends_on: [postgres]
     restart: always

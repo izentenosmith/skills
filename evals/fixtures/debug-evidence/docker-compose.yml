@@ -24,6 +24,15 @@ services:
       redis: {condition: service_healthy}
     restart: unless-stopped
 
+  scheduler:
+    build: ./scheduler
+    environment:
+      REDIS_URL: redis://redis:6379/0
+    mem_limit: 128m
+    depends_on:
+      redis: {condition: service_healthy}
+    restart: unless-stopped
+
   migrate:
     build: ./migrate
     environment:

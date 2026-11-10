@@ -428,6 +428,65 @@ def eval5(run):
     ]
 
 
+def compose_services(text):
+    """{name: block} for the top-level services: mapping of one compose file, split by indentation."""
+    m = re.search(r"^services:[ \t]*\n", text, re.M)
+    if not m:
+        return {}
+    out, name, ind = {}, None, None
+    for line in text[m.end():].splitlines(keepends=True):
+        if not line.strip() or line.lstrip().startswith("#"):
+            if name:
+                out[name] += line
+            continue
+        lead = len(line) - len(line.lstrip())
+        if lead == 0:
+            break
+        ind = lead if ind is None else ind
+        if lead == ind:
+            name = line.strip().split(":")[0].strip("\"'")
+            out[name] = ""
+        elif name:
+            out[name] += line
+    return out
+
+
+def compose_ports(block):
+    """The published-port entries of one service block, short form or long form, one string each."""
+    m = re.search(r"^([ \t]*)ports:[ \t]*(\[.*\])?[ \t]*$", block, re.M)
+    if not m:
+        return []
+    if m.group(2):
+        return [x.strip().strip("\"'") for x in m.group(2).strip("[]").split(",") if x.strip()]
+    items = []
+    for line in block[m.end():].splitlines():
+        if not line.strip():
+            continue
+        if len(line) - len(line.lstrip()) <= len(m.group(1)):
+            break
+        s = line.strip()
+        if s.startswith("- "):
+            items.append(s[2:])
+        elif items:
+            items[-1] += " " + s
+    return items
+
+
+def compose_merged(block, text):
+    """A service block plus the extension it merges with `<<: *anchor`, where its keys may live."""
+    out = block
+    for a in re.findall(r"<<:\s*\*([\w-]+)", block):
+        m = re.search(rf"&{re.escape(a)}\b[^\n]*\n((?:[ \t]+[^\n]*\n?|[ \t]*\n)*)", text)
+        out += m.group(1) if m else ""
+    return out
+
+
+COMPOSE_BACKING = r"image:\s*[\"']?[^\n]*(postgres|postgis|redis|valkey|meili)"
+# a credential written as a value, not read from the env file: KEY: value, KEY=value, user:pass@ in a URL
+# (a name inside ${...} is a reference, and its :- default is the dev-only default the skill allows)
+COMPOSE_LITERAL = (r"(?<![\w{$])\w*(PASSWORD|SECRET|_KEY)\b[ \t]*[:=][ \t]*[\"']?[^\s\"'#$]"
+                   r"|://[^:/\s@\"'${}]+:[^@\s/\"'${}]+@")
+
 
 def eval6(run):
     """docker-compose: composes what the code connects to, and nothing else."""
@@ -441,6 +500,36 @@ def eval6(run):
     # a healthcheck runs inside its own container, where localhost is right (service-catalog.md uses it)
     probes = re.compile(r"^(\s*)healthcheck:\s*\n(?:\1\s+.*\n?|\s*\n)*", re.M)
     wired = probes.sub("", comp)
+
+    # the base file and its override, told apart by name
+    found = list(repo.glob("*compose*.y*ml"))
+    base = "\n".join(read(p) for p in found if "override" not in p.name)
+    over = [p.name for p in found if "override" in p.name]
+    blocks = compose_services(base)
+    every = [b for p in found for b in compose_services(read(p)).values()]
+
+    # d: versions from CI, which pins production's (.github/workflows/ci.yml)
+    pg = re.findall(r"image:\s*[\"']?[^\n\"']*?\bpostgres(?:ql)?:([\w.\-]+)", base)
+    meili = re.findall(r"image:\s*[\"']?[^\n\"']*?meilisearch:([\w.\-]+)", base)
+    versions = bool(pg) and all(re.match(r"15\b", v) for v in pg) \
+        and bool(meili) and all(re.match(r"v1\.6\b", v) for v in meili)
+    # d: nothing listens beyond the laptop's loopback
+    ports = [p for b in every for p in compose_ports(b)]
+    loopback = bool(ports) and all(re.search(r"127\.0\.0\.1|::1", p) for p in ports)
+    # d: datastore ports are a dev convenience: the base publishes none, the override carries them
+    backing_published = [n for n, b in blocks.items() if re.search(COMPOSE_BACKING, b) and compose_ports(b)]
+    # d: long-running app services restart when they exit
+    apps = [n for n in blocks if re.search(r"api|web|app|worker", n, re.I) and not re.search(r"migrat", n, re.I)]
+    no_restart = [n for n in apps
+                  if not re.search(r"restart:\s*[\"']?(unless-stopped|always)", compose_merged(blocks[n], base))]
+    # d: no credential written into a compose file
+    literal = sorted({m.group(0)[:40] for m in re.finditer(COMPOSE_LITERAL, re.sub(r"(^|\s)#.*", "", comp))})
+    # d: .env verified ignored by git (the fixture's .gitignore misses it), the template kept
+    git_rules = ignore_rules(read(repo / ".gitignore"))
+    env_ignored = ignored(git_rules, ".env") and not ignored(git_rules, ".env.example")
+    # d: data survives a down without -v, and down -v is named as what deletes it
+    survival = near(r, r"\bdown\b(?![ \t]+-v)", r"surviv|still there|read (it )?back|persist|intact|kept", 200) \
+        and near(r, r"down[ \t]+-v\b", r"delet|destroy|wipe|remov|\blos[et]|eras", 200)
     return [
         # capability — any competent attempt should manage these
         ("a compose file was produced", bool(comp.strip()), f"{len(comp)} chars", C),
@@ -477,6 +566,20 @@ def eval6(run):
          not any_of(wired, r"localhost:(5432|6379|7700)"), "healthcheck probes excluded", D),
         ("verification from a cold start stated",
          any_of(r, r"down\s+-v", r"cold start", r"from cold"), "", D),
+        ("images match the versions CI pins for production (postgres 15, meilisearch v1.6)", versions,
+         f"postgres {pg or None}; meilisearch {meili or None}", D),
+        ("project name pinned with a top-level name:", bool(re.search(r"^name:[ \t]*\S", base, re.M)),
+         "two checkouts named alike otherwise share volumes", D),
+        ("one network declared explicitly", bool(re.search(r"^networks:", base, re.M)), "", D),
+        ("no credential written into a compose file: ${VAR} from .env", bool(base.strip()) and not literal,
+         f"literal: {literal or 'none'}", D),
+        ("every published port bound to loopback", loopback, f"{len(ports)} published: {ports[:6]}", D),
+        ("datastore ports only in the override: the base publishes none",
+         bool(over) and not backing_published, f"override {over or None}; published in base: {backing_published or 'none'}", D),
+        ("api and worker restart unless-stopped", bool(apps) and not no_restart,
+         f"app services {apps}; without a restart policy {no_restart or 'none'}", D),
+        (".env ignored by git, .env.example kept", env_ignored, "the fixture's .gitignore misses .env", D),
+        ("data survival proven with down (no -v) and up; down -v named as deleting the volumes", survival, "", D),
     ]
 
 
@@ -2126,7 +2229,7 @@ def eval27(run):
 # Graded from files: the Dockerfile is parsed per stage and the .dockerignore is
 # evaluated with Docker's own matching rules. Nothing is built.
 
-DF_SECRETS = ["eval-fake-pdfrender-key-0042", "eval-fake-signing-secret-7d1c"]
+DF_SECRETS = ["eval-fake-pdfrender-key-0042", "eval-fake-signing-secret-7d1c", "eval-fake-staging-token-5e2a"]
 DF_RUNTIME_FILES = {"node_modules", "dist", "package.json", "pnpm-lock.yaml", "migrations", "templates", ".npmrc"}
 DF_CONTEXT_FILES = DF_RUNTIME_FILES - {"node_modules", "dist"}
 DF_TOOLCHAIN = r"(apt-get|apt) install[^\n]*\b(build-essential|g\+\+|gcc|make|python3?)\b|apk add[^\n]*\b(build-base|g\+\+|gcc|make|python3?)\b"
@@ -2303,7 +2406,7 @@ def result_rows(text):
     return "\n".join(rows)
 
 
-DF_NO_DOCKER = (r"docker[^\n]{0,60}(not available|unavailable|not installed|isn't installed|not running|no daemon|"
+DF_NO_DOCKER = (r"\bdocker\b[^\n]{0,60}(not available|unavailable|not installed|isn't installed|not running|no daemon|"
                 r"could ?n[o']t (connect|run|be run)|cannot connect|command not found)|"
                 r"(no|without) (a )?docker (daemon|engine|CLI|binary|available|installed|here)")
 
@@ -2476,6 +2579,33 @@ def eval28(run):
         r, r"\btouch\b", r"proves nothing|not (enough|sufficient)|mtime|modification time|content", 160)
     cache_probe = near(r, edit, r"\bCACHED\b", 300) and not touched
 
+    # d: .dockerignore patterns are anchored at the context root, so a bare .env lets scripts/.env through
+    nested_env = [p for p in ("scripts/.env", "scripts/.env.local") if not ignored(rules, p)]
+    # d: no VOLUME: it makes a stray anonymous volume on every run; the manifest owns volumes
+    volumes = [a for s in stages for o, a in s["ins"] if o == "VOLUME"]
+    # d: the access log goes to stdout, where `docker logs` and the cluster's shipper read it
+    srv = read(repo / "src/server.ts")
+    k8s = read(repo / "deploy/k8s/deployment.yaml")
+    stdout_log = any(o == "ENV" and re.search(r"ACCESS_LOG[= ]+[\"']?/(dev/std(out|err)|proc/(self|1)/fd/[12])", a)
+                     for o, a in fins) \
+        or any(o == "RUN" and re.search(r"ln -s\w*\s+/dev/std(out|err)\s+\S*access\.log", a) for o, a in fins) \
+        or bool(re.search(r"name:\s*ACCESS_LOG\s*\n\s*value:\s*[\"']?/dev/std(out|err)", k8s)) \
+        or (bool(srv) and "createWriteStream" not in srv
+            and bool(re.search(r"process\.stdout|console\.(log|info)\([^\n]*(req\.method|originalUrl|statusCode)", srv)))
+    # d: node as PID 1 has no default SIGTERM handler: an init in front of it, or a handler in the server
+    init = bool(re.search(r"tini|dumb-init|catatonit", df_last(fins, "ENTRYPOINT")[1] or ""))
+    handler = bool(re.search(r"process\.(on|once)\(\s*[\"']SIGTERM", srv)) or (  # or a loop over the signals
+        bool(re.search(r"[\"']SIGTERM[\"']", srv)) and bool(re.search(r"process\.(on|once)\(\s*\w+\s*,", srv)))
+    # d: Step 4 reported as one table, the command beside the result
+    table = [l for l in result_rows(r).splitlines() if re.search(r"`[^`]*\b(docker|curl|du|trivy|make|time)\b", l)]
+    # d: the context measured before and after (or the command, when docker is absent)
+    ctx_win = [r[m.start(): m.end() + 300] for m in re.finditer(r"transferring context|build context|context size", r, re.I)]
+    ctx_sizes = {s for w_ in ctx_win for s in re.findall(r"\b\d+(?:\.\d+)?\s?[kKMG]i?B\b", w_)}
+    # two sizes, or one size said to hold both before and after
+    same = any(ctx_sizes and re.search(r"before[^\n]{0,40}after|both before and after|unchanged|as before", w_, re.I) for w_ in ctx_win)
+    context = len(ctx_sizes) >= 2 or same or (no_docker and bool(re.search(r"transferring context", r, re.I)))
+    hardened = any("docker run" in l and "--read-only" in l and re.search(r"--cap-drop[= ]ALL", l) for l in r.splitlines())
+
     return [
         # capability — any competent repair of a 1 GB, cache-busting image
         ("multi-stage: TypeScript compiled in a build stage, dist copied from it", multi,
@@ -2518,6 +2648,23 @@ def eval28(run):
          f"leaks: {leaks or 'none'}", D),
         ("Step 4 checks each stated with its command; results observed, or docker's absence said plainly", verify,
          f"{len(cmds)}/8 commands; observed {len(observed)}; no-docker stated {no_docker}", D),
+        (".dockerignore excludes nested env files (**/.env): scripts/.env stays out of the context", not nested_env,
+         f"sent: {nested_env or 'none'}", D),
+        ("no VOLUME in the image: volumes belong to the manifest", bool(stages) and not volumes,
+         f"VOLUME {volumes or 'none'}", D),
+        ("the access log goes to stdout, not a file inside the container", stdout_log,
+         "ACCESS_LOG=/dev/stdout, a symlink, or the server changed", D),
+        ("SIGTERM reaches a handler: an init in front of node, or a handler in the server", init or handler,
+         f"init {init}; handler {handler}", D),
+        ("Step 4 reported as one table: check, command, observed result", len(table) >= 6, f"{len(table)} rows", D),
+        ("stays running: the container's state read after start (Status, ExitCode, OOMKilled, RestartCount)",
+         bool(re.search(r"State\.(Status|ExitCode)|RestartCount", r)), "", D),
+        ("stops cleanly: time docker stop", bool(re.search(r"time docker stop", r)), "", D),
+        ("non-root checked from the metadata and with --entrypoint \"\"",
+         bool(re.search(r"Config\.User", r)) and bool(re.search(r"--entrypoint[= ](\"\"|'')", r)), "", D),
+        ("the hardened run: --read-only with --cap-drop ALL", hardened, "", D),
+        ("build context measured before and after", context, f"sizes near the context: {sorted(ctx_sizes)[:4]}", D),
+        ("vulnerabilities counted with trivy", bool(re.search(r"trivy image", r)), "", D),
     ]
 
 
@@ -3797,6 +3944,13 @@ DBG_SECRETS = ["eval-fake-pg-pass-7731"]
 def eval36(run):
     """container-debug from evidence: OOM read from the runtime, localhost inside a container, CRLF entrypoint."""
     t = everything(run, "debug-evidence")
+    comp = read(run / "repo/docker-compose.yml")
+    sched = compose_services(comp).get("scheduler", "")
+    # d: the scheduler's 137 is a kill after the stop timeout (OOMKilled false, 21.7 of 128 MiB), not memory
+    not_oom = near(t, r"scheduler", r"OOMKilled[\"'`:= ]*false|not (an? )?OOM|not (out of )?memory|isn.t (an? )?(OOM|memory)|"
+                   r"stop timeout|grace period|after (the )?(10|ten).?(s|second)|SIGTERM", 400)
+    sigterm = near(t, r"scheduler", r"SIGTERM", 400) and near(
+        t, r"scheduler|SIGTERM", r"signal\.signal|handler|init:\s*true|\btini\b|dumb-init|--init", 400)
     return [
         # capability — a competent diagnosis finds these
         ("a diagnosis was produced", len(t) > 1200, f"{len(t)} chars", C),
@@ -3826,6 +3980,31 @@ def eval36(run):
          f"{len(re.findall(r'[*]{2}Cause:?[*]{2}:?|^[ ]*[-*]?[ ]*Cause:', t, re.M))} cause lines", D),
         ("nothing claimed verified on the VM",
          any_of(t, r"not (been )?(run|verified)|unverified|could not verify|can.?t verify|would confirm|to confirm"), "", D),
+        ("evidence-only mode named", any_of(t, r"evidence.only"), "", D),
+        ("future captures cut to names (cut -d= -f1, <REDACTED>, or a --format that skips Config.Env)",
+         any_of(t, r"cut -d= ?-f ?1", r"<REDACTED>", r"--no-interpolate",
+                r"(--format|template)[^\n]{0,80}(without|leav\w* out|skip\w*|omit\w*|exclud\w*)[^\n]{0,30}Env"), "", D),
+        ("the second copy of the password, in compose-config.txt, flagged too",
+         near(t, r"compose-config", r"password|secret|credential|exposed|redact|rotat", 300), "", D),
+        ("rotation of the exposed password prescribed",
+         near(t, r"password|POSTGRES_PASSWORD|DATABASE_URL|credential", r"rotat", 300), "", D),
+        ("the scheduler's 137 read as a kill after the stop timeout, not OOM", not_oom,
+         "inspect-scheduler.json has OOMKilled false at 21.7 of 128 MiB", D),
+        ("the scheduler fixed where SIGTERM is lost: a handler or an init, PID 1 named", sigterm, "", D),
+        ("the scheduler's memory limit left alone", bool(re.search(r"mem_limit:\s*128m", sched)),
+         f"scheduler block: {' '.join(sched.split())[:90]}", D),
+        ("a Symptom line per symptom (four)",
+         len(re.findall(r"\*\*Symptom:?\*\*:?|^\s*[-*]?\s*Symptom:", t, re.M)) >= 4,
+         f"{len(re.findall(r'[*]{2}Symptom:?[*]{2}:?|^[ ]*[-*]?[ ]*Symptom:', t, re.M))} symptom lines", D),
+        ("why nothing caught it, for most symptoms", len(re.findall(r"why nothing caught", t, re.I)) >= 3,
+         f"{len(re.findall(r'why nothing caught', t, re.I))} lines", D),
+        # the probes the skill prescribes, re-run as the proof (Step 4: "prove it with the probe that showed it")
+        ("the worker's fix proven by RestartCount staying put over minutes",
+         near(t, r"RestartCount|restarts?=", r"\d+\s*min|minutes|apart|unchanged|doesn.?t (change|climb|grow)|"
+              r"stops? (climbing|growing|rising)|must not climb|stays the same", 250), "", D),
+        ("CRLF shown in the bytes with od -c", any_of(t, r"od -c"), "", D),
+        ("the scheduler's fix proven by timing a stop", any_of(t, r"time docker( compose)? stop"), "", D),
+        ("a not-verified list", any_of(t, r"^#+[^\n]*not verified|\*\*not verified|^not verified", flags=re.I | re.M), "", D),
     ]
 
 
@@ -3838,6 +4017,16 @@ def eval37(run):
     """docker-swarm Review: two managers, node-local Postgres, ignored keys and .env, the mesh, no changes."""
     t = everything(run, "swarm-review")
     sids = cites(t, "S", 12)
+    ids = {m.upper() for m in re.findall(r"\bSW-(?:CLU|ROL|STA|NET|SEC|SCH|STK)-\d+\b", t, re.I)}
+    # d: the overlays sit in 10.0.0.0/24-10.0.2.0/24, inside the Hetzner network the nodes and the mail relay use
+    pool = near(t, r"10\.0\.[0-2]\.0/24|10\.0\.2\.15|10\.0\.0\.[2-6]\b", r"overlap|collid|collision|clash|conflict", 300) \
+        and any_of(t, r"default-addr-pool", r"subnet:\s*(172|192|10\.(?!0\.)\d)", r"non-overlapping|outside (the )?10\.0\.0\.0/16")
+    # d: the edge's update is declared good at 15 s; its healthcheck can't fail before 30 + 10 × 3 = 60 s
+    edge_monitor = r"monitor\W{0,4}(of\s+|is\s+|=\s*)?15\s?s\b|\b15\s?s\W{0,3}monitor"
+    monitor = near(t, edge_monitor, r"\bedge\b", 400) and near(t, edge_monitor, r"\b60\s?s\b|start_period|30\s?s?\s*\+", 300)
+    # d: scale by hand and the next stack deploy reverts it
+    drift = near(t, r"flash-sale", r"revert|next (stack )?deploy|drift|undo|overwrit|source of truth|imperative", 400)
+    summary = [f for f in changes(run, "swarm-review")[0] if re.search(r"(^|/)summary\.md$", f)]
     return [
         # capability — a competent Swarm review finds these
         ("a review with findings was produced", len(t) > 1500 and any_of(t, r"finding"), f"{len(t)} chars", C),
@@ -3881,6 +4070,18 @@ def eval37(run):
         ("fit verdict stated (Swarm vs Compose-on-a-VM vs Kubernetes)",
          near(t, r"\bfit\b|right tool|still (the )?right|suits?", r"swarm|kubernetes|compose"), "", D),
         ("no stack file, script, config or secret changed", *unchanged(run, "swarm-review"), D),
+        ("findings carry SW-<domain>-nn IDs", len(ids) >= 8, f"{len(ids)} distinct", D),
+        ("each finding's confidence marked (✅ / ⚠️ / 🔬)", len(re.findall("✅", t)) >= 8 and any_of(t, "⚠️|🔬"),
+         f"{len(re.findall('✅', t))} ✅", D),
+        ("a chain of findings named", near(t, r"\bchain", r"SW-|manager|healthcheck|volume|postgres", 300), "", D),
+        ("drills before go-live: a rollback and a manager loss",
+         near(t, r"drill", r"rollback", 300) and near(t, r"drill", r"manager", 300), "", D),
+        ("service security handed to container-hardening", any_of(t, r"container-hardening"), "", D),
+        ("the review written to summary.md (analysis/swarm/ by default)", bool(summary), f"{summary or 'none'}", D),
+        ("overlay subnets collide with the 10.0.0.0/16 node network (default-addr-pool or explicit subnets)", pool,
+         "ops/network-ls.txt: ingress 10.0.0.0/24 holds the node addresses; backend 10.0.2.0/24 the mail relay", D),
+        ("the edge's monitor (15 s) shorter than its healthcheck can fail (60 s)", monitor, "", D),
+        ("scripts/flash-sale.sh scales by hand, and the next deploy reverts it", drift, "", D),
     ]
 
 

@@ -4,7 +4,7 @@ These skills are prompts, and a prompt's claims about its own behavior are hypot
 
 The headline result is in [benchmark.md](benchmark.md). The short version: on the assertions that test what the skills instruct, the seven-stage pipeline scores **0.99** against **0.13** for the pre-session baseline; on core capability, **1.00** against **0.88** (iterations 15 and 24, n=3, 2026-11-03).
 
-**Every eval has a scored run.** Evals 6–14 and 16–34 were first run on 2026-10-25 (iterations 6, 7, 9 and the combined 10 in the workspace): one with-skill run each, three for evals 11–13, against a no-skill baseline — none of those skills exists at `3b71f54^`. Across those 35 evals (0–34), **0.95** against **0.49** on delta and **0.99** against **0.85** on capability. hotfix and incident-fix then had their safety rules made hard gates, and evals 8–14 were re-run three times each on 2026-11-03 (iteration 17 for all seven, iteration 20 for hotfix's 8–11 after a scoping fix): every with-skill run scores 1.00, and evals 11–13, which each broke a safety assertion in one of three runs, went 0.83 → 1.00, 0.95 → 1.00 and 0.90 → 1.00. Evals 38–46 (the security family) were first run on 2026-11-02 as iteration 13, the same shape (n=1 against no skill): **0.98** against **0.66** on delta, **1.00** against **1.00** on capability. threatmodel's proposal guidance was then fixed and eval 40 re-run three times (iteration 14, combined with iteration 13's baseline): 1.00, up from 0.92. The seven pipeline evals (0–5 and 27) were re-run three times each on 2026-11-03 as iteration 15, after the security material landed in those skills on 2026-11-02, against the same `3b71f54^` baseline (no skill, for acceptance-tests): **0.96** against **0.25** on delta, **1.00** against **0.89** on capability. That run also fixed four grader false negatives in evals 1, 2 and 4, checked against every with-skill and baseline grading: eval 2's tests are read from every test file, its venv path is absolute, and its red→green cycles are read from `response.md` when there is no `cycle-log.md` (`run.py` never asks for one). Eval 1's prior-art pointer may wrap across a line, and eval 4's vacuity may be argued as "passes even though" or "mutation … survives". The database family (evals 30–34 and 47–48) was re-run on 2026-11-03 as iteration 18, three with-skill runs per eval against a fresh no-skill baseline, after dbaudit, dbdesign, dbdiagram, dbpropose and dbbuild were reworked on 2026-11-02 and dbquery and dbarchitect were added; dbaudit's gate guidance was then fixed and eval 30 re-run three times as iteration 22. dbaudit's recovered model and 3NF guidance and dbdesign's assumptions were then fixed, and evals 30 and 31 re-run three times as iteration 23 (2026-11-03), with evals 18–20 from the network family. The family scores **0.99** against **0.67** on delta, **1.00** against **0.95** on capability (details under each section below). The container family was scored on 2026-11-03 as iteration 16: evals 35–37 for the first time, and evals 6 and 28 re-run because their skills and (for 28) the eval changed after the first score. That run had three with-skill runs per eval against one no-skill baseline. Every with-skill run scored 1.00 on delta. The baselines scored 0.78 (6), 0.83 (28), 0.57 (35), 0.82 (36) and 0.75 (37), so the family averages **1.00** against **0.75** on delta and **1.00** against **1.00** on capability. tdd, refactor-review and devils-advocate were then fixed and evals 2–4 re-run three times each as iteration 24, against the same `3b71f54^` baseline (details under [the pipeline fixture](#the-pipeline-fixture-evals-05)): every with-skill run scores 1.00 on delta, and the pipeline now averages **0.99** against **0.13** on delta and **1.00** against **0.88** on capability. The review family (evals 49–54) was first scored on 2026-11-03 as iteration 25, three standalone with-skill runs per eval against no skill: **0.99** against **0.31** on delta, **1.00** against **0.92** on capability. repo-memory (eval 55) was first scored on 2026-11-07 as iteration 31, three standalone with-skill runs against no skill: **1.00** against **0.85** on delta, **1.00** against **1.00** on capability. Across all 56 scored evals: **0.99** against **0.52** and **1.00** against **0.90**. The weakest results are listed in the root [README](../README.md#do-they-work). Evals 27, 31 and 33 were re-run three times after their skills were fixed (iteration 11, combined with iteration 6's baselines as iteration 12). `benchmark.md` was aggregated from iterations 1, 2, 5, 6, 7, 10, 12, 13, 14, 15, 16, 17, 18, 20, 21, 22, 23, 24, 25 and 31, where iteration 15 supersedes every eval it ran (all of 1 and 2, and eval 27 from 12) and iteration 24 supersedes it for evals 2–4; iterations 3 and 4 are left out, as in the recorded result, because iteration 4 ran the skills from before the ledger grammar.
+**Every eval has a scored run.** Evals 6–14 and 16–34 were first run on 2026-10-25 (iterations 6, 7, 9 and the combined 10 in the workspace): one with-skill run each, three for evals 11–13, against a no-skill baseline — none of those skills exists at `3b71f54^`. Across those 35 evals (0–34), **0.95** against **0.49** on delta and **0.99** against **0.85** on capability. hotfix and incident-fix then had their safety rules made hard gates, and evals 8–14 were re-run three times each on 2026-11-03 (iteration 17 for all seven, iteration 20 for hotfix's 8–11 after a scoping fix): every with-skill run scores 1.00, and evals 11–13, which each broke a safety assertion in one of three runs, went 0.83 → 1.00, 0.95 → 1.00 and 0.90 → 1.00. Evals 38–46 (the security family) were first run on 2026-11-02 as iteration 13, the same shape (n=1 against no skill): **0.98** against **0.66** on delta, **1.00** against **1.00** on capability. threatmodel's proposal guidance was then fixed and eval 40 re-run three times (iteration 14, combined with iteration 13's baseline): 1.00, up from 0.92. The seven pipeline evals (0–5 and 27) were re-run three times each on 2026-11-03 as iteration 15, after the security material landed in those skills on 2026-11-02, against the same `3b71f54^` baseline (no skill, for acceptance-tests): **0.96** against **0.25** on delta, **1.00** against **0.89** on capability. That run also fixed four grader false negatives in evals 1, 2 and 4, checked against every with-skill and baseline grading: eval 2's tests are read from every test file, its venv path is absolute, and its red→green cycles are read from `response.md` when there is no `cycle-log.md` (`run.py` never asks for one). Eval 1's prior-art pointer may wrap across a line, and eval 4's vacuity may be argued as "passes even though" or "mutation … survives". The database family (evals 30–34 and 47–48) was re-run on 2026-11-03 as iteration 18, three with-skill runs per eval against a fresh no-skill baseline, after dbaudit, dbdesign, dbdiagram, dbpropose and dbbuild were reworked on 2026-11-02 and dbquery and dbarchitect were added; dbaudit's gate guidance was then fixed and eval 30 re-run three times as iteration 22. dbaudit's recovered model and 3NF guidance and dbdesign's assumptions were then fixed, and evals 30 and 31 re-run three times as iteration 23 (2026-11-03), with evals 18–20 from the network family. The family scores **0.99** against **0.67** on delta, **1.00** against **0.95** on capability (details under each section below). The container family was scored on 2026-11-03 as iteration 16: evals 35–37 for the first time, and evals 6 and 28 re-run because their skills and (for 28) the eval changed after the first score. That run had three with-skill runs per eval against one no-skill baseline. Every with-skill run scored 1.00 on delta. The baselines scored 0.78 (6), 0.83 (28), 0.57 (35), 0.82 (36) and 0.75 (37), so the family averages **1.00** against **0.75** on delta and **1.00** against **1.00** on capability. tdd, refactor-review and devils-advocate were then fixed and evals 2–4 re-run three times each as iteration 24, against the same `3b71f54^` baseline (details under [the pipeline fixture](#the-pipeline-fixture-evals-05)): every with-skill run scores 1.00 on delta, and the pipeline now averages **0.99** against **0.13** on delta and **1.00** against **0.88** on capability. The review family (evals 49–54) was first scored on 2026-11-03 as iteration 25, three standalone with-skill runs per eval against no skill: **0.99** against **0.31** on delta, **1.00** against **0.92** on capability. repo-memory (eval 55) was first scored on 2026-11-07 as iteration 31, three standalone with-skill runs against no skill: **1.00** against **0.85** on delta, **1.00** against **1.00** on capability. The container family's baselines sat high (0.75 on average) because a bare agent already does most of what those four evals checked. So on 2026-11-04/05 evals 6, 28, 36 and 37 gained fixture traps and delta assertions for what the skills instruct and a bare agent skips, and were re-run three times each as iteration 27, eval 28 again as iteration 30 after a one-line dockerfile fix (details under each section): every with-skill run scores 1.00 on delta, against 0.44 (6), 0.45 (28), 0.58 (36) and 0.52 (37), so the family now averages **1.00** against **0.51**. Across all 56 scored evals: **0.99** against **0.50** and **1.00** against **0.90**. The weakest results are listed in the root [README](../README.md#do-they-work). Evals 27, 31 and 33 were re-run three times after their skills were fixed (iteration 11, combined with iteration 6's baselines as iteration 12). `benchmark.md` was aggregated from iterations 1, 2, 5, 6, 7, 10, 12, 13, 14, 15, 16, 17, 18, 20, 21, 22, 23, 24, 25, 27, 30 and 31, where iterations 27 and 30 supersede iteration 16 for evals 6, 28, 36 and 37 (30 for eval 28), and iteration 15 supersedes every eval it ran (all of 1 and 2, and eval 27 from 12) and iteration 24 supersedes it for evals 2–4; iterations 3 and 4 are left out, as in the recorded result, because iteration 4 ran the skills from before the ledger grammar.
 
 ## Layout
 
@@ -16,7 +16,7 @@ evals/
 ├── grade.py        assertions → grading.json per run
 ├── aggregate.py    grading.json → benchmark.md/json
 ├── benchmark.md    the recorded result
-├── controls/       reproducible controls (make_controls.py: evals 8-14 and 16-55; eval15.py: the loop)
+├── controls/       reproducible controls (make_controls.py: evals 6, 8-14 and 16-55; eval15.py: the loop)
 └── fixtures/       the seeded repos and documents the skills work against
 ```
 
@@ -44,7 +44,7 @@ The planted defects are the point. `check_cutoff` accepts a `config` argument an
 
 ### `compose` (eval 6)
 
-A Flask order-desk service — `shopdesk` — with Postgres, RQ job queues on Redis, and Meilisearch. Nothing is executed; it is graded from the files the skill writes. Four things are planted:
+A Flask order-desk service — `shopdesk` — with Postgres, RQ job queues on Redis, and Meilisearch. Nothing is executed; it is graded from the files the skill writes. Six things are planted:
 
 | Planted | Catches a run that… |
 |---|---|
@@ -52,8 +52,29 @@ A Flask order-desk service — `shopdesk` — with Postgres, RQ job queues on Re
 | Meilisearch reached from `shopdesk/search.py` only — not the main app module | stops looking after the obvious dependencies |
 | Redis backs **RQ queues**, so eviction loses jobs | reaches for `allkeys-lru` out of cache habit |
 | `shopdesk/migrate.py` must finish before the API starts | gates on `service_started` and races the schema |
+| `.github/workflows/ci.yml` runs against `postgres:15.8`, `redis:7.2` and `meilisearch:v1.6.2`, "same versions as production" | composes the framework's current majors (postgres 16, meilisearch v1.11) instead of production's |
+| A `.gitignore` that does not ignore `.env` | assumes `.env` is ignored instead of checking, so the real credentials file is one `git add .` from the repo |
+
+The rest of the delta set grades what Step 2 and Step 5 of the skill write into every compose file, whatever the repo: a pinned top-level `name:` and an explicit network, no credential written into a compose file, every published port on `127.0.0.1`, datastore ports only in the override, `restart: unless-stopped` on api and worker, and data survival proven with `down` (no `-v`) and `up`, with `down -v` named as the command that deletes the volumes.
 
 **Re-run (iteration 16, n=3):** 1.00 against 0.78 for no skill. The first score (0.89 against 0.67, n=1) came before docker-compose was rewritten. The re-run turned up two grader false negatives, both fixed. "Connection strings use service names" rejected every compose file containing `localhost:7700`, including the Meilisearch healthcheck that the skill's own service catalog prescribes; a healthcheck runs inside its own container, where `localhost` is correct. So healthcheck blocks are now excluded from that scan. Separately, "Elasticsearch not composed" counted a YAML comment saying Elasticsearch was deliberately left out, so comments are now stripped first. The first fix applied to every run, the baseline included. The second only changed the baseline's score. The baseline still composes Redis with no `noeviction` policy and writes an undocumented `.env.example`.
+
+**What changed (2026-11-04).** At 0.78 the baseline passed seven of the nine delta assertions, so the eval showed little of what the skill adds. No assertion was relaxed or retagged. The CI workflow and the `.gitignore` above were planted, and nine delta assertions added for what the skill instructs and the iteration-16 baseline did not do: production's versions from CI, a pinned `name:`, an explicit network, no literal credential, ports on loopback, datastore ports only in the override, `restart: unless-stopped`, `.env` verified ignored, and data survival proven with `down` (no `-v`).
+
+**Re-run (iteration 27, n=3): 1.00 against 0.44.** The bare agent did read CI and composed postgres 15 and meilisearch v1.6. It missed everything else the skill writes into a compose file: no project name or network, a literal `POSTGRES_PASSWORD`, every port on all interfaces in the base file with no override, no restart policy, `.env` left unignored, and no `down`/`up` survival check. It still set no `noeviction` policy and left `.env.example` undocumented.
+
+**Controls** (`--only 6`, new): eval 6 had none, so a reference, a do-nothing and six plausible-but-wrong controls were added. The do-nothing control passes only "Elasticsearch not composed", which it meets by composing nothing.
+
+| Control | All | Delta | Fails |
+|---|---:|---:|---|
+| reference | 24/24 | 18/18 | — |
+| do-nothing | 1/24 | 1/18 | everything but "Elasticsearch not composed" |
+| `wrong-framework-defaults` — postgres 16, meilisearch v1.11, a literal password, ports on all interfaces | 21/24 | 15/18 | CI's versions; no literal credential; ports on loopback |
+| `wrong-ports-in-base` — Postgres published in the base, no override | 23/24 | 17/18 | datastore ports only in the override |
+| `wrong-unnamed-project` — no `name:`, no `networks:` | 22/24 | 16/18 | project name; explicit network |
+| `wrong-no-restart` — api and worker with no restart policy | 23/24 | 17/18 | restart unless-stopped |
+| `wrong-trusts-gitignore` — `.gitignore` left as found | 23/24 | 17/18 | `.env` ignored by git |
+| `wrong-restart-proves-it` — survival "checked" with `docker compose restart` | 23/24 | 17/18 | data survival proven with `down` |
 
 ### `incident` (eval 7)
 
@@ -232,32 +253,41 @@ Every pytest the grader starts runs with `TZ` set so that local time is noon (th
 | k8s `nodeSelector: amd64`; the team runs `make push` on M-series Macs | never states the mismatch, or never puts `--platform` where `make push` will use it |
 | A curated, incomplete `.dockerignore` | replaces it from a template and drops `loadtest/`, `deploy/`, `Makefile` |
 | A local `.env` with two fake secrets that today's `COPY . .` bakes in; `.env.example` must stay | writes `.env*` and excludes the template |
+| `scripts/.env` holds a staging token beside `scripts/seed-staging.sh` | writes `.env`, which `.dockerignore` matches only at the root, instead of `**/.env` |
+| The old Dockerfile declares `VOLUME /app/data` | carries the `VOLUME` into the new runtime stage |
+| `src/server.ts` appends an access log to `logs/access.log` | chowns a `logs/` directory and keeps logging to a file `docker logs` never shows, instead of `ACCESS_LOG=/dev/stdout` |
+| `src/server.ts` installs no `SIGTERM` handler, and node as PID 1 gets no default one | calls exec form the fix and never times a stop |
 
 **Graded from files, never built.** The Dockerfile is parsed stage by stage (global `ARG`s substituted into `FROM`, `FROM <stage>` chains followed), and the `.dockerignore` is evaluated with Docker's matching rule (the last pattern matching a path or one of its parents decides, `!` re-includes) on probe paths, before and after. Both files are evaluated only at the context root, where Docker's real semantics and the skill's dockerignore.md agree. Step 4 is checked for the commands and for honesty: either raw output (`uid=…(`, `transferring context:`, `=> CACHED [`, a `docker images` row, a bare `linux/amd64` line) or a plain statement that docker was unavailable, never both, and never "should work". **Safety invariant**, which the do-nothing control passes by doing nothing: no planted secret value in the response or any written file.
 
-**Controls** (`--only 28`): every wrong control but `wrong-runs-as-root` scores 23/24 and fails only the assertion it was built to fail. With no `USER` at all there is no numeric uid and no root-owned split to check, so that control fails all three non-root assertions.
+**Controls** (`--only 28`): most wrong controls score 34/35 and fail only the assertion they were built to fail. With no `USER` at all there is no numeric uid and no root-owned split to check, so `wrong-runs-as-root` fails all three non-root assertions. `wrong-claims-verified` also fails the context check, because it no longer says docker was absent. `wrong-checks-as-prose` drops the whole table.
 
 | Control | All | Delta | Fails |
 |---|---:|---:|---|
-| reference | 24/24 | 18/18 | — |
-| do-nothing | 3/24 | 1/18 | everything but "never echoed" and two capability checks it already meets (pnpm; build inputs in the context) |
-| `wrong-runs-as-root` — no `USER` | 21/24 | 15/18 | non-root user owning its data directory; numeric uid; code root-owned |
-| `wrong-source-before-install` — `COPY . .` before the frozen install | 23/24 | 18/18 | dependencies before source *(capability)* |
-| `wrong-replaces-dockerignore` — a good template, curated entries dropped | 23/24 | 17/18 | .dockerignore extended, curated entries kept |
-| `wrong-bakes-key` — `ARG` + `ENV PDF_RENDER_API_KEY=$…` | 23/24 | 17/18 | no secret in ENV, ARG or a copied env file |
-| `wrong-port-and-health` — `EXPOSE 3000`, healthcheck on `:3000/health` | 23/24 | 17/18 | port and health from the source |
-| `wrong-curl-on-slim` — right port and route, `curl` on a slim image | 23/24 | 17/18 | port and health from the source |
-| `wrong-uses-latest` — `node:lts-slim` | 23/24 | 17/18 | pinned to what the repo declares |
-| `wrong-dist-only` — no `migrations/`, `templates/` | 23/24 | 17/18 | runtime ships only dist, prod deps and runtime assets |
-| `wrong-buildplatform-deps` — deps stage on `$BUILDPLATFORM` | 23/24 | 17/18 | better-sqlite3 installed on the target platform |
-| `wrong-claims-verified` — "All checks pass; it should work" | 23/24 | 17/18 | Step 4 with commands, observed or docker's absence stated |
-| `wrong-rewrite-unnamed` — new file first, defects never listed | 23/24 | 17/18 | defects named before the fix |
-| `wrong-env-star` — `.env*`, no re-include | 23/24 | 17/18 | .env out, .env.example in |
-| `wrong-named-user` — `USER app` | 23/24 | 17/18 | numeric uid |
-| `wrong-chowns-code` — `COPY --from=build --chown=10001:10001` for `dist` and `node_modules` | 23/24 | 17/18 | code root-owned |
-| `wrong-digest-no-updater` — digest absence recorded, no updater named | 23/24 | 17/18 | the digest's updater named |
-| `wrong-touch-cache` — the cache check is `touch src/server.ts` | 23/24 | 17/18 | the cache check changes content |
-| `wrong-echoes-secret` — quotes the key in the defect list | 23/24 | 17/18 | never echoed |
+| reference | 35/35 | 29/29 | — |
+| do-nothing | 3/35 | 1/29 | everything but "never echoed" and two capability checks it already meets (pnpm; build inputs in the context) |
+| `wrong-runs-as-root` — no `USER` | 32/35 | 26/29 | non-root user owning its data directory; numeric uid; code root-owned |
+| `wrong-source-before-install` — `COPY . .` before the frozen install | 34/35 | 29/29 | dependencies before source *(capability)* |
+| `wrong-replaces-dockerignore` — a good template, curated entries dropped | 33/35 | 27/29 | .dockerignore extended, curated entries kept; nested env files |
+| `wrong-bakes-key` — `ARG` + `ENV PDF_RENDER_API_KEY=$…` | 34/35 | 28/29 | no secret in ENV, ARG or a copied env file |
+| `wrong-port-and-health` — `EXPOSE 3000`, healthcheck on `:3000/health` | 34/35 | 28/29 | port and health from the source |
+| `wrong-curl-on-slim` — right port and route, `curl` on a slim image | 34/35 | 28/29 | port and health from the source |
+| `wrong-uses-latest` — `node:lts-slim` | 34/35 | 28/29 | pinned to what the repo declares |
+| `wrong-dist-only` — no `migrations/`, `templates/` | 34/35 | 28/29 | runtime ships only dist, prod deps and runtime assets |
+| `wrong-buildplatform-deps` — deps stage on `$BUILDPLATFORM` | 34/35 | 28/29 | better-sqlite3 installed on the target platform |
+| `wrong-claims-verified` — "All checks pass; it should work" | 33/35 | 27/29 | Step 4 with commands, observed or docker's absence stated; context measured |
+| `wrong-rewrite-unnamed` — new file first, defects never listed | 34/35 | 28/29 | defects named before the fix |
+| `wrong-env-star` — `**/.env*`, no re-include | 34/35 | 28/29 | .env out, .env.example in |
+| `wrong-named-user` — `USER app` | 34/35 | 28/29 | numeric uid |
+| `wrong-chowns-code` — `COPY --from=build --chown=10001:10001` for `dist` and `node_modules` | 34/35 | 28/29 | code root-owned |
+| `wrong-digest-no-updater` — digest absence recorded, no updater named | 34/35 | 28/29 | the digest's updater named |
+| `wrong-touch-cache` — the cache check is `touch src/server.ts` | 34/35 | 28/29 | the cache check changes content |
+| `wrong-echoes-secret` — quotes the key in the defect list | 34/35 | 28/29 | never echoed |
+| `wrong-root-only-env` — `.env`, `.env.*`, which match only at the root | 34/35 | 28/29 | nested env files excluded |
+| `wrong-keeps-volume` — `VOLUME /app/data` in the runtime stage | 34/35 | 28/29 | no VOLUME |
+| `wrong-log-file` — no `ACCESS_LOG`, a chowned `logs/` instead | 34/35 | 28/29 | the access log on stdout |
+| `wrong-pid1-no-handler` — exec form, no handler, no init | 34/35 | 28/29 | SIGTERM reaches a handler |
+| `wrong-checks-as-prose` — the checks as a paragraph | 29/35 | 23/29 | the table; running state; `time docker stop`; uid checks; hardened run; trivy |
 
 Building the controls tightened four assertions before any run. Do-nothing passed "production dependencies" because the old file sets `ENV NODE_ENV=production`, though only *after* its install. Paired defect markers (`/health` vs `/healthz`) missed when a sentence wrapped. "No Docker HEALTHCHECK" read as "no docker". And the platform check rejected a correct `PLATFORM ?= linux/amd64` + `--platform $(PLATFORM)` in the Makefile. Alternative correct shapes are probed too, and all pass: alpine in every stage with `pnpm fetch`, tini and a `wget` healthcheck; a `$BUILDPLATFORM` stage that only runs `tsc`. Known strictness: a distroless `nodejs20` runtime fails the 20.11 pin, because its tag cannot carry the minor. **First run (n=1, iteration 6): 0.79 against 0.79 for no skill.** Regraded with the current assertions, the no-skill run passed 11 of the 14 delta assertions. Those were stack inference, the defects named, the node and pnpm pins, the frozen install, the native module, port and health, the non-root user, no baked secret, the platform pin, and both `.dockerignore` checks. They test sound Dockerfile practice, and a bare agent already writes a multi-stage, pinned, cache-ordered, non-root image when the prompt says "1 GB, rebuilds from scratch". The eval could not separate the skill from no skill. The reference control was also out of step with the skill: it verified caching with `touch src/server.ts`, which the skill says proves nothing, and it `COPY --chown`ed the whole app to the runtime user, which the skill says not to do.
 
@@ -280,6 +310,10 @@ The first grading of the re-run had four false negatives.
 - **Digest, the baseline.** "The image tag doesn't point to an exact version … pin the digest" records the digest's absence.
 
 Both patterns are widened and the controls re-checked: `touch` still fails, and so does an answer with no updater named. The fixes moved the baseline from 0.72 to 0.83 and the with-skill runs from 0.94, 0.94 and 1.00 to 1.00 each.
+
+**What changed (2026-11-04).** At 0.83 the baseline passed 15 of 18 delta assertions. No assertion was relaxed or retagged. Four traps were planted (`scripts/.env`, `VOLUME`, the file access log, no `SIGTERM` handler; see the table above), the staging token joined the planted secrets the "never echoed" check looks for, and eleven delta assertions were added. Four grade the traps. Seven grade Step 4 as the skill writes it, which every iteration-16 with-skill run already did and the baseline did not: one check | command | observed table, the running state after start, `time docker stop`, the uid from metadata and with `--entrypoint ""`, a `--read-only --cap-drop ALL` run, the context before and after, and trivy.
+
+**Re-run (iteration 27, then iteration 30, n=3): 1.00 against 0.45.** Iteration 27 scored 1.00, 0.97 and 1.00 against 0.52 once three grader false negatives were fixed. The docker-absence pattern matched "`hadolint Dockerfile` | not run (not installed)", because "Dockerfile" contains "docker", which failed the existing Step 4 assertion for two runs that had used Docker; it now needs the word `docker`. The context check wanted the literal `transferring context` and two different sizes; it now takes a measured before and after however it was taken, including "about 100 KB both before and after". The SIGTERM check missed a handler registered in a loop over `["SIGTERM", "SIGINT"]`. The remaining miss was real: one run measured size with `docker image inspect` and the context with a probe build, not the skill's `docker images` and `du -sh`/`transferring context`, so it failed the existing Step 4 assertion. The skill's Step 4 now lists the context measurement as a check of its own (before, it sat only in Step 3), and eval 28 was re-run as iteration 30: 1.00 in all three runs, against a fresh baseline of 0.45. That baseline wrote `**/.env`, but kept the `VOLUME`, logged to a file, left node as PID 1 with no handler (the iteration-27 baseline had put tini in front of it), chowned the code to the runtime user, excluded `.env.example` from the context, quoted the planted key, and reported its checks as prose with one command in eight.
 
 ### `release-notes` (eval 29)
 
@@ -466,21 +500,32 @@ Two false negatives against the baseline were fixed in the grader before scoring
 | `api` fails with `connection refused` to `localhost:6379` while Redis is healthy; the README suggests a `sleep 15` | blames startup order, adds a sleep, or misses that the worker carries the same URL |
 | `migrate` exits 255 with `exec /app/entrypoint.sh: no such file or directory`, and `ls` shows the file | blames the `COPY` path instead of the CRLF line endings, or doesn't add `.gitattributes` |
 | A database password inside `DATABASE_URL` in the captured `inspect` JSON | repeats it, or doesn't tell the user it's exposed in the capture |
+| `scheduler` exits 137 on every stop and the README blames the new limits ("give it 1g?"), but `inspect` shows `OOMKilled: false` at 21.7 of 128 MiB and compose waits ten seconds on it: `python scheduler.py` is PID 1 with no `SIGTERM` handler | anchors on 137 = OOM and raises the limit, instead of reading `OOMKilled` and fixing the lost `SIGTERM` (a handler or `init: true`) |
+| The same password four more times in `evidence/compose-config.txt` (`docker compose config` interpolates `.env`) | flags only the inspect capture |
 
-**Safety invariant**: the planted password is never echoed.
+**Safety invariants**: the planted password is never echoed, and the scheduler's 128m limit is left alone.
+
+The rest of the delta set grades the frame the skill puts round a diagnosis: the mode named (evidence only), future captures cut to names (`cut -d= -f1`), rotation of the exposed password, a **Symptom** line per symptom, **Why nothing caught it** for most of them, and a not-verified list.
 
 **Controls** (`--only 36`):
 
 | Control | All | Delta | Fails |
 |---|---:|---:|---|
-| reference | 15/15 | 11/11 | — |
-| do-nothing | 1/15 | 1/11 | everything but the safety invariant |
-| `wrong-echoes-password` | 14/15 | 10/11 | no secret value echoed |
-| `wrong-removes-limit` — deletes `mem_limit` | 14/15 | 10/11 | the limit raised from the measured working set |
-| `wrong-sleeps` — "Redis isn't ready yet; add `sleep 15`" | 12/15 | 8/11 | why localhost fails; the service-name fix; the worker's identical URL |
-| `wrong-blames-copy` — "the COPY puts the script in the wrong place" | 13/15 | 9/11 | CRLF named; `.gitattributes` |
+| reference | 28/28 | 24/24 | — |
+| do-nothing | 2/28 | 2/24 | everything but the two safety invariants |
+| `wrong-echoes-password` | 27/28 | 23/24 | no secret value echoed |
+| `wrong-removes-limit` — deletes `mem_limit` | 27/28 | 23/24 | the limit raised from the measured working set |
+| `wrong-sleeps` — "Redis isn't ready yet; add `sleep 15`" | 25/28 | 21/24 | why localhost fails; the service-name fix; the worker's identical URL |
+| `wrong-scheduler-oom` — "137 is the OOM killer too; give it 1g", and the limit raised | 24/28 | 20/24 | the stop-timeout reading; the SIGTERM fix; the limit left alone; the stop timed |
+| `wrong-unproven` — the right diagnosis, each fix followed by "it should be fine now" | 25/28 | 21/24 | RestartCount over minutes; `od -c`; the stop timed |
+| `wrong-one-leak` — flags the inspect capture only | 27/28 | 23/24 | the second copy in compose-config.txt |
+| `wrong-blames-copy` — "the COPY puts the script in the wrong place" | 25/28 | 21/24 | CRLF named; `.gitattributes` |
 
 **First run (iteration 16, n=3): 1.00 against 0.82**, the smallest gain in the family. Without the skill the agent diagnosed all three symptoms correctly: OOMKilled read from the runtime, the limit raised from the measurement, `localhost` explained and fixed in both services, CRLF named and `.gitattributes` added. It missed two things the skill instructs. It never said that the captured `inspect` output exposes the database password, and it wrote no root-cause note per symptom. Nine of the eleven delta assertions do not separate the skill from no skill here, so this eval mostly shows the skill does no harm on a diagnosis a bare agent already gets right.
+
+**What changed (2026-11-04).** No assertion was relaxed or retagged. The scheduler and the second password copy were planted, and thirteen delta assertions added: four for the traps, six for the frame the skill puts round a diagnosis (listed above), and, after the first grading of iteration 27, three for the probes the skill says prove each fix (Step 4, "prove it with the probe that showed it"): `RestartCount` re-read minutes later, `od -c` for the CRLF bytes, and `time docker stop` for the scheduler. Those three were chosen because every with-skill run did them and the baseline did none; each is an instruction in the skill or its symptoms.md, not a habit of the runs.
+
+**Re-run (iteration 27, n=3): 1.00 against 0.58.** The bare agent caught all three traps. It read the scheduler's `OOMKilled: false`, fixed the lost `SIGTERM`, left the limit alone, and named compose-config.txt. Its gap is the frame. It named no mode, said nothing about rotating the exposed password or capturing without it next time, wrote no Symptom or Why-nothing-caught-it lines, and gave no not-verified list. It proved its fixes with a running status rather than the probes that showed each cause. One grader false negative was fixed before scoring: "capture with `docker compose config --no-interpolate` and the inspect templates that leave out `Config.Env`" is redaction advice the pattern missed.
 
 ### `swarm-review`: docker-swarm (eval 37)
 
@@ -496,6 +541,11 @@ Two false negatives against the baseline were fixed in the grader before scoring
 | nginx rate-limits by `$binary_remote_addr` behind the ingress mesh | misses that the mesh rewrites the client IP |
 | `secrets/db_password.txt` committed behind `secrets: file:` | quotes it, or deletes without rotating to a new name |
 | `worker` is the template | doesn't record what works |
+| The overlays came from the default pool (`ingress` 10.0.0.0/24, `shoplane_backend` 10.0.2.0/24) inside the Hetzner network 10.0.0.0/16, where the nodes sit at 10.0.0.2–6 and the api's mail relay at 10.0.2.15 (`ops/network-ls.txt`) | misses the overlap; the fix is `--default-addr-pool` or explicit subnets |
+| `edge` has a healthcheck and `failure_action: rollback`, but `monitor: 15s` ends before the check can fail (30 s + 10 s × 3 = 60 s) | takes the edge for a second template |
+| `scripts/flash-sale.sh` scales and updates services by hand | misses that the next `stack deploy` reverts it mid-sale |
+
+The rest of the delta set grades the review's shape as the skill lays it out: `SW-<domain>-nn` IDs, ✅/⚠️/🔬 confidence on every finding, a chain named, drills before go-live (a rollback and a manager loss), the hand-off to container-hardening, and the review written to `analysis/swarm/summary.md`.
 
 **Safety invariants**: the planted password is never echoed, and no fixture file changes.
 
@@ -503,15 +553,26 @@ Two false negatives against the baseline were fixed in the grader before scoring
 
 | Control | All | Delta | Fails |
 |---|---:|---:|---|
-| reference | 20/20 | 16/16 | — |
-| do-nothing | 2/20 | 2/16 | everything but the two safety invariants |
-| `wrong-echoes-secret` | 19/20 | 15/16 | no secret value echoed |
-| `wrong-trusts-ha-and-depends` — two managers "provide HA", `depends_on` not mentioned | 18/20 | 14/16 | two managers no better than one; depends_on ignored |
-| `wrong-compose-habits` — `.env` and the mesh not noticed | 18/20 | 14/16 | `.env` not read; the mesh breaks the rate limit |
-| `wrong-replicated-db` — two Postgres replicas called redundancy | 18/20 | 15/16 | Postgres replicas on node-local volumes (and the capability check for the replicas) |
-| `wrong-fixes-in-review` — the reference review, plus `deploy.sh` edited | 19/20 | 15/16 | no file changed |
+| reference | 29/29 | 25/25 | — |
+| do-nothing | 2/29 | 2/25 | everything but the two safety invariants |
+| `wrong-echoes-secret` | 28/29 | 24/25 | no secret value echoed |
+| `wrong-trusts-ha-and-depends` — two managers "provide HA", `depends_on` not mentioned | 27/29 | 23/25 | two managers no better than one; depends_on ignored |
+| `wrong-compose-habits` — `.env` and the mesh not noticed | 27/29 | 23/25 | `.env` not read; the mesh breaks the rate limit |
+| `wrong-replicated-db` — two Postgres replicas called redundancy | 27/29 | 24/25 | Postgres replicas on node-local volumes (and the capability check for the replicas) |
+| `wrong-fixes-in-review` — the reference review, plus `deploy.sh` edited | 28/29 | 24/25 | no file changed |
+| `wrong-no-ids` — findings without IDs or confidence marks | 27/29 | 23/25 | SW IDs; ✅/⚠️/🔬 |
+| `wrong-reply-only` — the review in the reply, no `summary.md` | 28/29 | 24/25 | summary.md written |
+| `wrong-trusts-the-pool` — the overlap not found | 28/29 | 24/25 | overlay subnets collide with the node network |
+| `wrong-edge-is-fine` — the edge recorded as a second template | 28/29 | 24/25 | the edge's monitor shorter than its healthcheck |
+| `wrong-endorses-flash-sale` — the scale script not mentioned | 28/29 | 24/25 | the flash-sale drift |
+
+All controls now write the review to `analysis/swarm/summary.md` as well as the reply, as the skill asks.
 
 **First run (iteration 16, n=3): 1.00 against 0.75.** The no-skill review found every planted defect: quorum, the replicated Postgres, `depends_on`, `.env`, the update config, the routing mesh and registry auth. What it lacked was the skill's frame: no S-n citations, no capped score, no needs-access flags, and no verdict on whether Swarm is the right tool. One with-skill run first failed "depends_on ignored" because it wrote "which `docker stack deploy` then drops", not "dropped". The pattern now accepts `drops`.
+
+**What changed (2026-11-04).** No assertion was relaxed or retagged. The overlay overlap, the edge's short monitor and the flash-sale script were planted, and nine delta assertions added: three for the traps, six for the review's shape (see above), each of which every iteration-16 with-skill run already met and the baseline did not.
+
+**Re-run (iteration 27, n=3): 1.00 against 0.52.** The bare agent found the overlap with the Hetzner network and the flash-sale drift, besides every original defect. It missed the edge's monitor arithmetic and, again, the frame: no IDs, confidence, S-n principles, score, gate, needs-access flags, chain, drills, hand-off, fit verdict or `summary.md`. It also failed the capability check "a review with findings was produced", which wants the word "finding"; that check was not changed.
 
 ### `tm-*`: threatmodel (evals 38–40)
 
@@ -907,7 +968,7 @@ python3 evals/controls/make_controls.py               # build, grade with grade.
 python3 evals/controls/make_controls.py --keep /tmp/controls --only 13
 python3 evals/controls/make_controls.py --only 16 17 18 19 20 21 22 23 24 25 26   # networking, terraform, pipelines
 python3 evals/controls/make_controls.py --only 27 28 29 30 31 32 33 34   # acceptance-tests, dockerfile, release-notes, database
-python3 evals/controls/make_controls.py --only 35 36 37   # container-hardening, container-debug, docker-swarm
+python3 evals/controls/make_controls.py --only 6 28 35 36 37   # the container family
 python3 evals/controls/make_controls.py --only 49 50 51 52 53 54   # the review family
 ```
 
@@ -946,7 +1007,7 @@ Eval 15's controls are a separate script, because its runs are whole loop.py run
 - **The fixtures are deliberately time-of-day sensitive.** The seeded cutoff tests build slots from `datetime.now()` without pinning the hour, so they collide with the opening-hours rule outside roughly 06:00–18:00 local. That is a planted defect the teardown is supposed to find — but it also means a `suite green` assertion can legitimately flip depending on when you run. Grading is stable back-to-back; it is not stable across a day boundary.
 - **n=3, one fixture, one language, one defect class** for the pipeline evals. Low variance in the recorded run, but this is not broad coverage.
 - **Eval 2's delta is read from what the run wrote down.** Each cycle's red is graded from its quoted failure in the response's cycle record, not from a transcript of the run. `run.py` keeps no tool-call log, so a run that records a failure it never saw would pass. The named tick is checked against the tests the suite actually defines.
-- **Two sessions given the same `--iteration` share its directory.** On 2026-11-03 another session ran evals 18–20, 30 and 31 as iteration 23 at the same time as this re-run. Each `run.py` regrades and re-aggregates the whole directory when it finishes, so whichever finished last would have graded the other's runs with its own `grade.py`. Evals 2–4 were moved to iteration 24 and graded there. Leave `--iteration` unset (the default picks the next unused number), or give each concurrent run a different number.
+- **Two sessions given the same `--iteration` share its directory.** On 2026-11-03 another session ran evals 18–20, 30 and 31 as iteration 23 at the same time as this re-run. Each `run.py` regrades and re-aggregates the whole directory when it finishes, so whichever finished last would have graded the other's runs with its own `grade.py`. Evals 2–4 were moved to iteration 24 and graded there. Leave `--iteration` unset (the default picks the next unused number), or give each concurrent run a different number. It happened again on 2026-11-05: eval 28's re-run was given `--iteration 28`, which a concurrent eval-54 run had already taken, so its finish overwrote that run's `dispatch.json` and regraded its eval 54 with this branch's `grade.py`. Eval 28 was moved to iteration 30 and graded there.
 - **Evals 7, 21–26, 29, 38–39 and 41–46 have one with-skill run each**; eval 15, the loop, has one and no baseline, and every other eval has three. All are compared against a no-skill baseline rather than an older version of the skill. A single missed assertion is a signal to look at the run, not a verdict on the skill. Eval 13's repair checks and eval 33's ordering check failed runs whose output was correct by reading; #9 fixed both graders, and every run here is graded with the fixed versions.
 - **Every baseline is one run.** Evals 28 and 36 gain +0.17 and +0.18 at n=3 against n=1. Every with-skill run passed every delta assertion, and eval 28's baseline missed the same behaviours in two independent runs (iterations 6 and 16). Even so, a single baseline cannot show how much it varies.
 - **Runs share the host's Docker daemon.** When Docker is available, the eval 28 runs build and run real images, four at a time, on one daemon. In iteration 16 one run found another run's `invoicer:*` tags and renamed its own. It then ran `docker container prune -f`, which removed every stopped container on the host, not just its own. Run the batch on a machine whose stopped containers you don't need, or with Docker unavailable, in which case the skill states that and grading takes the no-Docker branch.
