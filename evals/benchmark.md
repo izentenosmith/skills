@@ -56,14 +56,14 @@
 | 53-concurrency-review-interleavings-and-replicas | i25 | 3 | 1.00 ± 0.00 | 0.39 | +0.61 | 1.00 | 0.83 |
 | 54-review-retro-areas-not-people | i29 | 3 | 1.00 ± 0.00 | 0.36 | +0.64 | 1.00 | 1.00 |
 | 55-repo-memory-dream-true-and-small | i34 | 3 | 1.00 ± 0.00 | 0.77 | +0.23 | 1.00 | 1.00 |
-| 56-ticket-reconcile-before-filing | i35 | 3 | 1.00 ± 0.00 | 0.92 | +0.08 | 1.00 | 1.00 |
+| 56-ticket-reconcile-before-filing | i36 | 3 | 1.00 ± 0.00 | 0.71 | +0.29 | 1.00 | 1.00 |
 | 57-backlog-health-and-order-by-policy | i35 | 3 | 1.00 ± 0.00 | 0.69 | +0.31 | 1.00 | 1.00 |
 | 6-compose-detects-real-services | i27 | 3 | 1.00 ± 0.00 | 0.44 | +0.56 | 1.00 | 1.00 |
 | 7-postmortem-widens-range-and-describes | i34 | 3 | 1.00 ± 0.00 | 0.70 | +0.30 | 1.00 | 1.00 |
 | 8-hotfix-node-shared-cause | i34 | 3 | 1.00 ± 0.00 | 0.38 | +0.62 | 1.00 | 1.00 |
 | 9-hotfix-jvm-both-callers | i34 | 3 | 1.00 ± 0.00 | 0.71 | +0.29 | 1.00 | 1.00 |
 
-**Delta — current 0.99 vs baseline 0.50**
+**Delta — current 0.99 vs baseline 0.49**
 **Capability — current 1.00 vs baseline 0.90**
 
 ## Delta assertions the baseline also passed (still non-discriminating)
@@ -518,7 +518,7 @@
 - FH-205 and FH-221 proposed as duplicates, with no third item
 - the incident's start taken from the log: 2026-11-08 22:10 UTC
 - the staging-only waitlist bug drafted without an incident label
-- the no-show request drafted as a story with acceptance criteria
+- the incident severity left to the incident commander, not mapped from support's S2
 - the sprint re-resolved to FH Sprint 46, not the profile's cached 44
 - required and conventional fields filled: Clinic impact on both bugs, Notifications on the incident
 - titles drop the QA notes' [iOS] and BUG: prefixes

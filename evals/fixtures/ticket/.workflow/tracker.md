@@ -28,6 +28,7 @@
 | Sprint (`customfield_10104`) | convention: bugs and incidents go into the current sprint; stories, tasks and spikes go to the backlog (no sprint) until refinement | current: **FH Sprint 44** (id 412) | sprint id, not name, in the API |
 | Component | convention (98% of items) | Booking · Patient app · Front desk · Payments · Notifications · Reporting | Booking = slots, calendar, availability; Patient app = the patient web and mobile UI; Front desk = receptionist screens; Payments = charges, refunds, receipts; Notifications = SMS, email, push; Reporting = exports and dashboards |
 | Clinic impact (`customfield_10231`) | required on Bug | None · One clinic · Several clinics · All clinics | create fails without it; None for anything not in production |
+| Incident severity (`customfield_10240`) | required on any item labelled `incident:prod` | SEV-1 · SEV-2 · SEV-3 · SEV-4 | set by the incident commander from the on-call severity matrix (Confluence: OPS/Severity) |
 | Story Points | at refinement, not at create | Fibonacci | estimate, confirmed by the team |
 | Hours | not tracked | | |
 
@@ -36,7 +37,7 @@
 |---|---|
 | prod-incident | `incident:prod` |
 | caused-by-<deploy-id> | `caused-by:<release>`, e.g. `caused-by:4.11.2` |
-| follow-up | `follow-up` |
+| follow-up | `follow-up`, with one of `action:mitigate` · `action:prevent` · `action:process` |
 | unplanned | `unplanned` |
 
 ## Linking

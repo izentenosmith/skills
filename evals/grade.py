@@ -5993,10 +5993,54 @@ def tk_labelled_incident(t, topic):
     return [l.strip()[:100] for l in lines if "incident:prod" in l and not re.search(neg, l, re.I)]
 
 
+def tk_drafts(t, topic):
+    """The draft blocks for `topic`: heading blocks whose heading names it. A check inside one story's draft
+    can't borrow a neighbouring story's acceptance criteria the way a character window can. The topic may sit in
+    the heading or in the title line under it (`### 3: create Story` / `**Summary:** …`). Split at ## and below
+    only: wiki markup's numbered lists start lines with `# `."""
+    return "\n".join(b for b in re.split(r"(?m)^(?=#{2,6}\s)", t)
+                     if re.match(r"#{2,6}\s", b) and re.search(topic, b[:300], re.I))
+
+
+def tk_profile_kept(run):
+    """The run's profile no longer gives Sprint 44 as current, names Sprint 46, and has more Known traps than
+    the fixture's: profile.md "Keeping it true"."""
+    prof, fx = read(run / "repo/.workflow/tracker.md"), read(FIXTURES / "ticket/.workflow/tracker.md")
+    traps = lambda text: len(re.findall(r"(?m)^\s*[-*] ", text.split("## Known traps", 1)[-1])) if "## Known traps" in text else 0
+    sprint_ok = "Sprint 46" in prof and not re.search(r"current:\s*\**\s*FH Sprint 44", prof)
+    return sprint_ok and traps(prof) > traps(fx), f"sprint {'updated' if sprint_ok else 'not updated'}; known traps {traps(fx)} → {traps(prof)}"
+
+
+def tk_severity_picked(t):
+    """Lines that give the incident a severity from the matrix the repo doesn't hold, rather than leaving it to the
+    incident commander. A line listing the allowed values, or asking, doesn't count."""
+    return [l.strip()[:90] for l in t.splitlines()
+            if re.search(r"severity|customfield_10240", l, re.I) and re.search(r"SEV-[1-4]", l)
+            and len(re.findall(r"SEV-[1-4]", l)) < 3
+            and not re.search(r"\?|TBD|unset|not set|leave|left|blank|empty|\bask|question|commander|pending|unknown|decide|open", l, re.I)]
+
+
+def tk_table_field(t, topic, field, value):
+    """A table row about `topic` whose cell under the `field` column matches `value`: a change-set table carries
+    the field name in its header, not on the row."""
+    cols = None
+    for line in t.splitlines():
+        if not line.lstrip().startswith("|"):
+            cols = None
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if any(re.fullmatch(rf"\**{field}\**", c, re.I) for c in cells):
+            cols = [i for i, c in enumerate(cells) if re.fullmatch(rf"\**{field}\**", c, re.I)]
+        elif cols and re.search(topic, line, re.I) and any(i < len(cells) and re.match(value, cells[i], re.I) for i in cols):
+            return True
+    return False
+
+
 TK_SAFARI = r"safari|cancel button|ipad"
+TK_NOSHOW = r"no-?show|missed|didn'?t (turn up|show)"
 TK_REMINDER = r"remind|time ?zone|wrong hour|12:30"
 TK_DOUBLE = r"double[- ]book|same slot|booked twice|two appointments"
-TK_INCIDENT = r"payment[- ]confirmation|payment[- ]e-?mail|SMTP|ESC-5531|receipt e-?mails?"
+TK_INCIDENT = r"payment[- ]confirmation|payment[- ]e-?mail|confirmation e-?mails?|SMTP|ESC-5531|receipt e-?mails?"
 
 
 def eval56(run):
@@ -6022,6 +6066,10 @@ def eval56(run):
                 and not re.search(r"(\bnot?\b|n't|\bnever\b|instead of|rather than|without)[^\n|]{0,30}\breopen", l, re.I)]
     staging_incident = tk_labelled_incident(t, r"waitlist")
     ok_only, only_ev = workflow_only(run, "ticket")
+    noshow, practitioner = tk_drafts(t, TK_NOSHOW), tk_drafts(t, r"practitioner")
+    followup = tk_drafts(t, r"follow-?up")
+    profile_kept = tk_profile_kept(run)
+    severity = tk_severity_picked(t)
     return [
         # capability
         ("a change set was drafted", len(t) >= 1500 and "FH-" in t and any_of(t, r"change set|create"), f"{len(t)} chars", C),
@@ -6060,14 +6108,32 @@ def eval56(run):
          f"labelled: {staging_incident[:1] or 'none'}", D),
         # writing.md kinds: a request is a story with who / what / why and acceptance criteria
         ("the no-show request drafted as a story with acceptance criteria",
-         near(t, r"no-?show", r"\bstory\b", 400) and near(t, r"no-?show", r"acceptance", 2000), "", D),
+         near(t, TK_NOSHOW, r"\bstory\b", 400) and bool(re.search(r"acceptance", noshow, re.I)),
+         "criteria in its own draft" if noshow else "no draft headed for it", D),
+        # writing.md Story "Demo — how it will be shown at review"
+        ("both new stories carry a demo line",
+         bool(re.search(r"\bdemo", noshow, re.I)) and bool(re.search(r"\bdemo", practitioner, re.I)), "", D),
+        # writing.md Follow-up: outcome, origin, action type (labels.md), what's in place meanwhile, owner, due date
+        ("the follow-up support asked for has an action type, a due date and what's in place meanwhile",
+         # the action type as its label, or as a field of the draft ("Action type: process")
+         bool(re.search(r"action:(mitigate|prevent|process)|action type\W{0,6}(mitigate|prevent|process)", followup, re.I))
+         and bool(re.search(r"\bdue\b", followup, re.I))
+         and bool(re.search(r"meanwhile|in the meantime|until (then|it ships|this ships)|interim|in place now", followup, re.I)),
+         "" if followup else "no draft headed as a follow-up", D),
+        # SKILL.md Stopping rule "A required field has no discoverable value … don't pick a plausible value"
+        ("the incident severity left to the incident commander, not mapped from support's S2",
+         not severity and near(t, r"incident severity|customfield_10240", r"\?|ask|question|confirm|TBD|unset|not set|left|blank|commander|needed|decide", 300),
+         f"picked: {severity[:1] or 'none'}", D),
+        # profile.md "Keeping it true": re-query a stale value, update the profile, record the trap
+        ("the profile kept true: the stale sprint corrected and a known trap recorded", profile_kept[0], profile_kept[1], D),
         # SKILL.md Step 1 "Volatile values are re-resolved, not reused — the current sprint"
         ("the sprint re-resolved to FH Sprint 46, not the profile's cached 44",
          bool(re.search(r"Sprint 46\b", t)) and not stale, f"stale: {stale[:1] or 'none'}", D),
         # SKILL.md Step 3 "Every required field from the profile, plus the fields the team always fills"
         ("required and conventional fields filled: Clinic impact on both bugs, Notifications on the incident",
-         near(t, r"waitlist", r"Clinic impact[^\n]{0,30}\bNone\b", 2000)
-         and near(t, TK_INCIDENT, r"Clinic impact[^\n]{0,30}All clinics", 2000)
+         (near(t, r"waitlist", r"Clinic impact[^\n]{0,30}\bNone\b", 2000) or tk_table_field(t, r"waitlist", r"Clinic impact", r"\**None\b"))
+         and (near(t, TK_INCIDENT, r"Clinic impact[^\n]{0,30}All clinics", 2000)
+              or tk_table_field(t, TK_INCIDENT, r"Clinic impact", r"\**All clinics"))
          and near(t, TK_INCIDENT, r"Notifications", 2000), "", D),
         # writing.md Titles "No prefixes the fields already carry — no [Backend], no BUG:"
         ("titles drop the QA notes' [iOS] and BUG: prefixes", waitlist_titled and not prefixed,
