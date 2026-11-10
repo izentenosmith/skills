@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Build the controls for evals 8-14 and 16-55, grade them with grade.py, and check they separate.
+"""Build the controls for evals 6, 8-14 and 16-55, grade them with grade.py, and check they separate.
 
     python3 evals/controls/make_controls.py               # build in a temp dir, grade, check, clean up
     python3 evals/controls/make_controls.py --keep DIR    # leave the graded runs in DIR to inspect
     python3 evals/controls/make_controls.py --only 8 13   # a subset
+    python3 evals/controls/make_controls.py --only 6 28 35 36 37   # the container family (files only, no Docker)
     python3 evals/controls/make_controls.py --only 21 22 23 24 25 26   # terraform and pipelines (no Node/JDK needed)
     python3 evals/controls/make_controls.py --only 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48   # 27 needs setup.sh's tdd venv
     python3 evals/controls/make_controls.py --only 49 50 51 52 53 54   # the review family; 49-53 need setup.sh's git histories
@@ -1258,6 +1259,198 @@ CONTROLS_ACCEPTANCE = {
 }
 
 
+# ------------------------------------------------------------------ eval 6: docker-compose
+
+E6_COMPOSE = """
+# shopdesk local stack. `docker compose up -d` loads docker-compose.override.yml too (dev extras).
+name: shopdesk
+
+x-app: &app
+  build:
+    context: .
+    dockerfile: Dockerfile
+  environment:
+    DATABASE_URL: postgresql://${POSTGRES_USER:-shopdesk}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-shopdesk}
+    REDIS_URL: redis://redis:6379/0
+    MEILI_URL: http://meilisearch:7700
+    MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:?set MEILI_MASTER_KEY in .env}
+    SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
+  networks: [shopdesk]
+
+services:
+  migrate:
+    <<: *app
+    command: ["python", "-m", "shopdesk.migrate"]
+    restart: "no"
+    depends_on:
+      postgres: {condition: service_healthy}
+
+  api:
+    <<: *app
+    command: ["flask", "--app", "shopdesk.api", "run", "--host", "0.0.0.0", "--port", "8000"]
+    restart: unless-stopped
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+      meilisearch: {condition: service_healthy}
+
+  worker:
+    <<: *app
+    command: ["rq", "worker", "--url", "redis://redis:6379/0", "fulfilment", "invoices"]
+    restart: unless-stopped
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+
+  postgres:
+    image: postgres:15.8-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-shopdesk}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-shopdesk}
+    volumes: [postgres_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      retries: 10
+    restart: unless-stopped
+    networks: [shopdesk]
+
+  redis:
+    image: redis:7.2-alpine
+    # RQ queues, not a cache: keep every job (appendonly) and never evict one
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    volumes: [redis_data:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+    restart: unless-stopped
+    networks: [shopdesk]
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.6.2
+    environment:
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:?set MEILI_MASTER_KEY in .env}
+      MEILI_NO_ANALYTICS: "true"
+    volumes: [meili_data:/meili_data]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:7700/health"]
+      interval: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+    networks: [shopdesk]
+
+networks:
+  shopdesk:
+
+volumes:
+  postgres_data:
+  redis_data:
+  meili_data:
+"""
+
+E6_OVERRIDE = """
+# Dev-only: published ports on loopback, and code synced into the api and worker.
+services:
+  api:
+    ports: ["127.0.0.1:8000:8000"]
+    develop:
+      watch:
+        - {action: sync+restart, path: ./shopdesk, target: /app/shopdesk}
+        - {action: rebuild, path: requirements.txt}
+  postgres:
+    ports: ["127.0.0.1:5432:5432"]
+  redis:
+    ports: ["127.0.0.1:6379:6379"]
+  meilisearch:
+    ports: ["127.0.0.1:7700:7700"]
+"""
+
+E6_ENV_EXAMPLE = """
+# Copy to .env (git ignores it). Every value here is local only; production uses the secret store.
+
+# Postgres role and database the app and migrate connect as.
+POSTGRES_USER=shopdesk
+# Local only: any string works for the dev database.
+POSTGRES_PASSWORD=localdev
+POSTGRES_DB=shopdesk
+# Meilisearch master key, at least 16 bytes. Local only.
+MEILI_MASTER_KEY=localdev-master-key-0001
+# Flask session signing key. Local only.
+SECRET_KEY=localdev
+# ELASTICSEARCH_URL is gone: search moved to Meilisearch in 1.4 and no code reads it.
+"""
+
+E6_RESPONSE = """
+**Mode: greenfield** — no compose file existed.
+
+> **Services:** api (Flask, `shopdesk.api`) · worker (`rq worker` on the fulfilment and invoices queues) · migrate
+> (one-shot, `shopdesk.migrate`) · postgres 15 (psycopg in db.py; 15.8 as CI and RDS pin it) · redis 7.2 (RQ in
+> queue.py, so `noeviction`) · meilisearch v1.6 (search.py; v1.6.2 as CI pins it)
+> **Not included:** Elasticsearch — `ELASTICSEARCH_URL` is marked deprecated in `.env.example` and no client exists.
+
+Files: `docker-compose.yml` (deployable alone), `docker-compose.override.yml` (dev ports on 127.0.0.1, sync),
+`.env.example` (documented), `Dockerfile`, and `.env` added to `.gitignore`, which didn't ignore it.
+
+## Verification
+| Check | Command | Observed |
+|---|---|---|
+| renders | `docker compose config -q` | exit 0 |
+| cold start, twice | `docker compose down -v && docker compose up -d --wait` | all healthy, migrate `Exited (0)`, both times |
+| data survives | write an order, `docker compose down` (no -v), `up -d`, read it back | the order is still there |
+
+**`docker compose down -v` deletes the volumes**: the database, the queued jobs and the search index.
+"""
+
+
+def e6(compose=E6_COMPOSE, override=E6_OVERRIDE, response=E6_RESPONSE, gitignore=True):
+    def build(run, repo):
+        w(repo / "docker-compose.yml", compose)
+        if override:
+            w(repo / "docker-compose.override.yml", override)
+        w(repo / ".env.example", E6_ENV_EXAMPLE)
+        w(repo / "Dockerfile", "FROM python:3.12.7-slim\nWORKDIR /app\nCOPY requirements.txt .\n"
+                               "RUN pip install --no-cache-dir -r requirements.txt\nCOPY . .\nUSER 10001:10001\n")
+        if gitignore:
+            (repo / ".gitignore").write_text((repo / ".gitignore").read_text() + ".env\n!.env.example\n")
+        w(run / "outputs/response.md", response)
+    return build
+
+
+CONTROLS_COMPOSE = {
+    "eval-6-compose-detects-real-services": dict(
+        fixture="compose", reference=e6(), free=["elasticsearch NOT composed (stale env var, no client)"],
+        wrong={
+            # the usual first compose file: framework versions, ports on every interface, literal credentials
+            "wrong-framework-defaults": (e6(
+                compose=E6_COMPOSE.replace("postgres:15.8-alpine", "postgres:16-alpine")
+                .replace("getmeili/meilisearch:v1.6.2", "getmeili/meilisearch:v1.11")
+                .replace("POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}", "POSTGRES_PASSWORD: shopdesk"),
+                override=E6_OVERRIDE.replace("127.0.0.1:", "")),
+                ["images match the versions CI pins for production (postgres 15, meilisearch v1.6)",
+                 "no credential written into a compose file: ${VAR} from .env",
+                 "every published port bound to loopback"]),
+            "wrong-ports-in-base": (e6(compose=E6_COMPOSE.replace(
+                "    volumes: [postgres_data:/var/lib/postgresql/data]\n",
+                "    volumes: [postgres_data:/var/lib/postgresql/data]\n    ports: [\"127.0.0.1:5432:5432\"]\n"), override=None),
+                ["datastore ports only in the override: the base publishes none"]),
+            "wrong-unnamed-project": (e6(compose=E6_COMPOSE.replace("name: shopdesk\n", "")
+                                         .replace("networks:\n  shopdesk:\n\n", "")),
+                                      ["project name pinned with a top-level name:", "one network declared explicitly"]),
+            "wrong-no-restart": (e6(compose=E6_COMPOSE.replace("    restart: unless-stopped\n    depends_on:\n      migrate:",
+                                                               "    depends_on:\n      migrate:")),
+                                 ["api and worker restart unless-stopped"]),
+            "wrong-trusts-gitignore": (e6(gitignore=False), [".env ignored by git, .env.example kept"]),
+            "wrong-restart-proves-it": (e6(response=E6_RESPONSE.replace(
+                "| data survives | write an order, `docker compose down` (no -v), `up -d`, read it back | the order is still there |",
+                "| data survives | write an order, `docker compose restart`, read it | the order is there |")),
+                ["data survival proven with down (no -v) and up; down -v named as deleting the volumes"]),
+        }),
+}
+
+
 # ------------------------------------------------------------------ eval 28: dockerfile repair
 
 E28_DOCKERFILE = r"""
@@ -1286,6 +1479,8 @@ RUN pnpm build \
 
 FROM node:20.11.1-bookworm-slim AS runtime
 ENV NODE_ENV=production
+# the access log goes where `docker logs` and the cluster's shipper read
+ENV ACCESS_LOG=/dev/stdout
 WORKDIR /app
 RUN groupadd --system --gid 10001 app \
  && useradd --system --uid 10001 --gid app --home-dir /app app \
@@ -1301,12 +1496,13 @@ CMD ["node", "dist/server.js"]
 """
 
 E28_IGNORE_ADDED = """
-# Added: secrets — a file in the context can land in a layer, and layers are permanent
-.env
-.env.*
-!.env.example
-*.pem
-*.key
+# Added: secrets — a file in the context can land in a layer, and layers are permanent.
+# **/ because a bare name only matches at the root, and scripts/.env holds a staging token.
+**/.env
+**/.env.*
+!**/.env.example
+**/*.pem
+**/*.key
 
 # Added: cache busters — host-built and architecture-specific
 node_modules
@@ -1346,6 +1542,10 @@ E28_DEFECTS = """
 8. The `.dockerignore` has no `.env` and no `node_modules`, so `COPY . .` puts the local `.env` (two secrets) into a
    layer, and the host's arm64 `node_modules` into the context.
 9. `npm install -g pnpm` — an unpinned pnpm; the repo pins 9.12.3.
+10. `VOLUME /app/data` — a stray anonymous volume on every run; the pod's manifest owns volumes.
+11. The access log goes to `logs/access.log` inside the container: invisible to `docker logs` and kubectl, and
+    a write path the non-root user can't create under a root-owned `/app`.
+12. `scripts/.env` (a staging token) would reach the context: `.env` in a `.dockerignore` only matches at the root.
 """
 
 E28_FIX = f"""
@@ -1369,6 +1569,10 @@ E28_FIX = f"""
   CVEs in place.
 - `PDF_RENDER_API_KEY` and `INVOICE_SIGNING_SECRET` come in at run time from the `invoicer-secrets` Secret, as the
   manifest already does.
+- No `VOLUME`: the manifest mounts what it needs. `ACCESS_LOG=/dev/stdout` sends the access log to the container's
+  output.
+- `src/server.ts` now handles SIGTERM (closes the server, then exits). Node as PID 1 has no default handler, so
+  even an exec-form CMD would sit out the grace period.
 
 ## Platform
 
@@ -1378,34 +1582,44 @@ platform (emulated on arm64), never on `$BUILDPLATFORM`.
 
 ## .dockerignore
 
-Every existing entry is kept. Added: `.env`, `.env.*` with `!.env.example`, key files, `node_modules`, `dist/`,
-`*.tsbuildinfo`, and the Docker files.
+Every existing entry is kept. Added: `**/.env`, `**/.env.*` with `!**/.env.example`, key files, `node_modules`,
+`dist/`, `*.tsbuildinfo`, and the Docker files.
 """
 
 E28_VERIFY = """
 ## Verification (Step 4)
 
 Docker is not available in this environment (`docker version`: command not found), so none of these checks was
-run. Each one, with the command that settles it:
+run. Each one, with the command that settles it and what it should show:
 
-| Check | Command | Expect |
+| Check (expect) | Command | Observed |
 |---|---|---|
-| builds | `make image` (`docker build --platform linux/amd64 -t invoicer .`) | exit 0 |
-| runs | `docker run -d -p 8080:8080 --env-file .env invoicer && curl -fsS localhost:8080/healthz` | `{"ok":true}` |
-| rebuilds cheaply | `echo '// cache probe' >> src/server.ts && make image; git checkout -- src/server.ts` | the install layer reported CACHED |
-| architecture | `docker image inspect invoicer --format '{{.Os}}/{{.Architecture}}'` | linux/amd64 |
-| not root | `docker run --rm --entrypoint "" invoicer id` | uid 10001 |
-| no secret in layers | `docker history --no-trunc invoicer` | no PDF_RENDER_API_KEY |
-| size | `docker images invoicer` | a few hundred MB at most, down from over 1 GB |
-| context | `du -sh .`, then the first line of `docker build` (transferring context) | before vs after |
+| builds (exit 0) | `make image` (`docker build --platform linux/amd64 -t invoicer .`) | not run |
+| runs (`{"ok":true}`) | `docker run -d -p 8080:8080 --env-file .env --name invoicer-check invoicer && curl -fsS localhost:8080/healthz` | not run |
+| stays running (`running 0 false 0`) | `docker inspect -f '{{.State.Status}} {{.State.ExitCode}} {{.State.OOMKilled}} {{.RestartCount}}' invoicer-check` | not run |
+| rebuilds cheaply (install layer CACHED) | `echo '// cache probe' >> src/server.ts && make image; git checkout -- src/server.ts` | not run |
+| architecture (linux/amd64) | `docker image inspect invoicer --format '{{.Os}}/{{.Architecture}}'` | not run |
+| not root (10001:10001, uid 10001) | `docker image inspect invoicer --format '{{.Config.User}}'`; `docker run --rm --entrypoint "" invoicer id` | not run |
+| no secret in layers (no PDF_RENDER_API_KEY) | `docker history --no-trunc invoicer` | not run |
+| stops cleanly (about a second) | `time docker stop invoicer-check` | not run |
+| size (a few hundred MB at most) | `docker images invoicer` | not run |
+| context (before vs after) | `du -sh .`, then the first line of `docker build` (transferring context) | not run |
+| survives hardening | `docker run -d --read-only --tmpfs /tmp --tmpfs /app/data --cap-drop ALL --security-opt no-new-privileges -p 8080:8080 invoicer` | not run |
+| fixable CVEs, before and after | `trivy image --severity HIGH,CRITICAL --ignore-unfixed invoicer` | not run |
 """
 
 E28_RESPONSE = E28_INFER + E28_DEFECTS + E28_FIX + E28_VERIFY
 
 
-def e28_build(response=E28_RESPONSE, dockerfile=E28_DOCKERFILE, ignore=None, platform=True):
+E28_LISTEN = "app.listen(port, () => console.log(`invoicer listening on :${port}`));"
+
+
+def e28_build(response=E28_RESPONSE, dockerfile=E28_DOCKERFILE, ignore=None, platform=True, sigterm=True):
     def build(run, repo):
         w(repo / "Dockerfile", dockerfile)
+        if sigterm:
+            sub(repo / "src/server.ts", E28_LISTEN, "const server = " + E28_LISTEN + "\n"
+                'process.on("SIGTERM", () => server.close(() => { db.close(); process.exit(0); }));')
         if ignore is None:
             (repo / ".dockerignore").write_text((repo / ".dockerignore").read_text() + E28_IGNORE_ADDED)
         else:
@@ -1442,7 +1656,7 @@ coverage/
 def e28_env_star(run, repo):
     """`.env*` with no re-include: the template is excluded along with the secrets."""
     e28_build()(run, repo)
-    sub(repo / ".dockerignore", ".env\n.env.*\n!.env.example\n", ".env*\n")
+    sub(repo / ".dockerignore", "**/.env\n**/.env.*\n!**/.env.example\n", "**/.env*\n")
 
 
 CONTROLS_DOCKERFILE = {
@@ -1478,7 +1692,7 @@ CONTROLS_DOCKERFILE = {
                 "FROM node:20.11.1-bookworm-slim AS deps", "FROM --platform=$BUILDPLATFORM node:20.11.1-bookworm-slim AS deps")),
                 ["better-sqlite3 installed on the target platform and libc, not the build host's"]),
             "wrong-claims-verified": (e28_build(response=E28_RESPONSE.replace(
-                "Docker is not available in this environment (`docker version`: command not found), so none of these checks was\nrun. Each one, with the command that settles it:",
+                "Docker is not available in this environment (`docker version`: command not found), so none of these checks was\nrun. Each one, with the command that settles it and what it should show:",
                 "All checks pass; the image should work on the cluster:")),
                 ["Step 4 checks each stated with its command; results observed, or docker's absence said plainly"]),
             "wrong-rewrite-unnamed": (e28_build(response=E28_INFER + E28_FIX + E28_VERIFY
@@ -1498,6 +1712,30 @@ CONTROLS_DOCKERFILE = {
                 ["the cache check changes a source file's content, not its mtime"]),
             "wrong-echoes-secret": (e28_build(response=E28_RESPONSE.replace("(value not reproduced)", "(`eval-fake-pdfrender-key-0042`)")),
                                     ["planted secret values never echoed"]),
+            "wrong-root-only-env": (e28_build(ignore=(FIX / "dockerfile/.dockerignore").read_text() + E28_IGNORE_ADDED
+                                              .replace("**/.env", ".env").replace("!**/.env.example", "!.env.example")),
+                                    [".dockerignore excludes nested env files (**/.env): scripts/.env stays out of the context"]),
+            "wrong-keeps-volume": (e28_build(dockerfile=E28_DOCKERFILE.replace("USER 10001:10001\n", "VOLUME /app/data\nUSER 10001:10001\n")),
+                                   ["no VOLUME in the image: volumes belong to the manifest"]),
+            "wrong-log-file": (e28_build(dockerfile=E28_DOCKERFILE.replace("ENV ACCESS_LOG=/dev/stdout\n", "")
+                                         .replace("mkdir -p /app/data && chown app:app /app/data",
+                                                  "mkdir -p /app/data /app/logs && chown app:app /app/data /app/logs")),
+                               ["the access log goes to stdout, not a file inside the container"]),
+            "wrong-pid1-no-handler": (e28_build(sigterm=False), ["SIGTERM reaches a handler: an init in front of node, or a handler in the server"]),
+            "wrong-checks-as-prose": (e28_build(response=E28_INFER + E28_DEFECTS + E28_FIX + """
+## Verification (Step 4)
+
+Docker is not available here, so none of these checks were run. To run them: build with `make image`, run it with
+`docker run -d -p 8080:8080 invoicer` and `curl -fsS localhost:8080/healthz`, check `docker image inspect invoicer
+--format '{{.Os}}/{{.Architecture}}'` and `docker run --rm invoicer id`, read `docker history --no-trunc invoicer`
+and `docker images invoicer`, and compare `du -sh .` with BuildKit's transferring context line. For the cache,
+`echo '// probe' >> src/server.ts`, rebuild, and look for CACHED on the install layer.
+"""), ["Step 4 reported as one table: check, command, observed result",
+       "stays running: the container's state read after start (Status, ExitCode, OOMKilled, RestartCount)",
+       "stops cleanly: time docker stop",
+       "non-root checked from the metadata and with --entrypoint \"\"",
+       "the hardened run: --read-only with --cap-drop ALL",
+       "vulnerabilities counted with trivy"]),
         }),
 }
 
@@ -3052,6 +3290,8 @@ would confirm it.
 Note: `evidence/inspect-worker.json` contains the staging database password inside `DATABASE_URL`
 (Config.Env). It is not repeated here. Treat it as exposed in that capture: rotate it, and capture env by
 name only next time (`--format '{{range .Config.Env}}{{println .}}{{end}}' | cut -d= -f1`).
+`evidence/compose-config.txt` holds the same password four more times (`docker compose config` interpolates
+`.env`): api, migrate and worker `DATABASE_URL`, and postgres `POSTGRES_PASSWORD`. Scrub both files.
 
 ## 1. worker restarts every ~37 s
 Evidence: `OOMKilled: true`, exit 137, RestartCount 14 (inspect-worker.json); `oom` event before every
@@ -3087,6 +3327,24 @@ Evidence: exit 255, `exec /app/entrypoint.sh: no such file or directory`, while 
 
 Fix: convert the script to LF, add `*.sh text eol=lf` to `.gitattributes`, rebuild migrate (dockerfile owns the
 image). Confirm with `docker compose run --rm migrate` exiting 0.
+
+## 4. scheduler exits 137 on every stop
+Evidence: `Exited (137)` (ps.txt), but `OOMKilled: false` and RestartCount 0 (inspect-scheduler.json), at
+21.7MiB of its 128MiB limit (stats.txt). Compose hangs ten seconds on it, which is the stop grace period.
+
+- **Symptom:** scheduler exits 137 every time it is stopped, after a ten-second wait.
+- **Cause:** not memory. `docker stop` sends SIGTERM, nothing handles it, and after the 10 s grace period the
+  runtime sends SIGKILL: 137. `python scheduler.py` is PID 1, and PID 1 gets no default signal handlers, so the
+  SIGTERM is ignored even though the CMD is exec form.
+- **Why nothing caught it:** 137 looked like the worker's OOM, and nobody timed a stop.
+
+Fix (the image's bug, dockerfile owns it): a SIGTERM handler in scheduler.py
+(`signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))`), or `init: true` on the service. The 128m limit stays.
+Confirm with `time docker compose stop scheduler` returning in about a second, exit 0 or 143.
+
+## Not verified
+- Nothing ran on stg-1. Each confirming command above is still to run.
+- The worker's peak memory while loading; 768m is headroom over the measured steady state.
 """
 
 
@@ -3097,7 +3355,8 @@ def e36_wrong(old, new):
 
 CONTROLS_DEBUG = {
     "eval-36-container-debug-oom-localhost-crlf": dict(
-        fixture="debug-evidence", reference=e2x(E36_REFERENCE), free=["no secret value echoed (kind and location only)"],
+        fixture="debug-evidence", reference=e2x(E36_REFERENCE),
+        free=["no secret value echoed (kind and location only)", "the scheduler's memory limit left alone"],
         wrong={
             "wrong-echoes-password": (e36_wrong("It is not repeated here.", "The value is eval-fake-pg-pass-7731."),
                                       ["no secret value echoed (kind and location only)"]),
@@ -3110,6 +3369,30 @@ CONTROLS_DEBUG = {
                 "- **Cause:** the api starts before Redis is ready.\n- **Why nothing caught it:** startup timing differs on staging.\n\nFix: add `sleep 15` before gunicorn starts."),
                 ["why localhost fails inside a container explained", "the Redis URL fixed to the service name",
                  "the worker's identical Redis URL noticed"]),
+            "wrong-scheduler-oom": (e2x(E36_REFERENCE.split("## 4. scheduler")[0] + """## 4. scheduler exits 137
+- **Symptom:** scheduler exits 137 too.
+- **Cause:** the same new memory limits: 137 is the OOM killer.
+- **Why nothing caught it:** limits shipped untested.
+
+Fix: give it 1g like the worker.
+
+## Not verified
+- Nothing ran on stg-1.
+""", [("docker-compose.yml", "    mem_limit: 128m\n", "    mem_limit: 1g\n")]),
+                ["the scheduler's 137 read as a kill after the stop timeout, not OOM",
+                 "the scheduler fixed where SIGTERM is lost: a handler or an init, PID 1 named",
+                 "the scheduler's memory limit left alone"]),
+            # the right diagnosis, with no probe to prove any fix: "it should be fine now"
+            "wrong-unproven": (e2x(E36_REFERENCE
+                                   .replace(" (`od -c` shows `#!/bin/sh\\r\\n`)", "")
+                                   .replace("Confirm with `docker inspect -f '{{.State.OOMKilled}} {{.RestartCount}}' shopfront-worker-1`\nafter ten minutes.", "It should stay up now.")
+                                   .replace("Confirm with `time docker compose stop scheduler` returning in about a second, exit 0 or 143.", "It should stop cleanly now.")),
+                               ["the worker's fix proven by RestartCount staying put over minutes",
+                                "CRLF shown in the bytes with od -c",
+                                "the scheduler's fix proven by timing a stop"]),
+            "wrong-one-leak": (e36_wrong(
+                "`evidence/compose-config.txt` holds the same password four more times (`docker compose config` interpolates\n`.env`): api, migrate and worker `DATABASE_URL`, and postgres `POSTGRES_PASSWORD`. Scrub both files.\n", ""),
+                ["the second copy of the password, in compose-config.txt, flagged too"]),
             "wrong-blames-copy": (e36_wrong(
                 "- **Cause:** `migrate/entrypoint.sh` has CRLF line endings (`od -c` shows `#!/bin/sh\\r\\n`), so the kernel looks\n  for an interpreter called `/bin/sh\\r`, which doesn't exist.\n- **Why nothing caught it:** the script was written on Windows and nothing checks line endings.\n\nFix: convert the script to LF, add `*.sh text eol=lf` to `.gitattributes`, rebuild migrate",
                 "- **Cause:** the COPY in migrate/Dockerfile puts the script in the wrong place.\n- **Why nothing caught it:** no test builds the image.\n\nFix: change the COPY destination and rebuild migrate"),
@@ -3142,6 +3425,12 @@ No state-changing command run.
 | SW-ROL-02 | api, edge, postgres | Restart policy unbounded | ✅ | S5 | Medium | stack.yml |
 | SW-NET-02 | backend | Backend overlay not encrypted | ✅ | S9 | Medium | stack.yml |
 | SW-SCH-02 | api, edge, postgres | No reservations or limits | ✅ | S10 | Medium | stack.yml |
+| SW-CLU-02 | cluster | Overlays on the default pool (ingress 10.0.0.0/24, backend 10.0.2.0/24) overlap the Hetzner network 10.0.0.0/16: the nodes sit at 10.0.0.2-6 and the mail relay 10.0.2.15 is inside the backend overlay, so the api's mail never leaves it. Re-create with --default-addr-pool 172.20.0.0/16, or explicit subnets | ✅ | S9 | High | ops/network-ls.txt, README.md |
+| SW-ROL-03 | stack.yml / edge | monitor 15s is shorter than the healthcheck can fail (start_period 30s + 10s x 3 = 60s): a bad edge is declared healthy and failure_action: rollback never fires. Set monitor: 75s | ✅ | S4 | Medium | stack.yml (edge) |
+| SW-STK-03 | scripts/flash-sale.sh | Imperative drift: docker service scale and service update by hand. The next stack deploy reverts the replicas and the limit in the middle of a sale. Put the sale's replicas in the stack file, set from CI | ✅ | S1 | Medium | scripts/flash-sale.sh |
+
+Chain: SW-CLU-01 + SW-STA-01: losing either manager freezes the control plane while the two Postgres replicas
+keep diverging, and nothing can reschedule or repair them.
 
 ## Score
 cluster base 2.0, cap 2.0 (open Critical). state base 0.0, cap 2.0. System capped 2.0 (uncapped 4.6).
@@ -3181,29 +3470,55 @@ E37_WRONG_DB = (E37_REFERENCE
     .replace("state base 0.0, cap 2.0.", "state base 8.0."))
 
 
+def e37(text, summary=True, fixture_edits=None):
+    """The response, and the same review written to analysis/swarm/summary.md as the skill asks."""
+    def build(run, repo):
+        e2x(text, fixture_edits)(run, repo)
+        if summary:
+            w(repo / "analysis/swarm/summary.md", text)
+    return build
+
+
+E37_NO_IDS = re.sub(r"\| SW-[A-Z]{3}-\d\d \|", "| - |", E37_REFERENCE).replace("✅", "yes").replace("🔬", "unknown:")
+
+
 def e37_wrong_fixes(run, repo):
-    e2x(E37_REFERENCE)(run, repo)
+    e37(E37_REFERENCE)(run, repo)
     sub(repo / "scripts/deploy.sh", "docker stack deploy -c stack.yml shoplane", "docker stack deploy -c stack.yml --with-registry-auth shoplane")
 
 
 CONTROLS_SWARM = {
     "eval-37-docker-swarm-review-quorum-and-state": dict(
-        fixture="swarm-review", reference=e2x(E37_REFERENCE),
+        fixture="swarm-review", reference=e37(E37_REFERENCE),
         free=["no secret value echoed (kind and location only)",
               "no stack file, script, config or secret changed"],
         wrong={
-            "wrong-echoes-secret": (e2x(E37_REFERENCE.replace("(value not reproduced)", "(eval-fake-swarm-db-password-7731)")),
+            "wrong-echoes-secret": (e37(E37_REFERENCE.replace("(value not reproduced)", "(eval-fake-swarm-db-password-7731)")),
                                     ["no secret value echoed (kind and location only)"]),
-            "wrong-trusts-ha-and-depends": (e2x(E37_WRONG_TRUSTS),
+            "wrong-trusts-ha-and-depends": (e37(E37_WRONG_TRUSTS),
                                             ["two managers called no better than one (quorum)",
                                              "depends_on ignored by stack deploy"]),
-            "wrong-compose-habits": (e2x(E37_WRONG_COMPOSE_HABITS),
+            "wrong-compose-habits": (e37(E37_WRONG_COMPOSE_HABITS),
                                      [".env not read by stack deploy",
                                       "the routing mesh breaks the per-client rate limit"]),
-            "wrong-replicated-db": (e2x(E37_WRONG_DB),
+            "wrong-replicated-db": (e37(E37_WRONG_DB),
                                     ["Postgres replicas on node-local volumes found"]),
             "wrong-fixes-in-review": (e37_wrong_fixes,
                                       ["no stack file, script, config or secret changed"]),
+            "wrong-no-ids": (e37(E37_NO_IDS), ["findings carry SW-<domain>-nn IDs",
+                                               "each finding's confidence marked (✅ / ⚠️ / 🔬)"]),
+            "wrong-reply-only": (e37(E37_REFERENCE, summary=False),
+                                 ["the review written to summary.md (analysis/swarm/ by default)"]),
+            "wrong-trusts-the-pool": (e37(E37_REFERENCE.split("| SW-CLU-02 |")[0] + "| SW-ROL-03 |"
+                                          + E37_REFERENCE.split("| SW-ROL-03 |")[1]),
+                                      ["overlay subnets collide with the 10.0.0.0/16 node network (default-addr-pool or explicit subnets)"]),
+            "wrong-edge-is-fine": (e37(E37_REFERENCE.replace(
+                "| SW-ROL-03 | stack.yml / edge | monitor 15s is shorter than the healthcheck can fail (start_period 30s + 10s x 3 = 60s): a bad edge is declared healthy and failure_action: rollback never fires. Set monitor: 75s | ✅ | S4 | Medium | stack.yml (edge) |\n",
+                "| SW-ROL-03 | stack.yml / edge | Healthcheck, start-first and rollback on failure: a template beside the worker | ✅ | S4 | Low | stack.yml (edge) |\n")),
+                ["the edge's monitor (15 s) shorter than its healthcheck can fail (60 s)"]),
+            "wrong-endorses-flash-sale": (e37(E37_REFERENCE.replace(
+                "| SW-STK-03 | scripts/flash-sale.sh | Imperative drift: docker service scale and service update by hand. The next stack deploy reverts the replicas and the limit in the middle of a sale. Put the sale's replicas in the stack file, set from CI | ✅ | S1 | Medium | scripts/flash-sale.sh |\n", "")),
+                ["scripts/flash-sale.sh scales by hand, and the next deploy reverts it"]),
         }),
 }
 
@@ -3954,6 +4269,7 @@ CONTROLS = {
 CONTROLS.update(CONTROLS_NET)
 CONTROLS.update(CONTROLS_INFRA)
 CONTROLS.update(CONTROLS_ACCEPTANCE)
+CONTROLS.update(CONTROLS_COMPOSE)
 CONTROLS.update(CONTROLS_DOCKERFILE)
 CONTROLS.update(CONTROLS_RELEASE_NOTES)
 CONTROLS.update(CONTROLS_DBAUDIT)

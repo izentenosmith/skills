@@ -8,8 +8,9 @@ audit  checks the tree against layout.md: the index budget, frontmatter, links, 
        references that no longer resolve, secret-like strings, orphans, stale and oversized notes,
        likely duplicates, and whether a dream is due. Codes ML01-ML12, below.
 delta  the dream's input: the watermark in .memory/.dream-state, the commits since it, the notes and
-       pages whose referenced files those commits touched, the memory files captured since, and the
-       notes past their verified window. With no watermark, every note is listed for verification.
+       pages whose referenced files those commits touched, the memory files captured since, the
+       design records (ADRs, glossary) added or changed since, and the notes past their verified
+       window. With no watermark, every note is listed for verification.
 
 Every command prints markdown; `--json PATH` also writes the full result. Stdlib only, Python 3.10+,
 read-only: it reads files and runs `git rev-parse`, `git rev-list`, `git log` and `git cat-file`, and
@@ -65,6 +66,8 @@ PATHREF = re.compile(r"^(?P<path>(?:\.{0,2}/)?[\w.@+-]+(?:/[\w.@+-]+)*)(?::(?P<l
 EXTS = {".py", ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".java", ".kt", ".go", ".rs", ".rb", ".php",
         ".cs", ".c", ".h", ".cc", ".cpp", ".swift", ".scala", ".sh", ".sql", ".tf", ".yml", ".yaml", ".toml",
         ".json", ".ini", ".cfg", ".md", ".txt", ".html", ".css", ".vue", ".svelte", ".proto", ".env"}
+# where a repo keeps its design records: the dream links these from memory, never copies them
+RECORDS = re.compile(r"^(?:(?:docs?/)?(?:adr|adrs|decisions)/.+\.md|(?:docs/)?(?:GLOSSARY|CONTEXT|glossary)\.md)$")
 SHA = re.compile(r"(?<![\w-])[0-9a-f]{7,40}(?![\w-])")
 STOP = set("the and for with that this from are was were has have not but its into when then than any all "
            "each per via use used uses using our their they them there here what which who will would should "
@@ -432,8 +435,15 @@ def delta(mem, today):
 
     captured = sorted({p for c in commits for f in c["files"] for p in [f["path"]]
                        if p.startswith(".memory/") and not p.endswith(".dream-state")}) if w else []
+    records = {}
+    if w:
+        for c in reversed(commits):  # oldest first, so the latest status wins
+            for f in c["files"]:
+                if RECORDS.match(f["path"]):
+                    records[f["path"]] = {"path": f["path"], "status": f["status"], "commit": c["sha"][:8]}
     stale = [f for f in audit(mem, today)[0] if f["code"] == "ML08"]
     return {**info, "commits": commits, "reverify": reverify, "captured": captured,
+            "records": sorted(records.values(), key=lambda r: r["path"]),
             "stale": [s["where"] for s in stale]}
 
 
@@ -484,6 +494,8 @@ def md_delta(d):
         else:
             why = "; ".join(f"`{h['ref']}` → {h['path']} in {', '.join(h['commits'])}" for h in r["why"])
             out.append(f"- `{r['file']}`: {why}")
+    out += ["", f"## Design records since the last dream ({len(d['records'])})", ""]
+    out += [f"- {r['status']} `{r['path']}` in `{r['commit']}`" for r in d["records"]] or ["- none"]
     out += ["", f"## Captured since the last dream ({len(d['captured'])})", ""]
     out += [f"- `{p}`" for p in d["captured"]] or ["- none"]
     out += ["", f"## Past their verified window ({len(d['stale'])})", ""]

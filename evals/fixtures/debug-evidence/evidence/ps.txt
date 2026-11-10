@@ -4,4 +4,5 @@ shopfront-api-1        shopfront-api        api        Up 2 hours
 shopfront-migrate-1    shopfront-migrate    migrate    Exited (255) 2 hours ago
 shopfront-postgres-1   postgres:16.4        postgres   Up 2 hours (healthy)
 shopfront-redis-1      redis:7.4-alpine     redis      Up 2 hours (healthy)
+shopfront-scheduler-1  shopfront-scheduler  scheduler  Exited (137) 3 minutes ago
 shopfront-worker-1     shopfront-worker     worker     Restarting (137) 8 seconds ago
