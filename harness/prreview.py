@@ -318,8 +318,8 @@ Return exactly one status: **fixed** (the scenario no longer reproduces; say how
 is new code: say in `note` if the fix itself looks wrong.
 """
 
-RETRO_PROMPT = HEADER + """Read the skill at `{skill}` and run it in **PR record** mode, in its "Under the PR \
-harness" role, on this review.
+RETRO_PROMPT = HEADER + """Read the skill at `{skill}` and run it in **PR record** mode, as its "When a \
+pipeline calls this skill" section describes, on this review.
 
 The review report is `{report}`; the findings with their final statuses are `{findings}`{rereviews}.
 

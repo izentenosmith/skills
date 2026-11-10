@@ -127,8 +127,8 @@ withdrawn is costing attention (RR12).
 
 ## 8. The approval rule
 
-1. **Proposals are text.** The skill writes them; it doesn't apply them. Under the PR harness, the
-   harness writes them to `proposals.md` and doesn't apply them either.
+1. **Proposals are text.** The skill writes them; it doesn't apply them. A pipeline that calls the
+   skill may write them to a file, and doesn't apply them either.
 2. **A person approves each one,** and the change lands as its own PR, so it gets its own review.
 3. **Record the decision.** An accepted proposal gets its PR link. A rejected one gets its reason,
    and the next retro reads it before proposing the same thing again (RR1, applied to retros).
