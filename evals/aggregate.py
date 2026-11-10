@@ -1,16 +1,24 @@
 #!/usr/bin/env python3
 """Aggregate grading across iterations.
 
-Usage: python3 aggregate.py <iter-dir> [<iter-dir> ...]
+Usage: python3 aggregate.py [--record] <iter-dir> [<iter-dir> ...]
 
 Later directories win: an eval present in iteration-2 supersedes iteration-1.
 Reports capability and delta pass rates separately — only the delta column is
 evidence that this session's edits helped.
+
+Writes benchmark.md, benchmark.json and scores.json next to the iteration
+directories. scores.json says, per eval, which iteration its score comes from
+and the skill_hash and staging run.py recorded for it; check_repo.py compares
+that hash with the skill as it is now. --record also writes benchmark.md and
+scores.json into evals/, the copies this repo commits.
 """
+import argparse
 import json
 import pathlib
 import statistics as st
-import sys
+
+EVALS_DIR = pathlib.Path(__file__).resolve().parent
 
 
 def load(p):
@@ -29,12 +37,24 @@ def collect(dirs):
         for ed in sorted(d.iterdir()):
             if not ed.is_dir() or not ed.name.startswith("eval-"):
                 continue
-            reps = [load(p / "grading.json") for p in sorted(ed.glob("with_skill/rep*"))]
-            reps = [r for r in reps if r]
+            graded = [p for p in sorted(ed.glob("with_skill/rep*")) if load(p / "grading.json")]
+            reps = [load(p / "grading.json") for p in graded]
+            runs = [load(p / "run.json") or {} for p in graded]
             base = load(ed / "old_skill/grading.json")
             if reps or base:
-                found[ed.name] = (d.name, reps, base)
+                found[ed.name] = (d.name, reps, base, runs)
     return found
+
+
+def provenance(name, runs, skills):
+    """What the scored with-skill runs saw: the skill, how run.py staged it, and
+    the hash of the staged folder. Runs from before run.py recorded these give
+    None, as do reps that disagree."""
+    def agreed(key):
+        values = {r.get(key) for r in runs}
+        return values.pop() if len(values) == 1 else None
+    return {"skill": agreed("skill") or skills.get(name),
+            "staging": agreed("staging"), "skill_hash": agreed("skill_hash")}
 
 
 def rate(rows, key):
@@ -43,11 +63,18 @@ def rate(rows, key):
 
 
 def main():
-    found = collect(sys.argv[1:])
+    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    ap.add_argument("dirs", nargs="+", help="iteration directories, oldest first")
+    ap.add_argument("--record", action="store_true",
+                    help="also write benchmark.md and scores.json into evals/")
+    args = ap.parse_args()
+    evals = json.loads((EVALS_DIR / "evals.json").read_text())["evals"]
+    skills = {f"eval-{e['id']}-{e['name']}": e["skill"] for e in evals if e.get("runner") != "loop"}
+    found = collect(args.dirs)
     out = []
     for name in sorted(found):
-        src, reps, base = found[name]
-        row = {"eval": name, "source": src, "n": len(reps)}
+        src, reps, base, runs = found[name]
+        row = {"eval": name, "source": src, "n": len(reps), **provenance(name, runs, skills)}
         for label, key in (("all", "pass_rate"), ("delta", "delta_rate"),
                            ("cap", "capability_rate")):
             v = rate(reps, key)
@@ -75,8 +102,14 @@ def main():
         out.append(row)
 
     bench = {"skill_name": "six-stage-pipeline", "evals": out}
-    ws = pathlib.Path(sys.argv[1]).parent
+    ws = pathlib.Path(args.dirs[0]).parent
     (ws / "benchmark.json").write_text(json.dumps(bench, indent=2))
+    scores = {"note": "Written by evals/aggregate.py. skill_hash is the content hash of the skill "
+                      "folder the scored runs saw (null: scored before run.py recorded it); "
+                      ".github/scripts/check_repo.py reports each skill whose current hash differs.",
+              "evals": {r["eval"]: {"skill": r["skill"], "iteration": r["source"], "n": r["n"],
+                                    "staging": r["staging"], "skill_hash": r["skill_hash"]}
+                        for r in out if r["skill"]}}
 
     L = ["# Benchmark", "",
          "`delta` = assertions that test what the skill instructs. `cap` = does the skill do its job at all. `n` = with-skill runs; the baseline is one run.", "",
@@ -121,7 +154,9 @@ def main():
     if not any_f:
         L.append("_None._")
 
-    (ws / "benchmark.md").write_text("\n".join(L))
+    for dest in [ws] + ([EVALS_DIR] if args.record else []):
+        (dest / "benchmark.md").write_text("\n".join(L))
+        (dest / "scores.json").write_text(json.dumps(scores, indent=2) + "\n")
     print("\n".join(L))
 
 

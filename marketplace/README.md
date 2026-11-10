@@ -90,7 +90,7 @@ The demo is the listing's largest conversion driver, and it should be a real run
 python3 evals/run.py --evals 7 --reps 1 --baseline-ref none   # post-mortem's eval
 ```
 
-The request is the eval's `prompt` in [`evals/evals.json`](../evals/evals.json); the result is the run's `outputs/response.md`. Say in the demo that the system is a seeded test incident, not a customer's.
+The request is the eval's `prompt` in [`evals/evals.json`](../evals/evals.json); the result is the run's `outputs/response.md`. `run.py` stages the skill as this packager builds it (`--stage package`, its default), so the demo comes from the same files the zip ships. Say in the demo that the system is a seeded test incident, not a customer's.
 
 To paste a long output, copy it as UTF-8: `LC_ALL=en_US.UTF-8 pbcopy < response.md`. Without a UTF-8 locale, macOS's `pbcopy` reads the bytes as Mac Roman, and every `→`, `–` and `—` lands on the listing as `‚Üí`, `‚Äì`, `‚Äî`.
 

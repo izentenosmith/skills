@@ -1,0 +1,404 @@
+{
+  "note": "Written by evals/aggregate.py. skill_hash is the content hash of the skill folder the scored runs saw (null: scored before run.py recorded it); .github/scripts/check_repo.py reports each skill whose current hash differs.",
+  "evals": {
+    "eval-0-architect-charter-and-options": {
+      "skill": "architect-deep-dive",
+      "iteration": "iteration-15",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-1-brief-ordered-criteria": {
+      "skill": "agent-brief",
+      "iteration": "iteration-15",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-10-hotfix-script-no-tests": {
+      "skill": "hotfix",
+      "iteration": "iteration-20",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-11-hotfix-routes-outage-out": {
+      "skill": "hotfix",
+      "iteration": "iteration-20",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-12-incident-webapp-contain-by-flag": {
+      "skill": "incident-fix",
+      "iteration": "iteration-17",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-13-incident-batch-repair-artifact": {
+      "skill": "incident-fix",
+      "iteration": "iteration-17",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-14-incident-library-no-deploy": {
+      "skill": "incident-fix",
+      "iteration": "iteration-17",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-16-netaudit-hub-spoke-recovers-and-scores": {
+      "skill": "netaudit",
+      "iteration": "iteration-21",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-17-netdesign-plans-around-what-is-in-use": {
+      "skill": "netdesign",
+      "iteration": "iteration-21",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-18-netdiagram-canonical-views-from-model": {
+      "skill": "netdiagram",
+      "iteration": "iteration-23",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-19-netpropose-contains-before-restructuring": {
+      "skill": "netpropose",
+      "iteration": "iteration-23",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-2-tdd-reads-brief-vertical": {
+      "skill": "tdd",
+      "iteration": "iteration-24",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-20-netblueprint-waits-for-acceptance": {
+      "skill": "netblueprint",
+      "iteration": "iteration-23",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-21-terraform-review-state-and-secrets": {
+      "skill": "terraform",
+      "iteration": "iteration-26",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-22-terraform-design-isolates-state": {
+      "skill": "terraform",
+      "iteration": "iteration-26",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-23-terraform-propose-no-recreate": {
+      "skill": "terraform",
+      "iteration": "iteration-26",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-24-pipelines-review-untrusted-and-rebuild": {
+      "skill": "pipelines",
+      "iteration": "iteration-26",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-25-pipelines-design-build-once-progressive": {
+      "skill": "pipelines",
+      "iteration": "iteration-26",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-26-pipelines-propose-keeps-prod-up": {
+      "skill": "pipelines",
+      "iteration": "iteration-26",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-27-acceptance-tests-red-for-the-right-reason": {
+      "skill": "acceptance-tests",
+      "iteration": "iteration-15",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-28-dockerfile-repair-pins-and-drops-root": {
+      "skill": "dockerfile",
+      "iteration": "iteration-30",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-29-release-notes-translates-drops-and-leads-with-breaking": {
+      "skill": "release-notes",
+      "iteration": "iteration-33",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-3-refactor-promotes-noted-smell": {
+      "skill": "refactor-review",
+      "iteration": "iteration-24",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-30-dbaudit-postgres-dump-scored-not-fixed": {
+      "skill": "dbaudit",
+      "iteration": "iteration-23",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-31-dbdesign-sqlite-from-requirements-traps": {
+      "skill": "dbdesign",
+      "iteration": "iteration-23",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-32-dbdiagram-barker-and-relational-from-design": {
+      "skill": "dbdiagram",
+      "iteration": "iteration-18",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-33-dbpropose-orphans-before-constraints": {
+      "skill": "dbpropose",
+      "iteration": "iteration-18",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-34-dbbuild-executable-ddl-from-accepted-proposal": {
+      "skill": "dbbuild",
+      "iteration": "iteration-18",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-35-container-hardening-review-socket-and-firewall": {
+      "skill": "container-hardening",
+      "iteration": "iteration-16",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-36-container-debug-oom-localhost-crlf": {
+      "skill": "container-debug",
+      "iteration": "iteration-27",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-37-docker-swarm-review-quorum-and-state": {
+      "skill": "docker-swarm",
+      "iteration": "iteration-27",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-38-threatmodel-review-design-abuse-and-fallback": {
+      "skill": "threatmodel",
+      "iteration": "iteration-26",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-39-threatmodel-design-abusers-and-traps": {
+      "skill": "threatmodel",
+      "iteration": "iteration-33",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-4-teardown-finds-vacuous-test": {
+      "skill": "devils-advocate",
+      "iteration": "iteration-24",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-40-threatmodel-propose-contain-then-design-out": {
+      "skill": "threatmodel",
+      "iteration": "iteration-14",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-41-appsec-review-inventory-and-secrets": {
+      "skill": "appsec",
+      "iteration": "iteration-26",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-42-appsec-design-reshapes-the-quick-wins": {
+      "skill": "appsec",
+      "iteration": "iteration-26",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-43-appsec-propose-contain-then-fix-the-class": {
+      "skill": "appsec",
+      "iteration": "iteration-33",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-44-hardening-review-mixed-estate": {
+      "skill": "hardening",
+      "iteration": "iteration-26",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-45-hardening-design-tier-aware-baseline": {
+      "skill": "hardening",
+      "iteration": "iteration-26",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-46-hardening-propose-no-lockout": {
+      "skill": "hardening",
+      "iteration": "iteration-33",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-47-dbquery-workload-ranked-plans-read-indexes-weighed": {
+      "skill": "dbquery",
+      "iteration": "iteration-18",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-48-dbarchitect-one-system-of-record-no-dual-writes": {
+      "skill": "dbarchitect",
+      "iteration": "iteration-18",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-49-peer-review-claim-omission-injection": {
+      "skill": "peer-review",
+      "iteration": "iteration-25",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-5-verdict-cuts-and-slices": {
+      "skill": "tyr-verdict",
+      "iteration": "iteration-15",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-50-pr-prep-splits-and-discloses": {
+      "skill": "pr-prep",
+      "iteration": "iteration-25",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-51-code-xray-hotspots-not-cold-giants": {
+      "skill": "code-xray",
+      "iteration": "iteration-25",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-52-test-review-would-it-fail": {
+      "skill": "test-review",
+      "iteration": "iteration-25",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-53-concurrency-review-interleavings-and-replicas": {
+      "skill": "concurrency-review",
+      "iteration": "iteration-25",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-54-review-retro-areas-not-people": {
+      "skill": "review-retro",
+      "iteration": "iteration-29",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-55-repo-memory-dream-true-and-small": {
+      "skill": "repo-memory",
+      "iteration": "iteration-31",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-56-ticket-reconcile-before-filing": {
+      "skill": "ticket",
+      "iteration": "iteration-35",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-57-backlog-health-and-order-by-policy": {
+      "skill": "backlog",
+      "iteration": "iteration-35",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-6-compose-detects-real-services": {
+      "skill": "docker-compose",
+      "iteration": "iteration-27",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-7-postmortem-widens-range-and-describes": {
+      "skill": "post-mortem",
+      "iteration": "iteration-6",
+      "n": 1,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-8-hotfix-node-shared-cause": {
+      "skill": "hotfix",
+      "iteration": "iteration-20",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-9-hotfix-jvm-both-callers": {
+      "skill": "hotfix",
+      "iteration": "iteration-20",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    }
+  }
+}
