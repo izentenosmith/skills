@@ -12,7 +12,8 @@ skill is packaged so it stands alone when someone installs only that one:
   - a link to anything else outside the skill (a family README, the harness)
     becomes its link text
   - patches.json applies exact text edits a generic rule can't make, such as a
-    sentence about the harness; a patch that no longer matches fails the build
+    sentence about the harness, and drops whole sections by heading; a patch
+    that no longer matches fails the build
 
 A bundle (bundles.json) zips several skill folders side by side. Links between
 its members stay live, as ../<member>/<file>; links to anything outside the
@@ -58,6 +59,8 @@ ZIP_DATE = (1980, 1, 1, 0, 0, 0)
 SKILL_PRICE_USD = 5
 BUNDLE_PRICE_USD = 10  # flat, whatever the bundle's size
 MAX_ZIP_BYTES = 50 * 1024 * 1024  # the submit form's limit
+DESC_MAX = 1024
+DESC_WARN = 1000  # less headroom than this and the next edit to a description fails the build
 
 FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n", re.S)
 # One pass over the text: fences and inline code are matched so they can be
@@ -90,6 +93,7 @@ class Package:
     demoted: list[str] = dc.field(default_factory=list)  # links turned into text
     problems: list[str] = dc.field(default_factory=list)
     warnings: list[str] = dc.field(default_factory=list)
+    description_length: int = 0
 
 
 @dc.dataclass
@@ -144,6 +148,31 @@ def plain(text: str, skills: dict[str, pathlib.Path]) -> str:
     return text
 
 
+def drop_section(text: str, heading: str) -> tuple[str, int]:
+    """Remove the section headed by the line `heading`, up to the next heading of
+    the same or a higher level, and the `---` rule that closed the section before
+    it if nothing follows. Returns the text and how many such headings there were."""
+    lines = text.split("\n")
+    starts = [i for i, line in enumerate(lines) if line == heading]
+    if len(starts) != 1:
+        return text, len(starts)
+    level = len(heading) - len(heading.lstrip("#"))
+    start, end, fence = starts[0], len(lines), None
+    for i in range(start + 1, len(lines)):
+        mark = re.match(r"(```|~~~)", lines[i])
+        if mark:
+            fence = None if fence == mark.group(1) else fence or mark.group(1)
+        elif not fence and re.match(rf"#{{1,{level}}} ", lines[i]):
+            end = i
+            break
+    kept = lines[:start] + lines[end:]
+    if end == len(lines):  # the last section: drop the rule left dangling above it
+        while kept and kept[-1].strip() in ("", "---"):
+            kept.pop()
+        kept.append("")
+    return "\n".join(kept), 1
+
+
 def apply_patches(pkg: Package, patches: dict) -> None:
     for path, edits in patches.get(pkg.name, {}).items():
         if path not in pkg.files:
@@ -151,6 +180,13 @@ def apply_patches(pkg: Package, patches: dict) -> None:
             continue
         text = pkg.files[path]
         for edit in edits:
+            if "drop_section" in edit:
+                text, count = drop_section(text, edit["drop_section"])
+                if count != 1:
+                    pkg.problems.append(
+                        f"patches.json: {pkg.name}/{path}: section heading matches {count} times, not once — "
+                        f"the source changed; update or drop it: {edit['drop_section']!r}")
+                continue
             count = text.count(edit["old"])
             if count != 1:
                 pkg.problems.append(
@@ -249,8 +285,9 @@ def check(pkg: Package, known: set[str]) -> None:
             pkg.problems.append(f"{pkg.name}/SKILL.md: name must be lowercase letters, digits and hyphens, ≤64")
         if re.search(r"anthropic|claude", name):
             pkg.problems.append(f"{pkg.name}/SKILL.md: name may not contain 'anthropic' or 'claude'")
-        if not desc or len(desc) > 1024:
-            pkg.problems.append(f"{pkg.name}/SKILL.md: description must be 1–1024 characters ({len(desc)})")
+        pkg.description_length = len(desc)
+        if not desc or len(desc) > DESC_MAX:
+            pkg.problems.append(f"{pkg.name}/SKILL.md: description must be 1–{DESC_MAX} characters ({len(desc)})")
         if re.search(r"<[a-zA-Z/][^>]*>", desc):
             pkg.problems.append(f"{pkg.name}/SKILL.md: description contains an XML/HTML tag")
 
@@ -409,6 +446,11 @@ def main(argv: list[str] | None = None) -> int:
     if mentions:
         print("\nmentions the repo's harness, which a zip does not ship:")
         print("\n".join(mentions))
+    long = sorted({(pkg.name, pkg.description_length) for listing in listings for pkg in listing.packages
+                   if DESC_WARN < pkg.description_length <= DESC_MAX}, key=lambda x: -x[1])
+    if long:
+        print(f"\ndescriptions within {DESC_MAX - DESC_WARN} characters of the {DESC_MAX} limit:")
+        print("\n".join(f"  {name}: {n}" for name, n in long))
     if problems:
         print("\nproblems:")
         for p in dict.fromkeys(problems):

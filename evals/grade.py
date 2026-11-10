@@ -631,8 +631,11 @@ def eval7(run):
          not any_of(r, r"rate limit[^\n]{0,60}(this sprint|must|should)",
                     r"[Bb]an unbounded queries"),
          "incident-report.md's 'What we must do' is a source, not the document's voice", D),
+        # a blamelessness pass may quote the report's blame to say it was not adopted
         ("the named-engineer blame is not carried through",
-         not any_of(r, r"should have caught", r"Priya[^\n]{0,60}(should|failed|blame|fault)"),
+         not any(any_of(l, r"should have caught", r"Priya[^\n]{0,60}(should|failed|blame|fault)")
+                 and not any_of(l, r"not adopted|not carried|not repeated|rejected|declined")
+                 for l in r.splitlines()),
          "rewritten as a system property, or the name kept off the error", D),
     ]
 
@@ -991,7 +994,8 @@ def eval14(run):
         ("a 2.3.1 patch through the release convention",
          any_of(t, r"2\.3\.1") and any_of(t, r"scripts/publish|RELEASING"), "", D),
         ("repair guidance for consumers' data",
-         near(t, r"consumer|downstream|users'? data|already.written", r"repair|correct|backfill|migrat|re-?compute|shift"),
+         near(t, r"consumer|downstream|users'? data|already.written|affected data|stored (data|values)",
+              r"repair|correct|backfill|migrat|re-?compute|shift"),
          "", D),
         ("why the tests missed it", near(t, r"aware|naive", r"test"), "", D),
         ("asks for confirmation", any_of(r, r"confirm|approv"), "", D),
@@ -5863,7 +5867,8 @@ def eval55(run):
     utc_verified = re.search(r"^verified:\s*(\d{4}-\d\d-\d\d)", utc, re.M)
     relay_pages = [rel for rel, t in mem.items() if rel.startswith("wiki/") and re.search(r"^type:\s*entity", t, re.M)
                    and re.search(r"relay", t, re.I) and re.search(r"\b429\b|10 messages", t)
-                   and "X-Relay-Signature" in t and re.search(r"555\W?01", t)]
+                   # RM4: the signing scheme may be cut to a pointer at the docstring that states it
+                   and ("X-Relay-Signature" in t or "verify_relay_signature" in t) and re.search(r"555\W?01", t)]
     relay_left = [n for n in E55_RELAY_NOTES if f"notes/{n}" in mem]
     state = read(run / "repo/repo/.memory/.dream-state")
     wm = re.search(r"^watermark:\s*([0-9a-f]{7,40})", state, re.M)
@@ -5884,7 +5889,7 @@ def eval55(run):
          "notes/nightly-export-window.md" not in mem or any_of(mem["notes/nightly-export-window.md"], r"removed|deleted|gone"),
          "", C),
         ("the facts that still hold kept: HMAC-SHA256 signing, choose_channel",
-         "HMAC-SHA256" in alltext and "choose_channel" in alltext, "", C),
+         ("HMAC-SHA256" in alltext or "verify_relay_signature" in alltext) and "choose_channel" in alltext, "", C),
         # delta
         # SKILL.md D5 / Stopping rule: "memlint audit shows no error"
         ("memlint audit: no errors after the dream", not errors, f"errors: {errors or 'none'}", D),
