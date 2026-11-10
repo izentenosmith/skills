@@ -5938,6 +5938,252 @@ def eval55(run):
     ]
 
 
+# ---- evals 56-57: ticket and backlog (no tracker access: a Jira export, a local markdown tracker)
+
+def wf_docs(run, fixture, skip=()):
+    """{rel: text} for every .md or .csv under the run's .workflow/ that the run added or changed.
+    changes() skips .workflow/, and blob() would read the fixture's own profile back as the run's words."""
+    root, fx = run / "repo/.workflow", FIXTURES / fixture / ".workflow"
+    if not root.is_dir():
+        return {}
+    return {p.relative_to(root).as_posix(): read(p) for p in sorted(root.rglob("*"))
+            if p.is_file() and p.suffix in (".md", ".csv") and p.relative_to(root).as_posix() not in skip
+            and read(p) != read(fx / p.relative_to(root))}
+
+
+def tracker_text(run, fixture, skip=()):
+    """The response, the .workflow files the run wrote, and any markdown it added elsewhere."""
+    added, modified, _ = changes(run, fixture)
+    md = [read(run / "repo" / f) for f in added + modified if f.endswith(".md")]
+    return "\n\n".join([resp(run), *wf_docs(run, fixture, skip).values(), *md])
+
+
+def workflow_only(run, fixture, allowed=r"\.(md|csv)$"):
+    """No fixture file outside .workflow/ changed or deleted, nothing but markdown added there, and every file
+    the run added under .workflow/ matches `allowed`."""
+    added, modified, deleted = changes(run, fixture)
+    bad = modified + deleted + [f for f in added if not f.endswith(".md")]
+    root, fx = run / "repo/.workflow", FIXTURES / fixture / ".workflow"
+    if root.is_dir():
+        bad += [f".workflow/{p.relative_to(root).as_posix()}" for p in root.rglob("*") if p.is_file()
+                and not (fx / p.relative_to(root)).exists() and not re.search(allowed, p.name)]
+    return not bad, f"touched: {bad[:6]}" if bad else "nothing outside .workflow/ changed"
+
+
+TK_NEG = r"\bnot?\b|n't|\bnever\b|instead|rather|\bskip|existing|already|duplicate|\bcomment|\bupdate|\blink"
+
+
+def tk_creates(t, topic):
+    """Lines that create a new item about `topic`: a change-set row or a sentence, not one that says why it won't."""
+    return [l.strip()[:100] for l in t.splitlines()
+            if re.search(r"\bcreate\b|\bnew (bug|story|item|issue|ticket|task)\b", l, re.I)
+            and re.search(topic, l, re.I) and not re.search(TK_NEG, l, re.I)]
+
+
+def tk_heading_blocks(t, pat):
+    """Blocks under a heading that matches `pat`, to the next heading."""
+    return [b for b in re.split(r"(?m)^(?=#{1,6}\s)", t) if re.match(rf"#{{1,6}}\s[^\n]*({pat})", b, re.I)]
+
+
+def tk_labelled_incident(t, topic):
+    """Lines (or drafts under a heading) about `topic` that put incident:prod on it, rather than saying it doesn't get one."""
+    neg = r"(\bno\b|\bnot\b|n't|without|never|instead of)[^\n|]{0,30}incident:prod|incident:prod[^\n|]{0,20}(\bnot\b|n't)"
+    lines = [l for l in t.splitlines() if re.search(topic, l, re.I)]
+    lines += [l for b in tk_heading_blocks(t, topic) for l in b.splitlines()]
+    return [l.strip()[:100] for l in lines if "incident:prod" in l and not re.search(neg, l, re.I)]
+
+
+TK_SAFARI = r"safari|cancel button|ipad"
+TK_REMINDER = r"remind|time ?zone|wrong hour|12:30"
+TK_DOUBLE = r"double[- ]book|same slot|booked twice|two appointments"
+TK_INCIDENT = r"payment[- ]confirmation|payment[- ]e-?mail|SMTP|ESC-5531|receipt e-?mails?"
+
+
+def eval56(run):
+    """ticket over a bug bash and a support escalation, with no Jira access: reconcile against the export,
+    draft against the profile with its volatile values re-resolved, write nothing, save the change set."""
+    # the profile is the run's to update; its cached sprint line is the fixture's words, not the run's
+    t = tracker_text(run, "ticket", ("tracker.md",))
+    pending = read(run / "repo/.workflow/ticket-pending.md")
+    keys = sorted({int(k) for k in re.findall(r"\bFH-(\d+)\b", t)})
+    invented = [k for k in keys if k > 224]
+    claimed = [l.strip()[:90] for l in t.splitlines()
+               if re.search(r"\b(created|filed|opened)\s+(FH-\d+|\d+ (new )?(items|issues|tickets))", l, re.I)
+               and not re.search(r"\bnot?\b|n't|nothing|\bnone\b|\bwould\b|\bwill\b|once|after|when|pending", l, re.I)]
+    stale = [l.strip()[:90] for l in t.splitlines() if re.search(r"Sprint 44\b", l)
+             and not re.search(r"stale|cached|clos|outdated|profile|\bwas\b|instead|not|n't|no longer|ended|previous|old|→|->", l, re.I)]
+    prefixed = [l.strip()[:90] for l in t.splitlines()
+                if re.search(r"BUG:|\[iOS\]", l) and (re.search(r"\b(title|summary)\b", l, re.I) or re.search(r"\bcreate\b", l, re.I))
+                and not re.search(r"\bQA\b|prefix|drop|strip|remov|not |n't", l, re.I)]
+    waitlist_titled = any(re.search(r"waitlist", l, re.I) and re.search(r"\b(title|summary|create)\b", l, re.I)
+                          for l in t.splitlines()) or bool(tk_heading_blocks(t, r"waitlist"))
+    # the negation must sit just before "reopen": a table row's other cells may say "isn't" about something else
+    reopened = [l.strip()[:90] for l in t.splitlines() if re.search(r"FH-198", l) and re.search(r"\breopen", l, re.I)
+                and not re.search(r"(\bnot?\b|n't|\bnever\b|instead of|rather than|without)[^\n|]{0,30}\breopen", l, re.I)]
+    staging_incident = tk_labelled_incident(t, r"waitlist")
+    ok_only, only_ev = workflow_only(run, "ticket")
+    return [
+        # capability
+        ("a change set was drafted", len(t) >= 1500 and "FH-" in t and any_of(t, r"change set|create"), f"{len(t)} chars", C),
+        ("every finding and the escalation accounted for",
+         all(k in t for k in ("FH-212", "FH-219", "FH-198", "FH-205", "FH-221"))
+         and any_of(t, r"waitlist") and any_of(t, r"no-?show") and any_of(t, TK_INCIDENT), "", C),
+        ("the waitlist bug drafted with steps, expected and actual",
+         near(t, r"waitlist", r"steps", 1500) and near(t, r"waitlist", r"expected", 1500), "", C),
+        ("the payment-email failure drafted as an incident with incident:prod",
+         near(t, TK_INCIDENT, r"incident:prod", 1500), "", C),
+        ("the change set waits for confirmation", any_of(t, r"confirm"), "", C),
+        # delta
+        # SKILL.md Step 2: "An item exists and is done → Skip. Report it as an existing duplicate"
+        ("the reminder SMS skipped as FH-212, already done, with no new item",
+         near(t, r"FH-212", r"skip|already|exist|\bdone\b|duplicate|covered|fixed", 250) and not tk_creates(t, TK_REMINDER),
+         f"creates: {tk_creates(t, TK_REMINDER)[:1] or 'none'}", D),
+        # SKILL.md Step 2: "An item exists and is open → Update or close that item … Don't create a second"
+        ("the Safari cancel bug added to the open FH-219, with no second item",
+         near(t, r"FH-219", r"comment|update|add", 250) and not tk_creates(t, TK_SAFARI),
+         f"creates: {tk_creates(t, TK_SAFARI)[:1] or 'none'}", D),
+        # SKILL.md Step 2 "covers part of it → continuation that links the original"; writing.md Closing "a new item, linked — not a reopened one"
+        ("the practitioner column a new item linked to FH-198, which is not reopened",
+         near(t, r"FH-198", r"continu|relat|link|follow-on|follow-up|extends", 300)
+         and near(t, r"practitioner", r"create|new (story|item|issue)", 400) and not reopened,
+         f"reopened: {reopened[:1] or 'none'}", D),
+        # SKILL.md Step 2: "Two existing items describe the same work → Propose linking one as a duplicate"
+        ("FH-205 and FH-221 proposed as duplicates, with no third item",
+         near(t, r"FH-205", r"FH-221", 300) and near(t, r"FH-2(05|21)", r"duplicate", 300) and not tk_creates(t, TK_DOUBLE),
+         f"creates: {tk_creates(t, TK_DOUBLE)[:1] or 'none'}", D),
+        # writing.md Incident "start time (from evidence, UTC)"; labels.md "Open the item when the failure starts"
+        ("the incident's start taken from the log: 2026-11-08 22:10 UTC",
+         near(t, r"(2026-11-08|Nov(ember)?\s+8|8\s+Nov\w*)[^\n]{0,24}22:(0[2-9]|10)|22:(0[2-9]|10)(:\d\d)?\s*(UTC|Z)\b",
+              r"start|began|since|first|impact|onset", 200), "", D),
+        # labels.md "A bug that never reached production is not a prod-incident"
+        ("the staging-only waitlist bug drafted without an incident label", waitlist_titled and not staging_incident,
+         f"labelled: {staging_incident[:1] or 'none'}", D),
+        # writing.md kinds: a request is a story with who / what / why and acceptance criteria
+        ("the no-show request drafted as a story with acceptance criteria",
+         near(t, r"no-?show", r"\bstory\b", 400) and near(t, r"no-?show", r"acceptance", 2000), "", D),
+        # SKILL.md Step 1 "Volatile values are re-resolved, not reused — the current sprint"
+        ("the sprint re-resolved to FH Sprint 46, not the profile's cached 44",
+         bool(re.search(r"Sprint 46\b", t)) and not stale, f"stale: {stale[:1] or 'none'}", D),
+        # SKILL.md Step 3 "Every required field from the profile, plus the fields the team always fills"
+        ("required and conventional fields filled: Clinic impact on both bugs, Notifications on the incident",
+         near(t, r"waitlist", r"Clinic impact[^\n]{0,30}\bNone\b", 2000)
+         and near(t, TK_INCIDENT, r"Clinic impact[^\n]{0,30}All clinics", 2000)
+         and near(t, TK_INCIDENT, r"Notifications", 2000), "", D),
+        # writing.md Titles "No prefixes the fields already carry — no [Backend], no BUG:"
+        ("titles drop the QA notes' [iOS] and BUG: prefixes", waitlist_titled and not prefixed,
+         f"prefixed: {prefixed[:1] or 'none'}", D),
+        # SKILL.md Stopping rule "Auth fails … stop with the drafted change set saved to .workflow/ticket-pending.md"
+        ("the drafted change set saved to .workflow/ticket-pending.md",
+         len(pending) >= 800 and "FH-219" in pending and re.search(r"waitlist", pending, re.I) is not None,
+         f"{len(pending)} chars", D),
+        # SKILL.md "Never create … without the user's confirmation"; Step 5 "Never declare an item written until a fresh query shows it"
+        ("nothing claimed as created and no FH key invented", bool(keys) and not invented and not claimed,
+         f"invented: {invented[:3] or 'none'}; claimed: {claimed[:1] or 'none'}", D),
+        ("only markdown under .workflow/ written; the export, notes and escalation unchanged", ok_only, only_ev, D),
+    ]
+
+
+BL_FEATURES = (15, 18, 21, 22, 23, 24, 25, 29, 36, 39, 40)
+BL_SKIP = ("backlog.md", "tracker.md")
+
+
+def bl_order(run, t):
+    """L-ids in the order the run ranked them: the order file when there is one, else the response's ordering
+    section. Read from ranked lines (`| 3 | L-27 …` or `3. L-27 …`) in document order, first appearance wins,
+    so per-class tables numbered from 1 still read top to bottom."""
+    docs = wf_docs(run, "backlog", BL_SKIP)
+    src = "\n".join(v for k, v in docs.items() if re.search(r"(^|/)order[^/]*\.md$", k)) \
+        or section(resp(run), r"order|pull next|priorit|rank|next up") or section(t, r"order|pull next|rank")
+    seen = []
+    for line in src.splitlines():
+        m = re.match(r"^\s*\|\s*\**#?\s*(\d+)\s*\**\s*\|(.*)", line) or re.match(r"^\s*(\d+)[.)]\s+(.*)", line)
+        if m and int(m.group(1)) <= 80 and (k := re.search(r"\bL-(\d+)\b", m.group(2))):
+            if int(k.group(1)) not in seen:
+                seen.append(int(k.group(1)))
+    return seen
+
+
+def bl_above(order, item, others):
+    """`item` is ranked, and above every one of `others` that is ranked."""
+    if item not in order:
+        return False
+    return all(order.index(item) < order.index(o) for o in others if o in order)
+
+
+BL_SIZES = (r"\bWSJF\b[^\n]{0,24}\d|\b(cost of delay|CoD|job size|size|effort)\s*[:=]\s*\d"
+            r"|\b\d+\s*(story\s*)?(points|pts)\b|\bSP\s*[:=]\s*\d")
+
+
+def eval57(run):
+    """backlog Health then Order over a local markdown tracker: the abandoned safety follow-up as Critical and
+    its cap, the untracked and untagged reliability work, the error-budget policy, one top item by class of
+    service, no invented sizes, and nothing in the tracker changed."""
+    t = tracker_text(run, "backlog", BL_SKIP)
+    docs = wf_docs(run, "backlog", BL_SKIP)
+    order = bl_order(run, t)
+    snap = [v for k, v in docs.items() if re.search(r"snapshot[^/]*\.csv$", k)]
+    saved = {kind: any(re.search(rf"(^|/){kind}[^/]*\.md$", k) for k in docs) for kind in ("health", "order")}
+    sizes = [m.group(0) for m in re.finditer(BL_SIZES, t, re.I)]
+    tracker_same = all(read(run / "repo/.workflow" / f) == read(FIXTURES / "backlog/.workflow" / f) for f in BL_SKIP)
+    ok_only, only_ev = workflow_only(run, "backlog")
+    return [
+        # capability
+        ("a health review and an order were written",
+         len(t) >= 1500 and any_of(t, r"priorit") and any_of(t, r"\bWIP\b|in progress"), f"{len(t)} chars", C),
+        ("the unowned, overdue follow-up L-31 noticed",
+         near(t, r"L-31\b", r"overdue|past (its )?due|unassigned|no owner|unowned|without an owner", 300), "", C),
+        ("the duplicate gift-subscription items noticed", near(t, r"L-15\b", r"L-29\b", 300), "", C),
+        ("bruno's five items in progress noticed", near(t, r"bruno", r"\b5\b|five", 200), "", C),
+        ("too many P1s noticed",
+         near(t, r"\b10\b|3[1-4]\s?%", r"\bP1\b|highest|top priorit", 150), "", C),
+        ("L-12 neglected in progress and L-19 blocked without a link",
+         near(t, r"L-12\b", r"untouched|neglect|stale|aged|idle|since (august|2026-08)|\b(6|7|8|9|10)\d\s*days", 300)
+         and near(t, r"L-19\b", r"block", 300) and near(t, r"L-19\b", r"link|BL-FLO-07|BL-RDY-07", 300), "", C),
+        # delta
+        # health-checks BL-REL-01: a prevent follow-up from a money/data incident, no owner or past due → Critical
+        ("L-31 graded Critical", near(t, r"L-31\b", r"critical", 300), "", D),
+        # scoring.md "any open Critical caps at 2.0"; the gate "no open Critical or High finding"
+        ("the score capped at 2.0 and the gate failed",
+         near(t, r"\bcap", r"\b2\.0\b|\b2\s*/\s*10\b", 200)
+         and near(t, r"\bgate\b", r"\bfail|not (met|pass|healthy)|❌|✗|🔴|\bno\b", 300), "", D),
+        # health-checks BL-REL-03: a post-mortem follow-up with no tracker item
+        ("FU-3, the reconciliation review, found to have no item",
+         near(t, r"FU-3|reconciliation", r"untracked|no (tracker |backlog |matching )?item|not tracked|missing|BL-REL-03|without (an |a )?item|never (filed|created)", 300),
+         "", D),
+        # health-checks BL-REL-04: a production failure without the incident label
+        ("L-38, the checkout outage, found without the prod-incident label",
+         near(t, r"L-38\b", r"prod-incident|incident label|untagged|unlabel|BL-REL-04", 300), "", D),
+        # ordering.md "Error-budget freeze"; health-checks BL-REL-05
+        ("the spent error budget and its freeze policy applied",
+         near(t, r"error.budget|\bSLO\b|164\s?%", r"freeze|policy|BL-REL-05|features? (first|above|ahead)", 400), "", D),
+        # ordering.md "Expedite … goes first"; SKILL.md Order "Exactly one item at the top"
+        ("exactly one item first: L-41, the open incident", bool(order) and order[0] == 41,
+         f"top: {('L-%d' % order[0]) if order else 'no ranked list found'}", D),
+        # ordering.md post-mortem follow-up "past-due … prevent item … ranks near the top"; fixed date "date minus the time it needs"
+        ("L-31 (past-due prevent) and L-27 (certificate due 2026-11-20) above every standard feature",
+         bl_above(order, 31, BL_FEATURES) and bl_above(order, 27, BL_FEATURES),
+         f"order: {['L-%d' % n for n in order[:8]]}", D),
+        # ordering.md "Error-budget freeze … goes above all standard feature work"
+        ("the freeze work (L-33, L-34, L-35) above the P1 features",
+         all(bl_above(order, n, BL_FEATURES) for n in (33, 34, 35)), "", D),
+        # health-checks BL-REL-07: the same manual fix three times with no automation done
+        ("the three manual refund batches tied to the missing idempotency fix",
+         near(t, r"L-[345]\b|manual(ly)? refund|refunds? by hand|\btoil\b", r"L-31\b|idempoten|BL-REL-07|three times|repeat", 300), "", D),
+        # ordering.md "Never invent numbers for either"; SKILL.md Order "Never invent sizes or values"
+        ("no sizes, points or WSJF scores invented", not sizes, f"invented: {sizes[:2] or 'none'}", D),
+        # SKILL.md Step 0 snapshot; scoring.md templates
+        ("a snapshot CSV, the health report and the order saved under .workflow/backlog/",
+         bool(snap) and len(set(re.findall(r"\bL-\d+\b", snap[0]))) >= 30 and all(saved.values()),
+         f"snapshot: {bool(snap)}; files: {saved}", D),
+        # SKILL.md Apply "Show it and wait"
+        ("the proposed changes left awaiting confirmation",
+         near(t, r"change set|proposed changes", r"confirm|approv|awaiting|your (yes|go)", 400), "", D),
+        # SKILL.md "Never create, update, close, re-rank … anything in a tracker yourself"
+        ("nothing applied: the backlog and profile unchanged, only notes and the snapshot written",
+         tracker_same and ok_only, "" if tracker_same else "backlog.md or tracker.md changed" if ok_only else only_ev, D),
+    ]
+
+
 
 CHECKS = {
     "eval-0-architect-charter-and-options": eval0,
@@ -5996,6 +6242,8 @@ CHECKS = {
     "eval-53-concurrency-review-interleavings-and-replicas": eval53,
     "eval-54-review-retro-areas-not-people": eval54,
     "eval-55-repo-memory-dream-true-and-small": eval55,
+    "eval-56-ticket-reconcile-before-filing": eval56,
+    "eval-57-backlog-health-and-order-by-policy": eval57,
 }
 
 

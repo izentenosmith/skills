@@ -56,13 +56,15 @@
 | 53-concurrency-review-interleavings-and-replicas | i25 | 3 | 1.00 ± 0.00 | 0.39 | +0.61 | 1.00 | 0.83 |
 | 54-review-retro-areas-not-people | i29 | 3 | 1.00 ± 0.00 | 0.36 | +0.64 | 1.00 | 1.00 |
 | 55-repo-memory-dream-true-and-small | i34 | 3 | 1.00 ± 0.00 | 0.77 | +0.23 | 1.00 | 1.00 |
+| 56-ticket-reconcile-before-filing | i35 | 3 | 1.00 ± 0.00 | 0.92 | +0.08 | 1.00 | 1.00 |
+| 57-backlog-health-and-order-by-policy | i35 | 3 | 1.00 ± 0.00 | 0.69 | +0.31 | 1.00 | 1.00 |
 | 6-compose-detects-real-services | i27 | 3 | 1.00 ± 0.00 | 0.44 | +0.56 | 1.00 | 1.00 |
 | 7-postmortem-widens-range-and-describes | i34 | 3 | 1.00 ± 0.00 | 0.70 | +0.30 | 1.00 | 1.00 |
 | 8-hotfix-node-shared-cause | i34 | 3 | 1.00 ± 0.00 | 0.38 | +0.62 | 1.00 | 1.00 |
 | 9-hotfix-jvm-both-callers | i34 | 3 | 1.00 ± 0.00 | 0.71 | +0.29 | 1.00 | 1.00 |
 
-**Delta — current 0.99 vs baseline 0.49**
-**Capability — current 1.00 vs baseline 0.89**
+**Delta — current 0.99 vs baseline 0.50**
+**Capability — current 1.00 vs baseline 0.90**
 
 ## Delta assertions the baseline also passed (still non-discriminating)
 
@@ -508,6 +510,31 @@
 - the credential's value removed, where it lives kept
 - the watermark advanced to HEAD
 - the report cites the commits behind the corrections (retry raise, rename)
+
+**eval-56-ticket-reconcile-before-filing**
+- the reminder SMS skipped as FH-212, already done, with no new item
+- the Safari cancel bug added to the open FH-219, with no second item
+- the practitioner column a new item linked to FH-198, which is not reopened
+- FH-205 and FH-221 proposed as duplicates, with no third item
+- the incident's start taken from the log: 2026-11-08 22:10 UTC
+- the staging-only waitlist bug drafted without an incident label
+- the no-show request drafted as a story with acceptance criteria
+- the sprint re-resolved to FH Sprint 46, not the profile's cached 44
+- required and conventional fields filled: Clinic impact on both bugs, Notifications on the incident
+- titles drop the QA notes' [iOS] and BUG: prefixes
+- nothing claimed as created and no FH key invented
+- only markdown under .workflow/ written; the export, notes and escalation unchanged
+
+**eval-57-backlog-health-and-order-by-policy**
+- FU-3, the reconciliation review, found to have no item
+- L-38, the checkout outage, found without the prod-incident label
+- the spent error budget and its freeze policy applied
+- exactly one item first: L-41, the open incident
+- L-31 (past-due prevent) and L-27 (certificate due 2026-11-20) above every standard feature
+- the freeze work (L-33, L-34, L-35) above the P1 features
+- the three manual refund batches tied to the missing idempotency fix
+- no sizes, points or WSJF scores invented
+- nothing applied: the backlog and profile unchanged, only notes and the snapshot written
 
 **eval-6-compose-detects-real-services**
 - meilisearch detected from the source
