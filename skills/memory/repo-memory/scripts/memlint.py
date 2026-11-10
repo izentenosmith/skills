@@ -216,7 +216,7 @@ class Memory:
             if ref:
                 out.append(("path", m.group(1), ref, body.count("\n", 0, m.start()) + 1))
         for tok in re.split(r"[\s,;()]+", meta.get("source", "")):
-            tok = tok.strip("`'\".")
+            tok = tok.strip("`'\"").rstrip(".")  # a sentence's last period, not a dotfile's first
             ref = pathref(tok)
             if ref and "/" in tok:
                 out.append(("path", tok, ref, 0))

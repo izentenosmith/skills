@@ -130,6 +130,14 @@ class Audit(Tree):
         self.w(".memory/notes/alpha.md", note("alpha", "a", body="In the vault at `kv/app/staging/db`; bucket `exports/daily`.\n"))
         self.assertNotIn("ML05", self.codes()[0])
 
+    def test_a_dotfile_path_in_source_keeps_its_leading_dot(self):
+        self.w(".github/ci.yml", "on: push\n")
+        self.w(".memory/notes/alpha.md", note("alpha", "a", source=".github/ci.yml, src/app.py."))
+        self.assertNotIn("ML05", self.codes()[0])
+        self.w(".memory/notes/alpha.md", note("alpha", "a", source=".github/gone.yml"))
+        whats = [f["what"] for f in self.codes()[1] if f["code"] == "ML05"]
+        self.assertEqual(whats, ["`.github/gone.yml`: no such file"])
+
     def test_ml05_unknown_commit_in_source(self):
         self.git("init", "-q", "-b", "main")
         self.commit("init")
