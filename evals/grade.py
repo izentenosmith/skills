@@ -1529,6 +1529,18 @@ def endorses(t, pat):
     return False
 
 
+def first_step(t, pat):
+    """The first match of pat that is a step, not a warning against one: "closing the
+    rule without a replacement would cut off both hosts" explains the risk, it doesn't
+    schedule the change."""
+    for m in re.finditer(pat, t, re.I):
+        line_start = t.rfind("\n", 0, m.start()) + 1
+        ctx = t[max(line_start, m.start() - 80): m.end() + 80]
+        if not re.search(r"\bwithout\b|\bwould\b|\bnever\b|don't|do not|before (a|its|the) (replacement|private)", ctx, re.I):
+            return m.start()
+    return None
+
+
 def deliverable(run, fixture, minimum=1500):
     """The longest markdown deliverable: an added .md in the repo, or the response."""
     added, _, _ = changes(run, fixture)
@@ -4422,9 +4434,11 @@ def eval46(run):
         ("containment before structural and governance work",
          before(seq, r"HD-NET-01|HD-DAT-01|HD-IDN-03|HD-HST-02", r"HD-GOV-0[12]|HD-MON-01|HD-HST-03|HD-NET-02"), "", D),
         ("the private admin path is live before public SSH is closed",
-         before(t, r"bastion|vpn|private (admin )?path|session manager",
-                r"(remov|delet|clos)\w*\s+(the\s+)?`?allow-ssh-temp|allow-ssh-temp`?[^\n]{0,40}(remov|delet|clos)|clos\w*\s[^\n]{0,30}port 22"),
-         "", D),
+         (lambda a, b: a is not None and b is not None and a < b)(
+             first(t, r"bastion|vpn|private (admin )?path|session manager"),
+             first_step(t, r"(remov|delet|clos)\w*\s+(the\s+)?`?allow-ssh[\w-]*|allow-ssh[\w-]*`?[^\n]{0,40}(remov|delet|clos)"
+                           r"|clos\w*\s[^\n]{0,30}port 22|clos\w*\s+(the\s+)?public SSH")),
+         "a warning against closing it early is not the closing step", D),
         ("access-reducing steps carry a lockout guard",
          any_of(t, r"second session|lockout guard|lock(ed)? out|auto-?revert|break-?glass"), "", D),
         ("the exposed DB password rotated before it is removed", rotated_first(t, r"HD-IDN-03|db\.conf|DB password|database password"), "", D),

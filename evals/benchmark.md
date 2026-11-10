@@ -26,7 +26,7 @@
 | 26-pipelines-propose-keeps-prod-up | i26 | 3 | 0.93 ± 0.06 | 0.70 | +0.23 | 1.00 | 1.00 |
 | 27-acceptance-tests-red-for-the-right-reason | i15 | 3 | 0.94 ± 0.05 | 0.25 | +0.69 | 1.00 | 0.67 |
 | 28-dockerfile-repair-pins-and-drops-root | i16 | 3 | 1.00 ± 0.00 | 0.83 | +0.17 | 1.00 | 1.00 |
-| 29-release-notes-translates-drops-and-leads-with-breaking | i26 | 3 | 0.90 ± 0.09 | 0.39 | +0.51 | 1.00 | 0.57 |
+| 29-release-notes-translates-drops-and-leads-with-breaking | i33 | 3 | 1.00 ± 0.00 | 0.54 | +0.46 | 1.00 | 0.57 |
 | 3-refactor-promotes-noted-smell | i24 | 3 | 1.00 ± 0.00 | 0.12 | +0.88 | 1.00 | 0.75 |
 | 30-dbaudit-postgres-dump-scored-not-fixed | i23 | 3 | 0.95 ± 0.04 | 0.43 | +0.52 | 1.00 | 1.00 |
 | 31-dbdesign-sqlite-from-requirements-traps | i23 | 3 | 0.97 ± 0.04 | 0.46 | +0.51 | 1.00 | 1.00 |
@@ -37,15 +37,15 @@
 | 36-container-debug-oom-localhost-crlf | i16 | 3 | 1.00 ± 0.00 | 0.82 | +0.18 | 1.00 | 1.00 |
 | 37-docker-swarm-review-quorum-and-state | i16 | 3 | 1.00 ± 0.00 | 0.75 | +0.25 | 1.00 | 1.00 |
 | 38-threatmodel-review-design-abuse-and-fallback | i26 | 3 | 1.00 ± 0.00 | 0.50 | +0.50 | 1.00 | 1.00 |
-| 39-threatmodel-design-abusers-and-traps | i26 | 3 | 0.96 ± 0.03 | 0.65 | +0.31 | 1.00 | 1.00 |
+| 39-threatmodel-design-abusers-and-traps | i33 | 3 | 1.00 ± 0.00 | 0.77 | +0.23 | 1.00 | 1.00 |
 | 4-teardown-finds-vacuous-test | i24 | 3 | 1.00 ± 0.00 | 0.20 | +0.80 | 1.00 | 1.00 |
 | 40-threatmodel-propose-contain-then-design-out | i14 | 3 | 1.00 ± 0.00 | 0.54 | +0.46 | 1.00 | 1.00 |
 | 41-appsec-review-inventory-and-secrets | i26 | 3 | 0.98 ± 0.03 | 0.61 | +0.37 | 1.00 | 1.00 |
 | 42-appsec-design-reshapes-the-quick-wins | i26 | 3 | 1.00 ± 0.00 | 0.71 | +0.29 | 1.00 | 1.00 |
-| 43-appsec-propose-contain-then-fix-the-class | i26 | 3 | 0.93 ± 0.00 | 0.50 | +0.43 | 1.00 | 1.00 |
+| 43-appsec-propose-contain-then-fix-the-class | i33 | 3 | 1.00 ± 0.00 | 0.57 | +0.43 | 1.00 | 1.00 |
 | 44-hardening-review-mixed-estate | i26 | 3 | 0.98 ± 0.03 | 0.68 | +0.30 | 1.00 | 1.00 |
 | 45-hardening-design-tier-aware-baseline | i26 | 3 | 1.00 ± 0.00 | 0.60 | +0.40 | 1.00 | 1.00 |
-| 46-hardening-propose-no-lockout | i26 | 3 | 0.95 ± 0.04 | 0.69 | +0.26 | 1.00 | 1.00 |
+| 46-hardening-propose-no-lockout | i33 | 3 | 1.00 ± 0.00 | 0.69 | +0.31 | 1.00 | 1.00 |
 | 47-dbquery-workload-ranked-plans-read-indexes-weighed | i18 | 3 | 1.00 ± 0.00 | 0.93 | +0.07 | 1.00 | 0.83 |
 | 48-dbarchitect-one-system-of-record-no-dual-writes | i18 | 3 | 1.00 ± 0.00 | 0.67 | +0.33 | 1.00 | 1.00 |
 | 49-peer-review-claim-omission-injection | i25 | 3 | 1.00 ± 0.00 | 0.29 | +0.71 | 1.00 | 1.00 |
@@ -55,12 +55,13 @@
 | 52-test-review-would-it-fail | i25 | 3 | 1.00 ± 0.00 | 0.20 | +0.80 | 1.00 | 0.83 |
 | 53-concurrency-review-interleavings-and-replicas | i25 | 3 | 1.00 ± 0.00 | 0.39 | +0.61 | 1.00 | 0.83 |
 | 54-review-retro-areas-not-people | i25 | 3 | 1.00 ± 0.00 | 0.29 | +0.71 | 1.00 | 1.00 |
+| 55-repo-memory-dream-true-and-small | i31 | 3 | 1.00 ± 0.00 | 0.85 | +0.15 | 1.00 | 1.00 |
 | 6-compose-detects-real-services | i16 | 3 | 1.00 ± 0.00 | 0.78 | +0.22 | 1.00 | 1.00 |
 | 7-postmortem-widens-range-and-describes | i6 | 1 | 1.00 ± 0.00 | 0.60 | +0.40 | 1.00 | 1.00 |
 | 8-hotfix-node-shared-cause | i20 | 3 | 1.00 ± 0.00 | 0.38 | +0.62 | 1.00 | 1.00 |
 | 9-hotfix-jvm-both-callers | i20 | 3 | 1.00 ± 0.00 | 0.71 | +0.29 | 1.00 | 1.00 |
 
-**Delta — current 0.99 vs baseline 0.49**
+**Delta — current 0.99 vs baseline 0.51**
 **Capability — current 1.00 vs baseline 0.90**
 
 ## Delta assertions the baseline also passed (still non-discriminating)
@@ -213,9 +214,11 @@
 **eval-29-release-notes-translates-drops-and-leads-with-breaking**
 - header has the exact version and the tag's date
 - the breaking change sits above the features, with the action
+- no internal identifiers in the notes
 - the unmeasured timeline improvement carries no number
 - fixes state the user's symptom, not the cause
-- the unquantified improvement named in the handoff
+- the CVE published as its effect, not as a bump
+- plain bumps, CI, tests, docs, lint and refactors dropped
 
 **eval-3-refactor-promotes-noted-smell**
 - prior venue_id smell explicitly left, not silently dropped
@@ -316,6 +319,9 @@
 
 **eval-39-threatmodel-design-abusers-and-traps**
 - the system definition includes support and recovery
+- adversaries by class and grade, abusers included
+- trust boundaries named
+- STRIDE applied per boundary crossing
 - requirements traced threat → requirement → test
 - hashing the national ID declined as privacy (S16)
 - caregiver delegation guarded against abuse and self-propagation
@@ -376,6 +382,7 @@
 - exploitable holes contained before systemic rework
 - /api/v1 retired or gated, and kept gone
 - the class fix for injection: one query layer
+- the class fix for access: one authorisation / tenant-scoping layer
 - passwords migrated to a slow KDF by rehash on login
 - code, spec, review and env untouched
 
@@ -485,6 +492,19 @@
 - unused imports proposed as a lint rule (ruff F401), not a checklist item
 - the Ledgerly rate limit explained twice in threads proposed for the code or CLAUDE.md
 
+**eval-55-repo-memory-dream-true-and-small**
+- memlint audit: no errors after the dream
+- the index within budget, its copied tables and diary demoted
+- the stale-but-true UTC note kept and re-verified
+- the duplicate utc-storage merged into the older timestamps-utc
+- the orphaned deploy-freeze convention linked from the index
+- the staging password appears nowhere: not in memory, not in the report
+- rotation of the exposed credential called for
+- the credential's value removed, where it lives kept
+- the watermark advanced to HEAD
+- the report cites the commits behind the corrections (retry raise, rename)
+- only .memory/ changed, nothing committed
+
 **eval-6-compose-detects-real-services**
 - meilisearch detected from the source
 - elasticsearch NOT composed (stale env var, no client)
@@ -523,10 +543,6 @@
 - every new test is red on the unimplemented code (none passes) (2/3)
 - tier stated (Standard) (2/3)
 
-**eval-29-release-notes-translates-drops-and-leads-with-breaking**
-- the range confirmed: v2.3.0..v2.4.0, 18 commits (1/3)
-- the dropped count stated in the handoff (1/3)
-
 **eval-30-dbaudit-postgres-dump-scored-not-fixed**
 - runtime facts flagged needs-data, never graded (2/3)
 - strengths recorded: the payment table (2/3)
@@ -537,21 +553,11 @@
 **eval-33-dbpropose-orphans-before-constraints**
 - the Critical handled before the name split (2/3)
 
-**eval-39-threatmodel-design-abusers-and-traps**
-- trust boundaries named (1/3)
-
 **eval-41-appsec-review-inventory-and-secrets**
 - findings mapped to the OWASP lists (2/3)
 
-**eval-43-appsec-propose-contain-then-fix-the-class**
-- the class fix for access: one authorisation / tenant-scoping layer (2/3)
-- class guards in CI, handed to the pipelines skill (1/3)
-
 **eval-44-hardening-review-mixed-estate**
 - score arithmetic shown, capped by the Critical (2/3)
-
-**eval-46-hardening-propose-no-lockout**
-- decisions cite the theory (H-n) (1/3)
 
 **eval-50-pr-prep-splits-and-discloses**
 - size counted and compared with the ~400-line limit (2/3)
