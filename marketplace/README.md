@@ -45,8 +45,11 @@ Only the copy in the zip; the repo stays as it is.
 `patches.json` holds the edits a rule can't make — a sentence about the harness, a sample value a secret scanner would flag. Each `old` must match exactly once; when the source changes and a patch stops matching, the build fails and says which one, so a stale patch never silently ships the original text.
 
 ```json
-{ "<skill>": { "<file in the skill>": [ { "old": "exact text", "new": "replacement" } ] } }
+{ "<skill>": { "<file in the skill>": [ { "old": "exact text", "new": "replacement" },
+                                       { "drop_section": "## Under the PR harness" } ] } }
 ```
+
+`drop_section` removes the section under that exact heading line, up to the next heading of the same or a higher level (headings inside code fences don't count), and the `---` left dangling above it when it was the last section. The review family's `## Under the PR harness` sections go this way: each is the contract `harness/prreview.py` calls the skill under, which no buyer has. code-xray keeps its section, because the JSON reference in it also documents `xray.py pr --json`. A heading that no longer matches exactly once fails the build, like a stale `old`.
 
 ## What it checks
 
@@ -58,7 +61,9 @@ A problem fails the run and nothing is written:
 - the zip is under Agensi's 50 MB limit
 - every patch applies and names a skill that exists; every bundle names skills that exist
 
-Mentions of "the harness", which no zip ships, are listed as warnings: a sentence like "if the repo carries the harness, run…" is fine without it, and the list shows where a skill may lean on it harder. The networking skills ship their own `scripts/netgraph.py` instead, so netaudit's one optional mention is all that family shows.
+Mentions of "the harness", which no zip ships, are listed as warnings: a sentence like "if the repo carries the harness, run…" is fine without it, and the list shows where a skill may lean on it harder. The networking skills ship their own `scripts/netgraph.py` instead, so netaudit's one optional mention is all that family shows. The development family's `harness/ledger.py` self-checks and the review family's harness contracts are patched out, so what remains are optional one-liners (and hotfix's "follow-up for the harness", which means a test harness).
+
+Descriptions within 24 characters of the 1024 limit are listed too: still valid, but the next sentence added to one fails the build.
 
 Tests: `python3 -m unittest discover marketplace/tests`.
 

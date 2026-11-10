@@ -115,6 +115,24 @@ class Patches(Tree):
         self.patches = {"query": {"nope.md": [{"old": "x", "new": ""}]}}
         self.assertIn("not in the package", " ".join(self.build().problems))
 
+    def test_drop_section_removes_it_up_to_the_next_heading(self):
+        (self.query / "rubric.md").write_text(
+            "# Rubric\n\n## Use\n\nKeep.\n\n---\n\n## Under the harness\n\nGone.\n\n"
+            "```\n## not a heading\n```\n\n### Its own subsection\n\nGone too.\n\n---\n\n## Stop\n\nKeep.\n")
+        self.patches = {"query": {"rubric.md": [{"drop_section": "## Under the harness"}]}}
+        pkg = self.build()
+        self.assertEqual(pkg.files["rubric.md"], "# Rubric\n\n## Use\n\nKeep.\n\n---\n\n## Stop\n\nKeep.\n")
+        self.assertEqual(pkg.problems, [])
+
+    def test_drop_section_at_the_end_takes_the_rule_above_it(self):
+        (self.query / "rubric.md").write_text("# Rubric\n\nKeep.\n\n---\n\n## Under the harness\n\nGone.\n")
+        self.patches = {"query": {"rubric.md": [{"drop_section": "## Under the harness"}]}}
+        self.assertEqual(self.build().files["rubric.md"], "# Rubric\n\nKeep.\n")
+
+    def test_a_section_that_is_gone_fails(self):
+        self.patches = {"query": {"rubric.md": [{"drop_section": "## Under the harness"}]}}
+        self.assertIn("section heading matches 0 times", " ".join(self.build().problems))
+
 
 class Checks(Tree):
     def test_secret_looking_strings_fail(self):
@@ -135,6 +153,14 @@ class Checks(Tree):
     def test_a_link_that_does_not_resolve_fails(self):
         (self.query / "rubric.md").write_text("See [gone](gone.md).\n")
         self.assertIn("does not resolve inside the zip (gone.md)", " ".join(self.build().problems))
+
+    def test_a_description_near_the_limit_is_reported_not_failed(self):
+        md = self.query / "SKILL.md"
+        md.write_text(md.read_text().replace("Does a thing. Use when a thing needs doing.", "x" * 1010))
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(AG.main(["--check", "query"]), 0)
+        self.assertIn("query: 1010", out.getvalue())
 
     def test_harness_mentions_are_warnings_not_problems(self):
         (self.query / "rubric.md").write_text("When the harness is available, run it. A throwaway harness is fine.\n")
