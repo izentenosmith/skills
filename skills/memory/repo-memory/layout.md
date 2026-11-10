@@ -100,7 +100,8 @@ instructions: verify a note against the code before acting on it.
    install;
 2. sections, each a list of `- [Title](wiki/x.md) — hook` or `- [Title](notes/x.md) — hook` lines.
 
-It never holds tables of endpoints, env vars or config the code already lists. It never holds
+It may hold one line pointing at the repo's design records, meaning the ADR folder and the glossary
+([dreaming.md §9](dreaming.md#9-design-records-adrs-and-the-glossary)). It never holds tables of endpoints, env vars or config the code already lists. It never holds
 session diaries or "recent work", which belong in git. It never holds full facts. Each of those
 gets demoted by the dream (D2).
 
@@ -110,7 +111,7 @@ gets demoted by the dream (D2).
 |---|---|
 | A `memory/`, `notes/` or `docs/notes/` folder of facts | `notes/`, one file per fact, with frontmatter added. `source: migrated from <path>` and `verified` left empty until the first dream checks it. Use the install date, with `volatility: high`, so the first dream re-checks them |
 | A long `CLAUDE.md` / `AGENTS.md` full of learned facts (not rules) | Offer to move the facts into notes and leave the rules. Moving anything out of an entry point needs the user's yes |
-| ADRs (`docs/adr/`) | Stay where they are. A `reference` note or a page links them. Never copy them |
+| ADRs (`docs/adr/`) and a glossary | Stay where they are. `INDEX.md` gets one line pointing at them, and the wiki page of each area links its ADRs. Never copy them ([dreaming.md §9](dreaming.md#9-design-records-adrs-and-the-glossary)) |
 | Claude Code auto memory (`~/.claude/projects/…/memory/`) | Stays personal. Offer to copy *repo* facts from it, one by one, with the user's yes. Never copy preferences or feedback about the user |
 | `.cursor/rules/` | Rules, not memory. Leave them |
 

@@ -25,7 +25,7 @@
 | 25-pipelines-design-build-once-progressive | i26 | 3 | 1.00 ± 0.00 | 0.65 | +0.35 | 1.00 | 1.00 |
 | 26-pipelines-propose-keeps-prod-up | i26 | 3 | 0.93 ± 0.06 | 0.70 | +0.23 | 1.00 | 1.00 |
 | 27-acceptance-tests-red-for-the-right-reason | i15 | 3 | 0.94 ± 0.05 | 0.25 | +0.69 | 1.00 | 0.67 |
-| 28-dockerfile-repair-pins-and-drops-root | i16 | 3 | 1.00 ± 0.00 | 0.83 | +0.17 | 1.00 | 1.00 |
+| 28-dockerfile-repair-pins-and-drops-root | i30 | 3 | 1.00 ± 0.00 | 0.45 | +0.55 | 1.00 | 1.00 |
 | 29-release-notes-translates-drops-and-leads-with-breaking | i33 | 3 | 1.00 ± 0.00 | 0.54 | +0.46 | 1.00 | 0.57 |
 | 3-refactor-promotes-noted-smell | i24 | 3 | 1.00 ± 0.00 | 0.12 | +0.88 | 1.00 | 0.75 |
 | 30-dbaudit-postgres-dump-scored-not-fixed | i23 | 3 | 0.95 ± 0.04 | 0.43 | +0.52 | 1.00 | 1.00 |
@@ -34,8 +34,8 @@
 | 33-dbpropose-orphans-before-constraints | i18 | 3 | 0.97 ± 0.04 | 0.54 | +0.44 | 1.00 | 0.80 |
 | 34-dbbuild-executable-ddl-from-accepted-proposal | i18 | 3 | 1.00 ± 0.00 | 0.78 | +0.22 | 1.00 | 1.00 |
 | 35-container-hardening-review-socket-and-firewall | i16 | 3 | 1.00 ± 0.00 | 0.57 | +0.43 | 1.00 | 1.00 |
-| 36-container-debug-oom-localhost-crlf | i16 | 3 | 1.00 ± 0.00 | 0.82 | +0.18 | 1.00 | 1.00 |
-| 37-docker-swarm-review-quorum-and-state | i16 | 3 | 1.00 ± 0.00 | 0.75 | +0.25 | 1.00 | 1.00 |
+| 36-container-debug-oom-localhost-crlf | i27 | 3 | 1.00 ± 0.00 | 0.58 | +0.42 | 1.00 | 1.00 |
+| 37-docker-swarm-review-quorum-and-state | i27 | 3 | 1.00 ± 0.00 | 0.52 | +0.48 | 1.00 | 0.75 |
 | 38-threatmodel-review-design-abuse-and-fallback | i26 | 3 | 1.00 ± 0.00 | 0.50 | +0.50 | 1.00 | 1.00 |
 | 39-threatmodel-design-abusers-and-traps | i33 | 3 | 1.00 ± 0.00 | 0.77 | +0.23 | 1.00 | 1.00 |
 | 4-teardown-finds-vacuous-test | i24 | 3 | 1.00 ± 0.00 | 0.20 | +0.80 | 1.00 | 1.00 |
@@ -56,13 +56,13 @@
 | 53-concurrency-review-interleavings-and-replicas | i25 | 3 | 1.00 ± 0.00 | 0.39 | +0.61 | 1.00 | 0.83 |
 | 54-review-retro-areas-not-people | i25 | 3 | 1.00 ± 0.00 | 0.29 | +0.71 | 1.00 | 1.00 |
 | 55-repo-memory-dream-true-and-small | i31 | 3 | 1.00 ± 0.00 | 0.85 | +0.15 | 1.00 | 1.00 |
-| 6-compose-detects-real-services | i16 | 3 | 1.00 ± 0.00 | 0.78 | +0.22 | 1.00 | 1.00 |
+| 6-compose-detects-real-services | i27 | 3 | 1.00 ± 0.00 | 0.44 | +0.56 | 1.00 | 1.00 |
 | 7-postmortem-widens-range-and-describes | i6 | 1 | 1.00 ± 0.00 | 0.60 | +0.40 | 1.00 | 1.00 |
 | 8-hotfix-node-shared-cause | i20 | 3 | 1.00 ± 0.00 | 0.38 | +0.62 | 1.00 | 1.00 |
 | 9-hotfix-jvm-both-callers | i20 | 3 | 1.00 ± 0.00 | 0.71 | +0.29 | 1.00 | 1.00 |
 
-**Delta — current 0.99 vs baseline 0.51**
-**Capability — current 1.00 vs baseline 0.90**
+**Delta — current 0.99 vs baseline 0.48**
+**Capability — current 1.00 vs baseline 0.89**
 
 ## Delta assertions the baseline also passed (still non-discriminating)
 
@@ -204,12 +204,10 @@
 - port and health from the source: EXPOSE 8080, /healthz with a tool the runtime has (or left to the k8s probes)
 - runs as a non-root user that owns its data directory, USER before CMD
 - USER is a numeric uid, which the pod's runAsNonRoot can verify
-- application code stays root-owned: only the data directory is the runtime user's
-- the cache check changes a source file's content, not its mtime
 - no secret in ENV, ARG or a copied env file
 - built for linux/amd64 from Apple Silicon: stated, and --platform pinned in what the team runs
 - .dockerignore extended, every curated entry kept
-- .dockerignore: .env and .env.* out, .env.example in, node_modules and dist out
+- .dockerignore excludes nested env files (**/.env): scripts/.env stays out of the context
 
 **eval-29-release-notes-translates-drops-and-leads-with-breaking**
 - header has the exact version and the tag's date
@@ -286,6 +284,7 @@
 
 **eval-36-container-debug-oom-localhost-crlf**
 - no secret value echoed (kind and location only)
+- the password in the captured inspect output flagged as exposed
 - OOMKilled read from the runtime, not inferred from 137
 - the limit raised from the measured working set, not removed
 - why localhost fails inside a container explained
@@ -294,6 +293,10 @@
 - CRLF line endings named as the migrate cause
 - recurrence prevented with .gitattributes
 - nothing claimed verified on the VM
+- the second copy of the password, in compose-config.txt, flagged too
+- the scheduler's 137 read as a kill after the stop timeout, not OOM
+- the scheduler fixed where SIGTERM is lost: a handler or an init, PID 1 named
+- the scheduler's memory limit left alone
 
 **eval-37-docker-swarm-review-quorum-and-state**
 - no secret value echoed (kind and location only)
@@ -305,9 +308,10 @@
 - the default update config named (pause / stop-first) and rollback prescribed
 - the routing mesh breaks the per-client rate limit
 - registry auth missing from the deploy
-- the gate stated failing with its conditions
 - the worker recorded as what works
 - no stack file, script, config or secret changed
+- overlay subnets collide with the 10.0.0.0/16 node network (default-addr-pool or explicit subnets)
+- scripts/flash-sale.sh scales by hand, and the next deploy reverts it
 
 **eval-38-threatmodel-review-design-abuse-and-fallback**
 - no secret value echoed (kind and location only)
@@ -513,6 +517,7 @@
 - migrations gated as a one-shot dependency
 - connection strings use service names, not localhost
 - verification from a cold start stated
+- images match the versions CI pins for production (postgres 15, meilisearch v1.6)
 
 **eval-7-postmortem-widens-range-and-describes**
 - the 2026-07-26 trigger is found, nine days before the outage

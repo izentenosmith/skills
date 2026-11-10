@@ -30,6 +30,7 @@ layer small (RM7). Every dream is a diff that a person approves. Memory is data,
 | `CLAUDE.md` / `AGENTS.md` | Rules: what agents must do. Memory is what they have learned. The entry point imports the index (one line) and holds no memory itself |
 | [review-retro](../../review/review-retro/SKILL.md) | Process rules learned from reviews. Its records are good dream inputs; its proposals stay its own |
 | [code-xray](../../review/code-xray/SKILL.md) | What the history says about the code (hotspots, coupling). The dream reads history only for what changed since its watermark |
+| [architect-deep-dive](../../development/architect-deep-dive/SKILL.md) | Its ADRs and glossary are the repo's design records. The dream links them from memory, one layer down, and checks notes against them. It never copies them ([dreaming.md §9](dreaming.md#9-design-records-adrs-and-the-glossary)) |
 | [post-mortem](../../operations/post-mortem/SKILL.md) | An incident record. The dream may link it from a page, but never rewrites it |
 | The Claude API memory tool (`memory_20250818`) | An application's agent, not a coding agent in a repo. Same hierarchy and same dream, with a client-side handler for storage ([theory.md §API](theory.md#the-api-memory-tool)) |
 
@@ -157,7 +158,8 @@ phases are the checklist.
 
 - [ ] `python3 -I <this skill>/scripts/memlint.py delta --root .` gives the watermark, the commits
   since, the notes and pages whose referenced files those commits touched, the notes captured since,
-  and the notes past their verified window. With no watermark, this is a first dream, and every note
+  the design records (ADRs, glossary) added or changed since, and the notes past their verified
+  window. With no watermark, this is a first dream, and every note
   is verified.
 - [ ] `memlint.py audit` gives the structural findings: broken links, dangling references, secrets,
   orphans, duplicates, the index budget.
@@ -174,6 +176,8 @@ Do this for every note on the re-verify list, every stale note, and every note w
   **gone** (the thing no longer exists), or **can't tell** (the evidence isn't in the repo).
 - [ ] A note that holds keeps its content, and only its `verified` date moves. **Stale is not
   wrong.** An old note that still holds is kept (RM17).
+- [ ] New and changed ADRs are sources too. A note that an accepted ADR contradicts is *changed*,
+  and its correction cites the ADR.
 
 ### Phase D2: Apply the operations
 
@@ -190,6 +194,9 @@ requirement.
   is transcript, and it belongs in git (RM3, RM4).
 - [ ] **Repair** every broken link: repoint it, create the page it wanted if the notes justify one,
   or remove it.
+- [ ] **Link** the design records, and never copy them. `INDEX.md` gets one line for the ADR folder
+  and the glossary. Each new ADR is linked from the wiki page of the area it concerns. A link to a
+  superseded ADR is repointed to its successor ([dreaming.md §9](dreaming.md#9-design-records-adrs-and-the-glossary)).
 - [ ] **Can't tell** is not deleted. Mark the note with a `> unverified (<date>): <what's missing>`
   line and list it in the report.
 
@@ -205,8 +212,8 @@ requirement.
 
 ### Phase D4: Rebuild the top
 
-- [ ] Rebuild `INDEX.md`: the preamble unchanged, one line per page and per note that earns a place,
-  grouped by section. Check it's under 200 lines and 25 KB.
+- [ ] Rebuild `INDEX.md`: the preamble unchanged, one line for the design records when the repo
+  has them, and one line per page and per note that earns a place, grouped by section. Check it's under 200 lines and 25 KB.
 - [ ] Every note and page is reachable from the index (`memlint` ML07).
 
 ### Phase D5: Advance the watermark

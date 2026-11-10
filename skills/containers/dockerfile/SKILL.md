@@ -114,6 +114,7 @@ Nothing here is optional, and none of it is satisfied by reading the file:
 - [ ] **No secret in any layer.** `docker history --no-trunc <image>` shows no credential in an `ENV`, an `ARG` or a `RUN` line, and the context excluded the env files. **`docker history` only shows instruction text** — a key file copied in and deleted later, or written by a `RUN`, is still in its layer and never appears there. Where a scanner is available, `trivy image --scanners secret <image>` reads layer *contents*. Search for a secret by its **name** (`grep -iE 'API_KEY|SECRET|TOKEN'`), never by printing its value. A command that would print one (`env`, `cat .env`, `docker inspect` on an old image) has its output cut to names (`cut -d= -f1`) before you quote it.
 - [ ] **It stops cleanly.** `time docker stop <image>-check` returns in about a second. Ten seconds means `SIGTERM` never reached the app — shell form, an entrypoint script without `exec`, or a PID 1 with no `SIGTERM` handler — see [optimization.md](optimization.md#signals-and-pid-1).
 - [ ] **The size is accounted for.** `docker images <image>` — if it's much larger than the runtime stage should be, something from the build stage came along. `docker history <image>` says which layer.
+- [ ] **The context is measured.** `du -sh .` and BuildKit's `transferring context:` line from Step 3, before and after the `.dockerignore` change, as a row of the table like every other check.
 
 Two more are worth running when the tools exist, and are reported the same way. Neither gates the stopping rule:
 
