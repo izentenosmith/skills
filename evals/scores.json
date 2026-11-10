@@ -358,6 +358,20 @@
       "staging": null,
       "skill_hash": null
     },
+    "eval-56-ticket-reconcile-before-filing": {
+      "skill": "ticket",
+      "iteration": "iteration-35",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
+    "eval-57-backlog-health-and-order-by-policy": {
+      "skill": "backlog",
+      "iteration": "iteration-35",
+      "n": 3,
+      "staging": null,
+      "skill_hash": null
+    },
     "eval-6-compose-detects-real-services": {
       "skill": "docker-compose",
       "iteration": "iteration-27",
