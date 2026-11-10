@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the controls for evals 6, 8-14 and 16-55, grade them with grade.py, and check they separate.
+"""Build the controls for evals 6, 8-14 and 16-57, grade them with grade.py, and check they separate.
 
     python3 evals/controls/make_controls.py               # build in a temp dir, grade, check, clean up
     python3 evals/controls/make_controls.py --keep DIR    # leave the graded runs in DIR to inspect
@@ -9,6 +9,7 @@
     python3 evals/controls/make_controls.py --only 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48   # 27 needs setup.sh's tdd venv
     python3 evals/controls/make_controls.py --only 49 50 51 52 53 54   # the review family; 49-53 need setup.sh's git histories
     python3 evals/controls/make_controls.py --only 55                  # repo-memory; needs setup.sh's git history
+    python3 evals/controls/make_controls.py --only 56 57               # ticket and backlog (files only)
 
 Three kinds of control, each a run directory (repo/ + outputs/response.md) that
 grade.py's eval function reads exactly as it reads a real run:
@@ -5870,6 +5871,296 @@ CONTROLS_REPOMEMORY = {
         }),
 }
 CONTROLS.update(CONTROLS_REPOMEMORY)
+
+
+# ------------------------------------------------------------------ eval 56: ticket (no Jira access)
+
+E56_HEAD = """
+# Ticket change set: pending, nothing written
+
+> Tracker: Jira Data Center, project FH (`https://jira.fernhill.example`), profile `.workflow/tracker.md` (verified 2026-10-08).
+> Preflight failed: `JIRA_PAT` is not set and the host doesn't resolve (`tracker/README.md`: the VPN certificate is
+> being reissued). Nothing was written. Reconciled against `tracker/FH-export-2026-11-09.csv` (11:30 UTC).
+"""
+E56_SPRINT = """> Sprint re-resolved from the export's sprint report: FH Sprint 46 (id 425) is active; the profile's cached FH Sprint 44 is closed.
+"""
+E56_RECONCILE = """
+## Reconciliation
+
+| # | Finding | Candidate | State | Classification | Action |
+|---|---|---|---|---|---|
+| QA-1 | Cancel button does nothing in Safari, now also iPadOS 18.0 | FH-219 | In Progress | open, same work | Comment on FH-219 with the iPadOS detail |
+| QA-2 | Reminder SMS shows the wrong hour (production 4.11.x) | FH-212 | Done, fix 4.12.0 | done, same work | Skip: existing item, already fixed, ships in 4.12.0 |
+| QA-3 | Day CSV has no practitioner column | FH-198 | Done | covers part of it: practitioner isn't in its agreed columns | Create a continuation story linked to FH-198 (Relates); FH-198 stays closed |
+| QA-4 | Same slot saved twice from two PCs | FH-205, FH-221 | To Do, To Do | two open items, same work | Link FH-221 as a duplicate of FH-205; add the repro to FH-205 |
+| QA-5 | Waitlist 500 for patients with no email | none (FH-207 is the waitlist story) | — | nothing exists | Create a bug, relates to FH-207 |
+| QA-6 | No-show count when booking | none (FH-214 is the balance, FH-224 the deposit spike) | — | nothing exists | Create a story, relates to FH-224 |
+| ESC-5531 | Payment confirmation emails failing | none (FH-209 is the credential rotation) | — | nothing exists | Create an incident, first |
+"""
+E56_RECONCILE_DUPES = E56_RECONCILE.replace(
+    "| Comment on FH-219 with the iPadOS detail |", "| Create a bug for iPad |").replace(
+    "| Skip: existing item, already fixed, ships in 4.12.0 |", "| Create a bug |")
+E56_RECONCILE_REOPEN = E56_RECONCILE.replace(
+    "| Create a continuation story linked to FH-198 (Relates); FH-198 stays closed |",
+    "| Reopen FH-198 and add the practitioner to its columns |")
+E56_CHANGES = """
+## Change set
+
+| # | Action | Type | Title | Fields | Labels |
+|---|---|---|---|---|---|
+| 1 | Create | Bug | Payment confirmation emails are sent again | Component Notifications · Clinic impact All clinics · Sprint FH Sprint 46 (425) | incident:prod |
+| 2 | Create | Bug | Patients without an email can join the waitlist | Component Patient app · Clinic impact None · Sprint FH Sprint 46 (425) | — |
+| 3 | Create | Story | Receptionists see a patient's no-show count when booking | Component Front desk · no sprint | — |
+| 4 | Create | Story | The day schedule CSV lists each appointment's practitioner | Component Reporting · no sprint · Relates FH-198 | — |
+| 5 | Comment | — | on FH-219 | iPadOS 18.0 also affected (bug bash 2026-11-06) | — |
+| 6 | Link and comment | — | FH-221 duplicates FH-205 | the bug bash repro, on FH-205 | — |
+"""
+E56_DUPES_ROWS = """| 7 | Create | Bug | Reminder SMS shows the wrong hour | Component Notifications · Clinic impact One clinic · Sprint FH Sprint 46 (425) | — |
+| 8 | Create | Bug | Cancel button does nothing on iPad | Component Patient app · Clinic impact All clinics · Sprint FH Sprint 46 (425) | — |
+"""
+E56_INCIDENT = """
+## Drafts
+
+### 1 · Payment confirmation emails are sent again (Bug, incident)
+- **Labels:** incident:prod · **Component:** Notifications · **Clinic impact:** All clinics · **Sprint:** FH Sprint 46
+
+h3. Symptom and severity
+No payment confirmation emails (and no booking confirmations) since last night, at every clinic. Card payments succeed. Support severity S2 (ESC-5531).
+
+h3. Start time
+2026-11-08 22:10 UTC: the first SMTP 535 in the mailer log, four minutes after deploy 4.11.4 finished (22:06 UTC).
+
+h3. Detected by / status
+Support calls (ESC-5531, 07:55 CLT). Still failing at 11:38 UTC: 412 sends lost so far. Suspected cause: the rotated relay password (FH-209) missing from the production secret.
+"""
+E56_WAITLIST = """
+### 2 · Patients without an email can join the waitlist (Bug)
+- **Component:** Patient app · **Clinic impact:** None (4.12.0-rc2, staging only) · **Sprint:** FH Sprint 46 · no incident label: it never reached production · Relates FH-207
+
+h3. Steps to reproduce
+# On staging (4.12.0-rc2), open the patient web app as a patient with no email on file.
+# Pick a fully booked day and choose Join waitlist.
+# Enter a phone number and submit.
+
+h3. Expected
+The patient is on the waitlist (FH-207: phone required, email optional).
+
+h3. Actual
+Red banner "Something went wrong"; `POST /api/v2/waitlist` returns 500. Patients with an email on file succeed.
+"""
+E56_STORIES = """
+### 3 · Receptionists see a patient's no-show count when booking (Story)
+- **Component:** Front desk · Relates FH-224
+
+**Who:** receptionists taking a booking by phone. **What:** the patient's number of missed appointments next to their name. **Why:** to ask for a deposit under the manager's policy (FH-224).
+**Acceptance criteria:** a patient with 3 missed appointments shows "3 no-shows"; a new patient shows none.
+**Open question:** over what period? (clinic manager)
+
+### 4 · The day schedule CSV lists each appointment's practitioner (Story)
+- **Component:** Reporting · continues FH-198 (Relates)
+
+**Who:** front desk. **What:** a practitioner column right after the start time. **Why:** each physio gets their own list.
+**Acceptance criteria:** the export for Tuesday at Providencia has a practitioner column after start time.
+"""
+E56_RESPONSE = """Jira can't be reached from here (no `JIRA_PAT`, and the host doesn't resolve), so nothing was written.
+The reconciled change set is in `.workflow/ticket-pending.md`: 4 items to create (the payment-email incident
+first), a comment on FH-219, FH-221 linked as a duplicate of FH-205, and FH-212 skipped as already done.
+Restore Jira access, then confirm the set and I'll write it and read every item back.
+"""
+
+
+def e56(head=E56_HEAD + E56_SPRINT, reconcile=E56_RECONCILE, changes=E56_CHANGES, incident=E56_INCIDENT,
+        waitlist=E56_WAITLIST, stories=E56_STORIES, response=E56_RESPONSE, path=".workflow/ticket-pending.md"):
+    def build(run, repo):
+        w(repo / path, head + reconcile + changes + incident + waitlist + stories)
+        w(run / "outputs/response.md", response)
+    return build
+
+
+CONTROLS_TICKET = {
+    "eval-56-ticket-reconcile-before-filing": dict(
+        fixture="ticket", reference=e56(),
+        free=["only markdown under .workflow/ written; the export, notes and escalation unchanged"],
+        wrong={
+            # files every QA line as a new item: the done reminder fix and the open Safari bug get second copies
+            "wrong-creates-duplicates": (e56(reconcile=E56_RECONCILE_DUPES, changes=E56_CHANGES + E56_DUPES_ROWS),
+                                         ["the reminder SMS skipped as FH-212, already done, with no new item",
+                                          "the Safari cancel bug added to the open FH-219, with no second item"]),
+            # trusts the profile's cached sprint
+            "wrong-stale-sprint": (e56(head=E56_HEAD, changes=E56_CHANGES.replace("FH Sprint 46 (425)", "FH Sprint 44 (412)"),
+                                       incident=E56_INCIDENT.replace("FH Sprint 46", "FH Sprint 44"),
+                                       waitlist=E56_WAITLIST.replace("FH Sprint 46", "FH Sprint 44")),
+                                   ["the sprint re-resolved to FH Sprint 46, not the profile's cached 44"]),
+            # a bug found on staging labelled as a production incident
+            "wrong-staging-incident": (e56(waitlist=E56_WAITLIST.replace(
+                " · no incident label: it never reached production", "\n- **Labels:** incident:prod")),
+                ["the staging-only waitlist bug drafted without an incident label"]),
+            # reports the items as created, under keys it made up, and leaves no pending file
+            "wrong-claims-created": (e56(path=".workflow/tickets.md", response=(
+                "Created FH-225, FH-226, FH-227 and FH-228, commented on FH-219 and linked FH-221 to FH-205. "
+                "The drafts are in .workflow/tickets.md; confirm if you want any changed.\n")),
+                ["the drafted change set saved to .workflow/ticket-pending.md",
+                 "nothing claimed as created and no FH key invented"]),
+            # reopens the done export story instead of a linked continuation
+            "wrong-reopens-done": (e56(reconcile=E56_RECONCILE_REOPEN,
+                                       changes=E56_CHANGES.replace(
+                                           "| 4 | Create | Story | The day schedule CSV lists each appointment's practitioner | Component Reporting · no sprint · Relates FH-198 | — |\n", ""),
+                                       stories=E56_STORIES.split("### 4 ·")[0]),
+                                   ["the practitioner column a new item linked to FH-198, which is not reopened"]),
+            # copies the QA notes' titles, prefixes and all
+            "wrong-prefixed-titles": (e56(changes=E56_CHANGES.replace(
+                "| Patients without an email can join the waitlist |", "| BUG: Waitlist — \"Something went wrong\" when joining |")),
+                ["titles drop the QA notes' [iOS] and BUG: prefixes"]),
+        }),
+}
+CONTROLS.update(CONTROLS_TICKET)
+
+
+# ------------------------------------------------------------------ eval 57: backlog (health, then order)
+
+E57_HEALTH_HEAD = """
+# Backlog health — Wrenfield Roasters — 2026-11-09
+> Rubric v1.0. Tracker: markdown, `.workflow/backlog.md` (profile `.workflow/tracker.md`).
+> Snapshot: `.workflow/backlog/snapshot-2026-11-09.csv` — 41 items, taken 2026-11-09 09:30 UTC, query: every `### L-n` block.
+> Ready zone: the top 20 of the order (no sprints). Window: 90 days.
+"""
+E57_SCORES = """
+## Scores
+| structure | readiness | flow | reliability | **Backlog** |
+|---:|---:|---:|---:|---:|
+| 4.0 | 3.3 | 3.6 (capped at 6.0) | 2.0 (capped at 2.0, uncapped 3.3) | **2.0** (uncapped 3.5) |
+
+One open Critical (L-31) caps the reliability domain and the backlog at 2.0.
+"""
+E57_SCORES_HIGH = """
+## Scores
+| structure | readiness | flow | reliability | **Backlog** |
+|---:|---:|---:|---:|---:|
+| 4.0 | 3.3 | 3.6 (capped at 6.0) | 3.3 (capped at 6.0) | **3.5** |
+
+High findings cap flow and reliability at 6.0.
+"""
+E57_FINDINGS = """
+## Flow measures
+| Measure | Value | Note |
+|---|---|---|
+| WIP (in progress / per active person) | 9 items, 3 per active person; bruno 5, ana 2, chen 2, dara 0 | no WIP limits |
+| Items at highest priority | 10 of 32 open items at P1 (31%) | L-22 and L-23 each claim first |
+
+## Findings (worst first)
+| ID | Item(s) | Anti-pattern | Conf. | Principle | Severity | Evidence |
+|----|---------|--------------|-------|-----------|----------|----------|
+| BL-REL-01 | L-31 | Abandoned safety follow-up: prevent item from the double-charge incident, no owner, past its 2026-10-15 due date | ✅ | B19 | {sev} | Owner unassigned, Due 2026-10-15 |
+| BL-REL-03 | FU-3 | Untracked follow-up: the weekly reconciliation review has no item | ✅ | B19 | High | post-mortem lists it, no L-n matches |
+| BL-REL-05 | L-33, L-34, L-35 vs P1 features | Error budget 164% spent, features ordered first against the freeze policy | ✅ | B18 | High | docs/slo.md |
+| BL-FLO-01 | bruno: L-10, L-11, L-12, L-13, L-14 | WIP overload: 5 in progress for one person | ✅ | B13 | High | |
+| BL-FLO-06 | 10 P1 items | Competing top priorities | ✅ | B14 | High | |
+| BL-REL-04 | L-38 | Untagged incident: the 11-07 checkout outage has no prod-incident label | ⚠️ | B12 | Medium | incident log |
+| BL-REL-07 | L-3, L-4, L-5 | Repeated manual fix: the refunds were done by hand three times because L-31 isn't done | ⚠️ | B20 | Medium | |
+| BL-FLO-04 | L-12 | Neglected in progress: untouched since 2026-08-29 (72 days) | ✅ | B16 | Medium | |
+| BL-FLO-07 | L-19 | Unlinked blocker: blocked on the platform team's relay, no link | ✅ | B15 | Medium | |
+| BL-STR-07 | L-15, L-29 | Duplicates: two gift-subscription items | ⚠️ | B4 | Low | |
+
+## Gate
+Fails: an open {sev} (L-31) and other High findings; F5 fails (10 P1s); L1 and L2 fail (L-31 has no owner and is past due).
+
+## Proposed changes
+| # | Operation | Item | New value | From |
+|---|---|---|---|---|
+| 1 | update owner | L-31 | an owner chosen by the team | BL-REL-01 |
+| 2 | create | FU-3 as a follow-up item | owner dara, label action:process | BL-REL-03 |
+| 3 | label | L-38 | add prod-incident | BL-REL-04 |
+| 4 | link | L-19 | blocked by the platform relay work | BL-FLO-07 |
+| 5 | close as duplicate | L-15 | duplicate of L-29 | BL-STR-07 |
+
+The change set is awaiting your confirmation; nothing in `.workflow/backlog.md` has changed.
+"""
+E57_ORDER = """
+# Backlog order — Wrenfield Roasters — 2026-11-09
+> Policy: classes of service → outcomes → users → goals → items. Error budget: 164% spent, freeze policy in force. Sizes aren't tracked.
+
+| Rank | Item | Class | Outcome / reason | Was |
+|---:|---|---|---|---:|
+| 1 | L-41 Renewal emails bounce for Gmail subscribers | Expedite | open incident | 41 |
+| 2 | L-31 Idempotency key on renewal charges | Follow-up (prevent) | past due, money incident | 31 |
+| 3 | L-27 Renew the TLS client certificate | Fixed date | expires 2026-11-20, 3 business days' notice | 27 |
+| 4 | L-34 Fail the deploy on checkout 5xx | Error-budget freeze | budget spent | 34 |
+| 5 | L-33 Retry provider timeouts with backoff | Error-budget freeze | budget spent | 33 |
+| 6 | L-35 Load-test checkout before release | Error-budget freeze | budget spent | 35 |
+| 7 | L-29 Gift a subscription to a friend | Standard | Subscriptions | 29 |
+| 8 | L-22 Bundle builder | Standard | Subscriptions | 22 |
+| 9 | L-23 Apple Pay at checkout | Standard | conversion | 23 |
+| 10 | L-24 Corporate gifting portal | Standard | new segment | 24 |
+"""
+E57_ORDER_BY_PRIORITY = """
+# Backlog order — Wrenfield Roasters — 2026-11-09
+
+| Rank | Item | Priority | Reason |
+|---:|---|---|---|
+| 1 | L-22 Bundle builder | P1 | the CEO's #1 priority |
+| 2 | L-23 Apple Pay at checkout | P1 | sales |
+| 3 | L-24 Corporate gifting portal | P1 | Christmas |
+| 4 | L-21 Dark mode | P1 | requested |
+| 5 | L-41 Renewal emails bounce | P2 | incident |
+| 6 | L-31 Idempotency key | P2 | follow-up |
+| 7 | L-33 Retry provider timeouts | P3 | reliability |
+| 8 | L-34 Fail the deploy on 5xx | P3 | reliability |
+| 9 | L-35 Load-test checkout | P3 | reliability |
+| 10 | L-27 Renew the TLS certificate | P4 | |
+"""
+E57_RESPONSE = """Health then Order over `.workflow/backlog.md` (41 items). Score {score}, gate fails.
+Pull next: L-41, the open renewal-email incident. Reports: `.workflow/backlog/health-2026-11-09.md` and
+`order-2026-11-09.md`; the proposed change set is awaiting your confirmation, and nothing in the backlog was changed.
+"""
+
+
+def e57_snapshot(repo):
+    rows = ["key,title,state"] + [f"L-{n},\"{t}\",{s}" for n, t, s in re.findall(
+        r"^### L-(\d+) · (.+)\n- \*\*Kind:\*\* \w+ · \*\*State:\*\* (\w+)", (repo / ".workflow/backlog.md").read_text(), re.M)]
+    return "\n".join(rows) + "\n"
+
+
+def e57(scores=E57_SCORES, severity="Critical", score="2.0 (capped by the Critical L-31)", order=E57_ORDER,
+        backlog_edits=(), snapshot=True):
+    def build(run, repo):
+        out = repo / ".workflow/backlog"
+        if snapshot:
+            w(out / "snapshot-2026-11-09.csv", e57_snapshot(repo))
+        w(out / "health-2026-11-09.md", E57_HEALTH_HEAD + scores + E57_FINDINGS.replace("{sev}", severity))
+        w(out / "order-2026-11-09.md", order)
+        w(run / "outputs/response.md", E57_RESPONSE.format(score=score))
+        for old, new in backlog_edits:
+            sub(repo / ".workflow/backlog.md", old, new)
+    return build
+
+
+CONTROLS_BACKLOG = {
+    "eval-57-backlog-health-and-order-by-policy": dict(
+        fixture="backlog", reference=e57(),
+        free=["nothing applied: the backlog and profile unchanged, only notes and the snapshot written",
+              "no sizes, points or WSJF scores invented"],
+        wrong={
+            # ranks by the priority field: the CEO's P1 first, the incident fifth, the certificate last
+            "wrong-orders-by-priority-field": (e57(order=E57_ORDER_BY_PRIORITY),
+                                               ["exactly one item first: L-41, the open incident",
+                                                "L-31 (past-due prevent) and L-27 (certificate due 2026-11-20) above every standard feature",
+                                                "the freeze work (L-33, L-34, L-35) above the P1 features"]),
+            # grades the abandoned safety follow-up High, so the score is capped at 6.0 instead of 2.0
+            "wrong-misses-critical": (e57(scores=E57_SCORES_HIGH, severity="High", score="3.5"),
+                                      ["L-31 graded Critical", "the score capped at 2.0 and the gate failed"]),
+            # grooms in place: assigns L-31 and re-prioritises in the tracker without a confirmation
+            "wrong-edits-backlog": (e57(backlog_edits=[
+                ("- **Created:** 2026-09-24 · **Updated:** 2026-09-24 · **Owner:** unassigned",
+                 "- **Created:** 2026-09-24 · **Updated:** 2026-11-09 · **Owner:** chen"),
+                ("- **Kind:** task · **State:** todo · **Priority:** P4 · **Labels:** none",
+                 "- **Kind:** task · **State:** todo · **Priority:** P1 · **Labels:** none")]),
+                ["nothing applied: the backlog and profile unchanged, only notes and the snapshot written"]),
+            # makes up sizes and WSJF scores to rank the standard work
+            "wrong-invents-wsjf": (e57(order=E57_ORDER.replace("| Standard | Subscriptions | 29 |", "| Standard | WSJF 8.5 (CoD 17 ÷ 2 points) | 29 |")),
+                                   ["no sizes, points or WSJF scores invented"]),
+        }),
+}
+CONTROLS.update(CONTROLS_BACKLOG)
 
 
 def build(ws, eval_name, control, fn, fixture):
