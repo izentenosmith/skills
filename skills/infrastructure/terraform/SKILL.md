@@ -177,7 +177,8 @@ build is a separate task.
 Follow [proposal.md](proposal.md). The rule that dominates it: **a refactor is correct only when its
 plan shows nothing destroyed and nothing re-created** — use `moved`, `import` and `removed` blocks,
 committed and reviewed, never ad-hoc `state` surgery. Sequence: containment → foundations (state,
-pinning, CI) → apply path → structural refactors in dependency order → hardening → cleanup.
+pinning, CI) → apply path → structural refactors in dependency order → hardening → cleanup. The apply
+path step hands the pipeline that carries it to [pipelines](../pipelines/SKILL.md), by name.
 
 ---
 

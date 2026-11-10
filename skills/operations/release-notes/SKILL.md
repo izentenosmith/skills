@@ -41,7 +41,9 @@ Read it from the repository, not from memory or from a ticket board:
 - [ ] **Pull the linked issues.** An issue title usually states the *user's* problem, which is exactly the framing the note needs and the commit message lacks.
 - [ ] **Note the version and date**, and which environments or platforms this release reaches.
 
-Then **confirm the range out loud** before writing: `v2.3.0..v2.4.0, 47 commits, 2026-09-14`. Release notes that silently cover the wrong range are worse than none — people trust them to be complete.
+Then **confirm the range out loud** before writing: `v2.3.0..v2.4.0, 47 commits, 2026-09-14`. The count is
+one number, every commit in the range as `git rev-list --count <prev>..<current>` gives it — the
+release commit included, nothing subtracted for what you will drop. Say it again in the handoff. Release notes that silently cover the wrong range are worse than none — people trust them to be complete.
 
 ---
 
@@ -119,6 +121,7 @@ Per-tier visual and distribution decisions are in [distribution.md](distribution
 Stop when all four hold:
 
 - [ ] Every shipped change is either **published or deliberately dropped** — no change is simply unaccounted for.
+- [ ] The handoff states the range with its commit count, and the **dropped count as a number**.
 - [ ] The depth matches the tier picked in Calibration, in both directions — **an over-written patch note is as wrong as an under-written launch**.
 - [ ] Every entry survives the "could a user notice this?" test.
 - [ ] The verification checklist passes.
@@ -152,6 +155,6 @@ Worth it on a **large release** — a quarter of work, a hundred-plus commits, s
 
 Once the notes are written:
 
-> Release notes for `<version>` are ready: `<f>` features, `<i>` improvements, `<b>` fixes, `<d>` changes dropped as having no user effect`<, and N breaking changes>`. `<q>` improvements are written without a figure because none was available — `<which ones, and what would have to be measured>`. See [distribution.md](distribution.md) for where to publish — the short answer is both an in-app surface and the public changelog, because a changelog nobody visits is not a distribution channel.
+> Release notes for `<version>` (`<prev>..<current>`, `<n>` commits) are ready: `<f>` features, `<i>` improvements, `<b>` fixes, `<d>` changes dropped as having no user effect`<, and N breaking changes>`. `<q>` improvements are written without a figure because none was available — `<which ones, and what would have to be measured>`. See [distribution.md](distribution.md) for where to publish — the short answer is both an in-app surface and the public changelog, because a changelog nobody visits is not a distribution channel.
 
 State the dropped count out loud. It's the only evidence the classification pass actually happened, and it's the number that tells the reviewer whether you were honest about it. State the unquantified improvements too — that list is the user's cue to supply a real measurement before publishing, and it's the only way they learn a number was wanted rather than silently invented.

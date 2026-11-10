@@ -182,7 +182,9 @@ Method:
 5. **Verification.** Every control gets a **read-only check** that returns pass/fail, and the
    evidence it leaves (§5). A control without a check is an aspiration.
 6. **Conventions.** Naming, tagging, resource grouping and account structure (§6) — generic patterns
-   with placeholders (`<org>`, `<product>`, `<client>`, `<env>`), never one organisation's literals.
+   with placeholders (`<org>`, `<product>`, `<client>`, `<env>`), never one organisation's literals —
+   even when the requirements ask for them; decline with the reason and keep the existing names out
+   of the baseline entirely (§6).
 7. **Exceptions.** How a deviation is requested, who approves it (a security owner, not the
    requester), how long it lasts, and where it is recorded (§7).
 8. **Evidence and cadence.** Where verification output is kept, how often each check runs, who reads

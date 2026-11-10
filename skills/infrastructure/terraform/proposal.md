@@ -54,7 +54,10 @@ Order the work:
    `fmt`/`validate`/lint/scan and posts the plan on every change (hand the pipeline design to the
    [pipelines](../pipelines/SKILL.md) skill).
 3. **Apply path.** Move apply into the pipeline with a saved plan and an approval on production; remove
-   human write credentials to production.
+   human write credentials to production. This step names what the apply path must guarantee (saved
+   plan, approval, per-environment role) and hands the pipeline that carries it to the
+   [pipelines](../pipelines/SKILL.md) skill, by name, in the step itself — the jobs, triggers and
+   promotion are that skill's design, not this proposal's.
 4. **Structural refactors in dependency order.** Split states leaf-first: the components other roots
    read (network, DNS, identity) stay put until their consumers read them through a stable interface
    (outputs + `terraform_remote_state` or, better, data sources / SSM-style parameters). Extract
@@ -77,7 +80,8 @@ Each step names:
 - the rollback (revert the commit and re-apply, restore the state version, or the explicit reason a
   step is one-way);
 - the blast radius (roots, environments and services touched while it is in flight);
-- the owner and window, if known.
+- the owner and window, if known — and, for a step whose change is the pipeline itself, that its
+  design is handed to [pipelines](../pipelines/SKILL.md).
 
 All changes are proposals for review. This skill never runs `apply`, `import` or `state` commands
 against a real backend.

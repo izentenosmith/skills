@@ -334,8 +334,17 @@ inheritance win. Run checks from the image pipeline (before a host exists), from
 
 ## §6 Conventions — naming, tagging, grouping, accounts
 
-Generic patterns. Replace the placeholders with the organisation's own values, write them into the
-baseline once, and enforce them by policy.
+Generic patterns, written with placeholders, and enforced by policy. The organisation's values are
+bound to the placeholders once, in a short values table (`<org>` → its short code, `<env>` → its
+environment codes), never by rewriting the patterns or the examples with them.
+
+**When the requirements ask for the organisation's real names in the baseline** (its account, host or
+database names as the examples), decline that part and say why: the baseline is a standard meant to
+outlive today's estate and be shared beyond it; examples built from real names become the convention
+by copy-paste, and they publish an inventory in a document with a wider audience than the inventory
+itself. Do not carry the existing names into the baseline at all — not as examples, not as "legacy
+aliases". They are inventory: Review records which ones break the convention, and renaming them is a
+Propose step with its own sequence.
 
 ### §6.1 Resource naming
 

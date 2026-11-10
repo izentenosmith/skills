@@ -18,15 +18,15 @@
 | 19-netpropose-contains-before-restructuring | i23 | 3 | 1.00 ± 0.00 | 0.70 | +0.30 | 1.00 | 0.67 |
 | 2-tdd-reads-brief-vertical | i24 | 3 | 1.00 ± 0.00 | 0.00 | +1.00 | 1.00 | 0.88 |
 | 20-netblueprint-waits-for-acceptance | i23 | 3 | 1.00 ± 0.00 | 0.75 | +0.25 | 1.00 | 1.00 |
-| 21-terraform-review-state-and-secrets | i6 | 1 | 1.00 ± 0.00 | 0.57 | +0.43 | 1.00 | 0.83 |
-| 22-terraform-design-isolates-state | i6 | 1 | 1.00 ± 0.00 | 0.86 | +0.14 | 1.00 | 1.00 |
-| 23-terraform-propose-no-recreate | i6 | 1 | 0.91 ± 0.00 | 0.82 | +0.09 | 1.00 | 1.00 |
-| 24-pipelines-review-untrusted-and-rebuild | i6 | 1 | 1.00 ± 0.00 | 0.67 | +0.33 | 1.00 | 0.75 |
-| 25-pipelines-design-build-once-progressive | i6 | 1 | 1.00 ± 0.00 | 0.79 | +0.21 | 1.00 | 1.00 |
-| 26-pipelines-propose-keeps-prod-up | i6 | 1 | 0.80 ± 0.00 | 0.50 | +0.30 | 1.00 | 1.00 |
+| 21-terraform-review-state-and-secrets | i26 | 3 | 1.00 ± 0.00 | 0.57 | +0.43 | 1.00 | 0.83 |
+| 22-terraform-design-isolates-state | i26 | 3 | 1.00 ± 0.00 | 0.71 | +0.29 | 1.00 | 1.00 |
+| 23-terraform-propose-no-recreate | i26 | 3 | 1.00 ± 0.00 | 0.43 | +0.57 | 1.00 | 1.00 |
+| 24-pipelines-review-untrusted-and-rebuild | i26 | 3 | 1.00 ± 0.00 | 0.67 | +0.33 | 1.00 | 0.75 |
+| 25-pipelines-design-build-once-progressive | i26 | 3 | 1.00 ± 0.00 | 0.65 | +0.35 | 1.00 | 1.00 |
+| 26-pipelines-propose-keeps-prod-up | i26 | 3 | 0.93 ± 0.06 | 0.70 | +0.23 | 1.00 | 1.00 |
 | 27-acceptance-tests-red-for-the-right-reason | i15 | 3 | 0.94 ± 0.05 | 0.25 | +0.69 | 1.00 | 0.67 |
 | 28-dockerfile-repair-pins-and-drops-root | i30 | 3 | 1.00 ± 0.00 | 0.45 | +0.55 | 1.00 | 1.00 |
-| 29-release-notes-translates-drops-and-leads-with-breaking | i6 | 1 | 1.00 ± 0.00 | 0.54 | +0.46 | 1.00 | 0.86 |
+| 29-release-notes-translates-drops-and-leads-with-breaking | i33 | 3 | 1.00 ± 0.00 | 0.54 | +0.46 | 1.00 | 0.57 |
 | 3-refactor-promotes-noted-smell | i24 | 3 | 1.00 ± 0.00 | 0.12 | +0.88 | 1.00 | 0.75 |
 | 30-dbaudit-postgres-dump-scored-not-fixed | i23 | 3 | 0.95 ± 0.04 | 0.43 | +0.52 | 1.00 | 1.00 |
 | 31-dbdesign-sqlite-from-requirements-traps | i23 | 3 | 0.97 ± 0.04 | 0.46 | +0.51 | 1.00 | 1.00 |
@@ -36,16 +36,16 @@
 | 35-container-hardening-review-socket-and-firewall | i16 | 3 | 1.00 ± 0.00 | 0.57 | +0.43 | 1.00 | 1.00 |
 | 36-container-debug-oom-localhost-crlf | i27 | 3 | 1.00 ± 0.00 | 0.58 | +0.42 | 1.00 | 1.00 |
 | 37-docker-swarm-review-quorum-and-state | i27 | 3 | 1.00 ± 0.00 | 0.52 | +0.48 | 1.00 | 0.75 |
-| 38-threatmodel-review-design-abuse-and-fallback | i13 | 1 | 1.00 ± 0.00 | 0.42 | +0.58 | 1.00 | 1.00 |
-| 39-threatmodel-design-abusers-and-traps | i13 | 1 | 1.00 ± 0.00 | 0.65 | +0.35 | 1.00 | 1.00 |
+| 38-threatmodel-review-design-abuse-and-fallback | i26 | 3 | 1.00 ± 0.00 | 0.50 | +0.50 | 1.00 | 1.00 |
+| 39-threatmodel-design-abusers-and-traps | i33 | 3 | 1.00 ± 0.00 | 0.77 | +0.23 | 1.00 | 1.00 |
 | 4-teardown-finds-vacuous-test | i24 | 3 | 1.00 ± 0.00 | 0.20 | +0.80 | 1.00 | 1.00 |
 | 40-threatmodel-propose-contain-then-design-out | i14 | 3 | 1.00 ± 0.00 | 0.54 | +0.46 | 1.00 | 1.00 |
-| 41-appsec-review-inventory-and-secrets | i13 | 1 | 1.00 ± 0.00 | 0.67 | +0.33 | 1.00 | 1.00 |
-| 42-appsec-design-reshapes-the-quick-wins | i13 | 1 | 1.00 ± 0.00 | 0.91 | +0.10 | 1.00 | 1.00 |
-| 43-appsec-propose-contain-then-fix-the-class | i13 | 1 | 1.00 ± 0.00 | 0.64 | +0.36 | 1.00 | 1.00 |
-| 44-hardening-review-mixed-estate | i13 | 1 | 1.00 ± 0.00 | 0.68 | +0.32 | 1.00 | 1.00 |
-| 45-hardening-design-tier-aware-baseline | i13 | 1 | 0.93 ± 0.00 | 0.73 | +0.20 | 1.00 | 1.00 |
-| 46-hardening-propose-no-lockout | i13 | 1 | 1.00 ± 0.00 | 0.69 | +0.31 | 1.00 | 1.00 |
+| 41-appsec-review-inventory-and-secrets | i26 | 3 | 0.98 ± 0.03 | 0.61 | +0.37 | 1.00 | 1.00 |
+| 42-appsec-design-reshapes-the-quick-wins | i26 | 3 | 1.00 ± 0.00 | 0.71 | +0.29 | 1.00 | 1.00 |
+| 43-appsec-propose-contain-then-fix-the-class | i33 | 3 | 1.00 ± 0.00 | 0.57 | +0.43 | 1.00 | 1.00 |
+| 44-hardening-review-mixed-estate | i26 | 3 | 0.98 ± 0.03 | 0.68 | +0.30 | 1.00 | 1.00 |
+| 45-hardening-design-tier-aware-baseline | i26 | 3 | 1.00 ± 0.00 | 0.60 | +0.40 | 1.00 | 1.00 |
+| 46-hardening-propose-no-lockout | i33 | 3 | 1.00 ± 0.00 | 0.69 | +0.31 | 1.00 | 1.00 |
 | 47-dbquery-workload-ranked-plans-read-indexes-weighed | i18 | 3 | 1.00 ± 0.00 | 0.93 | +0.07 | 1.00 | 0.83 |
 | 48-dbarchitect-one-system-of-record-no-dual-writes | i18 | 3 | 1.00 ± 0.00 | 0.67 | +0.33 | 1.00 | 1.00 |
 | 49-peer-review-claim-omission-injection | i25 | 3 | 1.00 ± 0.00 | 0.29 | +0.71 | 1.00 | 1.00 |
@@ -61,8 +61,8 @@
 | 8-hotfix-node-shared-cause | i20 | 3 | 1.00 ± 0.00 | 0.38 | +0.62 | 1.00 | 1.00 |
 | 9-hotfix-jvm-both-callers | i20 | 3 | 1.00 ± 0.00 | 0.71 | +0.29 | 1.00 | 1.00 |
 
-**Delta — current 0.99 vs baseline 0.50**
-**Capability — current 1.00 vs baseline 0.90**
+**Delta — current 0.99 vs baseline 0.48**
+**Capability — current 1.00 vs baseline 0.89**
 
 ## Delta assertions the baseline also passed (still non-discriminating)
 
@@ -153,9 +153,6 @@
 - Critical exposure contained before structural work
 - address changes declared with moved blocks
 - the expected plan for the moves is zero destroys
-- database protection lands before the identity moves
-- state migrated with a backup, not hand state surgery
-- needs-data flags carried as open questions
 - code, review and design untouched
 - nothing applied
 
@@ -164,28 +161,30 @@
 - rotation for the committed webhook
 - PR-title script injection found
 - deploys not gated by any test found
-- different deploy mechanisms per environment found
 - no post-deploy check or real rollback found
 - the @master action holding prod credentials found
 - the silenced e2e job found
+- the gate stated with its conditions
 - what is working well is recorded
 - no workflow, script, manifest or Dockerfile changed
 
 **eval-25-pipelines-design-build-once-progressive**
 - build once, promote the same digest
 - per-environment builds with baked config replaced
-- the 12-minute integration suite kept out of the commit stage
 - rollout region by region with automated rollback
 - migrations expand/contract, decoupled from the deploy
 - deploy decoupled from release with flags
 - the every-deploy approval meeting declined with a reason
 - separation of duties enforced by the pipeline
 - OIDC with per-environment roles
+- third-party actions pinned by SHA
 - Terraform planned on PR, saved plan applied from CI
 - open questions listed
 
 **eval-26-pipelines-propose-keeps-prod-up**
+- the webhook rotated before it is removed
 - NPM_TOKEN treated as possibly exposed
+- untrusted-trigger containment comes first
 - needs-data flags carried as open questions
 - every step has validation and rollback
 - no workflow, script, review or design file changed
@@ -211,13 +210,13 @@
 - .dockerignore excludes nested env files (**/.env): scripts/.env stays out of the context
 
 **eval-29-release-notes-translates-drops-and-leads-with-breaking**
+- header has the exact version and the tag's date
+- the breaking change sits above the features, with the action
 - no internal identifiers in the notes
 - the unmeasured timeline improvement carries no number
 - fixes state the user's symptom, not the cause
-- the reverted Slack threading is not announced
 - the CVE published as its effect, not as a bump
 - plain bumps, CI, tests, docs, lint and refactors dropped
-- the unquantified improvement named in the handoff
 
 **eval-3-refactor-promotes-noted-smell**
 - prior venue_id smell explicitly left, not silently dropped
@@ -315,6 +314,7 @@
 - scripts/flash-sale.sh scales by hand, and the next deploy reverts it
 
 **eval-38-threatmodel-review-design-abuse-and-fallback**
+- no secret value echoed (kind and location only)
 - the self-grantable delegation found (S25)
 - the fail-open fraud-score fallback found (S22)
 - the stale model checked against the partner API (S24/S27)
@@ -325,6 +325,8 @@
 - the system definition includes support and recovery
 - adversaries by class and grade, abusers included
 - trust boundaries named
+- STRIDE applied per boundary crossing
+- requirements traced threat → requirement → test
 - hashing the national ID declined as privacy (S16)
 - caregiver delegation guarded against abuse and self-propagation
 - impersonation treated as break-glass
@@ -347,7 +349,6 @@
 - documents, spec and review untouched
 
 **eval-41-appsec-review-inventory-and-secrets**
-- no secret value echoed (kind and location only)
 - rotation, not just removal, for the leaked key
 - an endpoint inventory was built
 - /api/v1 found absent from the spec (inventory reconciled)
@@ -373,9 +374,7 @@
 - GraphQL introspection and playground off in production
 - support impersonation audited and time-bound
 - rate limits keyed on the partner or tenant, not IP
-- a version-retirement policy
 - a header contract
-- webhooks signed
 - security events and never-logged values defined
 - abuse cases listed
 - open questions listed
@@ -387,16 +386,15 @@
 - exploitable holes contained before systemic rework
 - /api/v1 retired or gated, and kept gone
 - the class fix for injection: one query layer
-- mass assignment fixed by request/response DTOs or a writable-field allow-list
+- the class fix for access: one authorisation / tenant-scoping layer
 - passwords migrated to a slow KDF by rehash on login
-- needs-data flags carried as open questions
 - code, spec, review and env untouched
 
 **eval-44-hardening-review-mixed-estate**
-- findings cite the theory (H-n)
 - evidence cited by host path or resource
 - each host's distro identified
 - each host's own package tooling named
+- Postgres graded as a service role, TLS included
 - the unowned SUID binary flagged
 - backup immutability gap found, restores flagged needs-data
 - governance graded: deletion lock and owner tags
@@ -410,22 +408,20 @@
 **eval-45-hardening-design-tier-aware-baseline**
 - levels per tier, sandbox not held to prod rules
 - per-platform mapping for AWS and on-prem
-- a read-only verification per control
 - exception process: approver not the requester, with expiry
 - port knocking / port 2222 declined as controls
 - SELinux kept enforcing; permissive only with an end date
 - forced 30-day rotation declined
 - backups isolated in another account and immutable
 - developer SSH replaced by a private, just-in-time admin path
-- open questions listed
 - nothing written but documents (no host-changing scripts or IaC)
 
 **eval-46-hardening-propose-no-lockout**
 - containment before structural and governance work
+- the private admin path is live before public SSH is closed
 - access-reducing steps carry a lockout guard
 - the exposed DB password rotated before it is removed
 - the public container closed in containment
-- blocking controls observed first, with an end date
 - the vault immutability lock flagged as irreversible
 - the trust graph respected (bastion and identity first)
 - every step has verification and rollback
@@ -545,6 +541,9 @@
 
 ## Delta assertions that varied across repetitions
 
+**eval-26-pipelines-propose-keeps-prod-up**
+- build-once lands before rollback-by-digest and progressive delivery (1/3)
+
 **eval-27-acceptance-tests-red-for-the-right-reason**
 - every new test is red on the unimplemented code (none passes) (2/3)
 - tier stated (Standard) (2/3)
@@ -558,6 +557,12 @@
 
 **eval-33-dbpropose-orphans-before-constraints**
 - the Critical handled before the name split (2/3)
+
+**eval-41-appsec-review-inventory-and-secrets**
+- findings mapped to the OWASP lists (2/3)
+
+**eval-44-hardening-review-mixed-estate**
+- score arithmetic shown, capped by the Critical (2/3)
 
 **eval-50-pr-prep-splits-and-discloses**
 - size counted and compared with the ~400-line limit (2/3)
