@@ -6,11 +6,11 @@
 |---|---|---|---|---|---|---|---|
 | 0-architect-charter-and-options | i15 | 3 | 1.00 ± 0.00 | 0.00 | +1.00 | 1.00 | 1.00 |
 | 1-brief-ordered-criteria | i15 | 3 | 1.00 ± 0.00 | 0.00 | +1.00 | 1.00 | 1.00 |
-| 10-hotfix-script-no-tests | i20 | 3 | 1.00 ± 0.00 | 0.20 | +0.80 | 1.00 | 1.00 |
-| 11-hotfix-routes-outage-out | i20 | 3 | 1.00 ± 0.00 | 0.00 | +1.00 | 1.00 | 1.00 |
-| 12-incident-webapp-contain-by-flag | i17 | 3 | 1.00 ± 0.00 | 0.43 | +0.57 | 1.00 | 0.50 |
-| 13-incident-batch-repair-artifact | i17 | 3 | 1.00 ± 0.00 | 0.70 | +0.30 | 1.00 | 1.00 |
-| 14-incident-library-no-deploy | i17 | 3 | 1.00 ± 0.00 | 0.57 | +0.43 | 1.00 | 1.00 |
+| 10-hotfix-script-no-tests | i34 | 3 | 1.00 ± 0.00 | 0.20 | +0.80 | 1.00 | 1.00 |
+| 11-hotfix-routes-outage-out | i34 | 3 | 1.00 ± 0.00 | 0.00 | +1.00 | 1.00 | 1.00 |
+| 12-incident-webapp-contain-by-flag | i34 | 3 | 1.00 ± 0.00 | 0.43 | +0.57 | 1.00 | 0.50 |
+| 13-incident-batch-repair-artifact | i34 | 3 | 1.00 ± 0.00 | 0.60 | +0.40 | 1.00 | 1.00 |
+| 14-incident-library-no-deploy | i34 | 3 | 1.00 ± 0.00 | 0.71 | +0.29 | 1.00 | 1.00 |
 | 15-harness-loop-closes-teardown | i5 | 1 | 1.00 ± 0.00 | — | — | 1.00 | — |
 | 16-netaudit-hub-spoke-recovers-and-scores | i21 | 3 | 1.00 ± 0.00 | 0.31 | +0.69 | 1.00 | 0.60 |
 | 17-netdesign-plans-around-what-is-in-use | i21 | 3 | 0.90 ± 0.00 | 0.30 | +0.60 | 1.00 | 0.20 |
@@ -55,11 +55,11 @@
 | 52-test-review-would-it-fail | i25 | 3 | 1.00 ± 0.00 | 0.20 | +0.80 | 1.00 | 0.83 |
 | 53-concurrency-review-interleavings-and-replicas | i25 | 3 | 1.00 ± 0.00 | 0.39 | +0.61 | 1.00 | 0.83 |
 | 54-review-retro-areas-not-people | i29 | 3 | 1.00 ± 0.00 | 0.36 | +0.64 | 1.00 | 1.00 |
-| 55-repo-memory-dream-true-and-small | i31 | 3 | 1.00 ± 0.00 | 0.85 | +0.15 | 1.00 | 1.00 |
+| 55-repo-memory-dream-true-and-small | i34 | 3 | 1.00 ± 0.00 | 0.77 | +0.23 | 1.00 | 1.00 |
 | 6-compose-detects-real-services | i27 | 3 | 1.00 ± 0.00 | 0.44 | +0.56 | 1.00 | 1.00 |
-| 7-postmortem-widens-range-and-describes | i6 | 1 | 1.00 ± 0.00 | 0.60 | +0.40 | 1.00 | 1.00 |
-| 8-hotfix-node-shared-cause | i20 | 3 | 1.00 ± 0.00 | 0.38 | +0.62 | 1.00 | 1.00 |
-| 9-hotfix-jvm-both-callers | i20 | 3 | 1.00 ± 0.00 | 0.71 | +0.29 | 1.00 | 1.00 |
+| 7-postmortem-widens-range-and-describes | i34 | 3 | 1.00 ± 0.00 | 0.70 | +0.30 | 1.00 | 1.00 |
+| 8-hotfix-node-shared-cause | i34 | 3 | 1.00 ± 0.00 | 0.38 | +0.62 | 1.00 | 1.00 |
+| 9-hotfix-jvm-both-callers | i34 | 3 | 1.00 ± 0.00 | 0.71 | +0.29 | 1.00 | 1.00 |
 
 **Delta — current 0.99 vs baseline 0.49**
 **Capability — current 1.00 vs baseline 0.89**
@@ -81,13 +81,13 @@
 - pausing the job proposed as containment
 - the issued invoices named as a downstream copy
 - a separate repair artifact
-- the repair corrects exactly the affected orders
 
 **eval-14-incident-library-no-deploy**
 - containment fits a library: yank and/or advisory, with a pin
 - a 2.3.1 patch through the release convention
 - repair guidance for consumers' data
 - why the tests missed it
+- asks for confirmation
 
 **eval-16-netaudit-hub-spoke-recovers-and-scores**
 - no secret value reproduced anywhere
@@ -508,7 +508,6 @@
 - the credential's value removed, where it lives kept
 - the watermark advanced to HEAD
 - the report cites the commits behind the corrections (retry raise, rename)
-- only .memory/ changed, nothing committed
 
 **eval-6-compose-detects-real-services**
 - meilisearch detected from the source
@@ -522,11 +521,12 @@
 
 **eval-7-postmortem-widens-range-and-describes**
 - the 2026-07-26 trigger is found, nine days before the outage
+- the revert is not presented as the cause
 - the 14:07 vs 14:22 contradiction is recorded, not silently resolved
 - the unwatched alert channel is named as a detection factor
 - evidence limits recorded (missing chat / expired retention)
 - the latent condition is distinguished from the trigger
-- the report's demands are not adopted as output
+- the named-engineer blame is not carried through
 
 **eval-8-hotfix-node-shared-cause**
 - fixed in the shared helper, not special-cased in invoice.js
