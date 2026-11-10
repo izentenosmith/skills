@@ -14,8 +14,10 @@ evals/
 ├── evals.json      one entry per eval: a prompt and a skill, or (eval 15) a runner
 ├── run.py          dispatch the runs headless, then grade + aggregate
 ├── grade.py        assertions → grading.json per run
-├── aggregate.py    grading.json → benchmark.md/json
+├── aggregate.py    grading.json → benchmark.md/json and scores.json
 ├── benchmark.md    the recorded result
+├── scores.json     per eval: the iteration its score comes from, and the hash of the skill it scored
+├── tests/          unit tests for the staging hash and scores.json (CI runs them)
 ├── controls/       reproducible controls (make_controls.py: evals 6, 8-14 and 16-55; eval15.py: the loop)
 └── fixtures/       the seeded repos and documents the skills work against
 ```
@@ -698,7 +700,7 @@ Building the controls caught one loose assertion before any run: "unknown search
 
 ### The review family (evals 49–54)
 
-One eval per review skill. Each is **`"standalone": true`** in `evals.json`. `run.py` then stages the skill's own folder and nothing else: no `harness/`, so `harness/prreview.py` is out of reach, and no sibling skills, so a link to `../peer-review/` leads nowhere. That is the install a marketplace buyer gets from `marketplace/agensi.py`. Five fixtures are nested git repos built by their `make-history.sh` (in `setup.sh`), reproducible to the commit hash. `review-retro` is plain documents. The baseline is no skill: none of the six exists at `3b71f54^`.
+One eval per review skill. Each is **`"standalone": true`** in `evals.json`. Under `--stage repo`, `run.py` then stages the skill's own folder and nothing else: no `harness/`, so `harness/prreview.py` is out of reach, and no sibling skills, so a link to `../peer-review/` leads nowhere. Their recorded scores (iteration 25) were staged this way. Since 2026-11-10 every eval is staged as its Agensi package by default (see [Is a score still current?](#is-a-score-still-current)), which is standalone and also carries the packager's patches and rewritten links. Five fixtures are nested git repos built by their `make-history.sh` (in `setup.sh`), reproducible to the commit hash. `review-retro` is plain documents. The baseline is no skill: none of the six exists at `3b71f54^`.
 
 **Family result (iteration 25, n=3, standalone, against no skill):** **0.99** against **0.31** on delta, **1.00** against **0.92** on capability, $20.19 for 24 runs. Nine grader false negatives were found and fixed across evals 50–54. Every one was a with-skill miss, so the six baselines score exactly as they did before the fixes, and every control still separates. Several delta assertions test the skill's own vocabulary (the tier name, PR-n and TQ ids, the CONFIRMED/PLAUSIBLE labels). Those measure that the procedure ran, not a defect a bare agent missed. The rest are the plants.
 
@@ -919,6 +921,7 @@ python3 run.py                      # the full benchmark: 8 evals × (3 reps + 1
 | `--evals 0,5` | all | eval ids from `evals.json` |
 | `--reps` | 3 | with-skill repetitions per eval |
 | `--baseline-ref` | `3b71f54^` | git ref for the `old_skill` run, or `none` |
+| `--stage` | `package` | `package`: the current skill as its Agensi zip unpacks, alone. `repo`: its repo folder, with `harness/` beside it unless the eval is `"standalone": true` |
 | `--workspace` | `../skills-workspace` next to the main checkout | |
 | `--iteration` | next unused | naming an existing one replaces the selected evals' runs in it |
 | `--concurrency`, `--timeout`, `--model` | 4, 1800 s, CLI default | `--model` is passed to `claude` |
@@ -938,7 +941,8 @@ The layout it builds is the one `grade.py` reads:
 What it keeps out of a run's reach:
 
 - **Your setup.** Every run uses `--safe-mode`, so no CLAUDE.md, installed skills, plugins, hooks or MCP servers load. The only skill a run sees is the one its prompt names.
-- **The harness, unless you move it aside.** When this checkout has `harness/`, it is copied next to the staged skills, at the same relative path (minus its tests), and the run gets `--add-dir` for it. A skill that offers the harness as an optional accelerator then finds it as it would in a clone. Move `harness/` out of the checkout to measure the skills on their own: the plan prints `harness (none: …)`. The networking skills (evals 16–20) are measured both ways.
+- **Everything a buyer doesn't get.** By default (`--stage package`) the current skill is staged as `marketplace/agensi.py` packages it: patches from `patches.json` applied, other skills' reference docs copied in, links to anything outside rewritten, and the folder alone in a root of its own. No `harness/`, no sibling skills. The score is then for the artefact a buyer installs, not the repo copy.
+- **The harness, unless you stage from the repo.** Under `--stage repo`, when this checkout has `harness/`, it is copied next to the staged skills, at the same relative path (minus its tests), and the run gets `--add-dir` for it. A skill that offers the harness as an optional accelerator then finds it as it would in a clone. An eval marked `"standalone": true` gets its own folder and nothing else. Move `harness/` out of the checkout to measure the skills on their own: the plan prints `harness (none: …)`. The networking skills (evals 16–20) are measured both ways. The baseline (`old_skill`) is always staged from its `git archive` snapshot, never packaged.
 - **The answer key.** Both skill versions are copied to a temp directory: the current one out of this checkout, the baseline with `git archive <ref>` and `evals/` deleted from it. A run is never one `..` away from `grade.py`. `incident/README.md`, which lists every planted defect, is not copied into the run's repo. Neither is `make-history.sh`.
 - **The fixture names.** `evals.json` still uses the original workspace names (`fixture`, `fixture-tdd`, …); `fixture_dir()` in `run.py` maps them to the folders here (`base`, `tdd`, …).
 
@@ -953,7 +957,23 @@ python3 grade.py <workspace>/iteration-2
 python3 aggregate.py <workspace>/iteration-1 <workspace>/iteration-2
 ```
 
-`aggregate.py` takes iteration directories in priority order — later ones win, so you can re-run a subset of evals without redoing all of them.
+`aggregate.py` takes iteration directories in priority order — later ones win, so you can re-run a subset of evals without redoing all of them. It writes `benchmark.md`, `benchmark.json` and `scores.json` next to the iterations. `--record` also writes `benchmark.md` and `scores.json` into `evals/`, the copies this repo commits:
+
+```bash
+python3 aggregate.py --record <every iteration-* in the workspace, oldest first>
+```
+
+## Is a score still current?
+
+Every with-skill `run.json` records three things: the `skill`, how `run.py` staged it (`staging`: `package`, `standalone` or `harness`), and `skill_hash`, a sha256 over every file of the staged skill folder (path and content; `__pycache__`, `*.pyc` and `.DS_Store` left out). `aggregate.py` carries these into `scores.json` for the run each eval's score comes from. `.github/scripts/check_repo.py` recomputes each skill's hash now, the same way the run staged it (its repo folder, or its Agensi package), and compares. It runs in CI:
+
+- **A skill with no eval in `evals.json` fails CI.** Every skill needs a scored eval before it ships.
+- **A skill that changed since its last scored run is a warning**, with the command that re-scores it. A package-staged score goes stale on any change the zip would carry: a patch, a copied doc from another skill, a rewritten link. Warnings appear as annotations on the PR. Re-scoring costs a paid run, so a skill edit isn't blocked on one.
+- **A score with no `skill_hash` is a warning** too, as one line: it was recorded before `run.py` kept hashes (every score up to iteration 33), so whether the skill changed since is unknown. A re-run settles it.
+- **A score staged from the repo folder rather than the package is a warning**: it doesn't measure what a buyer installs.
+- **An eval with no score in `scores.json`** is a warning.
+
+`python3 .github/scripts/check_repo.py --strict` turns every warning into a failure. Run it before a marketplace release. Only the skill folder is hashed: under `--stage repo`, a change to `harness/` does not mark a score stale.
 
 ## Capability vs delta
 
@@ -1038,4 +1058,5 @@ Eval 15's controls are a separate script, because its runs are whole loop.py run
 - **Eval 6 is graded from files, never executed.** It checks that the right compose file was written, not that the stack comes up — which is precisely the claim the skill's own Step 6 makes and this harness does not verify.
 - **Dispatch is automated, the run itself is not pinned.** `run.py` keeps the layout, the prompt and the isolation identical between runs, which manual dispatch could not. It does not pin the model or the Claude Code version, it only records them in `dispatch.json`. Two iterations run months apart can differ for reasons that have nothing to do with the skill. Check those fields before you compare them.
 - **A background shell can hold a run open.** `claude -p` waits for its own background shells before it exits. One that hangs, on input for example, holds the run until `--timeout`, and the run still reports success. In a live `harness/loop.py` run, 13 seconds of work held a stage for about 12 minutes. `run.py` passes the same settings as the loop harness to every run: `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1`, `BASH_DEFAULT_TIMEOUT_MS=120000` and `BASH_MAX_TIMEOUT_MS=300000`. If `seconds` in a `run.json` is far above what the work needed, suspect this first.
+- **Scores up to iteration 33 carry no skill hash.** They were recorded before `run.py` kept one, and the staged copies were temp folders made from the working tree, not a commit. Comparing file times with `git log` can't settle which version a run saw. Until each eval is re-run, `check_repo.py` lists those skills as unknown, not as current.
 - **The transcripts are not committed.** `benchmark.md` is the recorded result; the 36 run transcripts behind it were evidence for one run, not something a future run needs.

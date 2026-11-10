@@ -2,14 +2,20 @@
 """Dispatch the eval runs headless, then grade and aggregate them.
 
 Usage: python3 run.py [--evals 0,5] [--reps 3] [--baseline-ref REF|none]
-                      [--workspace DIR] [--iteration N] [--concurrency 4]
-                      [--timeout 1800] [--model MODEL] [--dry-run]
+                      [--stage package|repo] [--workspace DIR] [--iteration N]
+                      [--concurrency 4] [--timeout 1800] [--model MODEL] [--dry-run]
 
 For each selected eval in evals.json this builds
 
   <workspace>/iteration-N/eval-<id>-<name>/
   ├── with_skill/rep1..repK/{repo,outputs}/   current skill, from this checkout
   └── old_skill/{repo,outputs}/               skill as of --baseline-ref
+
+The current skill is staged as its Agensi package unpacks (--stage package,
+the default), so the score is for what a buyer installs; --stage repo stages
+the repo folder instead. Each with-skill run.json records the skill, how it
+was staged and a hash of the staged folder, which check_repo.py compares with
+the skill as it is now.
 
 copies the fixture into each repo/, and launches one `claude -p` per run with
 its working directory set to that repo/. Every run is isolated (--safe-mode:
@@ -20,6 +26,7 @@ on the iteration afterwards.
 """
 import argparse
 import concurrent.futures as cf
+import hashlib
 import json
 import os
 import pathlib
@@ -35,6 +42,7 @@ import time
 EVALS_DIR = pathlib.Path(__file__).resolve().parent
 REPO_ROOT = EVALS_DIR.parent
 FIXTURES = EVALS_DIR / "fixtures"
+MARKETPLACE = REPO_ROOT / "marketplace"
 
 # The commit before the session that the recorded benchmark measures.
 DEFAULT_BASELINE = "3b71f54^"
@@ -162,30 +170,94 @@ def claude_cmd(run, skill_md, prompt, model):
     return cmd + ["--", prompt]
 
 
-def stage_skill(skill_md, dest_root, standalone=False):
+# Never part of a staged skill, so never part of its hash: a stray .DS_Store or
+# bytecode in a working tree would otherwise make a score look stale.
+STAGE_IGNORE = ("__pycache__", "*.pyc", ".DS_Store")
+
+
+def tree_hash(files):
+    """sha256 over {relative path: bytes}: the identity of a staged skill folder.
+    run.py records it per run; check_repo.py recomputes it from the repo."""
+    h = hashlib.sha256()
+    for path in sorted(files):
+        h.update(path.encode() + b"\0" + hashlib.sha256(files[path]).digest())
+    return h.hexdigest()
+
+
+def folder_files(folder):
+    """{relative path: bytes} for every file under folder, symlinks followed as
+    copytree follows them, STAGE_IGNORE left out."""
+    ignore = shutil.ignore_patterns(*STAGE_IGNORE)
+    files = {}
+    for d, dirs, names in os.walk(folder, followlinks=True):
+        skip = ignore(d, dirs + names)
+        dirs[:] = [n for n in dirs if n not in skip]
+        for n in names:
+            if n not in skip:
+                f = pathlib.Path(d) / n
+                files[f.relative_to(folder).as_posix()] = f.read_bytes()
+    return files
+
+
+def package_files(name):
+    """{relative path: bytes} of skill `name` as its Agensi zip holds it: patches
+    applied, other skills' docs copied in, outside links rewritten. Raises
+    ValueError when the skill does not package cleanly."""
+    if str(MARKETPLACE) not in sys.path:
+        sys.path.insert(0, str(MARKETPLACE))
+    import agensi
+    listing = agensi.build_listing(name, [name], agensi.discover(),
+                                   json.loads(agensi.PATCHES.read_text()))
+    if problems := listing.all_problems():
+        raise ValueError(f"{name} does not package: " + "; ".join(problems))
+    return {path: text.encode() for path, text in listing.packages[0].files.items()}
+
+
+# How a run's skill was staged, recorded in run.json as `staging`:
+#   package     the folder its Agensi zip unpacks to, alone (the default)
+#   harness     the repo folder, with harness/ beside it (--stage repo)
+#   standalone  the repo folder alone (--stage repo, an eval's "standalone": true)
+def skill_hash(skill_dir, staging):
+    """The skill_hash a run staging skill_dir this way would record now."""
+    if staging == "package":
+        return tree_hash(package_files(skill_dir.name))
+    return tree_hash(folder_files(skill_dir))
+
+
+def stage_skill(skill_md, dest_root, staging="harness"):
     """Copy the skill's folder out of this checkout, so a run pointed at it is
     not one `..` away from evals/ and the assertions it is graded by.
+    Returns (staged SKILL.md, tree_hash of the staged folder).
 
-    harness/ goes along when this checkout has it, at the same place relative to
-    the skill, so a skill that offers the harness as an optional accelerator finds
-    it as it would in a clone. Move harness/ aside to measure the skills alone.
+    `harness`: harness/ goes along when this checkout has it, at the same place
+    relative to the skill, so a skill that offers the harness as an optional
+    accelerator finds it as it would in a clone. Move harness/ aside to measure
+    the skills alone.
 
     `standalone` (an eval's `"standalone": true`) stages the skill's folder and
-    nothing else, in a root of its own: no harness, no sibling skills. That is the
-    install a marketplace buyer gets, so an eval marked standalone proves the skill
-    works without the rest of this repo."""
+    nothing else, in a root of its own: no harness, no sibling skills. That
+    proves the skill works without the rest of this repo.
+
+    `package` goes one step further and stages what a marketplace buyer
+    installs: the skill as marketplace/agensi.py packages it, alone."""
     rel = skill_md.parent.relative_to(REPO_ROOT)
-    if standalone:
-        dest_root = dest_root.parent / f"{dest_root.name}-standalone"
+    if staging != "harness":
+        dest_root = dest_root.parent / f"{dest_root.name}-{staging}" / skill_md.parent.name
     dest = dest_root / rel
     if not dest.exists():
-        shutil.copytree(skill_md.parent, dest)
-    if standalone:
-        return dest / skill_md.name
+        if staging == "package":
+            for path, data in package_files(skill_md.parent.name).items():
+                (dest / path).parent.mkdir(parents=True, exist_ok=True)
+                (dest / path).write_bytes(data)
+        else:
+            shutil.copytree(skill_md.parent, dest, ignore=shutil.ignore_patterns(*STAGE_IGNORE))
+    staged = dest / skill_md.name, tree_hash(folder_files(dest))
+    if staging != "harness":
+        return staged
     if (REPO_ROOT / "harness").is_dir() and not (dest_root / "harness").exists():
         shutil.copytree(REPO_ROOT / "harness", dest_root / "harness",
                         ignore=shutil.ignore_patterns("tests", "__pycache__"))
-    return dest / skill_md.name
+    return staged
 
 
 def staged_harness(skill_md):
@@ -268,7 +340,10 @@ def plan(args, ws_iter, snap_dir, cur_dir):
         current = find_skill(REPO_ROOT, ev["skill"])
         if current is None:
             sys.exit(f"skill {ev['skill']!r} not found in this checkout")
-        current = stage_skill(current, cur_dir, standalone=ev.get("standalone", False))
+        staging = args.stage if args.stage == "package" else (
+            "standalone" if ev.get("standalone") else "harness")
+        current, digest = stage_skill(current, cur_dir, staging)
+        provenance = {"skill": ev["skill"], "staging": staging, "skill_hash": digest}
         variants = [(ed / "with_skill" / f"rep{i}", current, "with_skill")
                     for i in range(1, args.reps + 1)]
         if snap_dir:
@@ -278,6 +353,7 @@ def plan(args, ws_iter, snap_dir, cur_dir):
             prompt = agent_prompt(skill_md, ev["prompt"], run / "outputs")
             runs.append({"eval": ed.name, "kind": kind, "run": run, "fixture": fix,
                          "skill_md": skill_md, "prompt": prompt,
+                         "provenance": provenance if kind == "with_skill" else {},
                          "cmd": claude_cmd(run, skill_md, prompt, args.model)})
     if wanted is not None and (missing := wanted - {e["id"] for e in data["evals"]}):
         sys.exit(f"no eval with id {sorted(missing)}")
@@ -307,6 +383,7 @@ def execute(r, timeout):
     timeout = max(timeout, r.get("timeout") or 0)
     rec = {"eval": r["eval"], "kind": r["kind"],
            "skill_md": str(r["skill_md"]) if r["skill_md"] else None,
+           **r.get("provenance", {}),
            "cmd": r["cmd"] if r["prompt"] is None else r["cmd"][:-1] + ["<prompt>"],
            "prompt": r["prompt"]}
     try:
@@ -378,8 +455,10 @@ def print_plan(runs, ws_iter, baseline, args_timeout):
             print()
             continue
         print(f"   skill    {r['skill_md'] or '(none: skill absent at baseline ref)'}")
+        if prov := r.get("provenance"):
+            print(f"   staged   {prov['staging']}, skill_hash {prov['skill_hash'][:12]}")
         if r["skill_md"] and r["kind"] == "with_skill":
-            print(f"   harness  {staged_harness(r['skill_md']) or '(none: a standalone eval, or harness/ absent from this checkout)'}")
+            print(f"   harness  {staged_harness(r['skill_md']) or '(none: a standalone or package-staged eval, or harness/ absent from this checkout)'}")
         print(f"   cwd      {r['run'] / 'repo'}")
         print(f"   env      {' '.join(f'{k}={v}' for k, v in RUN_ENV.items())}")
         print(f"   command  {shlex.join(r['cmd'][:-1])} <prompt>")
@@ -402,6 +481,10 @@ def main():
     ap.add_argument("--concurrency", type=int, default=4)
     ap.add_argument("--timeout", type=int, default=1800, help="seconds per run")
     ap.add_argument("--model", help="passed to claude --model")
+    ap.add_argument("--stage", choices=("package", "repo"), default="package",
+                    help="stage each current skill as its Agensi package unpacks, alone "
+                    "(default), or from its repo folder, with harness/ beside it unless "
+                    "the eval is standalone")
     ap.add_argument("--dry-run", action="store_true", help="print the plan and touch nothing")
     args = ap.parse_args()
 

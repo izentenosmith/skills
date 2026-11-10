@@ -28,8 +28,12 @@ jobs:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.14"
-      - name: Check skills, links and eval wiring
+      # Fails on a skill with no eval; a stale or unhashed score is a warning
+      # annotation, since re-scoring costs a paid run (--strict fails on those too).
+      - name: Check skills, links, eval wiring and eval health
         run: python3 .github/scripts/check_repo.py
+      - name: Run the eval provenance tests
+        run: python3 -m unittest discover evals/tests
       - name: Package every skill for Agensi (build and check, write nothing)
         run: python3 marketplace/agensi.py --check
       - name: Run the packager's tests
