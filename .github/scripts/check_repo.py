@@ -2,7 +2,8 @@
 """Structural checks for this repo: the things a skill install or an eval run
 breaks on, and that no test exercises.
 
-    python3 .github/scripts/check_repo.py      # exit 0 clean · 1 problems found
+    python3 .github/scripts/check_repo.py            # exit 0 clean · 1 problems found
+    python3 .github/scripts/check_repo.py --strict   # warnings count as problems
 
 Skills
   - every SKILL.md has frontmatter with `name` and `description`
@@ -19,11 +20,20 @@ Evals
   - grade.py has a check for every eval and no check without an eval
   - every control in make_controls.py grades an eval that exists
   - no answer key sits inside a fixture folder (runs copy the folder)
+Eval health (marketplace readiness)
+  - every skill has at least one eval
+  - warning: a skill eval with no score in scores.json
+  - warning: a score whose skill_hash differs from the skill as it is now
+    (the skill changed since its last scored run), computed the way the run
+    staged it: the repo folder, or its Agensi package
+  - warning: a score with no skill_hash (scored before run.py recorded one),
+    or one not staged as the package a buyer installs
 Branch protection
   - every status check .github/rulesets/main.json requires is a job name the
     workflows report — a renamed job would otherwise block every merge
 """
 import json
+import os
 import pathlib
 import re
 import subprocess
@@ -31,11 +41,17 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 EVALS = ROOT / "evals"
-problems = []
+STRICT = "--strict" in sys.argv[1:]
+problems, warnings = [], []
 
 
 def problem(msg):
     problems.append(msg)
+
+
+def warning(msg):
+    """Not broken, but not marketplace-ready either. --strict fails on it."""
+    (problems if STRICT else warnings).append(msg)
 
 
 def tracked(*patterns):
@@ -124,6 +140,52 @@ for name in sorted(set(make_controls.CONTROLS) - set(grade.CHECKS)):
 for key in tracked("evals/fixtures/*/*.answers.md", "evals/fixtures/*/**/*.answers.md"):
     problem(f"{key.relative_to(ROOT)}: answer key inside a fixture folder — runs copy the folder")
 
+# ------------------------------------------------------------ eval health
+
+import run  # noqa: E402
+
+skill_evals = {}
+for ev in data["evals"]:
+    if ev.get("runner") != "loop":
+        skill_evals.setdefault(ev["skill"], []).append(f"eval-{ev['id']}-{ev['name']}")
+for name, rel in sorted(skills.items()):
+    if name not in skill_evals:
+        problem(f"{rel}: no eval in evals/evals.json; every skill needs a scored eval before it ships")
+
+scores = json.loads((EVALS / "scores.json").read_text())["evals"]
+current, unscored, unhashed, unpackaged = {}, [], {}, {}
+for name, evs in sorted(skill_evals.items()):
+    if name not in skills:
+        continue  # reported above
+    for ev in evs:
+        score = scores.get(ev)
+        if score is None:
+            unscored.append(ev)
+            continue
+        if score["skill_hash"] is None:
+            unhashed.setdefault(name, []).append(score["iteration"])
+            continue
+        staging = score["staging"]
+        if (name, staging) not in current:
+            try:
+                current[name, staging] = run.skill_hash(ROOT / skills[name].parent, staging)
+            except ValueError as e:
+                current[name, staging] = None
+                warning(f"{ev}: can't tell whether its score is current — {e}")
+        if current[name, staging] not in (None, score["skill_hash"]):
+            warning(f"{ev}: {name} changed since its last scored run ({score['iteration']}, staged as "
+                    f"{staging}); re-run it: python3 evals/run.py --evals {ev.split('-')[1]}")
+        elif staging != "package":
+            unpackaged.setdefault(name, []).append(score["iteration"])
+for ev in unscored:
+    warning(f"{ev}: no score in evals/scores.json — run it, then aggregate.py --record")
+if unhashed:
+    warning(f"{len(unhashed)} skill(s) scored before run.py recorded skill hashes, so whether "
+            f"they changed since is unknown: {', '.join(sorted(unhashed))}")
+if unpackaged:
+    warning(f"{len(unpackaged)} skill(s) scored from the repo folder, not as their Agensi package: "
+            f"{', '.join(sorted(unpackaged))}")
+
 # --------------------------------------------------- ruleset vs workflow
 
 def job_names(workflow):
@@ -175,7 +237,10 @@ if ruleset_path.exists():
 
 # ---------------------------------------------------------------- report
 
+annotate = "GITHUB_ACTIONS" in os.environ
+for w in warnings:
+    print(f"::warning title=eval health::{w}" if annotate else f"! {w}")
 for p in problems:
     print(f"✗ {p}")
-print(f"{len(skills)} skills, {len(data['evals'])} evals, {len(problems)} problem(s)")
+print(f"{len(skills)} skills, {len(data['evals'])} evals, {len(problems)} problem(s), {len(warnings)} warning(s)")
 sys.exit(1 if problems else 0)
