@@ -1610,6 +1610,19 @@ def rotated_first(t, anchor):
 SEQUENCE = r"sequenc|migration (plan|order|steps)|cut-?over|change windows?|phases?|rollout plan|order of work|\bsteps\b|roadmap"
 
 
+def sequence(t):
+    """A proposal's sequence: from the outermost heading that names one to the
+    end. `## 5. Sequenced migration` wins over an earlier `### 2.3 Facts that
+    change how we sequence the work`, whose subsection sits in the summary and
+    would hand the summary's score tables the order checks. Ties go to the first."""
+    heads = [(len(m.group(1)), m.start())
+             for m in re.finditer(rf"^(#{{1,4}})[^\n]*({SEQUENCE})[^\n]*$", t, re.I | re.M)]
+    if not heads:
+        return ""
+    top = min(level for level, _ in heads)
+    return t[next(pos for level, pos in heads if level == top):]
+
+
 def endorses(t, pat):
     """`pat` appears somewhere not framed as something to avoid."""
     for m in re.finditer(pat, t, re.I):
@@ -1617,6 +1630,18 @@ def endorses(t, pat):
         if not re.search(r"avoid|never|instead of|rather than|not |n't|fallback|only if|last resort|no hand", ctx, re.I):
             return True
     return False
+
+
+def first_step(t, pat):
+    """The first match of pat that is a step, not a warning against one: "closing the
+    rule without a replacement would cut off both hosts" explains the risk, it doesn't
+    schedule the change."""
+    for m in re.finditer(pat, t, re.I):
+        line_start = t.rfind("\n", 0, m.start()) + 1
+        ctx = t[max(line_start, m.start() - 80): m.end() + 80]
+        if not re.search(r"\bwithout\b|\bwould\b|\bnever\b|don't|do not|before (a|its|the) (replacement|private)", ctx, re.I):
+            return m.start()
+    return None
 
 
 def deliverable(run, fixture, minimum=1500):
@@ -1686,6 +1711,7 @@ def eval22(run):
     tf = "\n".join(read(run / "repo" / f) for f in added if f.endswith(".tf"))
     n_res = len(re.findall(r'^\s*resource\s+"', tf, re.M))
     tids = cites(t, "T", 22)
+    hcl = "\n".join(re.findall(r"```.*?```", t, re.S))
     return [
         # capability
         ("a design document was produced", long_enough, f"{len(doc)} chars", C),
@@ -1715,16 +1741,33 @@ def eval22(run):
          "the requirements recount a deleted database", D),
         ("a narrow cross-state interface", any_of(t, r"\bSSM\b|[Pp]arameter [Ss]tore|data source"), "", D),
         ("decisions cite the theory (T-n)", len(tids) >= 3, f"{sorted(tids)[:10]}", D),
+        ("environments differ only by inputs, no environment conditionals",
+         any_of(t, r"differ\w*[^\n]{0,40}\bonly\b[^\n]{0,25}(input|variable|tfvars|value)",
+                r"only (by|in|through) (their )?(input|variable|tfvars|value)")
+         and not re.search(r"var\.env\w*\s*[!=]=", hcl), "T21; prose may name the conditional to forbid it", D),
+        ("a validation checklist closes the design", any_of(t, r"validation checklist|^#{1,4}[^\n]*checklist", flags=re.I | re.M),
+         "the skill's stopping rule", D),
         ("open questions listed", any_of(t, r"open question"), "", D),
+        ("open questions name the decision each blocks",
+         re.search(r"\bblock(s|ing)?\b|blocked (until|by)|decision it", section(doc, r"open question"), re.I) is not None, "", D),
         ("no resources built (design, not build)", n_res == 0, f"{n_res} resource blocks written", D),
     ]
+
+
+SENTENCE = r"(?:(?!\.\s)[\s\S])"   # one sentence, across line wraps and through `moved.tf`
+
+
+def per_step(seq, field):
+    """A register field named on three or more steps, or as a column of the step table."""
+    return (len(re.findall(field, seq, re.I)) >= 3
+            or re.search(rf"^\|[^\n]*({field})[^\n]*\|", seq, re.I | re.M) is not None)
 
 
 def eval23(run):
     """terraform Propose: containment first, rotate before remove, moves that recreate nothing."""
     t = everything(run, "tf-propose")
     doc, long_enough = deliverable(run, "tf-propose")
-    seq = section(doc, SEQUENCE) or doc
+    seq = sequence(doc) or doc
     ids = set(re.findall(r"TF-(?:SEC|STA|DEP|CHG|DEL|STR)-\d\d", doc))
     n_rb = len(re.findall(r"rollback|roll back", doc, re.I))
     n_val = len(re.findall(r"validat|verif", doc, re.I))
@@ -1747,10 +1790,19 @@ def eval23(run):
          before(seq, r"deletion_protection|prevent_destroy|TF-CHG-02", r"\bmoved\b|TF-CHG-01"), "", D),
         ("state migrated with a backup, not hand state surgery",
          near(t, r"backup|snapshot|state version|versioning", r"state")
-         and not endorses(t, r"terraform state (mv|rm)|cp[^\n]{0,20}\.tfstate"), "", D),
-        ("the apply path handed to the pipelines skill", any_of(t, r"pipelines skill|\[pipelines\]|/pipelines\b|pipelines\.md|pipelines \("), "", D),
+         and not endorses(t, r"terraform state (mv|rm|push)|cp[^\n]{0,20}\.tfstate"), "", D),
+        ("every step names its expected plan, pre-check and blast radius",
+         all(per_step(seq, f) for f in (r"expected plan", r"pre-?checks?\b|preconditions?\b", r"blast.radius")), "", D),
+        ("moved/import blocks removed only after every environment applied them",
+         any_of(t, rf"(remov|delet|drop)\w*{SENTENCE}{{0,60}}\b(moved|imports?)\b{SENTENCE}{{0,120}}\b(every|both|all|each)\s+(env|environment|root|state)s?\b{SENTENCE}{{0,40}}appl",
+                rf"\b(every|both|all|each)\s+(env|environment|root|state)s?\b{SENTENCE}{{0,40}}appl{SENTENCE}{{0,80}}(remov|delet|drop)\w*{SENTENCE}{{0,40}}\b(moved|imports?)\b"),
+         "two environments share the migration blocks", D),
+        ("the apply path handed to the pipelines skill", any_of(t, r"\**pipelines\**\s+skill|\[pipelines\]|/pipelines\b|pipelines\.md|pipelines \("), "", D),
         ("needs-data flags carried as open questions", any_of(t, r"🔬|needs.data") and any_of(t, r"open question"), "", D),
         ("every step has validation and rollback", n_rb >= 3 and n_val >= 3, f"{n_val} validation · {n_rb} rollback", D),
+        ("closes with: nothing applied until the proposal is accepted",
+         any_of(t, rf"\b(nothing|no (step|change))\b{SENTENCE}{{0,80}}\b(appl|execut|run)\w*{SENTENCE}{{0,60}}\b(until|before|unless)\b{SENTENCE}{{0,60}}\b(accept|approv|sign)"),
+         "", D),
         ("code, review and design untouched", *unchanged(run, "tf-propose", analysis_and_design), D),
         ("nothing applied", *backend_initialised(run), D),
     ]
@@ -1835,6 +1887,15 @@ def eval25(run):
          near(t, r"author|self.?review|self.?approv|prevent", r"approv|review"), "", D),
         ("OIDC with per-environment roles", any_of(t, r"OIDC") and near(t, r"role", r"staging|prod|per.(env|account)"), "", D),
         ("third-party actions pinned by SHA", near(t, r"pin", r"SHA|commit|digest"), "", D),
+        ("untrusted PR triggers never reach a credential",
+         near(t, r"fork|untrusted|pull_request_target",
+              r"no (secrets?|credentials?|AWS|roles?|cloud|token)|without (secrets?|credentials?)|never|not used|read.only"), "", D),
+        ("flaky tests quarantined with an owner and a deadline",
+         near(t, r"flak", r"quarantin") and near(t, r"flak|quarantin", r"owner|deadline|expir|\d+.(day|week)"), "", D),
+        ("an environment matrix: environment × config × credential × gate",
+         any_of(t, r"^#{1,4}[^\n]*environment (matrix|table)",
+                r"^\|[^\n]*environment[^\n]*\|[^\n]*(credential|role|identity)[^\n]*\|[^\n]*(gate|approv)", flags=re.I | re.M),
+         "", D),
         ("Terraform planned on PR, saved plan applied from CI",
          any_of(t, r"plan\s+-out|saved plan|tfplan|plan file") and any_of(t, r"pull request|\bPR\b"), "", D),
         ("deploy records for the audit and delivery metrics",
@@ -1849,7 +1910,7 @@ def eval26(run):
     """pipelines Propose: rotate and contain first, build-once before release safety, never down."""
     t = everything(run, "ci-propose")
     doc, long_enough = deliverable(run, "ci-propose")
-    seq = section(doc, SEQUENCE) or doc
+    seq = sequence(doc) or doc
     ids = set(re.findall(r"CI-(?:SEC|FLO|FBK|REL|ENV|INF)-\d\d", doc))
     n_rb = len(re.findall(r"rollback|roll back", doc, re.I))
     n_val = len(re.findall(r"validat|verif", doc, re.I))
@@ -4173,7 +4234,9 @@ def eval39(run):
         ("adversaries by class and grade, abusers included",
          any_of(t, r"abuser|abusive|intimate partner|coerciv|estranged")
          and any_of(t, r"\bgrade\b|Derek|Charlie|Bruno|Abdurrahman|capabilit"), "", D),
-        ("trust boundaries named", any_of(t, r"trust boundar"), "", D),
+        ("trust boundaries named",
+         any_of(t, r"trust boundar") or (re.search(r"subgraph\s+B\d+\b", t) is not None and any_of(t, r"boundary.crossing")),
+         "by name, or as the skill's B-n zones with a boundary-crossing table", D),
         ("STRIDE applied per boundary crossing", near(t, r"STRIDE", r"boundar|crossing|flow|element"), "", D),
         ("a threat tree", any_of(t, r"threat tree|attack tree"), "", D),
         ("a hazard × mechanism matrix", any_of(t, r"hazard\s*[×x]\s*mechanism|mechanism matrix"), "", D),
@@ -4205,7 +4268,7 @@ def eval40(run):
     """threatmodel Propose: a decision per risk, containment first, the self-grant designed out, the work routed."""
     t = everything(run, "tm-propose")
     doc, long_enough = deliverable(run, "tm-propose")
-    seq = section(doc, SEQUENCE) or doc
+    seq = sequence(doc) or doc
     ids = tm_ids(doc)
     accepted = section(doc, r"accepted risks?|acceptances")
     n_rb = len(re.findall(r"rollback|roll back", doc, re.I))
@@ -4354,6 +4417,14 @@ def eval42(run):
         ("an authorisation matrix including another tenant and anonymous",
          any_of(t, r"authori[sz]ation matrix") and any_of(t, r"another tenant|other tenant|cross-tenant")
          and any_of(t, r"anonymous|unauthenticated"), "", D),
+        ("the authorisation matrix verified A-B-A (A creates, B tries, A re-reads)",
+         any_of(t, r"A-B-A|\bA/B/A\b")
+         or near(t, r"re-?reads?|reads? (it )?(back|again)", r"unchanged|nothing changed|not (been )?(changed|modified)|intact", 150), "", D),
+        ("an API inventory with a shadow-route gate",
+         any_of(t, r"\binventory\b") and any_of(t, r"shadow (api|route|endpoint)|generated from (the )?code|missing from the spec|not in the spec|spec (diff|drift)|route table.{0,80}spec|spec.{0,80}route table"),
+         "", D),
+        ("a licence policy for how the product ships",
+         near(t, r"licen[cs]e", r"AGPL|copyleft|SSPL|network use|hosted|SaaS|allow-?list"), "hosted SaaS: AGPL needs a decision", D),
         ("GraphQL introspection and playground off in production",
          near(t, r"introspection|graphiql|playground", r"\boff\b|disabl|not in prod|never|declin|n't|only in (dev|non-prod)"), "trap 7", D),
         ("support impersonation audited and time-bound",
@@ -4376,7 +4447,7 @@ def eval43(run):
     """appsec Propose: contain first, rotate before remove, fix the class, every fix red first."""
     t = everything(run, "as-propose")
     doc, long_enough = deliverable(run, "as-propose")
-    seq = section(doc, SEQUENCE) or doc
+    seq = sequence(doc) or doc
     ids = set(re.findall(AS_IDS, doc))
     n_rb = len(re.findall(r"rollback|roll back|revert", doc, re.I))
     n_val = len(re.findall(r"validat|verif", doc, re.I))
@@ -4396,14 +4467,14 @@ def eval43(run):
         ("the class fix for injection: one query layer",
          any_of(t, r"query (layer|builder|helper)|data.access layer|repository layer|\bORM\b"), "", D),
         ("the class fix for access: one authorisation / tenant-scoping layer",
-         any_of(t, r"(policy|authori[sz]ation|tenant[- ]scop\w*) (layer|middleware|module|guard)|repository layer|deny by default"), "", D),
+         any_of(t, r"(policy|authori[sz]ation|tenant[- ]scop\w*) (layer|middleware|module|guard)|tenant[- ]scop\w* repositor|repository layer|deny.by.default"), "", D),
         ("mass assignment fixed by request/response DTOs or a writable-field allow-list",
          any_of(t, r"\bDTOs?\b|allow-?list of (writable )?(fields|properties)|writable (fields|properties)|_\.pick|explicit fields"), "", D),
         ("each fix starts with a red test, through tdd",
          near(t, r"\bred\b|failing test|fails first", r"test") and any_of(t, r"\btdd\b"), "", D),
         ("class guards in CI, handed to the pipelines skill",
          any_of(t, r"semgrep|codeql|lint rule|\bSCA\b|secret scan|spec.vs.route|gitleaks")
-         and any_of(t, r"pipelines skill|\[pipelines\]|/pipelines\b|pipelines\.md|pipelines \("), "", D),
+         and any_of(t, r"\**pipelines\**\s+skill|\[pipelines\]|/pipelines\b|pipelines\.md|pipelines \("), "", D),
         ("passwords migrated to a slow KDF by rehash on login",
          near(t, r"argon2|bcrypt|scrypt|pbkdf2", r"rehash|on (next |successful )?login|migrat|upgrade"), "", D),
         ("every step has validation and rollback", n_rb >= 3 and n_val >= 3, f"{n_val} validation · {n_rb} rollback", D),
@@ -4550,7 +4621,7 @@ def eval46(run):
     """hardening Propose: containment first, no lockouts, rotate before remove, irreversible steps flagged."""
     t = everything(run, "hd-propose")
     doc, long_enough = deliverable(run, "hd-propose")
-    seq = section(doc, SEQUENCE) or doc
+    seq = sequence(doc) or doc
     ids = set(re.findall(HD_IDS, doc))
     hids = cites(t, "H", 30)
     n_rb = len(re.findall(r"rollback|roll back|revert", doc, re.I))
@@ -4564,9 +4635,11 @@ def eval46(run):
         ("containment before structural and governance work",
          before(seq, r"HD-NET-01|HD-DAT-01|HD-IDN-03|HD-HST-02", r"HD-GOV-0[12]|HD-MON-01|HD-HST-03|HD-NET-02"), "", D),
         ("the private admin path is live before public SSH is closed",
-         before(t, r"bastion|vpn|private (admin )?path|session manager",
-                r"(remov|delet|clos)\w*\s+(the\s+)?`?allow-ssh-temp|allow-ssh-temp`?[^\n]{0,40}(remov|delet|clos)|clos\w*\s[^\n]{0,30}port 22"),
-         "", D),
+         (lambda a, b: a is not None and b is not None and a < b)(
+             first(t, r"bastion|vpn|private (admin )?path|session manager"),
+             first_step(t, r"(remov|delet|clos)\w*\s+(the\s+)?`?allow-ssh[\w-]*|allow-ssh[\w-]*`?[^\n]{0,40}(remov|delet|clos)"
+                           r"|clos\w*\s[^\n]{0,30}port 22|clos\w*\s+(the\s+)?public SSH")),
+         "a warning against closing it early is not the closing step", D),
         ("access-reducing steps carry a lockout guard",
          any_of(t, r"second session|lockout guard|lock(ed)? out|auto-?revert|break-?glass"), "", D),
         ("the exposed DB password rotated before it is removed", rotated_first(t, r"HD-IDN-03|db\.conf|DB password|database password"), "", D),
