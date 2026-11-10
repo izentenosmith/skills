@@ -39,6 +39,21 @@ jobs:
       - name: Lint this repo's workflows
         run: actionlint -color
 
+  memory:
+    name: memory audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      # Full history: notes cite commits, and the dream's watermark is one.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+      - name: Audit .memory/ (fails on errors only)
+        run: python3 -I skills/memory/repo-memory/scripts/memlint.py audit --root .
+
   harness:
     name: harness tests (python ${{ matrix.python }})
     runs-on: ubuntu-24.04

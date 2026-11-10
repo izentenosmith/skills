@@ -32,7 +32,8 @@
           { "context": "skills, links and eval wiring", "integration_id": 15368 },
           { "context": "harness tests (python 3.13)", "integration_id": 15368 },
           { "context": "harness tests (python 3.14)", "integration_id": 15368 },
-          { "context": "eval controls", "integration_id": 15368 }
+          { "context": "eval controls", "integration_id": 15368 },
+          { "context": "memory audit", "integration_id": 15368 }
         ]
       }
     }
