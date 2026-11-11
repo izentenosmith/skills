@@ -27,6 +27,17 @@ Three rules make them trustworthy:
 
 They are working artifacts, not deliverables — gitignore them, or commit them as the change's design record.
 
+### Before you write — is there already a brief?
+
+`.workflow/brief.md` is one path, and a repo has more than one change in its life. Look before you write:
+
+- **No brief there** → write it.
+- **A brief for this same work** (the user asked to revise or extend it) → revise it in place and log the change under **Revisions**. That is the first rule above.
+- **A finished brief for other work** — every criterion ticked, and its ledger (if there is one) ends in `### Verdict: GO` → move `brief.md` and `ledger.md` together to `.workflow/archive/<short-slug-of-that-brief>/`, say that you did, then write the new one. A ledger left behind would hand the new change another change's findings.
+- **An unfinished brief for other work** — unticked criteria, or a ledger that doesn't end in GO → **stop and ask.** Those unticked criteria may be mid-build in another session or worktree, and they exist nowhere else. Do not overwrite, rename or archive it on your own: show the user its title and what is still open, and let them choose — finish that change first, discard it explicitly, or archive it unfinished.
+
+On a **large** effort that architect-deep-dive split into increments, the brief holds **one increment at a time**. List the remaining increments, in order, under **Out of scope** as *"next increment: …"*, and write the next brief only once this one has reached GO and been archived.
+
 This skill is **stage 2 of a seven-stage workflow**:
 
 1. [architect-deep-dive](../architect-deep-dive/SKILL.md) — resolves the design tree, scope, and edge cases
@@ -37,7 +48,7 @@ This skill is **stage 2 of a seven-stage workflow**:
 6. [devils-advocate](../devils-advocate/SKILL.md) — assumes the result is wrong and hunts evidence for every defect
 7. [tyr-verdict](../tyr-verdict/SKILL.md) — adjudicates the findings, cuts false claims, and enforces the fixes
 
-**Upstream (from architect-deep-dive):** every dimension the architect resolved is your raw material — pull directly from it. Its **charter** (what we're solving, why now, what done looks like) becomes your **Summary** and **Desired behavior**; carry the *why now* rather than dropping it, because it is what tells TDD which criterion matters when two conflict. Its interface decisions become your **Key interfaces**; its resolved failure modes and edge cases become your **edge-case criteria**; its user-facing behaviors become your **happy-path criteria**; its scope boundaries become your **Out of scope**. If a dimension was left implicit, you are missing input — go back to architect-deep-dive rather than guessing. The ADRs it lists as **records** go under **Decisions on record** by path: cite them, don't restate their rationale.
+**Upstream (from architect-deep-dive):** every dimension the architect resolved is your raw material — pull directly from it. Its **charter** (what we're solving, why now, what done looks like) becomes your **Summary** and **Desired behavior**; carry the *why now* rather than dropping it, because it is what tells TDD which criterion matters when two conflict. Its interface decisions become your **Key interfaces**; its resolved failure modes and edge cases become your **edge-case criteria**; its user-facing behaviors become your **happy-path criteria**; its scope boundaries become your **Out of scope**. If a dimension was left implicit, you are missing input — go back to architect-deep-dive rather than guessing. The ADRs it lists as **records** go under **Decisions on record** by path: cite them, don't restate their rationale. Its **backwards-compatibility**, **observability** and **migration & rollout** decisions become criteria where a test can see them and **Ship checklist** items where it can't — see **Tangling to TDD**.
 
 Two of its outputs are **constraints on the plan rather than work in it**. Its resolved boundaries and dependency directions bound where the behavior may live — carry them into **Key interfaces** so TDD builds inward-pointing seams instead of rediscovering them. Its **deliberately deferred** decisions (database engine, framework, delivery mechanism) stay deferred: record each one with the boundary that protects it, and do not let an acceptance criterion commit to it. A criterion that names a deferred detail has quietly resolved a decision the architect chose to leave open.
 
@@ -74,6 +85,11 @@ The TDD stage's planning step asks: *"What should the public interface look like
 - **State criteria as observable behavior.** Each criterion must be verifiable through the public interface and read like a spec sentence.
 - **Separate edge-case criteria from happy-path.** Carry the unhappy paths resolved during architect-deep-dive (empty/missing input, boundaries, permission failures, partial failures, isolation/tenancy quirks) into their own clearly-marked criteria so TDD writes the edge-case slices it would otherwise skip.
 - **Carry the security block as criteria.** When architect-deep-dive's security trigger fired, every item in its security block becomes a criterion, not a note: each **abuse case** is an edge-case criterion stated as a refusal ("a user cannot …", with the exact refusal the caller sees); each **authorisation rule** becomes criteria for the allowed actor *and* the refused ones, on every path to the operation; each **domain primitive** is a Key interface whose validity rule is a criterion; each **never-logged value** is a criterion ("the reset token appears in no log line or error response"). A security decision that isn't a criterion never gets a test — and is the first thing a later change quietly undoes. When the trigger didn't fire, say so in one line under Desired behavior.
+- **Carry the operability decisions — as criteria where a test can see them, as a checklist where it can't.** architect-deep-dive resolves **backwards-compatibility**, **observability** and **migration & rollout**, and those are the decisions most often lost between a design and a merge, because nothing downstream fails when they are missing. Sort each one:
+  - *A test can observe it* → it is an acceptance criterion like any other. "A caller that omits the new field gets today's response, unchanged." "With the flag off, the endpoint behaves exactly as before." "A rejected request emits one `request.rejected` event carrying the account id and the code — and not the token."
+  - *No test can observe it* → it goes under **Ship checklist**: the backfill and its order relative to the deploy, the rollback step and what triggers it, the dashboard or alert, the runbook or changelog entry, who is told. Each item is a checkbox with the decision in it, so it is either done, or visibly not done when the verdict is called.
+
+  A dimension the architect marked N/A gets no line. When all three were N/A, write `- none — no rollout, compatibility or observability work in this change` so an empty section is a decision and not an omission.
 - **Supply prior art.** TDD's planning step looks for similar tests already in the codebase. Point at the closest existing test suites/patterns (e.g. table-driven constraint tests, public-entry-point handler tests, component-contract tests, boundary/gateway tests) so TDD matches conventions instead of inventing them.
 
 ## Subagents — optional
@@ -89,6 +105,7 @@ The **prior-art hunt** is not. "Point at the closest existing test suites and pa
 ```markdown
 # Build Plan: <feature/fix name>
 
+**Status:** draft — awaiting approval
 **Category:** bug / enhancement
 **Summary:** one-line description of what needs to happen
 
@@ -130,6 +147,14 @@ Be specific about edge cases and error conditions.
 - Thing that should NOT be changed or addressed here
 - Adjacent feature that might seem related but is separate
 
+**Ship checklist** (what no acceptance test can prove — rollout, compatibility, observability; tdd ticks what the build delivers, tyr-verdict reports what is still open):
+- [ ] Rollout: <the flag and its default / the backfill and when it runs relative to the deploy / the sequencing>
+- [ ] Rollback: <the step that undoes this, and the signal that triggers it>
+- [ ] Observability: <the dashboard, alert or log query someone will use to see this working>
+- [ ] Docs: <the runbook, changelog or API doc that must change with it>
+
+**Base:** — (filled in by tdd before its first slice: the commit the change is measured against)
+
 **Acceptance tests** (filled in by stage 3, acceptance-tests — leave empty here):
 - **Command:** —
 
@@ -139,9 +164,20 @@ Be specific about edge cases and error conditions.
 
 ## Handoff
 
+### The approval gate
+
+The brief is the contract three stages build against and two more judge by, and it is the last point where changing your mind costs a sentence instead of a test suite. So it is **approved before anything is built on it**:
+
+1. Write the plan to `.workflow/brief.md` with `**Status:** draft — awaiting approval`.
+2. In your response, show what the user is agreeing to in a form they can check in a minute: the criteria in order, the **Out of scope** list, the **Deferred by design** list, the **Ship checklist**, and anything you had to assume because the design left it open — each assumption as a question.
+3. **Stop there.** Do not start acceptance-tests or tdd in the same turn. An approval is an explicit yes to this brief; "looks fine, I guess" is a question still open, and silence is not an answer.
+4. When the user approves, set `**Status:** approved` and log it under **Revisions**. When they ask for changes, make them in place, log them, and ask again.
+
+**When nobody can answer** — a headless run, a harness, a user who has said to produce the deliverable without asking — write the brief, leave it `draft — awaiting approval`, and say so in your last line. An unapproved brief is still a brief; what it must not do is look approved.
+
 After writing the plan to `.workflow/brief.md`, prompt the user:
 
-> The build plan is written to `.workflow/brief.md`. Run **[acceptance-tests](../acceptance-tests/SKILL.md)** next to turn its acceptance criteria into failing black-box tests, then **[tdd](../tdd/SKILL.md)** — its criteria are ordered as a red→green build order, with the first as the tracer bullet. (Trivial tier: go straight to tdd.)
+> The build plan is written to `.workflow/brief.md` as a **draft**. Approve it, or tell me what to change. Once approved, run **[acceptance-tests](../acceptance-tests/SKILL.md)** to turn its acceptance criteria into failing black-box tests, then **[tdd](../tdd/SKILL.md)** — its criteria are ordered as a red→green build order, with the first as the tracer bullet. (Trivial tier: go straight to tdd.)
 
 ## Examples
 

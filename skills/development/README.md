@@ -76,14 +76,16 @@ The pipeline keeps two files in the repo it's working on — `.workflow/brief.md
 | Stage | `brief.md` | `ledger.md` |
 |---|---|---|
 | architect-deep-dive | — (its charter feeds stage 2) | — |
-| agent-brief | **creates** | — |
+| agent-brief | **creates**, as a draft the user approves; archives a finished brief and its ledger together, and stops rather than overwrite an unfinished one | — |
 | acceptance-tests | reads criteria; **records** the acceptance tests and their command | — |
-| tdd | reads; **revises** via the feedback edge; ticks criteria | **appends** closed slices |
+| tdd | reads; **revises** via the feedback edge; ticks criteria and ship-checklist items; records `**Base:**` | **appends** closed slices |
 | refactor-review | reads (scope boundaries) | **re-rates** prior noted smells; appends new ones |
 | devils-advocate | reads (criteria, edge cases, deferrals) | **appends findings** |
 | tyr-verdict | reads | **appends verdicts and slices**; reads noted smells into the verdict |
 
 The ledger is an **append-only log** in a strict grammar — every stage appends its own section to the current iteration, and state (what's open, what's closed, which smells are carried) is read by replaying it. The grammar is in each writing skill, and in [harness/LEDGER.md](../../harness/LEDGER.md) for the whole picture; [harness/](../../harness/README.md) can check a ledger, or run stages 5–7 and the loop itself.
+
+Three things keep the build honest between those files and the code. **Save points:** tdd commits each green slice on a working branch and records the commit it started from as `**Base:**` in the brief, so a slice that goes wrong costs that slice and every later stage knows what the change is measured against. **The bar itself:** devils-advocate reads the diff for a check that got weaker — a skipped or deleted test, a suppressed checker, a lowered threshold, an acceptance test edited without a brief revision — and tyr-verdict does not accept a green suite as the refutation. **The ship checklist:** rollout, rollback, observability and documentation decisions that no test can prove are checkboxes in the brief; a GO names the ones still open.
 
 Add `.workflow/` to the host repo's `.gitignore` unless you want the plan and the ledger in version control — both are legitimate choices, and committing them makes the loop's reasoning reviewable.
 
@@ -123,4 +125,4 @@ Each lives in the folder of the skill that uses it.
 
 ## Measured
 
-The seven stages carry the repo's deepest scored result: **0.99 vs 0.13** on delta and **1.00 vs 0.88** on capability, with three runs per eval against the pre-session skills (iterations 15 and 24). tdd's eval checks what it adds over a capable agent: each criterion ticked with the test that verifies it, each red recorded with the failure it showed, and a tracer bullet that is red on the behavior, not on the seam it needs. See [`../evals/`](../../evals/README.md) and [benchmark.md](../../evals/benchmark.md). `acceptance-tests` has eval 27, on the `tdd` fixture: the tests it writes are run against the unchanged code, a correct implementation and three mutants, so a test that is red for the wrong reason or cannot fail is caught by execution, not by reading. Its controls separate as intended. **0.75 against 0.25 for no skill on its first run** — two tests passed on the unimplemented code and the edge had a minute of slack — and **1.00 on all three runs** after the fix: criteria that already hold are tested with their contrast, and edges within seconds.
+The seven stages carry the repo's deepest scored result: **0.99 vs 0.15** on delta and **0.99 vs 0.95** on capability, with three runs per eval against the pre-session skills (iteration 37, re-run after save points, the brief's approval gate, the bar-itself attack surface and the ship checklist were added; those four are not yet graded by an assertion of their own). tdd's eval checks what it adds over a capable agent: each criterion ticked with the test that verifies it, each red recorded with the failure it showed, and a tracer bullet that is red on the behavior, not on the seam it needs. See [`../evals/`](../../evals/README.md) and [benchmark.md](../../evals/benchmark.md). `acceptance-tests` has eval 27, on the `tdd` fixture: the tests it writes are run against the unchanged code, a correct implementation and three mutants, so a test that is red for the wrong reason or cannot fail is caught by execution, not by reading. Its controls separate as intended. **0.75 against 0.25 for no skill on its first run** — two tests passed on the unimplemented code and the edge had a minute of slack — and **1.00 on all three runs** after the fix: criteria that already hold are tested with their contrast, and edges within seconds.

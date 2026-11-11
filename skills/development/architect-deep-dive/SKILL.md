@@ -160,6 +160,8 @@ When every dimension in the termination gate has reached one of the three end st
 
 When the security trigger fired, give the security decisions their own block in the summary — the abuse cases, the authorisation rule per operation and where it is enforced, the domain primitives, the values that must never be logged — because agent-brief turns each one into an acceptance criterion and a test, and a security decision buried in prose is the one that never gets one.
 
+Give the **operability** decisions their own block too — what was resolved under backwards-compatibility, observability and migration & rollout: what must not break and for whom, what gets logged or measured, the flag or backfill and its order relative to the deploy, and how the change is undone. Nothing downstream fails when these go missing, which is exactly why they do; agent-brief turns each into an acceptance criterion where a test can see it and a ship-checklist item where it can't. A dimension that ended N/A says so in one line.
+
 Keep the **deferred** decisions in their own section, each with the boundary that protects it and the signal that will force it — agent-brief carries those into the plan as constraints, not as work.
 
 List the **records** written during the session — each ADR's path and one-line decision, each glossary term added or changed — so agent-brief can cite them instead of restating their rationale. None written is a valid answer; say so.

@@ -51,15 +51,21 @@ Stdlib Python 3.10+, no dependencies. The skills don't need any of this — ever
 
 | Rule the skills state | Who enforces it now |
 |---|---|
-| devils-advocate fans out by attack surface, never below three delegates, all at once | `loop.py` dispatches 3 grouped delegates (9 on a diff over 400 changed lines) in parallel |
+| devils-advocate fans out by attack surface, never below three delegates, all at once | `loop.py` dispatches 3 grouped delegates (10 on a diff over 400 changed lines) in parallel |
+| The teardown reads the diff for **the bar itself** moving — a skipped or deleted test, a suppressed checker, a lowered threshold, unfinished work | `bar_signals()` scans the diff for those patterns and hands each hit to the delegate that owns the surface, as a lead to read (saved as `bar-i<n>.json`). Whether a hit is a finding stays the model's call; a loosened assertion or an edited acceptance test is still its to spot |
+| The change is measured against the commit tdd started from, not against `HEAD` | `--base`, else the remembered base, else the brief's `**Base:**` line, else the merge-base with `main`. `HEAD` is pinned to a commit on first use, and a tree that doesn't differ from its base **stops the loop** instead of producing a clean teardown of nothing |
+| Every green state is a save point | With `--save-points`, one commit after each tdd and refactor-review stage that passes its gates. The stages are told not to commit; the harness does it, and only on a working branch that started clean |
+| A GO names the ship-checklist items still open | Read from the brief at GO and written into the verdict's reason. They never change the verdict |
 | The teardown **does not execute** — no suite, no test, no mutation | Delegates get `--tools Read,Grep,Glob`. They *can't* run anything, rather than being asked not to |
 | A delegate that never returns is an **unattacked surface**, not a clean one | Recorded under `### Surfaces` by the harness |
+| A teardown nobody ran found nothing, which is not the same as a clean one | When **no** delegate returns, the loop stops with an error and writes nothing, so the next run retries the teardown — "no findings" from a teardown that never happened used to compute GO |
 | tyr verifies each finding with a reproduction; verifiers don't fix | One verifier per finding, each in a throwaway copy of the repo |
 | Collect every verifier before judging | `fan_out` waits on all of them; tyr's call is made once, on the whole slate |
 | The suite is green before and after refactor-review, and after tdd | `--test-cmd` is run as a gate; red stops the loop (exit 4) |
 | The ledger is append-only and only the running stage writes it | Agents never write it. The harness snapshots it, restores it if an agent edits it anyway, and appends through `ledger.render_*` |
 | Every CONFIRMED gets a slice; REFUTED carries *Reopens only if*; INCONCLUSIVE carries what settles it | Validated on tyr's answer; one correction round, then the harness stops |
 | A slice closes when its test exists | The tests tdd added are run against a snapshot of the pre-fix code (`redgreen.py`): if they pass there, or fail only because they can't load (an import or compile error), they don't capture the defect and **no slice closes**. Each test name tdd reports must also be found in the repo |
+| One closing line per slice | A slice tdd reports more than once (once per test that verifies it) closes once, naming every test; two closing lines for one slice are a ledger error |
 | Every carried smell is re-examined each pass | Missing decisions are recorded as "left, not re-examined" and logged |
 | GO / NO-GO / ESCALATED, the three-iteration cap, the stall rule, one re-run per INCONCLUSIVE | `ledger.judge()` computes it. tyr states a verdict too; if they disagree the ledger records both and the computed one stands |
 
@@ -77,13 +83,14 @@ The first run remembers `--test-cmd` and `--base` in `.workflow/harness.json`, s
 
 | Flag | Default | |
 |---|---|---|
-| `--base` | merge-base with `main` | what the diff is measured against; `HEAD` when you're on the base branch itself |
+| `--base` | the brief's `**Base:**`, else the merge-base with `main` | what the diff is measured against; `HEAD` (pinned to its commit) when you're on the base branch itself with the change uncommitted |
 | `--skills` | `../skills` next to this folder | where the `SKILL.md` folders are; the repo's `.claude/skills` is searched too |
 | `--model`, `--delegate-model` | your Claude default | e.g. a stronger model for the stages that judge or write code, a cheaper one for delegates |
 | `--concurrency` | 4 | parallel delegate calls |
 | `--budget-usd` | none | spend cap per `claude` call |
 | `--cap` | 3 | iterations |
 | `--acceptance-cmd` | the **Command** stage 3 recorded in the brief | runs only the acceptance tests; every gate requires them green too (remembered) |
+| `--save-points` | off | commit after each tdd and refactor-review stage that passes its gates. Refuses the default branch, a detached `HEAD` and a tree with uncommitted changes outside `.workflow/` — run it once tdd's slices are committed |
 | `--once` | | run one stage and stop — to watch it step by step |
 | `--dry-run` | | write the next stage's prompts to `.workflow/runs/…/calls/` and call nothing |
 
@@ -91,7 +98,7 @@ Each run leaves its prompts, raw model output and the diff each teardown saw in 
 
 ### When it stops
 
-- **GO** (exit 0) — nothing open. Minors ship as tracked follow-ups, carried smells are named in the verdict's reason.
+- **GO** (exit 0) — nothing open. Minors ship as tracked follow-ups; carried smells and any open **Ship checklist** items from the brief are named in the verdict's reason.
 - **ESCALATED** (exit 3) — the decision has left the loop. Read the last `### Verdict` reason, then either fix by hand, take it back to agent-brief / architect-deep-dive, or accept the risk: append to the last iteration
 
   ```markdown

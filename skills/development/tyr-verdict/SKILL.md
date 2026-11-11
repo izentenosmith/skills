@@ -46,6 +46,11 @@ For each finding from the teardown, render exactly one verdict:
 - **Exploitability is not severity.** A confirmed breach is a blocker even when the breaking case looks hard to reach; "an attacker would have to know the ID" is how IDs leak through a list endpoint later. Downgrade only for a stated reason that is about impact, not effort.
 - **Design-layer defects go upstream.** When the defect is the design doing the wrong thing correctly — a rule another feature circumvents, a role someone can grant themselves, a fallback that skips a control — the slice fixes the symptom and the reason names [architect-deep-dive](../architect-deep-dive/SKILL.md) (and, where one exists, the threat model) as the place the decision has to be revisited.
 
+**Findings about the bar itself** — a test skipped, deleted or loosened, a checker suppressed, a threshold lowered, an acceptance test edited without a brief revision — follow two more:
+
+- **A green suite refutes nothing here.** The suite is green *because* the check was moved; that is the finding. REFUTED needs the reason the weakening is right — the brief revision that logged it, or the proof that the check still catches what it caught (restore it on a scratch copy and run it).
+- **The slice restores the check, then fixes what it catches.** *"`test_export_rejects_other_tenant` runs un-skipped and passes"* is the red→green target; the suppression being gone is part of it. Severity follows what the weakened check was guarding, not how small the diff line is — a skipped test on an authorisation path is a blocker.
+
 Record each in `.workflow/ledger.md`, in the current iteration's `### Verdicts` section:
 
 ```markdown
@@ -66,7 +71,7 @@ Four rules break it. All of them depend on the ledger being a file, not a memory
 1. **REFUTED is sticky.** A finding you struck down stays struck down. It is not re-adjudicated on a later iteration unless *new* evidence appears that meets the **Reopens only if** condition you wrote when you cut it. If a teardown re-reports a refuted finding with the same evidence, strike it in one line citing the prior verdict — do not re-derive the reasoning.
 2. **Progress must be monotonic.** From iteration 2 on, each pass must close something: a remediation slice closed, a finding newly CONFIRMED, or an INCONCLUSIVE settled either way. Read the outcome carefully, because an iteration that closes nothing means one of two opposite things — **nothing left open** is convergence, and the verdict is GO; **something still open and nothing closed** is a stall, and the loop is spinning. Say which, and never let a stall buy another iteration.
 3. **Escalate rather than recirculate.** Any single INCONCLUSIVE gets **one** re-run for evidence. After that it goes to the user with the options stated plainly: accept the risk and ship, treat it as CONFIRMED and fix it, or block pending investigation outside this loop. Guessing is still forbidden; so is looping on it.
-4. **Cap at three iterations.** If a third adjudication still leaves confirmed blockers or majors open — or an INCONCLUSIVE, since there is no fourth pass to settle it in — the loop is not converging and the problem is upstream — a design decision that was never actually resolved, or a brief that doesn't match reality. Stop the loop and say which, rather than grinding stage 3 against a plan that can't succeed. That is a finding about `.workflow/brief.md`, and it goes back to [agent-brief](../agent-brief/SKILL.md) or [architect-deep-dive](../architect-deep-dive/SKILL.md).
+4. **Cap at three iterations.** If a third adjudication still leaves confirmed blockers or majors open — or an INCONCLUSIVE, since there is no fourth pass to settle it in — the loop is not converging and the problem is upstream — a design decision that was never actually resolved, or a brief that doesn't match reality. Stop the loop and say which, rather than grinding tdd against a plan that can't succeed. That is a finding about `.workflow/brief.md`, and it goes back to [agent-brief](../agent-brief/SKILL.md) or [architect-deep-dive](../architect-deep-dive/SKILL.md).
 
 The file lives in the repo under review and is an **append-only log** — never edit anything above its end, and never reuse or renumber an id. Every stage appends its own section to the current iteration, and the state is read by replaying the log from the top: a slice is opened by your line and closed by a later line of tdd's, never by ticking yours. Every stage writes its section even when it has nothing to record (`- none`), so a stage that found nothing is distinguishable from one that never ran. One iteration, in loop order:
 
@@ -170,6 +175,8 @@ Before the verdict, read the carried smells in `.workflow/ledger.md` — every `
 - **Enumerate them in the verdict** so the user accepts them explicitly rather than by silence: *"Shipping with 2 noted smells: N1, N3."*
 - **Cross-check them against the confirmed findings.** A noted smell in the same code as a CONFIRMED blocker is worth a second look — the structure you tolerated may be why the defect was possible, in which case the remediation slice should fix the structure rather than patch around it. Say so when you see it; that is a judgment only this stage is positioned to make, because only this stage sees both lists.
 
+**The ship checklist is the other thing a GO ships by omission.** Where `.workflow/brief.md` has a **Ship checklist**, read it before the verdict: the rollout, rollback, observability and documentation items no acceptance test could prove. tdd ticks the ones the build delivered. Like the noted smells, the open ones get no verdict and do not change GO or NO-GO — that call stays arithmetic over the findings — but they are **named in the verdict, one line each**: *"Open before this ships: rollback step (undecided), alert on `request.rejected` (not built)."* An item ticked with nothing saying where it landed is reported as open. A brief with no such section: say so in one clause.
+
 Never silently promote a noted smell into a remediation slice. A slice is a red→green behavior target; a smell has no failing test. If the structure has to change, say why the fix requires it.
 
 ## Merge verdict
@@ -198,7 +205,7 @@ The loop **converges** when devils-advocate surfaces no new proven finding and t
 ## Handoff
 
 - On **GO**, prompt the user:
-  > Verdict: **GO**. All confirmed defects are closed (or accepted as tracked minors) and no findings are open. Shipping with <n> noted smell(s) and <m> tracked minor(s), listed above. The change is done.
+  > Verdict: **GO**. All confirmed defects are closed (or accepted as tracked minors) and no findings are open. Shipping with <n> noted smell(s) and <m> tracked minor(s), listed above. <k> ship-checklist item(s) are still open: <each, in a few words> — the code is done; the change is done when those are. Next: prepare it for review (pr-prep, where installed) and work the open items before it merges.
 - On **NO-GO**, prompt the user:
   > Verdict: **NO-GO** — <n> confirmed defect(s) remain, iteration <i> of at most 3. Run **[tdd](../tdd/SKILL.md)** next against the open remediation slices in `.workflow/ledger.md`, then re-run refactor-review → devils-advocate → tyr-verdict until the verdict is GO.
 - On **ESCALATED**, prompt the user:

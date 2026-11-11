@@ -50,14 +50,37 @@ HEAVY_DIRS = {".venv", "venv", "node_modules", ".tox", ".mypy_cache", ".pytest_c
 BASH_ENV = {"CLAUDE_CODE_DISABLE_BACKGROUND_TASKS": "1",
             "BASH_DEFAULT_TIMEOUT_MS": "120000", "BASH_MAX_TIMEOUT_MS": "300000"}
 
-# The nine attack surfaces from devils-advocate, and how they merge on a small diff.
+# The ten attack surfaces from devils-advocate, and how they merge on a small diff.
+BAR = "the bar itself"
 SURFACES = [
-    "acceptance criteria", "test integrity", "listed edge cases",
+    "acceptance criteria", "test integrity", BAR, "listed edge cases",
     "unlisted unhappy paths", "error handling", "contracts & invariants",
     "security & permissions", "coupling & state leakage", "performance & scale",
 ]
-SMALL_DIFF_GROUPS = [SURFACES[0:3], SURFACES[3:6], SURFACES[6:9]]
+SMALL_DIFF_GROUPS = [SURFACES[0:4], SURFACES[4:7], SURFACES[7:10]]
 LARGE_DIFF_LINES = 400
+DEFAULT_BRANCHES = {"main", "master", "trunk"}
+
+# What a diff looks like when the bar moved instead of the code. A pattern scan can only
+# point: every hit is handed to the delegate that owns the surface as a lead to read.
+TEST_PATH = re.compile(r"(^|/)(tests?|specs?|__tests__)/|(^|/)test_[^/]+$|_test\.\w+$|\.(test|spec)\.\w+$"
+                       r"|Tests?\.(java|kt|cs)$")
+BAR_ADDED = [
+    ("a test skipped, expected to fail or run alone",
+     re.compile(r"@pytest\.mark\.(skip|skipif|xfail)|pytest\.(skip|xfail)\(|unittest\.skip|@skip\b"
+                r"|\b(it|test|describe|context)\.(skip|only|todo)\(|\bx(it|describe|test)\("
+                r"|@Ignore\b|@Disabled\b|\bt\.Skip(f|Now)?\(|#\[ignore\]")),
+    ("a checker suppressed",
+     re.compile(r"#\s*noqa|type:\s*ignore|eslint-disable|@ts-(ignore|nocheck|expect-error)|@SuppressWarnings"
+                r"|nosemgrep|pragma:\s*no cover|istanbul ignore|c8 ignore|gitleaks:allow|\bNOLINT"
+                r"|#\s*nosec|Stryker disable|pylint:\s*disable|rubocop:disable|#\[allow\(")),
+]
+BAR_CHANGED = ("a threshold or gate line changed",
+               re.compile(r"fail[_-]under|coverageThreshold|cov-fail-under|minimum_coverage|min[_-]coverage"
+                          r"|continue-on-error|allow_failure|\|\|\s*true\b"))
+BAR_UNFINISHED = ("work left unfinished",
+                  re.compile(r"raise NotImplementedError|\btodo!\(|\bunimplemented!\(|\bTODO\b|\bFIXME\b"))
+ASSERTION = re.compile(r"\bassert\w*\b|\bexpect\(|\.should\b|\bAssert\.")
 
 
 class HarnessError(Exception):
@@ -146,6 +169,8 @@ the open remediation slices below red→green, one at a time, in the order given
 
 {slices}
 
+{commits}
+
 The build plan is `.workflow/brief.md`; the feedback edge still applies — if a slice \
 contradicts the brief, revise the brief in place and log it under Revisions. The test \
 command is `{test_cmd}`, and the full suite must be green when you finish{acceptance}.
@@ -157,6 +182,8 @@ that verifies it. For any slice you could not close, return why.
 REFACTOR_PROMPT = """Read the skill at `{skill}` and follow it on the changes since `{base}` \
 (`git diff {base}`, plus untracked files). The suite is green now (`{test_cmd}`) — keep it \
 green through every step, running it between treatments.
+
+{commits}
 
 Carried noted smells from earlier passes — re-examine each one and decide promote, leave \
 or retire:
@@ -183,7 +210,7 @@ deliberately deferred decision is not a gap):
 **Already refuted — do not re-report** unless your evidence meets the reopen condition, in \
 which case set `reopens` to that id:
 {refuted}
-{reexamine}
+{reexamine}{bar}
 **The change.** The diff against `{base}` is in `{diff}`. Read it once, then read the source \
 and tests it touches. Do not open `.workflow/ledger.md` or any transcript.
 
@@ -209,6 +236,17 @@ REEXAMINE = """
 reading, and report each as a finding with `reexamines` set to its id:
 {items}
 """
+
+BAR_SIGNALS = """
+**Leads for "the bar itself"** — a pattern scan of the diff found these. Each is a place to \
+read, not a finding: report one only when the check it weakens guarded something the change \
+claims, and say so when the brief explains it. The scan cannot see a loosened assertion or an \
+edited acceptance test — read the test changes for those yourself.
+{items}
+"""
+
+NO_COMMIT = ("Do not commit, push, stash or switch branches: leave your changes in the working "
+             "tree. The harness checks them there{then}.")
 
 CONSOLIDATE_PROMPT = """You are ranking a devils-advocate teardown. Below are the raw \
 findings returned by {k} independent delegates, as JSON.
@@ -288,6 +326,7 @@ class Ctx:
     skip_refactor: str | None = None        # a lane without refactor-review says why, and it's recorded
     ledger_path: pathlib.Path | None = None  # other harnesses keep their own ledger beside the pipeline's
     brief_path: pathlib.Path | None = None
+    save_points: bool = False               # commit after each write stage passes its gates
     cost: float = 0.0
     lock: threading.Lock = dc.field(default_factory=threading.Lock)
 
@@ -418,6 +457,102 @@ def acceptance_from_brief(brief):
     return m.group(1).strip() if m else None
 
 
+BASE_RE = re.compile(r"^\*\*Base:\*\*\s*`?([0-9a-f]{7,40})\b", re.M)
+STATUS_RE = re.compile(r"^\*\*Status:\*\*\s*(.+)$", re.M)
+SHIP_RE = re.compile(r"\*\*Ship checklist\*\*[^\n]*\n(.*?)(?=\n\s*\n\*\*|\n##|\Z)", re.S)
+
+
+def base_from_brief(brief):
+    """The commit tdd recorded before its first slice. Once the slices are committed,
+    HEAD no longer means "before the change", and this is the only place that says what does."""
+    if not brief.exists():
+        return None
+    m = BASE_RE.search(brief.read_text())
+    return m.group(1) if m else None
+
+
+def brief_status(brief):
+    m = STATUS_RE.search(brief.read_text()) if brief.exists() else None
+    return m.group(1).strip() if m else None
+
+
+def open_ship_items(brief):
+    """Unticked Ship checklist items: what no acceptance test can prove, and a GO ships by omission."""
+    m = SHIP_RE.search(brief.read_text()) if brief.exists() else None
+    if not m:
+        return []
+    return [re.sub(r"\s+", " ", i).strip() for i in re.findall(r"^\s*-\s*\[ \]\s*(.+)$", m.group(1), re.M)]
+
+
+def pin(repo, ref):
+    """A ref that moves when something commits is no base. Resolve it once, to a commit."""
+    if ref not in ("HEAD", "@"):
+        return ref
+    r = subprocess.run(["git", "rev-parse", "--verify", "-q", "HEAD^{commit}"], cwd=repo,
+                       capture_output=True, text=True)
+    return r.stdout.strip() or ref
+
+
+def bar_signals(diff):
+    """Lines in a unified diff where a check got weaker instead of the code getting better."""
+    out, path, old = [], None, None
+    removed, added, deleted = {}, {}, set()
+    for line in diff.splitlines():
+        if line.startswith("--- "):
+            old = line[4:].split("\t")[0].strip()
+            old = None if old == "/dev/null" else re.sub(r"^a/", "", old)
+            continue
+        if line.startswith("+++ "):
+            new = line[4:].split("  (untracked)")[0].split("\t")[0].strip()
+            path = None if new == "/dev/null" else re.sub(r"^b/", "", new)
+            if path is None and old and TEST_PATH.search(old):
+                out.append(f"`{old}` — a test file deleted")
+                deleted.add(old)
+            continue
+        if line[:1] not in ("+", "-") or not (path or old):
+            continue
+        where, body = path or old, line[1:]
+        is_test = bool(TEST_PATH.search(where))
+        if is_test and ASSERTION.search(body):
+            (added if line[0] == "+" else removed)[where] = (added if line[0] == "+" else removed).get(where, 0) + 1
+        if BAR_CHANGED[1].search(body):
+            out.append(f"`{where}` — {BAR_CHANGED[0]}: `{line.strip()[:120]}`")
+        if line[0] != "+":
+            continue
+        for what, pat in BAR_ADDED:
+            if pat.search(body):
+                out.append(f"`{where}` — {what}: `{body.strip()[:120]}`")
+        if not is_test and BAR_UNFINISHED[1].search(body):
+            out.append(f"`{where}` — {BAR_UNFINISHED[0]}: `{body.strip()[:120]}`")
+    for where, n in sorted(removed.items()):
+        if where not in deleted and n > added.get(where, 0):
+            out.append(f"`{where}` — {n} assertion line(s) removed, {added.get(where, 0)} added")
+    return list(dict.fromkeys(out))
+
+
+def current_branch(repo):
+    r = subprocess.run(["git", "symbolic-ref", "--short", "-q", "HEAD"], cwd=repo, capture_output=True, text=True)
+    return r.stdout.strip()
+
+
+def dirty(repo):
+    """Uncommitted paths outside .workflow/ — the loop's own files don't count."""
+    r = subprocess.run(["git", "status", "--porcelain", "--untracked-files=all", "--", ".", ":(exclude).workflow"],
+                       cwd=repo, capture_output=True, text=True)
+    return [l[3:] for l in r.stdout.splitlines() if l.strip()]
+
+
+def save_point(ctx, n, what):
+    """One commit per write stage that passed its gates: a state the next iteration can return to.
+    Only with --save-points, and only what that stage left in the tree — the loop started clean."""
+    paths = dirty(ctx.repo) if ctx.save_points and not ctx.dry else []
+    if not paths:
+        return
+    sh(ctx, "git", "add", "-A", "--", *paths)
+    sh(ctx, "git", "commit", "-q", "-m", f"loop iteration {n}: {what}")
+    log(f"  save point: {sh(ctx, 'git', 'rev-parse', '--short', 'HEAD').strip()} — {what}")
+
+
 def diff_text(ctx):
     out = sh(ctx, "git", "diff", ctx.base, "--", ".", ":(exclude).workflow")
     for path in sh(ctx, "git", "ls-files", "--others", "--exclude-standard").splitlines():
@@ -499,7 +634,7 @@ def stage_fix(ctx, n, st):
     slices = st["open_slices"]
     log(f"iteration {n} · tdd on {len(slices)} remediation slice(s)")
     prompt = HEADER.format(stage="fix", n=n, cap=ctx.cap) + FIX_PROMPT.format(
-        skill=skill_path(ctx, "tdd"), test_cmd=ctx.test_cmd,
+        skill=skill_path(ctx, "tdd"), test_cmd=ctx.test_cmd, commits=no_commit(ctx),
         acceptance=(f" — and so must the acceptance tests (`{ctx.acceptance_cmd}`), which you never edit to "
                     "make pass" if ctx.acceptance_cmd else ""),
         slices=bullet(slices, lambda s: f"- [{s['severity']}] {s['id']} — {s['behavior']}"))
@@ -518,6 +653,16 @@ def stage_fix(ctx, n, st):
     (ctx.run_dir / f"redgreen-i{n}.json").write_text(json.dumps(
         {k: v for k, v in proof.items() if k not in ("before", "after")}, indent=2))
     log(f"  red→green: {proof['verdict']} — {proof['reason']}")
+    # One closing line per slice: tdd sometimes reports a slice once per test that verifies it,
+    # and two `- [x] F1` lines in one iteration are a ledger error (E32) that stops the loop.
+    merged = {}
+    for c in out["closed"]:
+        if c["finding"] in merged:
+            if c["test"] not in merged[c["finding"]]["test"]:
+                merged[c["finding"]]["test"] += " + " + c["test"]
+        else:
+            merged[c["finding"]] = dict(c)
+    out["closed"] = list(merged.values())
     closed = []
     if proof["verdict"] != "red-green":
         # A remediation test that passes on the pre-fix code doesn't capture the defect it claims to.
@@ -533,6 +678,12 @@ def stage_fix(ctx, n, st):
         log(f"  {nc['finding']} not closed: {nc['reason']}")
     append(ctx, n, L.render_closed(closed))
     log(f"  closed {len(closed)}/{len(slices)}{' · brief revised' if out['brief_revised'] else ''}")
+    save_point(ctx, n, "tdd closes " + ", ".join(c["finding"] for c in closed) if closed
+               else "tdd on the remediation slices, none closed")
+
+
+def no_commit(ctx):
+    return NO_COMMIT.format(then=", then makes the save point itself" if ctx.save_points else "")
 
 
 def test_exists(ctx, name):
@@ -555,6 +706,7 @@ def stage_refactor(ctx, n, st):
     gate(ctx, "before refactor-review")
     prompt = HEADER.format(stage="refactor", n=n, cap=ctx.cap) + REFACTOR_PROMPT.format(
         skill=skill_path(ctx, "refactor-review"), base=ctx.base, test_cmd=ctx.test_cmd,
+        commits=no_commit(ctx),
         carried=bullet(carried, lambda s: f"- **{s['id']}** {s['what']} (noted iteration {s['since']}) — "
                                           f"promote if: {s['promote_if']}", "- none (first pass)"))
     ids = {s["id"] for s in carried}
@@ -579,6 +731,7 @@ def stage_refactor(ctx, n, st):
         noted.append({**s, "id": f"N{nid + i}", "smell": smell})
     append(ctx, n, L.render_smells(noted, [actions[k] for k in sorted(actions, key=lambda x: int(x[1:]))]))
     log(f"  {len(out['fixed'])} fixed, {len(noted)} noted, {len(actions)} carried decided")
+    save_point(ctx, n, "refactor-review")
 
 
 def stage_teardown(ctx, n, st):
@@ -586,10 +739,19 @@ def stage_teardown(ctx, n, st):
     diff_path = ctx.run_dir / f"diff-i{n}.patch"
     diff_path.write_text(diff)
     changed = sum(1 for l in diff.splitlines() if l[:1] in "+-" and l[:3] not in ("+++", "---"))
+    if not changed:
+        raise HarnessError(
+            f"nothing to tear down: the tree does not differ from the base ({ctx.base}). If tdd committed "
+            "its slices, the base is the commit before them — record it in the brief as **Base:** <sha>, "
+            "or pass --base")
     groups = [[s] for s in SURFACES] if changed > LARGE_DIFF_LINES else SMALL_DIFF_GROUPS
+    signals = bar_signals(diff)
+    (ctx.run_dir / f"bar-i{n}.json").write_text(json.dumps(signals, indent=2))
+    bar = BAR_SIGNALS.format(items=bullet(signals, lambda s: f"- {s}", "- none found by the scan"))
     reexam = st["inconclusive"]
     log(f"iteration {n} · devils-advocate: {len(groups)} read-only delegates over {changed} changed lines"
-        + (f", {len(reexam)} sent back for evidence" if reexam else ""))
+        + (f", {len(reexam)} sent back for evidence" if reexam else "")
+        + (f", {len(signals)} lead(s) on the bar itself" if signals else ""))
 
     brief = ctx.brief.read_text() if ctx.brief.exists() else (
         "(no build plan — derive the claims from the diff, and say that is what you did)")
@@ -600,7 +762,7 @@ def stage_teardown(ctx, n, st):
     def job(i, surfaces, extra=""):
         prompt = HEADER.format(stage="teardown-delegate", n=n, cap=ctx.cap) + DELEGATE_PROMPT.format(
             surfaces=", ".join(surfaces), brief=brief, refuted=refuted, reexamine=extra,
-            base=ctx.base, diff=diff_path, skill=skill)
+            bar=bar if BAR in surfaces else "", base=ctx.base, diff=diff_path, skill=skill)
         return lambda: claude(ctx, f"i{n}-teardown-{i}", prompt, DELEGATE_SCHEMA, READ_TOOLS,
                               model=ctx.delegate_model)
 
@@ -613,6 +775,11 @@ def stage_teardown(ctx, n, st):
         results = fan_out(ctx, jobs)
         if ctx.dry:
             return
+        if results and all(isinstance(r, Exception) for r in results.values()):
+            # Nothing was attacked, so nothing was found — and "no findings" would compute GO. A teardown
+            # that never ran is not a clean one: stop here, write nothing, and let the next run retry it.
+            raise HarnessError("no teardown delegate returned, so no surface was attacked — the ledger is "
+                               f"unchanged; re-run to retry the teardown ({next(iter(results.values()))})")
         raw, swept, unattacked = [], [], []
         for key, res in results.items():
             if isinstance(res, Exception):
@@ -754,8 +921,14 @@ def record_outcome(ctx, n, out):
         note = f"tyr-verdict stated {out['stated_verdict']}; the ledger rules compute {outcome}"
     if out and out.get("carried_smells"):
         reason += f". Carried smells: {out['carried_smells']}"
+    ship = open_ship_items(ctx.brief) if outcome == "GO" else []
+    if ship:
+        # Not a rule of the verdict: named, like a carried smell, so a GO doesn't ship them by silence.
+        reason += f". Open ship-checklist items ({len(ship)}): " + "; ".join(s[:80] for s in ship)
     append(ctx, n, L.render_outcome(outcome, reason, note))
     log(f"  verdict: {outcome} — {reason}" + (f" ({note})" if note else ""))
+    for s in ship:
+        log(f"  open before this ships: {s}")
 
 
 def scratch_copy(ctx):
@@ -841,6 +1014,9 @@ def main(argv=None):
     ap.add_argument("--concurrency", type=int, default=4)
     ap.add_argument("--budget-usd", type=float, help="spend cap per claude call")
     ap.add_argument("--timeout", type=int, default=1800, help="seconds per claude call or suite run")
+    ap.add_argument("--save-points", action="store_true",
+                    help="commit after each tdd and refactor-review stage that passes its gates (needs a clean "
+                         "tree on a working branch: tdd's slices already committed)")
     ap.add_argument("--once", action="store_true", help="run one stage, then stop")
     ap.add_argument("--dry-run", action="store_true", help="write the next stage's prompts and stop")
     a = ap.parse_args(argv)
@@ -855,7 +1031,17 @@ def main(argv=None):
     if not test_cmd:
         print("--test-cmd is required on the first run", file=sys.stderr)
         return EXIT_ERROR
-    base = a.base or cfg.get("base") or resolve_base(repo, None)
+    brief_path = repo / ".workflow" / "brief.md"
+    base = pin(repo, a.base or cfg.get("base") or base_from_brief(brief_path) or resolve_base(repo, None))
+    if a.save_points:
+        branch = current_branch(repo)
+        problem = (f"the tree has uncommitted changes ({', '.join(dirty(repo)[:3])}…)" if dirty(repo) else
+                   "HEAD is detached" if not branch else
+                   f"`{branch}` is the default branch" if branch in DEFAULT_BRANCHES else "")
+        if problem:
+            print(f"--save-points: {problem} — save points go on a working branch whose tdd slices are "
+                  "already committed", file=sys.stderr)
+            return EXIT_ERROR
     acceptance = a.acceptance_cmd or cfg.get("acceptance_cmd") or acceptance_from_brief(repo / ".workflow" / "brief.md")
     if not a.dry_run:
         cfg_path.parent.mkdir(parents=True, exist_ok=True)
@@ -869,12 +1055,21 @@ def main(argv=None):
     ctx = Ctx(repo=repo, skills=pathlib.Path(a.skills).resolve(), test_cmd=test_cmd, base=base, cap=a.cap,
               model=a.model, delegate_model=a.delegate_model, concurrency=a.concurrency,
               budget=a.budget_usd, timeout=a.timeout, dry=a.dry_run, run_dir=run_dir,
-              claude_bin=os.environ.get("HARNESS_CLAUDE", "claude"), acceptance_cmd=acceptance)
+              claude_bin=os.environ.get("HARNESS_CLAUDE", "claude"), acceptance_cmd=acceptance,
+              save_points=a.save_points)
     log(f"repo {repo} · base {base} · run artifacts in {run_dir.relative_to(repo)}")
     log(f"acceptance tests: `{acceptance}`" if acceptance else
         "no acceptance tests recorded — the gates run the suite only")
     if not ctx.brief.exists():
         log("no .workflow/brief.md — the teardown will derive its claims from the diff")
+    elif (brief_status(ctx.brief) or "").lower().startswith("draft"):
+        log("warning: the brief is still `draft — awaiting approval`; the loop judges the change against "
+            "a plan nobody has agreed to")
+    head = re.match(r"# Ledger — (.+)$", ctx.ledger.read_text().splitlines()[0]) if (
+        ctx.ledger.exists() and ctx.ledger.read_text().strip()) else None
+    if head and ctx.brief.exists() and head.group(1).strip() != brief_title(ctx):
+        log(f"warning: the ledger is for “{head.group(1).strip()}” but the brief is “{brief_title(ctx)}” — "
+            "a new brief starts a new ledger (agent-brief archives the finished pair together)")
 
     code = EXIT_ERROR
     try:

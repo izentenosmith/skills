@@ -69,6 +69,14 @@ Walk each of these deliberately. For each, state what you attacked and what you 
 
 - [ ] **Acceptance criteria.** For each criterion in the brief: does the behavior actually hold, or does its test pass vacuously (asserting nothing meaningful, asserting on setup, or asserting a value that would be true even if the feature were deleted)? That includes the **acceptance tests** the brief maps to each criterion — were any edited since stage 3 wrote them, and does each still fail if its criterion breaks?
 - [ ] **Test integrity.** Would each test actually fail if the behavior broke? Mentally mutate the implementation (invert a condition, drop a branch, return a constant) — does a test go red? A test no mutation can break tests nothing.
+- [ ] **The bar itself.** An agent that hits a red check takes the cheapest road to green, and the cheapest road is often to move the check. Read the diff for the bar getting lower rather than the code getting better — every one of these is visible in the diff alone:
+  - **A test got easier.** A skip, `xfail`, `.only` or disabled marker added; a test or test file deleted; assertions removed from a test that stayed, or loosened (an exact value to a truthiness check, a specific error to any error).
+  - **A checker got silenced.** A new suppression — `noqa`, `type: ignore`, `eslint-disable`, `@ts-ignore`, `@SuppressWarnings`, `nosemgrep`, `pragma: no cover`, `istanbul ignore`, a secret-scanner allow — or a rule switched off in the linter, type-checker or scanner configuration.
+  - **A threshold moved.** A coverage floor, a size or time budget, a severity level, or a CI step removed, made optional or allowed to fail.
+  - **An acceptance test changed after stage 3 wrote it** with no matching entry in the brief's **Revisions**. An acceptance test changes only through the brief.
+  - **Work left unfinished behind a green bar.** A stub that raises not-implemented on a path a criterion needs, an empty `catch`/`except` that turns a failure into silence, a `TODO` where the handling should be.
+
+  Each one found is a finding, with the diff line as its evidence and the claim it challenges stated as *"this check still guards what it guarded before the change."* A weakening the brief explains — a logged revision, an Out of scope line — is not a finding; say that you saw it and why it holds. Finding none is a result worth recording: `Swept: the bar itself — no skip, suppression, threshold or acceptance-test change in the diff`.
 - [ ] **Listed edge cases.** The unhappy paths the brief called out — are they genuinely handled, or stubbed/short-circuited to make a test pass?
 - [ ] **Unlisted unhappy paths.** Empty/missing/null input, boundary and off-by-one values, concurrent access, ordering assumptions, partial failure and rollback, duplicate/retry.
 - [ ] **Contracts & invariants.** Can a documented invariant be violated through the public interface? Did the change break a contract an existing caller depends on (backwards-compatibility)?
@@ -92,6 +100,7 @@ Every finding must carry **concrete evidence**, not an assertion of doubt — an
 2. **A test that survives a mutation** — name the test, name the mutation (invert the condition, drop the branch, return a constant, delete the feature), and show from the test body why its assertions would still hold. Reasoned, not executed.
 3. **A constructed breaking case** — specific inputs/state, traced through the code path, → what the code yields vs. what the claim says it should. Construct it; don't just describe it. Trace it; don't run it.
 4. **A missing branch** — the input class that has no handling at all.
+5. **A check that got weaker** — the diff line that adds the skip, the suppression or the lowered threshold, and what that check caught before it.
 
 Where a claim genuinely cannot be settled by reading — timing, concurrency, behavior against a real database, a test that fails intermittently — do **not** start running things. Record the finding with confidence **unproven**, name the exact run that would settle it, and leave the run to Tyr. That is what the evidence re-run is for, and it is the single largest place a teardown loses time.
 
