@@ -7,6 +7,14 @@
       }
     ]
   },
+  "architect-deep-dive": {
+    "SKILL.md": [
+      {
+        "old": "\n\nIf the repo carries the harness, the rest of the pipeline can run from that file without you: `python3 harness/pipeline.py --repo . --design <the design file's path> --test-cmd \"<the suite>\"` writes the brief, the acceptance tests and the code, then runs the closing loop to GO or ESCALATED.",
+        "new": ""
+      }
+    ]
+  },
   "concurrency-review": {
     "SKILL.md": [
       {

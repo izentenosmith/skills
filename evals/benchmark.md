@@ -4,14 +4,14 @@
 
 | eval | from | n | delta (mean ± sd) | delta base | gain | cap | cap base |
 |---|---|---|---|---|---|---|---|
-| 0-architect-charter-and-options | i37 | 3 | 1.00 ± 0.00 | 0.00 | +1.00 | 1.00 | 1.00 |
-| 1-brief-ordered-criteria | i37 | 3 | 1.00 ± 0.00 | 0.00 | +1.00 | 1.00 | 1.00 |
+| 0-architect-charter-and-options | i42 | 3 | 1.00 ± 0.00 | 0.00 | +1.00 | 1.00 | 1.00 |
+| 1-brief-ordered-criteria | i42 | 3 | 1.00 ± 0.00 | 0.00 | +1.00 | 0.95 | 1.00 |
 | 10-hotfix-script-no-tests | i34 | 3 | 1.00 ± 0.00 | 0.20 | +0.80 | 1.00 | 1.00 |
 | 11-hotfix-routes-outage-out | i34 | 3 | 1.00 ± 0.00 | 0.00 | +1.00 | 1.00 | 1.00 |
 | 12-incident-webapp-contain-by-flag | i34 | 3 | 1.00 ± 0.00 | 0.43 | +0.57 | 1.00 | 0.50 |
 | 13-incident-batch-repair-artifact | i34 | 3 | 1.00 ± 0.00 | 0.60 | +0.40 | 1.00 | 1.00 |
 | 14-incident-library-no-deploy | i34 | 3 | 1.00 ± 0.00 | 0.71 | +0.29 | 1.00 | 1.00 |
-| 15-harness-loop-closes-teardown | i39 | 3 | 0.87 ± 0.12 | — | — | 0.78 | — |
+| 15-harness-loop-closes-teardown | i43 | 3 | 0.93 ± 0.12 | — | — | 1.00 | — |
 | 16-netaudit-hub-spoke-recovers-and-scores | i21 | 3 | 1.00 ± 0.00 | 0.31 | +0.69 | 1.00 | 0.60 |
 | 17-netdesign-plans-around-what-is-in-use | i21 | 3 | 0.90 ± 0.00 | 0.30 | +0.60 | 1.00 | 0.20 |
 | 18-netdiagram-canonical-views-from-model | i23 | 3 | 1.00 ± 0.00 | 0.20 | +0.80 | 1.00 | 0.00 |

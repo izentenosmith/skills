@@ -123,7 +123,9 @@ def eval0(run):
         ("charter states what done looks like", has(t, r"Done looks like"), "", D),
         ("charter states a calibration", has(t, r"Calibration"), "", D),
         ("charter estimates a question count",
-         any_of(t, r"Questions:?\s*~?\s*\*?\*?\d+", r"~\d+\s+(questions|to resolve)"), "", D),
+         # "about 6 to resolve" is an estimate too: iterations 40 and 42 each failed a run for the word.
+         any_of(t, r"Questions:?\*{0,2}\s*(?:~|about|around|roughly|approx\w*\.?)?\s*\*{0,2}\d+",
+                r"(?:~|about |around |roughly )\d+\s+(questions|to resolve)"), "", D),
         ("progress line shows current question of total",
          any_of(t, r"Question\s+\d+\s+of\s+~?\s*\d+"), "'Question N of ~M'", D),
         ("options are presented", any_of(t, r"\[Options\]", r"\*\*Options"), "", D),

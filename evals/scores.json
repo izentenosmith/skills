@@ -3,17 +3,17 @@
   "evals": {
     "eval-0-architect-charter-and-options": {
       "skill": "architect-deep-dive",
-      "iteration": "iteration-37",
+      "iteration": "iteration-42",
       "n": 3,
       "staging": "package",
-      "skill_hash": "f4a8f046abe73acb8e1616d4c7c2589cee815c80a4fca6547852674cc7a97d08"
+      "skill_hash": "c0c14db76d2ebfe573fcd600704a9f3a56d345b6fead88461c282350db3c634e"
     },
     "eval-1-brief-ordered-criteria": {
       "skill": "agent-brief",
-      "iteration": "iteration-37",
+      "iteration": "iteration-42",
       "n": 3,
       "staging": "package",
-      "skill_hash": "31f8b5366276ccac26652183ca99be93ccb74fe5171512c6fd172e0bb5b1df64"
+      "skill_hash": "80d21635cdcee458e19ad32702c2a54916620e1e04d372a432dd246104176ce2"
     },
     "eval-10-hotfix-script-no-tests": {
       "skill": "hotfix",

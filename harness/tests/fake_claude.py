@@ -171,6 +171,47 @@ elif stage == "fix":
         if scenario == "twice":       # the same slice reported once per test that verifies it
             out["closed"] += [{"finding": f, "test": "tests/test_fix.py::check_cutoff"} for f in ids]
 
+elif stage.startswith("pl-"):
+    # pipeline.py's stages 2–4. FAKE_PL: ok (default) · strays (the brief stage edits code) · nocriteria ·
+    # accept-green (an acceptance test that passes now) · accept-load (one that cannot import) ·
+    # build-slow (red after the first tdd call, green after the second) · build-never
+    import subprocess
+    PL = os.environ.get("FAKE_PL", "ok")
+    brief = cwd / ".workflow" / "brief.md"
+    if stage == "pl-brief":
+        design = re.search(r"on disk at `([^`]+)`", prompt).group(1)
+        title = re.search(r"^# Design:\s*(.+)$", pathlib.Path(design).read_text(), re.M).group(1)
+        crit = "" if PL == "nocriteria" else ("- [ ] Tracer bullet: the cutoff defaults to 120 minutes\n"
+                                              "- [ ] Edge case: an empty config still yields the default\n")
+        brief.write_text(f"# Build Plan: {title}\n\n**Status:** draft — awaiting approval\n\n"
+                         f"**Acceptance criteria** (ordered):\n{crit}\n**Out of scope:**\n- admin override\n\n"
+                         "**Ship checklist** (what no test can prove):\n- [ ] Rollback: revert the commit\n\n"
+                         "**Base:** —\n\n**Acceptance tests** (filled in by stage 3):\n- **Command:** —\n\n"
+                         "## Revisions\n- (none yet)\n")
+        if PL == "strays":
+            (cwd / "app.py").write_text("DEFAULT = 120\n")
+        out = {"title": title, "criteria": 2, "assumptions": ["the default applies to every account"],
+               "summary": "written"}
+    elif stage == "pl-acceptance":
+        body = {"accept-green": "assert True", "accept-load": "import no_such_module"}.get(
+            PL, "from app import check_cutoff\nassert check_cutoff(None, {}) == 120")
+        (cwd / "tests" / "test_accept.py").write_text(body + "\n")
+        cmd = "PYTHONPATH=. python3 tests/test_accept.py"
+        brief.write_text(brief.read_text().replace("- **Command:** —", f"- **Command:** `{cmd}`"))
+        out = {"command": cmd, "tests": 1, "not_testable": [], "summary": "red"}
+    else:
+        again = "This is attempt" in prompt
+        if PL == "build-never" or (PL == "build-slow" and not again):
+            out = {"criteria_done": 0, "commits": 0, "brief_revised": False, "open_ship_items": [], "summary": "stuck"}
+        else:
+            (cwd / "app.py").write_text("DEFAULT = 120\n\ndef check_cutoff(slot, config):\n    return DEFAULT\n")
+            brief.write_text(brief.read_text().replace("- [ ] Tracer", "- [x] Tracer").replace("- [ ] Edge", "- [x] Edge"))
+            subprocess.run(["git", "add", "app.py"], cwd=cwd, check=True)
+            subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm",
+                            "the cutoff defaults to 120 minutes"], cwd=cwd, check=True)
+            out = {"criteria_done": 2, "commits": 1, "brief_revised": False,
+                   "open_ship_items": ["Rollback: revert the commit"], "summary": "green"}
+
 elif stage == "discover":
     import subprocess
     head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=cwd, capture_output=True, text=True).stdout.strip()
