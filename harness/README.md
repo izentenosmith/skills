@@ -4,6 +4,7 @@ Eight harnesses and the tools they share. Each one runs a skill's judgment throu
 
 | Harness | Runs | Returns |
 |---|---|---|
+| [`pipeline.py`](pipeline.py) | development stages 2–7, from the design architect-deep-dive wrote | a branch of commits, the brief, the ledger, a GO / ESCALATED verdict and a report |
 | [`loop.py`](loop.py) | development stages 5–7 and the fix loop | a GO / NO-GO / ESCALATED ledger |
 | [`fix.py`](fix.py) | the hotfix lane, or incident-fix's fix phase | a committed branch and, with `--open-pr`, a draft PR |
 | [`postmortem.py`](postmortem.py) | incident-fix's Phase 4 | a linted, blameless post-mortem and an owned follow-through |
@@ -47,6 +48,46 @@ This folder makes the referee a program. The model still does every judgment; th
 
 Stdlib Python 3.10+, no dependencies. The skills don't need any of this — every skill folder still works copied on its own, in Cursor or Claude Code. The harness is an optional layer that enforces what they ask for when you want it enforced.
 
+## The whole pipeline — `pipeline.py`
+
+`loop.py` starts where tdd ends. `pipeline.py` starts where **you** end: you work the design with architect-deep-dive, in conversation, and it writes the design to its own file, `.workflow/designs/<YYYYMMDD-HHMM>-<slug>.md`. Everything after that runs without you.
+
+```
+ architect-deep-dive ──► .workflow/designs/… ──► agent-brief ─► acceptance-tests ─► tdd ─► loop.py ──► GO        exit 0
+ (you, one question       Status: resolved        brief.md       red, on behavior    green,   stages 5–7  ESCALATED exit 3
+  at a time)                                                                         committed
+```
+
+```bash
+python3 path/to/skills/harness/pipeline.py --repo . --design .workflow/designs/20261112-1105-cutoff.md \
+    --test-cmd ".venv/bin/python -m pytest -q"
+```
+
+**One file per design, nothing shared.** A repo holds several designs at once — parallel sessions, worktrees, branches that will merge — so each has a name made of when and what, and none overwrites or conflicts with another. `--design` picks the one to build; with a single `resolved` design in the folder it is found without being named, with several the harness lists them and asks, and it is remembered for the resume. On **GO** the design is marked `built` and the change's working files — brief, ledger, report, state — move to `.workflow/archive/<design name>/`, so the shared `brief.md` and `ledger.md` paths are empty again and two branches that each built something never meet in the same file. An ESCALATED change stays where it is, to be resumed.
+
+Stage 1 stays a conversation on purpose: a design is decided with you, and a headless call can't ask you anything. The harness refuses a design that isn't `**Status:** resolved`.
+
+| Stage | What the model does | What code checks |
+|---|---|---|
+| before anything | — | a resolved design; no brief or ledger left from other work; a clean tree; a green suite; a working branch (created as `pipeline/<slug>` when you start on the default branch) |
+| brief | **agent-brief**, from the design file | nothing outside `.workflow/` changed; the brief has criteria. The assumptions it had to make are logged and put in the report. Status becomes `approved — from the resolved design … (no separate review)` |
+| acceptance | **acceptance-tests** | a `**Command:**` is recorded; it is **red**; no line of its output is a load or import error |
+| build | **tdd**, committing each green slice | suite and acceptance tests green, or tdd is called again with what is still red (`--build-attempts`, default 2); `**Base:**` written into the brief before the first slice; anything left uncommitted becomes one commit |
+| loop | `loop.py`, unchanged, with save points | everything in the table below |
+
+| Flag | |
+|---|---|
+| `--pause-at-brief` | stop once after the brief is written (exit 5) so you can read or edit it; re-run without the flag to build it |
+| `--from-brief` | no design: build the `.workflow/brief.md` that is already there |
+| `--skip-acceptance` | the Trivial tier: no stage 3 |
+| `--design` | the design file to build (default: the only resolved one in `.workflow/designs/`) |
+| `--branch`, `--build-attempts` | the working branch's name, tdd calls before giving up |
+| `--dry-run` | write the next stage's prompt and call nothing |
+
+The model, budget, cap and concurrency flags are `loop.py`'s. State is `.workflow/pipeline.json`: re-running resumes at the first stage not done, and once the loop has started the ledger is the state, as before. It ends with `pipeline-report.md` (in the archive folder on GO, in `.workflow/` otherwise) — the verdict, the commits, what was assumed for you, and the ship-checklist items still open. Nothing is pushed, merged or deployed. Exit 5 means it needs you: no resolved design, a brief that belongs to other work, a dirty tree, or the pause you asked for.
+
+**What you give up by not pausing.** The brief's approval gate exists because the brief is the last cheap place to change your mind. Running straight through treats the design conversation as that approval, and the brief says so rather than looking reviewed. Use `--pause-at-brief` when the design left real latitude.
+
 ## What moved from prose into code
 
 | Rule the skills state | Who enforces it now |
@@ -69,7 +110,7 @@ Stdlib Python 3.10+, no dependencies. The skills don't need any of this — ever
 | Every carried smell is re-examined each pass | Missing decisions are recorded as "left, not re-examined" and logged |
 | GO / NO-GO / ESCALATED, the three-iteration cap, the stall rule, one re-run per INCONCLUSIVE | `ledger.judge()` computes it. tyr states a verdict too; if they disagree the ledger records both and the computed one stands |
 
-What stays with the model: which smells to fix, what's a defect, how severe, whether evidence holds, what each slice must make true. What stays with you: stages 1–4, and any ESCALATED decision.
+What stays with the model: which smells to fix, what's a defect, how severe, whether evidence holds, what each slice must make true. What stays with you: stage 1 — and stages 2–4 too, unless you run `pipeline.py` — and any ESCALATED decision.
 
 ## Running it
 

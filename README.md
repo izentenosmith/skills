@@ -104,6 +104,12 @@ The loop's rules — read-only teardown, one verifier per finding, sticky refuta
 python3 harness/loop.py --repo ../my-service --test-cmd ".venv/bin/python -m pytest -q"
 ```
 
+`pipeline.py` goes one step further back: you work the design with architect-deep-dive, which writes the design to its own file under `.workflow/designs/`, and it runs the brief, the acceptance tests, tdd and that loop from there to GO or ESCALATED.
+
+```bash
+python3 harness/pipeline.py --repo ../my-service --design .workflow/designs/<file>.md --test-cmd ".venv/bin/python -m pytest -q"
+```
+
 The same folder holds three more: `fix.py` takes a bug report to a draft PR (the hotfix lane, or incident-fix's fix phase), `postmortem.py` turns a resolved incident log into a linted post-mortem with an owned follow-through, and the database and network workflow harnesses coordinate audit, design, diagram, and proposal stages. It's optional and Claude Code only; the skills don't depend on it.
 
 ---

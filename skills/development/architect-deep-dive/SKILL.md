@@ -23,7 +23,8 @@ Follow these strict execution rules:
 3. For each question, format your response into four distinct sections: **[The Question]**, **[Options]**, **[Architect's Recommendation]**, **[Cost of getting this wrong]** — all four specified below.
 4. **Codebase Constraint:** If the answer to a question can be inferred by analyzing the existing codebase, do not ask me. Instead, use your file/search tools to find the answer, state your findings, and present the next logical question based on that data. Mark such answers **[inferred]** — they count as resolved, but I can overturn them. An inferred answer still names what the codebase forced and what that costs; it is a resolved decision, not a free one.
 5. **Record as you resolve.** When a resolved decision is hard to reverse, surprising without context, and a real trade-off, write it as an ADR; when a question settles what a word means, add it to the glossary. Both happen the moment the question resolves, per [records.md](records.md), and the next question names them in one line.
-6. Conclude every response with: "Awaiting your decision or input to proceed."
+6. **Keep the design on disk.** The conversation is where decisions get made; a design file of its own under `.workflow/designs/` is where they live — see **The design file** below. Write the charter to it before the first question and append each decision as it resolves.
+7. Conclude every response with: "Awaiting your decision or input to proceed."
 
 ## The charter — open with what we're solving and why
 
@@ -40,6 +41,51 @@ Before the first question, state the charter once. It is the thing every later d
 ```
 
 If you cannot write **Solving** and **Why now** from what the user gave you, that is question 1 — ask it before anything structural. A design review that starts from an unexamined premise resolves the wrong tree beautifully.
+
+## The design file — what survives the conversation
+
+Everything downstream builds from what is resolved here, and a design that exists only in scrollback is gone at the first compaction, the first new session, and for any stage that runs without this conversation in front of it. So the design is a file in the repo being worked on, kept current as you go — **one file per design, with a name no other design will take**:
+
+```
+.workflow/designs/<YYYYMMDD-HHMM>-<slug>.md      e.g. .workflow/designs/20261112-1105-cancellation-cutoff.md
+```
+
+The stamp is the moment you create the file (`date +%Y%m%d-%H%M`); the slug is the title in the project's vocabulary, lower-case and hyphenated, six words at most. A repo carries several designs at once — two sessions, two worktrees, two branches that will merge — and a single shared `design.md` is one they would all overwrite and then conflict on. A name made of when and what collides with nothing, and a folder of them reads as the history of what was designed. If you cannot read the clock, use the slug alone and add a suffix that is not already in the folder. **Say the path in your first response**, and use that same path for the rest of the session — never a second file for the same design.
+
+```markdown
+# Design: <title>
+
+**Status:** in progress | resolved
+**Solving:** …
+**Why now:** …
+**Done looks like:** …
+**Calibration:** small | medium | large — <reason>
+**Questions:** ~<n> to resolve (<the dimensions in play>) — <resolved> resolved, <deferred> deferred
+
+## Decisions
+- **<dimension> — <the question, in a few words>:** <the option chosen> — <the one-line reason>. Rejected: <the other live option, and why>. [inferred] where it was.
+
+## Security
+- <abuse cases, the authorisation rule per operation and where it is enforced, domain primitives, never-logged values — or `N/A — no trust boundary touched`>
+
+## Operability
+- <backwards-compatibility, observability, migration & rollout — or `N/A` with the reason>
+
+## Deferred
+- <decision> — behind <the boundary that protects it>; forced by <signal>
+
+## N/A
+- <dimension> — <one-line reason>
+
+## Records
+- <ADR path> — <the decision in one line> (or `- none`)
+```
+
+- **The file's header is the charter, line for line** — the same six lines you open the session with, question estimate included — plus the status. Stating the charter in your response is still rule 2; the file does not replace it.
+- **Create it with the charter, before the first question**, with `**Status:** in progress`. Other designs already in the folder are not yours: leave them exactly as they are. The one exception is a file there for **this same work** still marked `in progress` — a session that was cut short. Continue that file rather than starting a second.
+- **Append each decision the moment it resolves** — the same moment rule 5 writes an ADR. One line per decision, carrying the option chosen *and* the reason; an overturned decision is edited in place, not appended twice.
+- **Set `**Status:** resolved` only at handoff**, when every dimension has reached one of its three end states. A stage or a harness that finds `in progress` knows the design is not finished and must not build on it.
+- It records decisions, not the dialogue: no options tables, no transcript.
 
 ## The progress line — where we are
 
@@ -168,8 +214,12 @@ List the **records** written during the session — each ADR's path and one-line
 
 Close with the count: how many questions were asked against the estimate, and where the estimate moved.
 
+Bring the design file up to date with that summary — every block above has a section in it — and set its `**Status:** resolved`. The file, not this conversation, is what agent-brief reads.
+
 Then prompt the user:
 
-> The design is resolved across all dimensions — <n> questions, <d> deferred. Run **[agent-brief](../agent-brief/SKILL.md)** next to turn these decisions into the pure-text plan TDD builds from.
+> The design is resolved across all dimensions — <n> questions, <d> deferred — and written to `<the design file's path>`. Run **[agent-brief](../agent-brief/SKILL.md)** next to turn these decisions into the pure-text plan TDD builds from.
+
+If the repo carries the harness, the rest of the pipeline can run from that file without you: `python3 harness/pipeline.py --repo . --design <the design file's path> --test-cmd "<the suite>"` writes the brief, the acceptance tests and the code, then runs the closing loop to GO or ESCALATED.
 
 To begin: acknowledge these constraints, state the **charter**, and ask the very first high-priority question in the four-section format.
