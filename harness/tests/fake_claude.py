@@ -83,6 +83,10 @@ if os.environ.get("FAKE_CLAUDE_LOG"):
         fh.write(json.dumps({"stage": stage, "n": n, "argv": argv, "cwd": str(cwd),
                              "no_background": os.environ.get("CLAUDE_CODE_DISABLE_BACKGROUND_TASKS")}) + "\n")
 
+if scenario == "mute" and stage == "teardown-delegate":
+    print("You've hit your spend limit")          # what a delegate looks like when the account is out of budget
+    sys.exit(2)
+
 FINDING = {
     "target": "acceptance criterion 3 — the window length reads from account config",
     "claim": "the cutoff window length is read from account config",
@@ -164,6 +168,8 @@ elif stage == "fix":
             "test_cutoff_reads_config()\n")
         out = {"closed": [{"finding": f, "test": "tests/test_fix.py::test_cutoff_reads_config"} for f in ids],
                "not_closed": [], "brief_revised": False, "summary": "green"}
+        if scenario == "twice":       # the same slice reported once per test that verifies it
+            out["closed"] += [{"finding": f, "test": "tests/test_fix.py::check_cutoff"} for f in ids]
 
 elif stage == "discover":
     import subprocess

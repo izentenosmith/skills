@@ -25,7 +25,7 @@ This is **stage 4 of a seven-stage workflow**:
 
 > **The working files.** The pipeline keeps `.workflow/brief.md` (the plan you execute) and `.workflow/ledger.md` (findings and remediation slices across loop iterations) in the repo under review. The brief is revised in place, never forked; the ledger is append-only, and its finding IDs are stable — `F1` in iteration 1 is the same finding in iteration 3. Running standalone, neither file exists: work from what you have and say so.
 
-> **Loop-back edge.** This stage also runs as the fix step of the closing loop: when [tyr-verdict](../tyr-verdict/SKILL.md) returns NO-GO, its confirmed defects arrive as remediation slices already shaped like acceptance criteria, in `.workflow/ledger.md` under the last iteration's `### Remediation slices`. Execute them here red-green exactly as you would a fresh brief. As each one goes green, close it by appending `- [x] F<id> — verified by <test name>` under `### Closed slices` in a new `## Iteration <n+1>` of the ledger — never tick or move the line tyr-verdict wrote, because the ledger is an append-only log and the opening line and the closing line together are the record. That record is how the loop proves it is making progress rather than circling. Then send the result back through refactor-review → devils-advocate → tyr-verdict.
+> **Loop-back edge.** This stage also runs as the fix step of the closing loop: when [tyr-verdict](../tyr-verdict/SKILL.md) returns NO-GO, its confirmed defects arrive as remediation slices already shaped like acceptance criteria, in `.workflow/ledger.md` under the last iteration's `### Remediation slices`. Execute them here red-green exactly as you would a fresh brief. As each one goes green, close it by appending `- [x] F<id> — verified by <test name>` under `### Closed slices` in a new `## Iteration <n+1>` of the ledger — never tick or move the line tyr-verdict wrote, because the ledger is an append-only log and the opening line and the closing line together are the record. That record is how the loop proves it is making progress rather than circling. Each closed slice is its own save point, exactly as a criterion is (see **Save points**) — a remediation that breaks something else must be revertable without losing the ones that held. Then send the result back through refactor-review → devils-advocate → tyr-verdict.
 
 ## Philosophy
 
@@ -88,6 +88,8 @@ Stages 1–3 already resolved the interface, chose and prioritized the behaviors
 - [ ] **The conventions** ← **Test seams & prior art**. Mirror what it points at — new tests go in the test file it names, in the style it names, not a new file of your own. Every criterion marked **Edge case** gets its own test, named for the edge it pins (`…_boundary_is_exclusive`, `…_both_codes_surface`), so the suite reads as the brief's checklist.
 - [ ] **The limits** ← **Out of scope** and **Deferred by design**. A deferred detail stays deferred; do not let a test commit to it.
 - [ ] **The finish line** ← **Acceptance tests**: run the command once now and see every mapped test red. A tracer bullet that turns its criterion's acceptance test green is the clearest progress signal you have.
+- [ ] **The things that aren't tests** ← **Ship checklist**, where the brief has one: the rollout, compatibility and observability work that no acceptance test can prove. Build the items that are code (the flag, the log event, the migration) as part of the slice they belong to, and tick each **in the file, naming where it landed**. Items that happen after merge stay unticked; they are not yours to tick.
+- [ ] **The standing** ← **Status**: a brief still marked `draft — awaiting approval` has not been agreed. If the user sent you here to build it, that is the approval — set it to `approved` and log it under Revisions. Otherwise say it is unapproved before you build on it.
 
 Then verify the brief is actually executable before writing a test — that the named seams exist, and that no criterion depends on one that doesn't. **A gap here is the feedback edge, not a licence to re-plan:** fix `.workflow/brief.md` and log the revision. Confirm with the user only where the brief is silent or self-contradictory.
 
@@ -155,6 +157,19 @@ Run each new test and **read the failure before writing any production code**. R
 | 3 | Edge case: no fee on the due date | `test_no_fee_on_due_date_is_exclusive` | passed on first run; with `>=` → `assert 15 == 0` | already held — restored `>` |
 ```
 
+#### Save points — one commit per green slice
+
+When a slice goes green — its test, the code that passes it, and nothing else — **commit it before writing the next test**. A red you cannot get past on slice 4 should cost you slice 4, not slices 1–3: with a commit behind every green, "back to the last state that worked" is one command instead of a reconstruction, and the loop's later iterations fix a tree they can always return to.
+
+- **Record where you started, before the first test.** Write the current commit into the brief as `**Base:** <sha>`. It is what refactor-review, devils-advocate and the harness diff the change against — once you commit, `HEAD` stops meaning "before the change".
+- **Never on the default branch.** If you are on it, create a working branch first, named the way the repo names them.
+- **One slice, one commit.** Stage the files that slice touched, by name — never `git add -A`, which sweeps in work that isn't yours. The message states the behavior the slice added, in the criterion's words. `.workflow/` goes in only if the repo already tracks it.
+- **Only on green.** A commit is a state someone can return to; a red one is a trap. Scaffolding that let a test reach the behavior goes in with the slice it served.
+- **Structure and behavior never share a commit.** A refactor step is its own commit, made on a green suite.
+- **Local only.** Do not push, squash, amend or rebase — what happens to these commits before merge is the user's call.
+
+**Where you can't commit** — the directory is not a git work tree, the user or the repo's rules say not to, or a harness is driving this stage and makes the save points itself — say so in one line and carry on. Do not create a repository to satisfy this rule; the cycle record above is then the only trail.
+
 ### 4. Refactor
 
 After all tests pass, look for refactor candidates:
@@ -182,6 +197,8 @@ The loop is finished when every one of these holds:
 - [ ] On a loop-back pass: every **remediation slice** you were handed is closed in `.workflow/ledger.md` — one `### Closed slices` line per slice, naming the test that verifies it
 - [ ] **The acceptance tests are GREEN** — the command in the brief's **Acceptance tests** section passes, and each mapped criterion is ticked there. (No acceptance stage ran: skip this line and say so.)
 - [ ] The full suite is GREEN
+- [ ] **Every green slice is committed**, the brief's `**Base:**` names the commit the work started from, and the tree holds no uncommitted change — or you have said, in one line, why this build has no save points
+- [ ] Every **Ship checklist** item this build delivers is ticked in the brief, naming where it landed; the ones left open are listed in your response, so they reach the verdict as a count and not as a silence
 
 Then the structure gets cleaned, in [refactor-review](../refactor-review/SKILL.md) — that is stage 5, not a checklist item here, and it has its own severity rules and stopping rule. Invoke it against the new changes only, apply what it prescribes as **structural-only** changes, and keep the suite GREEN through every step.
 
@@ -207,4 +224,5 @@ If tyr-verdict returns **NO-GO**, its remediation slices come back to this skill
 [ ] Test would survive internal refactor
 [ ] Code is minimal for this test
 [ ] No speculative features added
+[ ] Green slice committed on its own (or said once why this build has no save points)
 ```

@@ -186,7 +186,7 @@ Worth it on a **large diff**, unnecessary on a small one.
 
 1. **Behavior is frozen.** A refactor that changes observable behavior is a bug, not a refactor.
 2. **Tests are the safety net.** Green before, green after — the acceptance tests in the brief included — see the Pre/Post checks above. Never refactor without coverage.
-3. **Small steps.** Apply one technique, run tests, commit. Don't batch unrelated refactors.
+3. **Small steps.** Apply one technique, run tests, commit. Don't batch unrelated refactors. A refactoring commit holds no behavior change and never shares a commit with one of tdd's slices; where tdd made no save points (it says so, and why), follow its lead rather than starting to commit here.
 4. **Name the smell first.** Don't refactor on vibes; map symptom → treatment via the two catalogs.
 5. **New code only.** Pre-existing smells outside the diff are out of scope unless they **block** the change — and "blocks" has a test: *the new code cannot be made clean without touching it.* In practice that means one of two things — you would have to duplicate the old code to avoid it, or the new code has to work around it in a way that is itself a smell. Anything else is merely adjacent: name it, record it as `noted`, and leave it. Scope creep dressed as tidiness is the most common way a behavior-preserving refactor stops being behavior-preserving.
 

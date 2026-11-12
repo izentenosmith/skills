@@ -242,8 +242,10 @@ def criteria(brief):
 
 
 # A failure quoted as pytest prints it: on the behavior, or failing to reach it.
+# `Rejected: <CODE>` is the fixture's own refusal reaching a test that expected the booking
+# to be accepted: a failure on the behavior. Iteration 37 rep2 quoted three reds that way.
 BEHAVIOR_FAIL = (r"DID NOT RAISE|AssertionError|\bassert\s+\S|Failed:|\bE\s{2,}\S"
-                 r"|expected\b[^\n|]{0,60}\b(got|but|instead)\b")
+                 r"|expected\b[^\n|]{0,60}\b(got|but|instead)\b|\bRejected: [A-Z][A-Z_]+")
 LOAD_FAIL = (r"TypeError|ImportError|ModuleNotFoundError|NameError|AttributeError"
              r"|unexpected keyword|fixture '[^']+' not found|collection error")
 NOT_RED = (r"not (yet )?red|(not|isn'?t|wasn'?t) (yet )?(a )?(real |true |proper )?red"
@@ -1080,8 +1082,14 @@ def eval15(run):
     # boundary: the brief's own criterion 5, both codes surfacing when cutoff and party
     # size are broken together, is a legitimate finding, and the first live run confirmed it.
     about = lambda f: "\n".join(re.findall(r"^- \*\*(?:Target|Claim challenged):\*\*.*$", blocks[f], re.M))
-    party = [f for f in confirmed if re.search(r"party.?size|PARTY_TOO_LARGE", about(f), re.I)
-             and re.search(r"off.?by.?one|boundar|\b12\b|at the (limit|max)|>=", about(f), re.I)]
+    # Party size and its boundary close together, as eval 4 reads it since iteration 23: a
+    # cutoff-edge finding that names `test_party_size_rule` as the table-driven style to
+    # mirror is about the cutoff boundary, and iteration 38 failed two runs for exactly that.
+    pb = r"off.?by.?one|boundar|\b12\b|at the (limit|max)|>="
+    party = [f for f in confirmed
+             if re.search(rf"(?:{PARTY})[^\n]{{0,60}}(?:{pb})|(?:{pb})[^\n]{{0,60}}(?:{PARTY})", about(f), re.I)
+             and not re.search(r"mirror(ing|s)?\s+`?test_party_size_rule|(style|form|pattern) (of|used in) `?test_party_size_rule",
+                               about(f), re.I)]
     return [
         ("the loop reached a verdict (GO or ESCALATED)", code in (0, 3), f"exit {code}", C),
         ("ledger.py check clean, extending the fixture's ledger", clean, cev, C),

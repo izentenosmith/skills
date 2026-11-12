@@ -4,19 +4,19 @@
 
 | eval | from | n | delta (mean ± sd) | delta base | gain | cap | cap base |
 |---|---|---|---|---|---|---|---|
-| 0-architect-charter-and-options | i15 | 3 | 1.00 ± 0.00 | 0.00 | +1.00 | 1.00 | 1.00 |
-| 1-brief-ordered-criteria | i15 | 3 | 1.00 ± 0.00 | 0.00 | +1.00 | 1.00 | 1.00 |
+| 0-architect-charter-and-options | i37 | 3 | 1.00 ± 0.00 | 0.00 | +1.00 | 1.00 | 1.00 |
+| 1-brief-ordered-criteria | i37 | 3 | 1.00 ± 0.00 | 0.00 | +1.00 | 1.00 | 1.00 |
 | 10-hotfix-script-no-tests | i34 | 3 | 1.00 ± 0.00 | 0.20 | +0.80 | 1.00 | 1.00 |
 | 11-hotfix-routes-outage-out | i34 | 3 | 1.00 ± 0.00 | 0.00 | +1.00 | 1.00 | 1.00 |
 | 12-incident-webapp-contain-by-flag | i34 | 3 | 1.00 ± 0.00 | 0.43 | +0.57 | 1.00 | 0.50 |
 | 13-incident-batch-repair-artifact | i34 | 3 | 1.00 ± 0.00 | 0.60 | +0.40 | 1.00 | 1.00 |
 | 14-incident-library-no-deploy | i34 | 3 | 1.00 ± 0.00 | 0.71 | +0.29 | 1.00 | 1.00 |
-| 15-harness-loop-closes-teardown | i5 | 1 | 1.00 ± 0.00 | — | — | 1.00 | — |
+| 15-harness-loop-closes-teardown | i39 | 3 | 0.87 ± 0.12 | — | — | 0.78 | — |
 | 16-netaudit-hub-spoke-recovers-and-scores | i21 | 3 | 1.00 ± 0.00 | 0.31 | +0.69 | 1.00 | 0.60 |
 | 17-netdesign-plans-around-what-is-in-use | i21 | 3 | 0.90 ± 0.00 | 0.30 | +0.60 | 1.00 | 0.20 |
 | 18-netdiagram-canonical-views-from-model | i23 | 3 | 1.00 ± 0.00 | 0.20 | +0.80 | 1.00 | 0.00 |
 | 19-netpropose-contains-before-restructuring | i23 | 3 | 1.00 ± 0.00 | 0.70 | +0.30 | 1.00 | 0.67 |
-| 2-tdd-reads-brief-vertical | i24 | 3 | 1.00 ± 0.00 | 0.00 | +1.00 | 1.00 | 0.88 |
+| 2-tdd-reads-brief-vertical | i37 | 3 | 1.00 ± 0.00 | 0.00 | +1.00 | 1.00 | 0.88 |
 | 20-netblueprint-waits-for-acceptance | i23 | 3 | 1.00 ± 0.00 | 0.75 | +0.25 | 1.00 | 1.00 |
 | 21-terraform-review-state-and-secrets | i26 | 3 | 1.00 ± 0.00 | 0.57 | +0.43 | 1.00 | 0.83 |
 | 22-terraform-design-isolates-state | i26 | 3 | 1.00 ± 0.00 | 0.71 | +0.29 | 1.00 | 1.00 |
@@ -24,10 +24,10 @@
 | 24-pipelines-review-untrusted-and-rebuild | i26 | 3 | 1.00 ± 0.00 | 0.67 | +0.33 | 1.00 | 0.75 |
 | 25-pipelines-design-build-once-progressive | i26 | 3 | 1.00 ± 0.00 | 0.65 | +0.35 | 1.00 | 1.00 |
 | 26-pipelines-propose-keeps-prod-up | i26 | 3 | 0.93 ± 0.06 | 0.70 | +0.23 | 1.00 | 1.00 |
-| 27-acceptance-tests-red-for-the-right-reason | i15 | 3 | 0.94 ± 0.05 | 0.25 | +0.69 | 1.00 | 0.67 |
+| 27-acceptance-tests-red-for-the-right-reason | i37 | 3 | 0.94 ± 0.05 | 0.25 | +0.69 | 1.00 | 1.00 |
 | 28-dockerfile-repair-pins-and-drops-root | i30 | 3 | 1.00 ± 0.00 | 0.45 | +0.55 | 1.00 | 1.00 |
 | 29-release-notes-translates-drops-and-leads-with-breaking | i33 | 3 | 1.00 ± 0.00 | 0.54 | +0.46 | 1.00 | 0.57 |
-| 3-refactor-promotes-noted-smell | i24 | 3 | 1.00 ± 0.00 | 0.12 | +0.88 | 1.00 | 0.75 |
+| 3-refactor-promotes-noted-smell | i37 | 3 | 1.00 ± 0.00 | 0.25 | +0.75 | 1.00 | 0.75 |
 | 30-dbaudit-postgres-dump-scored-not-fixed | i23 | 3 | 0.95 ± 0.04 | 0.43 | +0.52 | 1.00 | 1.00 |
 | 31-dbdesign-sqlite-from-requirements-traps | i23 | 3 | 0.97 ± 0.04 | 0.46 | +0.51 | 1.00 | 1.00 |
 | 32-dbdiagram-barker-and-relational-from-design | i18 | 3 | 1.00 ± 0.00 | 0.88 | +0.12 | 1.00 | 1.00 |
@@ -38,7 +38,7 @@
 | 37-docker-swarm-review-quorum-and-state | i27 | 3 | 1.00 ± 0.00 | 0.52 | +0.48 | 1.00 | 0.75 |
 | 38-threatmodel-review-design-abuse-and-fallback | i26 | 3 | 1.00 ± 0.00 | 0.50 | +0.50 | 1.00 | 1.00 |
 | 39-threatmodel-design-abusers-and-traps | i33 | 3 | 1.00 ± 0.00 | 0.77 | +0.23 | 1.00 | 1.00 |
-| 4-teardown-finds-vacuous-test | i24 | 3 | 1.00 ± 0.00 | 0.20 | +0.80 | 1.00 | 1.00 |
+| 4-teardown-finds-vacuous-test | i37 | 3 | 1.00 ± 0.00 | 0.20 | +0.80 | 0.95 | 1.00 |
 | 40-threatmodel-propose-contain-then-design-out | i14 | 3 | 1.00 ± 0.00 | 0.54 | +0.46 | 1.00 | 1.00 |
 | 41-appsec-review-inventory-and-secrets | i26 | 3 | 0.98 ± 0.03 | 0.61 | +0.37 | 1.00 | 1.00 |
 | 42-appsec-design-reshapes-the-quick-wins | i26 | 3 | 1.00 ± 0.00 | 0.71 | +0.29 | 1.00 | 1.00 |
@@ -49,7 +49,7 @@
 | 47-dbquery-workload-ranked-plans-read-indexes-weighed | i18 | 3 | 1.00 ± 0.00 | 0.93 | +0.07 | 1.00 | 0.83 |
 | 48-dbarchitect-one-system-of-record-no-dual-writes | i18 | 3 | 1.00 ± 0.00 | 0.67 | +0.33 | 1.00 | 1.00 |
 | 49-peer-review-claim-omission-injection | i25 | 3 | 1.00 ± 0.00 | 0.29 | +0.71 | 1.00 | 1.00 |
-| 5-verdict-cuts-and-slices | i15 | 3 | 1.00 ± 0.00 | 0.33 | +0.67 | 1.00 | 0.83 |
+| 5-verdict-cuts-and-slices | i37 | 3 | 1.00 ± 0.00 | 0.33 | +0.67 | 1.00 | 1.00 |
 | 50-pr-prep-splits-and-discloses | i25 | 3 | 0.97 ± 0.04 | 0.31 | +0.67 | 1.00 | 1.00 |
 | 51-code-xray-hotspots-not-cold-giants | i25 | 3 | 1.00 ± 0.00 | 0.40 | +0.60 | 1.00 | 0.83 |
 | 52-test-review-would-it-fail | i25 | 3 | 1.00 ± 0.00 | 0.20 | +0.80 | 1.00 | 0.83 |
@@ -63,8 +63,8 @@
 | 8-hotfix-node-shared-cause | i34 | 3 | 1.00 ± 0.00 | 0.38 | +0.62 | 1.00 | 1.00 |
 | 9-hotfix-jvm-both-callers | i34 | 3 | 1.00 ± 0.00 | 0.71 | +0.29 | 1.00 | 1.00 |
 
-**Delta — current 0.99 vs baseline 0.49**
-**Capability — current 1.00 vs baseline 0.90**
+**Delta — current 0.99 vs baseline 0.50**
+**Capability — current 1.00 vs baseline 0.91**
 
 ## Delta assertions the baseline also passed (still non-discriminating)
 
@@ -192,8 +192,8 @@
 - no workflow, script, review or design file changed
 
 **eval-27-acceptance-tests-red-for-the-right-reason**
+- red for the right reason: every failure is on behavior, none fails to load
 - the config test kills a hard-coded-window mutant (not vacuous)
-- no internals: tests import only the public entry point
 - no implementation of the cutoff rule
 
 **eval-28-dockerfile-repair-pins-and-drops-root**
@@ -221,6 +221,7 @@
 - plain bumps, CI, tests, docs, lint and refactors dropped
 
 **eval-3-refactor-promotes-noted-smell**
+- severity vocabulary applied to findings
 - prior venue_id smell explicitly left, not silently dropped
 
 **eval-30-dbaudit-postgres-dump-scored-not-fixed**
@@ -573,8 +574,7 @@
 - build-once lands before rollback-by-digest and progressive delivery (1/3)
 
 **eval-27-acceptance-tests-red-for-the-right-reason**
-- every new test is red on the unimplemented code (none passes) (2/3)
-- tier stated (Standard) (2/3)
+- tier stated (Standard) (1/3)
 
 **eval-30-dbaudit-postgres-dump-scored-not-fixed**
 - runtime facts flagged needs-data, never graded (2/3)

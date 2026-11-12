@@ -3,17 +3,17 @@
   "evals": {
     "eval-0-architect-charter-and-options": {
       "skill": "architect-deep-dive",
-      "iteration": "iteration-15",
+      "iteration": "iteration-37",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "package",
+      "skill_hash": "f4a8f046abe73acb8e1616d4c7c2589cee815c80a4fca6547852674cc7a97d08"
     },
     "eval-1-brief-ordered-criteria": {
       "skill": "agent-brief",
-      "iteration": "iteration-15",
+      "iteration": "iteration-37",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "package",
+      "skill_hash": "31f8b5366276ccac26652183ca99be93ccb74fe5171512c6fd172e0bb5b1df64"
     },
     "eval-10-hotfix-script-no-tests": {
       "skill": "hotfix",
@@ -80,10 +80,10 @@
     },
     "eval-2-tdd-reads-brief-vertical": {
       "skill": "tdd",
-      "iteration": "iteration-24",
+      "iteration": "iteration-37",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "package",
+      "skill_hash": "feae0d5a583df6217c86b5e07b5b51dc85ad49964654baba5a5b8e4b5c47d629"
     },
     "eval-20-netblueprint-waits-for-acceptance": {
       "skill": "netblueprint",
@@ -136,10 +136,10 @@
     },
     "eval-27-acceptance-tests-red-for-the-right-reason": {
       "skill": "acceptance-tests",
-      "iteration": "iteration-15",
+      "iteration": "iteration-37",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "package",
+      "skill_hash": "48c4034c4f30a59c64ef9fb6ce358982b1362c81c0bbea24ee24805cc65c357a"
     },
     "eval-28-dockerfile-repair-pins-and-drops-root": {
       "skill": "dockerfile",
@@ -157,10 +157,10 @@
     },
     "eval-3-refactor-promotes-noted-smell": {
       "skill": "refactor-review",
-      "iteration": "iteration-24",
+      "iteration": "iteration-37",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "package",
+      "skill_hash": "735d5b82f23d4a49c42798dd6d14fa911bb38f921311c238c6baf1ffc0cb19a4"
     },
     "eval-30-dbaudit-postgres-dump-scored-not-fixed": {
       "skill": "dbaudit",
@@ -234,10 +234,10 @@
     },
     "eval-4-teardown-finds-vacuous-test": {
       "skill": "devils-advocate",
-      "iteration": "iteration-24",
+      "iteration": "iteration-37",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "package",
+      "skill_hash": "446733d59cf7bdbae66003603e2ac2d0690e036342f334411accbe426dd5e7e1"
     },
     "eval-40-threatmodel-propose-contain-then-design-out": {
       "skill": "threatmodel",
@@ -311,10 +311,10 @@
     },
     "eval-5-verdict-cuts-and-slices": {
       "skill": "tyr-verdict",
-      "iteration": "iteration-15",
+      "iteration": "iteration-37",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "package",
+      "skill_hash": "89cab58c2a5509e3f722f600c4586832df39f524f35237de0fa90202ec6cce58"
     },
     "eval-50-pr-prep-splits-and-discloses": {
       "skill": "pr-prep",
