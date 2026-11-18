@@ -20,6 +20,7 @@ evals/
 ├── scores.json     per eval: the iteration its score comes from, and the hash of the skill it scored
 ├── tests/          unit tests for the staging hash, scores.json, transcripts and the health table (CI runs them)
 ├── controls/       reproducible controls (make_controls.py: evals 6, 8-14 and 16-59; eval15.py: the loop)
+├── trigger/        the triggering eval: does a description get its skill picked, and only when it should (its own README)
 └── fixtures/       the seeded repos and documents the skills work against
 ```
 
@@ -1190,7 +1191,7 @@ A failed assertion is the skill's fault, the task's or the grader's, and only th
 3. **Keep the change only if the eval improves and nothing else regresses.** Re-run the skill's other evals and its controls.
 4. **Two or three rounds with no gain:** stop editing and sort the remaining failures by cause. The usual finding is an ambiguous task or a grader that rejects a correct answer.
 
-Each skill has one fixture, and its skill was edited against that fixture until it passed. There is no held-out fixture, so a score here cannot tell a better skill from one fitted to its fixture. See the caveats.
+Only hotfix has a held-out eval (59, the twin of eval 8). Every other skill was edited against its one fixture until it passed, so its score cannot tell a better skill from one fitted to that fixture. See [Held-out evals](#held-out-evals) and the caveats.
 
 ## Negative controls
 
@@ -1258,8 +1259,7 @@ Eval 15's controls are a separate script, because its runs are whole loop.py run
 - **Eval 2's delta is read from what the run wrote down.** Each cycle's red is graded from its quoted failure in the response's cycle record, not from a transcript of the run, so a run that records a failure it never saw would pass. Since 2026-11-18 `run.py` keeps the transcript, and `transcript.tool_calls` reads it; the assertion has not been moved onto it yet. The named tick is checked against the tests the suite actually defines.
 - **Two sessions given the same `--iteration` share its directory.** On 2026-11-03 another session ran evals 18–20, 30 and 31 as iteration 23 at the same time as this re-run. Each `run.py` regrades and re-aggregates the whole directory when it finishes, so whichever finished last would have graded the other's runs with its own `grade.py`. Evals 2–4 were moved to iteration 24 and graded there. Leave `--iteration` unset (the default picks the next unused number), or give each concurrent run a different number. It happened again on 2026-11-05: eval 28's re-run was given `--iteration 28`, which a concurrent eval-54 run had already taken, so its finish overwrote that run's `dispatch.json` and regraded its eval 54 with this branch's `grade.py`. Eval 28 was moved to iteration 30 and graded there.
 - **Eval 15, the loop, has one with-skill run** and no baseline; every other eval has three. All are compared against a no-skill baseline rather than an older version of the skill. A single missed assertion is a signal to look at the run, not a verdict on the skill. Eval 13's repair checks and eval 33's ordering check failed runs whose output was correct by reading; #9 fixed both graders, and every run here is graded with the fixed versions.
-- **No held-out fixture.** Every skill is scored on the one fixture it was tuned against, with the grader that was fixed alongside it. A second fixture per skill, written and graded without looking at the skill's runs and never used to edit the skill, is what would show the gains carry over.
-- **Nothing tests triggering.** Every run is told to follow the skill. Whether a skill's description makes an agent pick it up when it should, and leave it alone when it should not, is not measured.
+- **Triggering is measured apart, and not yet scored.** Every run here is told to follow the skill. Whether a description makes an agent pick the skill up when it should, and leave it alone when it should not, is what [trigger/](trigger/README.md) measures, for eight skills so far; no full batch has been run.
 - **Every recorded baseline is one run.** `--baseline-reps` exists since 2026-11-18; no recorded score has used it yet. Evals 28 and 36 gain +0.17 and +0.18 at n=3 against n=1. Every with-skill run passed every delta assertion, and eval 28's baseline missed the same behaviours in two independent runs (iterations 6 and 16). Even so, a single baseline cannot show how much it varies.
 - **Runs share the host's Docker daemon.** When Docker is available, the eval 28 runs build and run real images, four at a time, on one daemon. In iteration 16 one run found another run's `invoicer:*` tags and renamed its own. It then ran `docker container prune -f`, which removed every stopped container on the host, not just its own. Run the batch on a machine whose stopped containers you don't need, or with Docker unavailable, in which case the skill states that and grading takes the no-Docker branch.
 - **Eval 28 is graded from files, never built.** It checks that the Dockerfile and `.dockerignore` say the right things, not that the image builds, runs, rebuilds from cache or lands at the right size, which is exactly what the skill's own Step 4 requires and this harness cannot do without Docker.
