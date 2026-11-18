@@ -1,8 +1,10 @@
 ---
 name: heldout-evals
 description: An eval marked "split": "heldout" in evals.json is a test set; its failures never edit the skill
-metadata:
-  type: project
+type: convention
+source: evals/evals.json (eval 59), evals/README.md "Held-out evals"
+verified: 2026-11-18
+volatility: low
 ---
 
 Eval 59 (`hotfix-py`) is the first held-out eval, added 2026-11-18: hotfix on a fixture it was never
