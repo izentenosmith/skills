@@ -3,7 +3,7 @@ name: eval-fixtures-per-checkout
 description: Eval fixture git histories and venvs are gitignored build output, so each new worktree must run evals/setup.sh first
 type: gotcha
 source: evals/setup.sh, evals/run.py::fixture_built, session 2026-11-09
-verified: 2026-11-10
+verified: 2026-11-18
 volatility: low
 ---
 

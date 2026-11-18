@@ -3,7 +3,7 @@ name: grader-fix-regrade
 description: When a grade.py check wrongly fails a good run, re-grade every stored run of that eval and confirm only with-skill false negatives flip
 type: convention
 source: evals/grade.py, commit 046d626
-verified: 2026-11-10
+verified: 2026-11-18
 volatility: low
 ---
 
