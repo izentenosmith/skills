@@ -134,5 +134,21 @@ class Health(Tmp):
         self.assertIn("no gain", h["flags"])
 
 
+class Overall(unittest.TestCase):
+    ROWS = [{"eval": "eval-8-a", "delta_mean": 1.0, "delta_base": 0.4, "cap_mean": 1.0, "cap_base": 1.0},
+            {"eval": "eval-59-b", "delta_mean": 0.5, "delta_base": 0.0, "cap_mean": 1.0, "cap_base": None}]
+
+    def test_a_held_out_eval_stays_out_of_the_suite_averages(self):
+        lines = aggregate.overall(self.ROWS, {"eval-59-b"})
+        self.assertIn("**Delta — current 1.00 vs baseline 0.40**", lines)
+        self.assertTrue(any(l.startswith("**Held-out (eval 59)") and "current 0.50 vs baseline 0.00" in l
+                            for l in lines))
+
+    def test_without_held_out_evals_the_lines_are_as_before(self):
+        self.assertEqual(aggregate.overall(self.ROWS, set()),
+                         ["", "**Delta — current 0.75 vs baseline 0.20**",
+                          "**Capability — current 1.00 vs baseline 1.00**", ""])
+
+
 if __name__ == "__main__":
     unittest.main()

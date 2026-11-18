@@ -15,5 +15,6 @@ suite's 0.99 on delta can't tell a better skill from one fitted to its fixture.
 
 **How to apply:** never edit a skill from a held-out eval's failure, transcript or assertion text.
 If it shows a real gap, write a new train eval for the same instruction and fix against that. The
-rules are in `evals/README.md` under "Held-out evals". `run.py`, `aggregate.py` and `check_repo.py`
-ignore the key (checked 2026-11-18), so the aggregate does not separate the splits.
+rules are in `evals/README.md` under "Held-out evals". `run.py` and `check_repo.py`
+ignore the key; `aggregate.py` reads it to keep a held-out eval out of the two overall lines and
+give it a line of its own.

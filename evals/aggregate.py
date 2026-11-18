@@ -132,6 +132,26 @@ def rate(rows, key):
     return vals
 
 
+def overall(out, heldout):
+    """The overall lines. A held-out eval is a test set, so it gets a line of
+    its own and stays out of the averages of the evals the skills were edited
+    against."""
+    m = lambda rows, key: (lambda v: f"{st.mean(v):.2f}" if v else "—")(
+        [r[key] for r in rows if r[key] is not None])
+    train = [r for r in out if r["eval"] not in heldout]
+    held = [r for r in out if r["eval"] in heldout]
+    L = [""]
+    if train or not held:
+        L += [f"**Delta — current {m(train, 'delta_mean')} vs baseline {m(train, 'delta_base')}**",
+              f"**Capability — current {m(train, 'cap_mean')} vs baseline {m(train, 'cap_base')}**"]
+    if held:
+        ids = ", ".join(r["eval"].split("-")[1] for r in held)
+        L.append(f"**Held-out (eval {ids}), not in the two lines above: delta — current "
+                 f"{m(held, 'delta_mean')} vs baseline {m(held, 'delta_base')}; capability — current "
+                 f"{m(held, 'cap_mean')} vs baseline {m(held, 'cap_base')}**")
+    return L + [""]
+
+
 def health_section(out):
     """The health table and its summary, as benchmark.md lines."""
     usd = lambda v: "—" if v is None else f"${v:.2f}"
@@ -176,6 +196,7 @@ def main():
     args = ap.parse_args()
     evals = json.loads((EVALS_DIR / "evals.json").read_text())["evals"]
     skills = {f"eval-{e['id']}-{e['name']}": e["skill"] for e in evals if e.get("runner") != "loop"}
+    heldout = {f"eval-{e['id']}-{e['name']}" for e in evals if e.get("split") == "heldout"}
     found = collect(args.dirs)
     out = []
     for name in sorted(found):
@@ -232,13 +253,7 @@ def main():
                  f"| {gain} "
                  f"| {f(r['cap_mean'])} | {f(r['cap_base'])} |")
 
-    dm = [r["delta_mean"] for r in out if r["delta_mean"] is not None]
-    db = [r["delta_base"] for r in out if r["delta_base"] is not None]
-    cm = [r["cap_mean"] for r in out if r["cap_mean"] is not None]
-    cb = [r["cap_base"] for r in out if r["cap_base"] is not None]
-    m = lambda v: f"{st.mean(v):.2f}" if v else "—"
-    L += ["", f"**Delta — current {m(dm)} vs baseline {m(db)}**",
-          f"**Capability — current {m(cm)} vs baseline {m(cb)}**", ""]
+    L += overall(out, heldout)
 
     L += health_section(out)
 

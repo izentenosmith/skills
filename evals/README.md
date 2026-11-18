@@ -137,7 +137,7 @@ Needs `python3` and `make` to run and to grade; `setup.sh` has nothing to build.
 
 **Scored n=3 (iteration 48, 2026-11-18, $3.02):** every with-skill run passes all twelve assertions, **1.00** against **0.44** for no skill on delta, **1.00** against **1.00** on capability. The score carried over from eval 8's fixture to this one. The bare run fixed the shared parser and the copy in `delivery.py`, wrote a red test, ran `make verify` and added the changelog line, so those four delta assertions do not discriminate here; it declared no strict mode, wrote no root-cause note, profile or checklist, and proposed a PR without asking first. One grader false negative was fixed: rep3 wrote "I need your OK first" where the check wanted "confirm" or "approve", and first graded 0.89. "Your OK / go-ahead / sign-off" now counts. Re-graded against all four stored runs: only that run flips, the baseline does not move, and the controls still separate.
 
-It is **not recorded** in `benchmark.md` or `scores.json`, so `check_repo.py` still warns that eval 59 has no score: `aggregate.py` does not yet separate the splits, and a held-out row should not be blended into the suite average as one more row of the same kind. To re-run it:
+It is recorded in `benchmark.md` and `scores.json` (2026-11-18). `aggregate.py` keeps a held-out eval out of the two overall lines, which average the evals the skills were edited against, and gives it a line of its own. To re-run it:
 
 ```bash
 python3 evals/run.py --evals 59 --reps 3    # 3 with-skill runs + 1 no-skill baseline (hotfix does not exist at the default baseline ref)

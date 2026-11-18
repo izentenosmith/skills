@@ -59,6 +59,7 @@
 | 56-ticket-reconcile-before-filing | i36 | 3 | 1.00 ± 0.00 | 0.71 | +0.29 | 1.00 | 1.00 |
 | 57-backlog-health-and-order-by-policy | i35 | 3 | 1.00 ± 0.00 | 0.69 | +0.31 | 1.00 | 1.00 |
 | 58-nexus-judges-the-record | i47 | 3 | 1.00 ± 0.00 | 1.00 | +0.00 | 1.00 | 1.00 |
+| 59-hotfix-py-scope-parser | i48 | 3 | 1.00 ± 0.00 | 0.44 | +0.56 | 1.00 | 1.00 |
 | 6-compose-detects-real-services | i27 | 3 | 1.00 ± 0.00 | 0.44 | +0.56 | 1.00 | 1.00 |
 | 7-postmortem-widens-range-and-describes | i34 | 3 | 1.00 ± 0.00 | 0.70 | +0.30 | 1.00 | 1.00 |
 | 8-hotfix-node-shared-cause | i34 | 3 | 1.00 ± 0.00 | 0.38 | +0.62 | 1.00 | 1.00 |
@@ -66,6 +67,7 @@
 
 **Delta — current 0.99 vs baseline 0.51**
 **Capability — current 1.00 vs baseline 0.91**
+**Held-out (eval 59), not in the two lines above: delta — current 1.00 vs baseline 0.44; capability — current 1.00 vs baseline 1.00**
 
 ## Delta assertions the baseline also passed (still non-discriminating)
 
@@ -554,6 +556,12 @@
 - the TEST-warehouse ruling taken in loaders-b's window not accepted without a DEC id
 - personnel-etl found stalled and resumed from its log
 - nothing merged, no code or migration touched: only notes written
+
+**eval-59-hotfix-py-scope-parser**
+- fixed in the shared parser, not patched in the exports endpoint
+- the inline copy in webhook delivery found
+- CI's command used, not make test
+- the repo's changelog convention followed
 
 **eval-6-compose-detects-real-services**
 - meilisearch detected from the source
