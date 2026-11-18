@@ -8,7 +8,9 @@ breaks on, and that no test exercises.
 Skills
   - every SKILL.md has frontmatter with `name` and `description`
   - `name` equals the folder name (the CLI installs by name) and is unique
-  - `description` fits the 1024-character limit agents load
+  - `name` and `description` parse as YAML scalars (an unquoted `: ` or ` #`
+    gets a skill skipped or its description cut) and the description fits
+    the 1024-character limit agents load
   - every symlink under skills/ resolves (installs dereference them)
   - the root README links every skill
 Links
@@ -63,6 +65,32 @@ def tracked(*patterns):
 # ---------------------------------------------------------------- skills
 
 FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n", re.S)
+
+
+def yaml_scalar(raw):
+    """The value of a one-line YAML scalar, and why a YAML parser would reject
+    or cut it (None if it wouldn't). An unquoted value breaks on ': ' (read as a
+    nested mapping) and silently ends at ' #' (read as a comment); the skills CLI
+    skips the first and installs the second with its description cut short."""
+    if raw[:1] == '"':
+        m = re.fullmatch(r'"((?:[^"\\]|\\.)*)"', raw)
+        if not m:
+            return raw, "an unterminated or badly escaped double-quoted string"
+        return re.sub(r"\\(.)", r"\1", m.group(1)), None
+    if raw[:1] == "'":
+        m = re.fullmatch(r"'((?:[^']|'')*)'", raw)
+        if not m:
+            return raw, "an unterminated single-quoted string"
+        return m.group(1).replace("''", "'"), None
+    if raw[:1] and raw[:1] in "[]{}&*!|>%@`,?:-#":
+        return raw, f"an unquoted value starting with {raw[0]!r}"
+    if ": " in raw or raw.endswith(":"):
+        return raw, "': ' in an unquoted value (YAML reads a nested mapping)"
+    if " #" in raw:
+        return raw, "' #' in an unquoted value (YAML drops the rest as a comment)"
+    return raw, None
+
+
 skills = {}
 for md in tracked("skills/**/SKILL.md"):
     rel = md.relative_to(ROOT)
@@ -75,6 +103,15 @@ for md in tracked("skills/**/SKILL.md"):
     if not name or not desc:
         problem(f"{rel}: frontmatter needs both name and description")
         continue
+    bad = False
+    for key in ("name", "description"):
+        _, why = yaml_scalar(fields[key].strip())
+        if why:
+            problem(f"{rel}: {key} is {why}; wrap it in double quotes")
+            bad = True
+    if bad:
+        continue
+    name, desc = yaml_scalar(name)[0], yaml_scalar(desc)[0]
     if name != md.parent.name:
         problem(f"{rel}: name {name!r} does not match its folder {md.parent.name!r}")
     if len(desc) > 1024:
