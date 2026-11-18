@@ -894,8 +894,9 @@ def eval59(run):
         ("environment profile written", bool(re.search(r"make\s+(-s\s+)?verify", env)), f"{len(env)} chars", D),
         ("final checklist recorded", bool(workflow(run, "hotfix-*.md")), "", D),
         ("the repo's changelog convention followed", "CHANGELOG.md" in modified and changelog, "", D),
+        # "I need your OK first" is asking too: iteration 48 rep3 failed for the word.
         ("ships by PR, after confirmation",
-         any_of(r, r"pull request|\bPR\b") and any_of(r, r"confirm|approv"), "", D),
+         any_of(r, r"pull request|\bPR\b") and any_of(r, r"confirm|approv|\byour (ok|okay|go-ahead|sign-?off)\b"), "", D),
     ]
 
 
