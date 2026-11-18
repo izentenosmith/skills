@@ -379,6 +379,13 @@
       "staging": "standalone",
       "skill_hash": "a95cf06e1220a9060274b3010419d8f3a8fdce5d97be595d2278b8e6f6188d6a"
     },
+    "eval-59-hotfix-py-scope-parser": {
+      "skill": "hotfix",
+      "iteration": "iteration-48",
+      "n": 3,
+      "staging": "harness",
+      "skill_hash": "fcb9c322c9269ff2d08d32bd3a51deae0954a042ac64199c13c7e6506d7fb9cc"
+    },
     "eval-6-compose-detects-real-services": {
       "skill": "docker-compose",
       "iteration": "iteration-27",

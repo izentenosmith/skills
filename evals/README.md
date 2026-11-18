@@ -11,14 +11,16 @@ The headline result is in [benchmark.md](benchmark.md). The short version: on th
 ```
 evals/
 ├── setup.sh        build fixture venvs + the incident git history (run once)
-├── evals.json      one entry per eval: a prompt and a skill, or (eval 15) a runner
+├── evals.json      one entry per eval: a prompt and a skill, or (eval 15) a runner; `"split": "heldout"` marks a held-out eval
 ├── run.py          dispatch the runs headless, then grade + aggregate
 ├── grade.py        assertions → grading.json per run
-├── aggregate.py    grading.json → benchmark.md/json and scores.json
+├── aggregate.py    grading.json → benchmark.md/json (scores, then a health table) and scores.json
+├── transcript.py   read one run turn by turn, or list an iteration's failed assertions
 ├── benchmark.md    the recorded result
 ├── scores.json     per eval: the iteration its score comes from, and the hash of the skill it scored
-├── tests/          unit tests for the staging hash and scores.json (CI runs them)
-├── controls/       reproducible controls (make_controls.py: evals 6, 8-14 and 16-58; eval15.py: the loop)
+├── tests/          unit tests for the staging hash, scores.json, transcripts and the health table (CI runs them)
+├── controls/       reproducible controls (make_controls.py: evals 6, 8-14 and 16-59; eval15.py: the loop)
+├── trigger/        the triggering eval: does a description get its skill picked, and only when it should (its own README)
 └── fixtures/       the seeded repos and documents the skills work against
 ```
 
@@ -103,6 +105,43 @@ Six small repos in six shapes, so the two response skills have to discover their
 | 14 | incident-fix | `incident-library` | no deploy step — containment is a yank and an advisory; the corrupted data lives with consumers |
 
 `hotfix-jvm` needs a JDK (`javac`, `java`) and `hotfix-node` needs Node 22+, both to run and to grade; nothing else needs setup. **Controls** ([`controls/make_controls.py`](controls/make_controls.py), see [Negative controls](#negative-controls)): a reference answer scores every assertion on all seven, a do-nothing answer fails every delta assertion except the safety invariants it passes by doing nothing (no production call, no file changed), and a plausible-but-wrong answer per eval fails the assertion it was built to game. **Scored n=3** (iterations 17 and 20): every with-skill run passes every assertion; see [benchmark.md](benchmark.md). **Re-run n=3 (iteration 34, 2026-11-09)** after both skills took on SRE book material (roles, overload containment levers, error-budget sizing, typed follow-ups): every with-skill run again passes every assertion, against 0.00–0.71 for no skill. One grader false negative was fixed: eval 14's consumer-repair check needed "consumer" or "downstream" within 220 characters of "repair", and rep2 wrote a full repair section headed "Find affected data" over "stored values". Those two phrases now count. Re-graded against every stored run of eval 14: only that run flips, no baseline moves, and the controls still separate.
+
+### `hotfix-py`: hotfix, held out (eval 59)
+
+**The first held-out eval.** Every other eval scores a skill on the fixture it was edited against, with a grader fixed alongside it, so a high score cannot tell a better skill from one fitted to its fixture. Eval 59 is eval 8's twin on a fixture hotfix has never seen: the same instructions, a different language, toolchain, strict-mode trigger and defect shape. It is marked `"split": "heldout"` in `evals.json`, and the rules under [Held-out evals](#held-out-evals) apply to it.
+
+`gatehouse` is a partner API in Python (standard library only). A token stored as `reports:read, exports:run` is refused on `POST /exports`, because `parse_scopes` splits on the comma and keeps the space. The answer key is [`fixtures/hotfix-py.answers.md`](fixtures/hotfix-py.answers.md).
+
+| Planted | A run that misses it… |
+|---|---|
+| the report names `POST /exports`; `require_scope` is shared with the reports endpoint | patches `api/exports.py` |
+| `tokens.issue` writes the `", "` since 2.4.0, and a test pins it | changes the issuer or reverts 2.4.0, leaving every stored token refused |
+| `webhooks/delivery.py` copies the split inline and never calls `parse_scopes` | sweeps callers by name and misses the copy |
+| CI runs `make verify` (unit + `contract/`); the README offers `make test` | runs the unit tests only |
+| `contract/` pins exact matching | loosens the match to a substring: green on `make test`, an over-grant in production |
+| it is an authorization check | doesn't enter strict mode |
+| `CONTRIBUTING.md`: PRs only, and a line under **Unreleased** in `CHANGELOG.md` | skips the repo's convention, or doesn't ask before shipping |
+
+| | Eval 8 (`hotfix-node`, train) | Eval 59 (`hotfix-py`, held out) |
+|---|---|---|
+| Stack | Node, `node --test`, npm scripts, GitHub Actions | Python, `unittest` beside the code, `make`, CircleCI |
+| Strict mode because | money | permissions |
+| Defect | arithmetic: floor where the rule is half up | parsing: a separator's whitespace kept |
+| Tempting wrong fix | the reported caller | the reported caller, **and upstream**: the code that writes the string |
+| A wrong fix that looks right | `Math.ceil` | substring match, which grants `exports:run` to `exports:runner` |
+| Red test graded by | a number in the test's text | **running** the run's tests against the original code |
+
+Twelve assertions, three capability and nine delta. Three are executed and not read: a probe of `has_scope` (the reported token passes, the space-free form still does, `exports:runner` and `exports` are still refused), `make verify` in the run's repo, and the run's own test files laid over the pristine fixture, where `make verify` must go red. A test that fails on the original only because it imports something the fix added still counts as red. The duplicate counts as found if `wants()` now accepts a spaced token or the run names `delivery.py`. Strict mode, CI's command, the root-cause note and "ships by PR, after confirmation" are read from the text, as in eval 8. Everything graded is something the prompt, the skill or the fixture's `CONTRIBUTING.md` asks for.
+
+Needs `python3` and `make` to run and to grade; `setup.sh` has nothing to build. **Controls** (`python3 evals/controls/make_controls.py --only 59`): the reference scores 12/12, do-nothing 0/9 on delta, and four plausible-but-wrong answers each fail what they were built to fail (table under [Negative controls](#evals-814-reference-do-nothing-and-plausible-but-wrong)).
+
+**Scored n=3 (iteration 48, 2026-11-18, $3.02):** every with-skill run passes all twelve assertions, **1.00** against **0.44** for no skill on delta, **1.00** against **1.00** on capability. The score carried over from eval 8's fixture to this one. The bare run fixed the shared parser and the copy in `delivery.py`, wrote a red test, ran `make verify` and added the changelog line, so those four delta assertions do not discriminate here; it declared no strict mode, wrote no root-cause note, profile or checklist, and proposed a PR without asking first. One grader false negative was fixed: rep3 wrote "I need your OK first" where the check wanted "confirm" or "approve", and first graded 0.89. "Your OK / go-ahead / sign-off" now counts. Re-graded against all four stored runs: only that run flips, the baseline does not move, and the controls still separate.
+
+It is recorded in `benchmark.md` and `scores.json` (2026-11-18). `aggregate.py` keeps a held-out eval out of the two overall lines, which average the evals the skills were edited against, and gives it a line of its own. To re-run it:
+
+```bash
+python3 evals/run.py --evals 59 --reps 3    # 3 with-skill runs + 1 no-skill baseline (hotfix does not exist at the default baseline ref)
+```
 
 ### `harness/loop.py` end to end (eval 15)
 
@@ -1039,6 +1078,7 @@ python3 run.py                      # the full benchmark: 8 evals × (3 reps + 1
 | `--evals 0,5` | all | eval ids from `evals.json` |
 | `--reps` | 3 | with-skill repetitions per eval |
 | `--baseline-ref` | `3b71f54^` | git ref for the `old_skill` run, or `none` |
+| `--baseline-reps` | 1 | baseline repetitions per eval. With one, nothing says how much the baseline varies, so the gain has no error bar |
 | `--workspace` | `../skills-workspace` next to the main checkout | |
 | `--iteration` | next unused | naming an existing one replaces the selected evals' runs in it |
 | `--concurrency`, `--timeout`, `--model` | 4, 1800 s, CLI default | `--model` is passed to `claude` |
@@ -1049,11 +1089,13 @@ The layout it builds is the one `grade.py` reads:
 <workspace>/iteration-N/
 ├── dispatch.json                       batch summary: baseline, CLI version, models, failures, cost
 └── eval-3-refactor-promotes-noted-smell/
-    ├── with_skill/rep1/{repo,outputs}/  + run.json, claude.json
+    ├── with_skill/rep1/{repo,outputs}/  + run.json, claude.json, transcript.jsonl
     ├── with_skill/rep2/{repo,outputs}/
     ├── with_skill/rep3/{repo,outputs}/
-    └── old_skill/{repo,outputs}/
+    └── old_skill/{repo,outputs}/        old_skill/rep1..repN/ with --baseline-reps N > 1
 ```
+
+`transcript.jsonl` is the run's whole trajectory: every message, tool call and tool result, as `claude -p --output-format stream-json` printed it. A run that timed out keeps what it had printed. `claude.json` is the transcript's `result` event, the same object earlier iterations stored.
 
 What it keeps out of a run's reach:
 
@@ -1091,6 +1133,17 @@ Every with-skill `run.json` records three things: the `skill`, how `run.py` stag
 
 `python3 .github/scripts/check_repo.py --strict` turns every warning into a failure. Only the skill folder is hashed: a change to `harness/` does not mark a score stale.
 
+## Held-out evals
+
+An eval whose `evals.json` entry carries `"split": "heldout"` is a test set. Every other eval is a train eval: its failures are what skills are edited against. The split only means something while these hold:
+
+- **A held-out failure is never used to edit the skill.** Not its transcript, not the assertion that failed, not a paraphrase of either. Edit a skill from train evals only, then re-run the held-out eval to see whether the change carried over. If a held-out miss shows a real gap, write a **new train eval** that exercises the same instruction on another fixture, fix the skill against that, and leave the held-out one alone.
+- **Don't shape a held-out fixture or grader from the skill's stored runs.** Write it from what the skill instructs. A grader false negative may still be fixed (see the convention for [re-grading every stored run](../.memory/notes/grader-fix-regrade.md)), but only when the run did what the skill asks and the check missed it, never to make a miss pass.
+- **Once it has been used to edit the skill, it is a train eval.** Remove the key, say so in its section, and write a new held-out one.
+- **Report it separately.** A train score says the skill does what it was edited to do on that fixture; the gap between an eval and its held-out twin (8 and 59) is the estimate of how much of that score is fit to the fixture. One fixture is a pilot, not a measurement of the suite.
+
+Unmarked evals are train. `run.py`, `aggregate.py` and `check_repo.py` ignore the key today; it is a label for people and agents until the aggregate reports the two splits apart.
+
 ## Capability vs delta
 
 Every assertion is tagged. **Capability** asks whether the stage does its job at all; the baseline passing is expected and fine. **Delta** asks whether it does the thing a change to the skill added. Only the delta column is evidence that an edit helped.
@@ -1106,6 +1159,39 @@ Since the closing-loop harness, the ledger has a grammar ([harness/LEDGER.md](..
 Numbering and cross-reference errors are deliberately ignored: `E01`, the `E2x`/`E3x`/`E4x` id checks and `E50`. The fixture ledgers keep their history in the old prose, for the reason given under [The fixtures](#the-fixtures). `ledger.py` reads that prose as an unparsed preamble, so every carried id (N1, N2, F1, and for eval 5 the findings F2–F5) looks undefined, and every run would fail for the fixture's sake, not the skill's. Only the shape of the stage's own lines and append-only discipline are checked against a legacy history.
 
 Checked before committing: all 12 iteration-4 runs, made with the skills as they were before the grammar existed, fail it, while a new-grammar ledger passes once its stray prose is removed, and rewriting a single word of the preamble fails it with `E60`.
+
+## Health: is the score evidence?
+
+After the score table, `aggregate.py` writes a health table. It answers what a pass rate cannot, following Anthropic's [Demystifying evals for AI agents](https://www.anthropic.com/research/demystifying-evals-for-ai-agents) and [Automating eval design and hillclimbing](https://claude.dev/blog/automating-eval-design-and-hillclimbing/):
+
+| Column or flag | What it tells you |
+|---|---|
+| `runs` 2/3, `lost` | A run timed out or left no response. `grade.py` skips it, so without this column it would only show up as a smaller `n`. That is infrastructure noise, not a skill result |
+| `all delta` 2/3, `inconsistent` | How many repetitions passed every delta assertion. A mean of 0.94 can be one miss in each of three runs; a skill that guards a safety rule has to pass every time |
+| `base n`, `noise`, `noise unknown`, `gain within noise` | With two or more runs on each side, `noise` is the standard error of the gain, and a gain under twice that is flagged. With one baseline run the noise is unknown, and the table says so |
+| `saturated` | Delta is 0.95 or more. The eval guards against regressions and cannot show that an edit improved the skill |
+| `baseline high`, `no gain` | The baseline passes 0.80 or more of the delta assertions without the skill, or as much as the skill does |
+| `cost with`, `cost base` | Mean cost of a run. When quality is saturated, cost at equal quality is the thing left to improve |
+
+Nearly every eval here is saturated: the recorded delta is 0.99. Read the suite as a regression suite. An eval that should measure an improvement needs room first: a harder fixture, or traps a bare agent and the current skill both miss.
+
+### Reading runs
+
+```bash
+python3 transcript.py --failures <workspace>/iteration-48   # every failed assertion, with the grader's evidence
+python3 transcript.py <workspace>/iteration-48/eval-27-…/with_skill/rep1   # one run, turn by turn (--full for untruncated)
+```
+
+A failed assertion is the skill's fault, the task's or the grader's, and only the run says which. Sort the failures by cause before editing anything. For a grader's fault, follow the re-grade convention in `.memory/notes/grader-fix-regrade.md`. `transcript.tool_calls(run)` gives a grader the tools a run called, for an assertion about what a run did and not what it says it did.
+
+### Changing a skill against its eval
+
+1. **Check the noise first.** Run the eval with `--reps 3 --baseline-reps 3` and read `noise`. An improvement smaller than twice the noise cannot be seen at this number of runs.
+2. **Read the failed runs, then make one change** that fixes the cause in the skill. Never copy fixture content, a planted defect or an assertion's wording into the skill: that teaches it this fixture.
+3. **Keep the change only if the eval improves and nothing else regresses.** Re-run the skill's other evals and its controls.
+4. **Two or three rounds with no gain:** stop editing and sort the remaining failures by cause. The usual finding is an ambiguous task or a grader that rejects a correct answer.
+
+Only hotfix has a held-out eval (59, the twin of eval 8). Every other skill was edited against its one fixture until it passed, so its score cannot tell a better skill from one fitted to that fixture. See [Held-out evals](#held-out-evals) and the caveats.
 
 ## Negative controls
 
@@ -1148,6 +1234,10 @@ The script builds each control as a run directory from the pristine fixture, gra
 | 13 | `wrong-applies-by-default` | writes unless `--dry-run` | executed: no-flag run changes the database |
 | 13 | `wrong-formula` | off by a cent and includes cancelled orders | executed: wrong orders changed |
 | 14 | `wrong-yanks-first` | yanks 2.3.0 itself, then asks | `scripts/.calls.log` |
+| 59 | `wrong-substring` | looks for the scope anywhere in the string: `exports:runner` is granted `exports:run` | `has_scope` probe, `make verify` (the contract tests; `make test` stays green) *(both capability)* |
+| 59 | `wrong-issuer-only` | stores new tokens without the space; every stored token stays refused | `has_scope` probe, shared parser unmodified |
+| 59 | `wrong-endpoint-only` | strips the spaces in `api/exports.py` | `has_scope` probe, shared parser unmodified |
+| 59 | `wrong-vacuous-test` | the right fix, with a test that never uses a space | the test is run against the original |
 
 Each wrong control scores everything else, so it fails only what it was built to fail: one or two assertions per run. `wrong-ceil` passed eval 8 until the probe gained `applyDiscount(999, 10) === 899`. It still fails no **delta** assertion, because rounding correctness is tagged capability. The do-nothing control passes these delta assertions by doing nothing: eval 11 "changes no source or test file", eval 12 "no production action" and "no code changed before containment", eval 13 "production database untouched" and "the job not reloaded", eval 14 "no yank or publish".
 
@@ -1164,15 +1254,18 @@ Eval 15's controls are a separate script, because its runs are whole loop.py run
 ## Caveats
 
 - **The fixtures are deliberately time-of-day sensitive.** The seeded cutoff tests build slots from `datetime.now()` without pinning the hour, so they collide with the opening-hours rule outside roughly 06:00–18:00 local. That is a planted defect the teardown is supposed to find — but it also means a `suite green` assertion can legitimately flip depending on when you run. Grading is stable back-to-back; it is not stable across a day boundary.
+- **One held-out eval, for one skill.** Every score but eval 59's is measured on the fixture its skill was edited against, so the suite's 0.99 on delta is an upper bound on how the skills do elsewhere, not an estimate of it. See [Held-out evals](#held-out-evals).
 - **n=3, one fixture, one language, one defect class** for the pipeline evals. Low variance in the recorded run, but this is not broad coverage.
-- **Eval 2's delta is read from what the run wrote down.** Each cycle's red is graded from its quoted failure in the response's cycle record, not from a transcript of the run. `run.py` keeps no tool-call log, so a run that records a failure it never saw would pass. The named tick is checked against the tests the suite actually defines.
+- **Eval 2's delta is read from what the run wrote down.** Each cycle's red is graded from its quoted failure in the response's cycle record, not from a transcript of the run, so a run that records a failure it never saw would pass. Since 2026-11-18 `run.py` keeps the transcript, and `transcript.tool_calls` reads it; the assertion has not been moved onto it yet. The named tick is checked against the tests the suite actually defines.
 - **Two sessions given the same `--iteration` share its directory.** On 2026-11-03 another session ran evals 18–20, 30 and 31 as iteration 23 at the same time as this re-run. Each `run.py` regrades and re-aggregates the whole directory when it finishes, so whichever finished last would have graded the other's runs with its own `grade.py`. Evals 2–4 were moved to iteration 24 and graded there. Leave `--iteration` unset (the default picks the next unused number), or give each concurrent run a different number. It happened again on 2026-11-05: eval 28's re-run was given `--iteration 28`, which a concurrent eval-54 run had already taken, so its finish overwrote that run's `dispatch.json` and regraded its eval 54 with this branch's `grade.py`. Eval 28 was moved to iteration 30 and graded there.
 - **Eval 15, the loop, has one with-skill run** and no baseline; every other eval has three. All are compared against a no-skill baseline rather than an older version of the skill. A single missed assertion is a signal to look at the run, not a verdict on the skill. Eval 13's repair checks and eval 33's ordering check failed runs whose output was correct by reading; #9 fixed both graders, and every run here is graded with the fixed versions.
-- **Every baseline is one run.** Evals 28 and 36 gain +0.17 and +0.18 at n=3 against n=1. Every with-skill run passed every delta assertion, and eval 28's baseline missed the same behaviours in two independent runs (iterations 6 and 16). Even so, a single baseline cannot show how much it varies.
+- **Triggering is measured apart, and not yet scored.** Every run here is told to follow the skill. Whether a description makes an agent pick the skill up when it should, and leave it alone when it should not, is what [trigger/](trigger/README.md) measures, for eight skills so far; no full batch has been run.
+- **Every recorded baseline is one run.** `--baseline-reps` exists since 2026-11-18; no recorded score has used it yet. Evals 28 and 36 gain +0.17 and +0.18 at n=3 against n=1. Every with-skill run passed every delta assertion, and eval 28's baseline missed the same behaviours in two independent runs (iterations 6 and 16). Even so, a single baseline cannot show how much it varies.
 - **Runs share the host's Docker daemon.** When Docker is available, the eval 28 runs build and run real images, four at a time, on one daemon. In iteration 16 one run found another run's `invoicer:*` tags and renamed its own. It then ran `docker container prune -f`, which removed every stopped container on the host, not just its own. Run the batch on a machine whose stopped containers you don't need, or with Docker unavailable, in which case the skill states that and grading takes the no-Docker branch.
 - **Eval 28 is graded from files, never built.** It checks that the Dockerfile and `.dockerignore` say the right things, not that the image builds, runs, rebuilds from cache or lands at the right size, which is exactly what the skill's own Step 4 requires and this harness cannot do without Docker.
 - **Eval 6 is graded from files, never executed.** It checks that the right compose file was written, not that the stack comes up — which is precisely the claim the skill's own Step 6 makes and this harness does not verify.
 - **Dispatch is automated, the run itself is not pinned.** `run.py` keeps the layout, the prompt and the isolation identical between runs, which manual dispatch could not. It does not pin the model or the Claude Code version, it only records them in `dispatch.json`. Two iterations run months apart can differ for reasons that have nothing to do with the skill. Check those fields before you compare them.
 - **A background shell can hold a run open.** `claude -p` waits for its own background shells before it exits. One that hangs, on input for example, holds the run until `--timeout`, and the run still reports success. In a live `harness/loop.py` run, 13 seconds of work held a stage for about 12 minutes. `run.py` passes the same settings as the loop harness to every run: `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1`, `BASH_DEFAULT_TIMEOUT_MS=120000` and `BASH_MAX_TIMEOUT_MS=300000`. If `seconds` in a `run.json` is far above what the work needed, suspect this first.
 - **Scores up to iteration 33 carry no skill hash.** They were recorded before `run.py` kept one, and the staged copies were temp folders made from the working tree, not a commit. Comparing file times with `git log` can't settle which version a run saw. Until each eval is re-run, `check_repo.py` lists those skills as unknown, not as current.
+- **Runs before 2026-11-18 have no transcript.** They kept only the final response and the `result` object.
 - **The transcripts are not committed.** `benchmark.md` is the recorded result; the 36 run transcripts behind it were evidence for one run, not something a future run needs.
