@@ -16,8 +16,7 @@ sys.path.insert(0, str(EVALS))
 import aggregate  # noqa: E402
 import run  # noqa: E402
 
-# incident-fix has a symlinked reference doc, and a patch-free package that
-# still differs from its folder (links to other skills are rewritten).
+# incident-fix has a symlinked reference doc.
 SKILL = REPO / "skills/operations/incident-fix"
 
 
@@ -28,18 +27,21 @@ class StagedHash(unittest.TestCase):
         self.tmp = pathlib.Path(tmp.name)
 
     def test_staged_folder_hashes_as_the_check_recomputes_it(self):
-        for staging in ("harness", "standalone", "package"):
+        for staging in ("harness", "standalone"):
             with self.subTest(staging=staging):
                 skill_md, digest = run.stage_skill(SKILL / "SKILL.md", self.tmp / "current", staging)
                 self.assertTrue(skill_md.is_file())
                 self.assertEqual(digest, run.skill_hash(SKILL, staging))
 
-    def test_package_and_folder_differ_and_package_stands_alone(self):
-        self.assertNotEqual(run.skill_hash(SKILL, "standalone"), run.skill_hash(SKILL, "package"))
-        skill_md, _ = run.stage_skill(SKILL / "SKILL.md", self.tmp / "current", "package")
+    def test_standalone_stands_alone(self):
+        skill_md, _ = run.stage_skill(SKILL / "SKILL.md", self.tmp / "current", "standalone")
         self.assertIsNone(run.staged_harness(skill_md))
-        root = self.tmp / "current-package" / SKILL.name
+        root = self.tmp / "current-standalone" / SKILL.name
         self.assertEqual([p.name for p in (root / "skills").rglob("SKILL.md")], ["SKILL.md"])
+
+    def test_a_staging_run_py_no_longer_does_has_no_hash(self):
+        with self.assertRaises(ValueError):
+            run.skill_hash(SKILL, "package")
 
     def test_os_litter_does_not_change_the_hash(self):
         folder = self.tmp / "skill"
@@ -56,7 +58,7 @@ class StagedHash(unittest.TestCase):
 class Aggregate(unittest.TestCase):
     def test_provenance_from_runs_or_unknown(self):
         skills = {"eval-7-x": "post-mortem"}
-        recorded = {"skill": "post-mortem", "staging": "package", "skill_hash": "abc"}
+        recorded = {"skill": "post-mortem", "staging": "standalone", "skill_hash": "abc"}
         self.assertEqual(aggregate.provenance("eval-7-x", [recorded, dict(recorded)], skills), recorded)
         self.assertEqual(aggregate.provenance("eval-7-x", [{}, {}], skills),
                          {"skill": "post-mortem", "staging": None, "skill_hash": None})
@@ -73,14 +75,14 @@ class Aggregate(unittest.TestCase):
                     {"pass_rate": 1.0, "delta_rate": 1.0, "capability_rate": 1.0, "expectations": []}))
                 if digest:
                     (rep / "run.json").write_text(json.dumps(
-                        {"skill": "post-mortem", "staging": "package", "skill_hash": digest}))
+                        {"skill": "post-mortem", "staging": "standalone", "skill_hash": digest}))
             subprocess.run([sys.executable, str(EVALS / "aggregate.py"),
                             str(ws / "iteration-1"), str(ws / "iteration-2")],
                            check=True, capture_output=True)
             score = json.loads((ws / "scores.json").read_text())["evals"]
             self.assertEqual(score["eval-7-postmortem-widens-range-and-describes"],
                              {"skill": "post-mortem", "iteration": "iteration-2", "n": 1,
-                              "staging": "package", "skill_hash": "abc"})
+                              "staging": "standalone", "skill_hash": "abc"})
 
 
 if __name__ == "__main__":

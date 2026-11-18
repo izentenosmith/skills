@@ -1,0 +1,16 @@
+{
+  "number": 215,
+  "title": "fix(etl): extraction keeps trailing characters",
+  "baseRefName": "dev",
+  "headRefOid": "c3e8f10a7d5b2e94f0c61a8d3b7e25f9c4a0d812",
+  "mergeable": "MERGEABLE",
+  "mergeStateStatus": "CLEAN",
+  "statusCheckRollup": [
+    {"name": "build-and-test", "conclusion": "SUCCESS", "summary": "1,204 passed, 0 failed, 37 skipped"}
+  ],
+  "files": [
+    {"path": "src/etl/extract/NvarcharReader.java"},
+    {"path": "src/etl/extract/ColumnMapping.java"},
+    {"path": "src/etl/extract/NvarcharReaderTest.java"}
+  ]
+}

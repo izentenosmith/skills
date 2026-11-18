@@ -20,14 +20,14 @@ Evals
   - grade.py has a check for every eval and no check without an eval
   - every control in make_controls.py grades an eval that exists
   - no answer key sits inside a fixture folder (runs copy the folder)
-Eval health (marketplace readiness)
+Eval health
   - every skill has at least one eval
   - warning: a skill eval with no score in scores.json
   - warning: a score whose skill_hash differs from the skill as it is now
     (the skill changed since its last scored run), computed the way the run
-    staged it: the repo folder, or its Agensi package
+    staged it (the repo folder, alone or with harness/ beside it)
   - warning: a score with no skill_hash (scored before run.py recorded one),
-    or one not staged as the package a buyer installs
+    or one staged by the zip-packaging step this repo no longer has
 Branch protection
   - every status check .github/rulesets/main.json requires is a job name the
     workflows report — a renamed job would otherwise block every merge
@@ -50,7 +50,7 @@ def problem(msg):
 
 
 def warning(msg):
-    """Not broken, but not marketplace-ready either. --strict fails on it."""
+    """Not broken, but not a score you can trust as current either. --strict fails on it."""
     (problems if STRICT else warnings).append(msg)
 
 
@@ -153,7 +153,7 @@ for name, rel in sorted(skills.items()):
         problem(f"{rel}: no eval in evals/evals.json; every skill needs a scored eval before it ships")
 
 scores = json.loads((EVALS / "scores.json").read_text())["evals"]
-current, unscored, unhashed, unpackaged = {}, [], {}, {}
+current, unscored, unhashed, legacy = {}, [], {}, {}
 for name, evs in sorted(skill_evals.items()):
     if name not in skills:
         continue  # reported above
@@ -166,6 +166,9 @@ for name, evs in sorted(skill_evals.items()):
             unhashed.setdefault(name, []).append(score["iteration"])
             continue
         staging = score["staging"]
+        if staging not in ("harness", "standalone"):
+            legacy.setdefault(name, []).append(score["iteration"])
+            continue
         if (name, staging) not in current:
             try:
                 current[name, staging] = run.skill_hash(ROOT / skills[name].parent, staging)
@@ -175,16 +178,14 @@ for name, evs in sorted(skill_evals.items()):
         if current[name, staging] not in (None, score["skill_hash"]):
             warning(f"{ev}: {name} changed since its last scored run ({score['iteration']}, staged as "
                     f"{staging}); re-run it: python3 evals/run.py --evals {ev.split('-')[1]}")
-        elif staging != "package":
-            unpackaged.setdefault(name, []).append(score["iteration"])
 for ev in unscored:
     warning(f"{ev}: no score in evals/scores.json — run it, then aggregate.py --record")
 if unhashed:
     warning(f"{len(unhashed)} skill(s) scored before run.py recorded skill hashes, so whether "
             f"they changed since is unknown: {', '.join(sorted(unhashed))}")
-if unpackaged:
-    warning(f"{len(unpackaged)} skill(s) scored from the repo folder, not as their Agensi package: "
-            f"{', '.join(sorted(unpackaged))}")
+if legacy:
+    warning(f"{len(legacy)} skill(s) scored through the zip-packaging step this repo no longer has, so whether "
+            f"they changed since is unknown until a re-run: {', '.join(sorted(legacy))}")
 
 # --------------------------------------------------- ruleset vs workflow
 

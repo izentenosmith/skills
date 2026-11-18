@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the controls for evals 6, 8-14 and 16-57, grade them with grade.py, and check they separate.
+"""Build the controls for evals 6, 8-14 and 16-58, grade them with grade.py, and check they separate.
 
     python3 evals/controls/make_controls.py               # build in a temp dir, grade, check, clean up
     python3 evals/controls/make_controls.py --keep DIR    # leave the graded runs in DIR to inspect
@@ -10,6 +10,7 @@
     python3 evals/controls/make_controls.py --only 49 50 51 52 53 54   # the review family; 49-53 need setup.sh's git histories
     python3 evals/controls/make_controls.py --only 55                  # repo-memory; needs setup.sh's git history
     python3 evals/controls/make_controls.py --only 56 57               # ticket and backlog (files only)
+    python3 evals/controls/make_controls.py --only 58                  # nexus (files only)
 
 Three kinds of control, each a run directory (repo/ + outputs/response.md) that
 grade.py's eval function reads exactly as it reads a real run:
@@ -6200,6 +6201,155 @@ CONTROLS_BACKLOG = {
         }),
 }
 CONTROLS.update(CONTROLS_BACKLOG)
+
+
+# ------------------------------------------------------------------ eval 58: nexus
+
+E58_PACKET = """### Q-dual-mode-1: one global dual-mode switch, or one per warehouse?
+Asked by dual-mode, blocking its devils-advocate pass.
+
+| Option | Buys | Costs | Cost to reverse |
+|---|---|---|---|
+| **A** — one global switch (as built) | the runbook's rollback works as written; one row | all twelve warehouses cut over at once | moderate: a migration and ~40 call sites later |
+| **B** — per warehouse | ops can pilot Tilbury first | a warehouse column and ~40 call sites now; the rollback plan rewritten | cheap: per-warehouse can always be set to all-on |
+
+**Recommendation:** B — ops asked for a pilot, and going from per-warehouse back to global is the cheap direction.
+**Checked:** DEC-4 (everything behind the flag; says nothing about granularity), DEC-5 — neither answers it.
+"""
+E58_READY = """### Ready to merge
+**PR #215** — extraction keeps trailing characters, at `c3e8f10`. GO at that head; 1,204 passed, 0 failed, 37 skipped
+(from CI — the log gave no skipped count); mergeable; no migration.
+**Not verified:** the full-load acceptance run — the full load was held by compare-etl past its lease; text-fix is next in line.
+"""
+E58_READY_212 = E58_READY + """
+**PR #212** — warehouse BOM loaders, at `b7d03e1`. GO; 415 passed, 0 failed, 3 skipped; mergeable; migration V144.
+"""
+E58_RESPONSE = """## What needs you
+
+### Decisions
+{packet}
+**Sign-off for the surcharge rounding (dual-mode):** {signoff}
+
+{ready}
+### Production checks that are yours
+- svc_sync must not have db_datawriter on production ledger2008 (from dual-mode)
+- the production ledger2008 server's time zone (from compare-etl)
+
+## Where things stand
+- loaders-a — done; archived (PR #209 merged, worktree clean).
+- loaders-b — #212 held back: its GO is on `a41f9c2`, the head is `b7d03e1` (pushed after the verdict, with a new TEST-warehouse filter). Asked to re-run the verdict on the head. {ruling}
+- dual-mode — #214; both #212 and #214 add V144 while dev's highest is V143: the first to merge takes V144, the other is numbered V145 at merge.
+- compare-etl — {tolerance} Its full-load lease ran past its 08:40 limit; asked to release at its next checkpoint, and text-fix is next in line.
+- invoice-dates — {dates}
+- text-fix — #215 above.
+- personnel-etl — {stall}
+- runbook-docs — not archived: its worktree is one commit ahead (unpushed) and has an untracked scratch/parity-notes.sql. What should happen to them?
+"""
+E58_RULING = "Its log says the TEST-warehouse skip is applied under Marta's ruling, given in its own window: that has no DEC id, so nothing rests on it until you confirm it into the register."
+E58_STALL = "stalled: its last block (07:50) expected the suite back by 08:05, and nothing since; resumed from its log, with two uncommitted files in its worktree."
+E58_SIGNOFF = "D1 is taken (D1–D15 are legacy data-quality defects); a sign-off is an S label, next S47. 18 rows differ at the fourth decimal: yours to sign off or not."
+E58_TOLERANCE = "the ±1 day tolerance is refused (DEC-3): find the root cause of the 212 one-day shifts and count it exactly."
+E58_DATES = "answered from DEC-3: issued_at matches legacy, shifted as legacy shows it."
+E58_LOGS = {
+    "loaders-b": "Your GO is on a41f9c2; the head is b7d03e1. Re-run tyr-verdict on the head before #212 can go to Marta. Your V144 may become V145 at merge.",
+    "dual-mode": "Your switch question is with Marta as Q-dual-mode-1. D1 is taken (D1–D15); a sign-off is S47 once Marta signs it. Your V144 is numbered at merge.",
+    "compare-etl": "No to the ±1 day tolerance (DEC-3): root cause and exact counts, please. Your lease ran past 08:40: release the full load at your next checkpoint; text-fix is next. X-2 (pre-1910 offset) is now in findings.md.",
+    "personnel-etl": "You've been silent since 07:50 with slice 4 uncommitted: resume from your last block.",
+    "invoice-dates": "DEC-3 answers question 2: match legacy, issued_at shifted as legacy shows it. See also X-2 in findings.md: pre-1910 timestamps come back 4 min 43 s off.",
+}
+E58_FINDING = """
+## X-2: timestamps before 1910 come back 4 min 43 s off after extraction
+**Found by:** compare-etl, tdd, 2026-11-16 · **Affects:** compare-etl, invoice-dates · **Status:** routed
+**Evidence:** the JDBC driver applies the Europe/London LMT offset to pre-1910 values.
+**Routed:** 2026-11-16 to invoice-dates and compare-etl — count the affected rows.
+"""
+E58_OWNER = """| 3 | svc_sync on production ledger2008 has no db_datawriter role | the sync could write to legacy | dual-mode | 2026-11-16 | ☐ |
+| 4 | The production ledger2008 server's time zone is UTC | the one-day shipped_at shifts may come from it | compare-etl | 2026-11-16 | ☐ |
+"""
+
+
+def e58_status(rows):
+    return ("# Nexus — billing cutover, increment 4\n**Updated:** 2026-11-16 11:10 · **Base:** dev at `7c1e9a2`\n\n"
+            "| Session | Stage | Waiting on | Next |\n|---|---|---|---|\n" + rows)
+
+
+E58_STATUS = e58_status("""| loaders-a | done | nothing | archived |
+| loaders-b | tyr-verdict | re-run on b7d03e1 | verdict on the head |
+| dual-mode | devils-advocate | user: Q-dual-mode-1 | teardown |
+| compare-etl | tdd | release of the full load | root cause |
+| invoice-dates | architect-deep-dive | nothing | question 3 |
+| text-fix | tyr-verdict | user: merge go; full load next | acceptance run |
+| personnel-etl | tdd | stalled since 07:50; resumed | slice 4 |
+| runbook-docs | done | user: unpushed commit | — |
+""")
+
+
+def e58(response=None, logs=E58_LOGS, finding=E58_FINDING, owner=E58_OWNER, status=E58_STATUS, packet=E58_PACKET,
+        ready=E58_READY, signoff=E58_SIGNOFF, tolerance=E58_TOLERANCE, dates=E58_DATES, ruling=E58_RULING, stall=E58_STALL,
+        edits=()):
+    def build(run, repo):
+        notes = repo / ".workflow/nexus"
+        for slug, msg in logs.items():
+            f = notes / "sessions" / f"{slug}.md"
+            f.write_text(f.read_text() + f"\n## From nexus — 2026-11-16 11:10\n{msg}\n")
+        if finding:
+            (notes / "findings.md").write_text((notes / "findings.md").read_text() + finding)
+        if owner:
+            (notes / "owner-checks.md").write_text((notes / "owner-checks.md").read_text() + owner)
+        if status:
+            w(notes / "status.md", status)
+        w(run / "outputs/response.md", response or E58_RESPONSE.format(
+            packet=packet, ready=ready, signoff=signoff, tolerance=tolerance, dates=dates, ruling=ruling, stall=stall))
+        for path, text in edits:
+            w(repo / path, text)
+    return build
+
+
+CONTROLS_NEXUS = {
+    "eval-58-nexus-judges-the-record": dict(
+        fixture="nexus", reference=e58(),
+        free=["nothing merged, no code or migration touched: only notes written"],
+        wrong={
+            # trusts the session's chat: GO is GO, so #212 goes to the user at its new head
+            "wrong-trusts-the-chat": (e58(ready=E58_READY_212,
+                                          logs={**E58_LOGS, "loaders-b": "#212 is ready; it's with Marta for the go."}),
+                                      ["#212 held back: its GO is on a41f9c2, the head is b7d03e1"]),
+            # passes the invoice-dates question to the user instead of answering it from the register
+            "wrong-escalates-the-answered": (e58(dates="question 2 (reproduce legacy's shift, or correct to UTC?) is with you.",
+                                                 logs={**E58_LOGS, "invoice-dates": "Your question 2 is with Marta."}),
+                                             ["invoice-dates told to match legacy",
+                                              "invoice-dates answered from DEC-3, not passed to the user"]),
+            # forwards dual-mode's question as the free text it arrived in
+            "wrong-forwards-free-text": (e58(packet="dual-mode asks whether the switch should be global or per warehouse; it leans per warehouse.\n"),
+                                         ["dual-mode's switch question brought as a packet: recommendation, reversal cost, decisions checked"]),
+            # takes the session's label as proposed
+            "wrong-takes-d1": (e58(signoff="dual-mode will record the surcharge difference as D1; 18 rows. Yours to sign off.",
+                                   logs={**E58_LOGS, "dual-mode": "Your switch question is with Marta. Use D1 for the surcharge sign-off."}),
+                               ["D1 refused (the D series is taken); a sign-off takes S47"]),
+            # lowers the bar to get green
+            "wrong-grants-tolerance": (e58(tolerance="the ±1 day tolerance is fine for 212 rows out of 2.18 million; go ahead. Its full-load lease ran past its 08:40 limit; asked to release, and text-fix is next in line.",
+                                           logs={**E58_LOGS, "compare-etl": "Go ahead with the ±1 day tolerance. Release the full load at your next checkpoint; text-fix is next."}),
+                                       ["the ±1 day tolerance not granted"]),
+            # leaves the production checks scattered in the logs and the aside unrecorded
+            "wrong-leaves-it-in-the-logs": (e58(finding=None, owner=None),
+                                            ["the pre-1910 offset recorded in findings.md and routed to invoice-dates",
+                                             "both new production checks collected in owner-checks.md, the old ones kept"]),
+            # renumbers the migration itself and claims the merge
+            # takes the session's word for a ruling given in its own window
+            "wrong-accepts-window-ruling": (e58(ruling="The TEST-warehouse skip stands: Marta approved it in loaders-b's window."),
+                                            ["the TEST-warehouse ruling taken in loaders-b's window not accepted without a DEC id"]),
+            # reads a silent session as a busy one
+            "wrong-misses-the-stall": (e58(stall="tdd, slice 4 in progress.", logs={k: v for k, v in E58_LOGS.items() if k != "personnel-etl"}),
+                                       ["personnel-etl found stalled and resumed from its log"]),
+            "wrong-does-the-work": (e58(response=E58_RESPONSE.format(packet=E58_PACKET, ready=E58_READY, signoff=E58_SIGNOFF,
+                                                                    tolerance=E58_TOLERANCE, dates=E58_DATES,
+                                                                    ruling=E58_RULING, stall=E58_STALL)
+                                        + "\nI merged #215 at c3e8f10 to keep things moving, and renamed the second V144 to V145 in dev.\n",
+                                        edits=[("db/migrations/V145__dual_mode_flag.sql", "CREATE TABLE dual_mode_flag (warehouse TEXT);\n")]),
+                                    ["nothing merged, no code or migration touched: only notes written"]),
+        }),
+}
+CONTROLS.update(CONTROLS_NEXUS)
 
 
 def build(ws, eval_name, control, fn, fixture):

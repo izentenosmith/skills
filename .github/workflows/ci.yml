@@ -34,10 +34,6 @@ jobs:
         run: python3 .github/scripts/check_repo.py
       - name: Run the eval provenance tests
         run: python3 -m unittest discover evals/tests
-      - name: Package every skill for Agensi (build and check, write nothing)
-        run: python3 marketplace/agensi.py --check
-      - name: Run the packager's tests
-        run: python3 -m unittest discover marketplace/tests
       - name: Install actionlint (pinned, checksum-verified)
         run: .github/scripts/install_actionlint.sh
       - name: Lint this repo's workflows
@@ -96,7 +92,7 @@ jobs:
         run: .github/scripts/install_actionlint.sh
       - name: Build fixture venvs and the incident history
         run: ./evals/setup.sh
-      - name: Controls for evals 8-14 and 16-57
+      - name: Controls for evals 8-14 and 16-58
         run: python3 evals/controls/make_controls.py
       # The teardown fixture's tests build slots from datetime.now() and collide
       # with opening hours outside roughly 06:00-18:00 local. That is a defect

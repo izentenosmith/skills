@@ -1,0 +1,42 @@
+== ~/wt/loaders-a (corte/4.0a-invoice-loaders) ==
+On branch corte/4.0a-invoice-loaders
+Your branch is up to date with 'origin/corte/4.0a-invoice-loaders'.
+nothing to commit, working tree clean
+
+== ~/wt/loaders-b (corte/4.0b-bom-loaders) ==
+On branch corte/4.0b-bom-loaders
+Your branch is up to date with 'origin/corte/4.0b-bom-loaders'.
+nothing to commit, working tree clean
+
+== ~/wt/dual-mode (corte/4.1-dual-mode) ==
+On branch corte/4.1-dual-mode
+Your branch is up to date with 'origin/corte/4.1-dual-mode'.
+nothing to commit, working tree clean
+
+== ~/wt/compare-etl (corte/4.2-compare-only) ==
+On branch corte/4.2-compare-only
+Changes not staged for commit:
+	modified:   src/compare/InvoiceCompare.java
+no changes added to commit (use "git add" and/or "git commit -a")
+
+== ~/wt/invoice-dates (corte/4.3-invoice-dates) ==
+On branch corte/4.3-invoice-dates
+nothing to commit, working tree clean
+
+== ~/wt/text-fix (fix/etl-trailing-chars) ==
+On branch fix/etl-trailing-chars
+Your branch is up to date with 'origin/fix/etl-trailing-chars'.
+nothing to commit, working tree clean
+
+== ~/wt/personnel-etl (corte/4.4-personnel-etl) ==
+On branch corte/4.4-personnel-etl
+Changes not staged for commit:
+	modified:   src/etl/personnel/TerminatedEmployeeLoader.java
+	modified:   src/etl/personnel/TerminatedEmployeeLoaderTest.java
+
+== ~/wt/runbook-docs (docs/nightly-diff-runbook) ==
+On branch docs/nightly-diff-runbook
+Your branch is ahead of 'origin/docs/nightly-diff-runbook' by 1 commit.
+  (use "git push" to publish your local commits)
+Untracked files:
+	scratch/parity-notes.sql

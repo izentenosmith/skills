@@ -117,9 +117,6 @@ evals/fixtures/test-review/repo/
 evals/fixtures/concurrency/repo/
 evals/fixtures/repo-memory/repo/
 
-# --- marketplace: built zips and their manifest ---
-dist/
-
 # --- harness: run artifacts in a repo under review ---
 .workflow/runs/
 evals/fixtures/hotfix-jvm/build/

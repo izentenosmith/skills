@@ -1,0 +1,18 @@
+{
+  "number": 214,
+  "title": "feat(cutover): 4.1 dual mode",
+  "baseRefName": "dev",
+  "headRefOid": "f07aa31b2e48c09d61f7a3e5b9c2d40e8a17f6c3",
+  "mergeable": "MERGEABLE",
+  "mergeStateStatus": "CLEAN",
+  "statusCheckRollup": [
+    {"name": "build-and-test", "conclusion": "SUCCESS", "summary": "1,061 passed, 0 failed, 12 skipped"}
+  ],
+  "files": [
+    {"path": "db/migrations/V144__dual_mode_flag.sql"},
+    {"path": "src/dual/DualMode.java"},
+    {"path": "src/dual/DualReader.java"},
+    {"path": "src/dual/FlagCache.java"},
+    {"path": "src/dual/DualModeTest.java"}
+  ]
+}

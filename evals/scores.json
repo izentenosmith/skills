@@ -3,17 +3,17 @@
   "evals": {
     "eval-0-architect-charter-and-options": {
       "skill": "architect-deep-dive",
-      "iteration": "iteration-42",
+      "iteration": "iteration-45",
       "n": 3,
       "staging": "package",
-      "skill_hash": "c0c14db76d2ebfe573fcd600704a9f3a56d345b6fead88461c282350db3c634e"
+      "skill_hash": "94c9d6700a559918318b1d81e9277425d92855cb3c710bc73f9f6966910390ec"
     },
     "eval-1-brief-ordered-criteria": {
       "skill": "agent-brief",
-      "iteration": "iteration-42",
+      "iteration": "iteration-47",
       "n": 3,
-      "staging": "package",
-      "skill_hash": "80d21635cdcee458e19ad32702c2a54916620e1e04d372a432dd246104176ce2"
+      "staging": "harness",
+      "skill_hash": "f8ab7533ee5cec39421a7eeba1fe285398908eb244484633373d8c249a98862b"
     },
     "eval-10-hotfix-script-no-tests": {
       "skill": "hotfix",
@@ -80,10 +80,10 @@
     },
     "eval-2-tdd-reads-brief-vertical": {
       "skill": "tdd",
-      "iteration": "iteration-37",
+      "iteration": "iteration-47",
       "n": 3,
-      "staging": "package",
-      "skill_hash": "feae0d5a583df6217c86b5e07b5b51dc85ad49964654baba5a5b8e4b5c47d629"
+      "staging": "harness",
+      "skill_hash": "405b2f9dae8bde007fcfff757fd1785119a417f7bed7ceddbf9ba03f3f991941"
     },
     "eval-20-netblueprint-waits-for-acceptance": {
       "skill": "netblueprint",
@@ -371,6 +371,13 @@
       "n": 3,
       "staging": null,
       "skill_hash": null
+    },
+    "eval-58-nexus-judges-the-record": {
+      "skill": "nexus",
+      "iteration": "iteration-47",
+      "n": 3,
+      "staging": "standalone",
+      "skill_hash": "a95cf06e1220a9060274b3010419d8f3a8fdce5d97be595d2278b8e6f6188d6a"
     },
     "eval-6-compose-detects-real-services": {
       "skill": "docker-compose",
