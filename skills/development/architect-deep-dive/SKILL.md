@@ -190,6 +190,26 @@ Surface each dimension as its own one-at-a-time question, interleaved with the r
 
 If the effort is large, also resolve **decomposition**: how it splits into independently shippable increments (each of which can become its own brief → acceptance-tests → TDD → refactor-review → devils-advocate → tyr-verdict pass). Group into one increment what changes for the same reasons at the same times; split what changes for different reasons. Dependencies between increments must be acyclic and point toward the more stable side — never let a rigid, widely-depended-on piece depend on a volatile one.
 
+## In a sub-session — when a coordinating session runs you
+
+When your brief says another session coordinates this work — a [nexus](../nexus/SKILL.md) running several sessions at once — the user is not in this conversation, and your questions reach them only through that session. Three things change; everything else above holds.
+
+- **Read the decisions register before every question.** A decision the user already took (`DEC-n`) answers the question: mark it **[inferred]**, cite the id, and move on.
+- **Each question goes out as a packet**, the four sections above compressed into one block the coordinator can forward without reshaping:
+
+  ```markdown
+  ### Q-<session>-<n>: <the question, in one line>
+  **Stage:** architect-deep-dive · **Blocks:** <what cannot proceed until it is answered>
+  | Option | Buys | Costs | Cost to reverse |
+  |---|---|---|---|
+  | **A** — … | … | … | … |
+  **Recommendation:** <option> — <why>
+  **Checked:** <the DEC-ids you read and why none answers it>
+  ```
+
+  Write it to your stage log as well as your reply, and keep resolving whatever the question doesn't block. Record the answer, when it comes back, as given.
+- **A finding that touches another slice** — a shared module, a decision already taken, data another increment reads — goes out as its own `Cross-slice:` block, not as an aside: the coordinator is the only one who can route it.
+
 ## Subagents — optional
 
 The design dialogue stays here: one question at a time, with you as the decision-maker. A subagent cannot ask you anything, so it never runs the conversation.

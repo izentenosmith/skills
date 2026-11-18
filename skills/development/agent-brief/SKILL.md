@@ -90,6 +90,13 @@ The TDD stage's planning step asks: *"What should the public interface look like
   - *No test can observe it* → it goes under **Ship checklist**: the backfill and its order relative to the deploy, the rollback step and what triggers it, the dashboard or alert, the runbook or changelog entry, who is told. Each item is a checkbox with the decision in it, so it is either done, or visibly not done when the verdict is called.
 
   A dimension the architect marked N/A gets no line. When all three were N/A, write `- none — no rollout, compatibility or observability work in this change` so an empty section is a decision and not an omission.
+- **Say whether the build can run in parallel tracks.** Usually it can't, and the brief says so in one line. A big build sometimes splits into groups of criteria that several sessions can build at once, each working towards its own GO, with the session that owns this brief integrating them. A group is a **track** only when all four hold:
+  1. **Its writes are its own.** No module, file, migration or shared document is changed by two tracks. Name each track's area — the module or package, not file paths.
+  2. **It needs nothing another track builds.** Every criterion in it is observable without another track's behavior.
+  3. **The seams between tracks are fixed here.** Any interface that two tracks meet at is decided in **Key interfaces** and built first, as track 0, before the others start.
+  4. **It is worth a session.** Several slices at least. A session per track plus an integration pass costs more than a small build saves.
+
+  When in doubt, keep one track. Tracks that could each ship as their own PR are really increments, and belong in architect-deep-dive's decomposition.
 - **Supply prior art.** TDD's planning step looks for similar tests already in the codebase. Point at the closest existing test suites/patterns (e.g. table-driven constraint tests, public-entry-point handler tests, component-contract tests, boundary/gateway tests) so TDD matches conventions instead of inventing them.
 
 ## Subagents — optional
@@ -138,6 +145,15 @@ Be specific about edge cases and error conditions.
 - Highest existing seam to test through (prefer existing seams to new ones)
 - Closest existing test suite/pattern in the codebase to mirror for conventions
 
+**Parallel tracks:** none — <one line: why this builds as one sequence>
+<!-- or, only when every track passes the four tests in "Tangling to TDD": -->
+<!--
+- **Track 0 — seams:** <the interfaces the tracks meet at>; built first, before any other track starts
+- **Track A — <name>:** criteria <which>; area <module/package>; needs track 0 only
+- **Track B — <name>:** criteria <which>; area <module/package>; needs track 0 only
+- **Integration:** the owner of this brief merges each track at its GO, runs the whole suite and the acceptance tests, then runs devils-advocate and tyr-verdict on the combined diff
+-->
+
 **Deferred by design** (constraints, not work — carried from architect-deep-dive):
 - <decision left open> — deferred behind <the boundary that protects it>; forced by <signal>
 
@@ -170,7 +186,7 @@ Be specific about edge cases and error conditions.
 The brief is the contract three stages build against and two more judge by, and it is the last point where changing your mind costs a sentence instead of a test suite. So it is **approved before anything is built on it**:
 
 1. Write the plan to `.workflow/brief.md` with `**Status:** draft — awaiting approval`.
-2. In your response, show what the user is agreeing to in a form they can check in a minute: the criteria in order, the **Out of scope** list, the **Deferred by design** list, the **Ship checklist**, and anything you had to assume because the design left it open — each assumption as a question.
+2. In your response, show what the user is agreeing to in a form they can check in a minute: the criteria in order, the **Out of scope** list, the **Deferred by design** list, the **Ship checklist**, the **Parallel tracks** when there are any, and anything you had to assume because the design left it open — each assumption as a question.
 3. **Stop there.** Do not start acceptance-tests or tdd in the same turn. An approval is an explicit yes to this brief; "looks fine, I guess" is a question still open, and silence is not an answer.
 4. When the user approves, set `**Status:** approved` and log it under **Revisions**. When they ask for changes, make them in place, log them, and ask again.
 

@@ -1,6 +1,6 @@
 # development
 
-Seven skills that take a change from a vague idea to reviewed, tested code. They form a pipeline — each stage checks the one before it — but every one also works alone.
+Seven skills that take a change from a vague idea to reviewed, tested code, and an eighth, **nexus**, for running several of those pipelines at once. The seven form a pipeline — each stage checks the one before it — but every one also works alone.
 
 ```
 architect-deep-dive → agent-brief → acceptance-tests → tdd → refactor-review → devils-advocate → tyr-verdict
@@ -18,6 +18,7 @@ architect-deep-dive → agent-brief → acceptance-tests → tdd → refactor-re
 | [refactor-review](refactor-review/SKILL.md) | Reviews the current diff: names the smell, then prescribes a behavior-preserving refactoring. |
 | [devils-advocate](devils-advocate/SKILL.md) | Assumes everything just built is wrong and hunts concrete evidence for each defect. Over-reports on purpose; does not fix or judge. |
 | [tyr-verdict](tyr-verdict/SKILL.md) | Adjudicates the devils-advocate findings, cuts false claims, turns confirmed defects into red→green remediation slices, and issues a go/no-go verdict. |
+| [nexus](nexus/SKILL.md) | Coordinates several parallel sessions, one PR each through the seven stages. Writes no code: judges each PR on its stage log, answers questions from a register of the user's decisions or brings them to the user as packets, guards shared resources (leases, migration numbers, label series), routes findings that cross slices, and merges only on the user's go. |
 
 ## How to use them
 
@@ -25,6 +26,12 @@ Install the whole pipeline from the root of the repo you're working in:
 
 ```bash
 npx skills add izentenosmith/skills --skill architect-deep-dive agent-brief acceptance-tests tdd refactor-review devils-advocate tyr-verdict
+```
+
+To run several pipelines at once — one session per PR, or per track of a PR — add the coordinator:
+
+```bash
+npx skills add izentenosmith/skills --skill nexus
 ```
 
 Or one stage at a time:
@@ -38,6 +45,7 @@ Or one stage at a time:
 | refactor-review | `npx skills add izentenosmith/skills --skill refactor-review` |
 | devils-advocate | `npx skills add izentenosmith/skills --skill devils-advocate` |
 | tyr-verdict | `npx skills add izentenosmith/skills --skill tyr-verdict` |
+| nexus | `npx skills add izentenosmith/skills --skill nexus` |
 
 The Trivial tier below needs only `--skill tdd refactor-review`. The repo is private: you need read access and GitHub auth first. That setup, and the flags (`-a`, `-g`, `-y`), are in the [root README](../../README.md#install-with-npx).
 
@@ -91,6 +99,16 @@ Three things keep the build honest between those files and the code. **Save poin
 
 Add `.workflow/` to the host repo's `.gitignore` unless you want the plan and the ledger in version control — both are legitimate choices, and committing them makes the loop's reasoning reviewable.
 
+## Several pipelines at once — nexus
+
+An increment that stage 1 decomposes into several PRs can be built in parallel: one session per PR, each running the seven stages in its own worktree, and one more session — the [nexus](nexus/SKILL.md) — over them. The nexus writes no product code. Each session attacks its own work through devils-advocate and tyr-verdict; the nexus judges only the evidence they leave, and it is the only one who sees across sessions: two PRs that took the same migration number, the base branch moving underneath, two branches that pass alone and fail together, a finding in one slice that breaks another.
+
+Everything they share lives in one notes folder outside the worktrees ([notes.md](nexus/notes.md)): a status file the nexus rewrites every turn, so it survives compaction; a register of the user's decisions that every session reads before asking; findings that cross slices; the label series and their next free ids; leases on exclusive resources; production checks that only the user can do; and one stage log per session. Each session gets [the contract](nexus/contract.md) in its first message: end every turn with a status block, ask in a fixed packet (options, recommendation, cost of reversing, the decisions checked), report cross-slice findings as their own block, and never loosen a check, take a migration number, coin a label series or hold a resource without a lease. architect-deep-dive sends its questions in that packet when it runs as a sub-session.
+
+Within one PR, a brief whose criteria split into **parallel tracks** (agent-brief names them only when each has its own write area and needs nothing another builds) can be built the same way, one level down. The session that owns the brief builds the shared seams first. It then starts a child session per track, each running tdd through tyr-verdict to its own GO. It merges each track and runs devils-advocate and tyr-verdict once more on the combined diff before the PR goes up. The tree has one root: registries, the register and the user stay with the top nexus.
+
+The user answers in one place, the nexus's digest, and every ruling gets an id that sessions cite. The user sees only decisions and merges, each already checked against the record and integrated with the latest base, with what wasn't verified said plainly.
+
 ## Security runs through the pipeline, not after it
 
 Security is not an eighth stage. Most vulnerabilities are ordinary defects in places where a defect has security consequences, so each stage carries its part, gated by one **security trigger** — the change adds an entry point, crosses a trust boundary, changes who may do what, or handles identity, money, secrets, personal data, paths, queries or URLs:
@@ -124,6 +142,8 @@ Each lives in the folder of the skill that uses it.
 | [deep-modules](tdd/deep-modules.md) | tdd — the deep-module principle |
 | [interface-design](tdd/interface-design.md) | tdd — designing for testability |
 | [domain-primitives](tdd/domain-primitives.md) | tdd — security-relevant values as validated, immutable types; validation order; the tests they need; read-once secrets |
+| [notes](nexus/notes.md) | nexus — the shared notes folder: status, decisions register, cross-slice findings, label series, leases and numbered files, owner checks, stage logs |
+| [contract](nexus/contract.md) | nexus — the brief every sub-session gets: status block, question packet, cross-slice findings, what it never does |
 
 ## Measured
 

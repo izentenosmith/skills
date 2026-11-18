@@ -39,7 +39,7 @@ cp -r skills/skills/memory/repo-memory my-project/.claude/skills/     # Claude C
 cp -r skills/skills/memory/repo-memory my-project/.cursor/skills/     # Cursor
 ```
 
-or install the `repo-memory` listing from Agensi. Copy the `repo-memory/` folder, not `memory/`. The
+or `npx skills add izentenosmith/skills --skill repo-memory`. Copy the `repo-memory/` folder, not `memory/`. The
 folder carries `scripts/memlint.py`, which needs only Python 3.10+ and git.
 
 **2. Apply the layout to a repo.** In a session inside that repo, run `/repo-memory` or ask "add

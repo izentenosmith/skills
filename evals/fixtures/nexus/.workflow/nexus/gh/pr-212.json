@@ -1,0 +1,18 @@
+{
+  "number": 212,
+  "title": "feat(cutover): 4.0b warehouse bill-of-materials loaders",
+  "baseRefName": "dev",
+  "headRefOid": "b7d03e1c90f2a6d8e4b1c7a3f5e09d2b8c6a4f11",
+  "mergeable": "MERGEABLE",
+  "mergeStateStatus": "CLEAN",
+  "statusCheckRollup": [
+    {"name": "build-and-test", "conclusion": "SUCCESS", "summary": "415 passed, 0 failed, 3 skipped"}
+  ],
+  "files": [
+    {"path": "db/migrations/V144__bom_loader_tables.sql"},
+    {"path": "src/etl/load/BomLoader.java"},
+    {"path": "src/etl/load/BomLine.java"},
+    {"path": "src/etl/load/BomLoaderTest.java"},
+    {"path": "src/etl/load/WarehouseFilter.java"}
+  ]
+}

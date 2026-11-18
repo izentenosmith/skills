@@ -91,6 +91,12 @@ Stages 1–3 already resolved the interface, chose and prioritized the behaviors
 - [ ] **The things that aren't tests** ← **Ship checklist**, where the brief has one: the rollout, compatibility and observability work that no acceptance test can prove. Build the items that are code (the flag, the log event, the migration) as part of the slice they belong to, and tick each **in the file, naming where it landed**. Items that happen after merge stay unticked; they are not yours to tick.
 - [ ] **The standing** ← **Status**: a brief still marked `draft — awaiting approval` has not been agreed. If the user sent you here to build it, that is the approval — set it to `approved` and log it under Revisions. Otherwise say it is unapproved before you build on it.
 
+**When you were started for one track** of a brief that lists **Parallel tracks**, the brief belongs to the session that started you, and you build only your part of it:
+
+- Build your track's criteria, in their order, and touch only your track's area. A criterion that needs a change in another track's area, or in a seam the brief fixed, is a question for that session. Don't make the edit.
+- Read the brief at the path you were given, but don't write to it. Record your ticks, each naming the test that proves it, in your stage log. The owning session ticks the brief when it merges your track.
+- Your Base is the commit you were started from: track 0's seams, already built.
+
 Then verify the brief is actually executable before writing a test — that the named seams exist, and that no criterion depends on one that doesn't. **A gap here is the feedback edge, not a licence to re-plan:** fix `.workflow/brief.md` and log the revision. Confirm with the user only where the brief is silent or self-contradictory.
 
 #### Without a brief — standalone TDD

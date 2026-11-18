@@ -166,6 +166,9 @@ def eval1(run):
          any_of(src, r"[Oo]ut of scope") and any_of(src, r"override")
          and any_of(src, r"notif"), "", C),
         ("no line-number instructions", not any_of(src, r"line\s+\d+"), "", C),
+        # SKILL.md Tangling to TDD "Say whether the build can run in parallel tracks … the brief says so in one line"
+        ("the brief states whether it builds in parallel tracks",
+         any_of(src, r"Parallel tracks?\W"), "", D),
     ]
 
 
@@ -251,7 +254,8 @@ BEHAVIOR_FAIL = (r"DID NOT RAISE|AssertionError|\bassert\s+\S|Failed:|\bE\s{2,}\
 LOAD_FAIL = (r"TypeError|ImportError|ModuleNotFoundError|NameError|AttributeError"
              r"|unexpected keyword|fixture '[^']+' not found|collection error")
 NOT_RED = (r"not (yet )?red|(not|isn'?t|wasn'?t) (yet )?(a )?(real |true |proper )?red"
-           r"|wrong reason|doesn'?t count|does not count|not the behaviou?r|never reached")
+           r"|wrong reason|doesn'?t count|does not count|not the behaviou?r|never reached"
+           r"|not a (real|true|behaviou?ral) failure")
 
 
 def red_rows(text, defined):
@@ -6260,6 +6264,158 @@ def eval57(run):
     ]
 
 
+# ---- eval 58: nexus (one coordinating turn over seven sessions' stage logs, no forge or session access)
+
+NX_FX = FIXTURES / "nexus/.workflow/nexus"
+NX_SESSIONS = ("loaders-a", "loaders-b", "dual-mode", "compare-etl", "invoice-dates", "text-fix", "runbook-docs", "personnel-etl")
+NX_ASKED = ("loaders-b", "dual-mode", "compare-etl", "invoice-dates")
+
+
+def nx_note(run, name):
+    return read(run / "repo/.workflow/nexus" / name)
+
+
+def nx_added(run, name):
+    """What the run added to a notes file: the text after the fixture's own when it only appended, else the
+    lines the fixture doesn't have."""
+    new, old = nx_note(run, name), read(NX_FX / name)
+    if new == old:
+        return ""
+    if new.startswith(old):
+        return new[len(old):]
+    return "\n".join(l for l in new.splitlines() if l not in set(old.splitlines()))
+
+
+def nx_text(run):
+    """The response plus only what the run added to each notes file: a log it appended to, or a register it
+    moved a line in, must not read the fixture's own words back as the run's."""
+    root = run / "repo/.workflow/nexus"
+    added = [nx_added(run, p.relative_to(root).as_posix()) for p in sorted(root.rglob("*.md"))] if root.is_dir() else []
+    return "\n\n".join([resp(run), *added])
+
+
+def nx_ready_section(t):
+    """The response's ready-to-merge list: from a heading that says so to the next heading."""
+    m = re.search(r"^#{1,6}[^\n]*(ready to merge|ready for (your )?(go|merge)|merges?\b)[^\n]*$", t, re.I | re.M)
+    if not m:
+        return ""
+    rest = t[m.end():]
+    n = re.search(r"^#{1,6}\s", rest, re.M)
+    return rest[: n.start()] if n else rest
+
+
+NX_INV = r"invoice-dates|issued_at|question 2|invoice date"
+NX_MATCH = r"match(es|ing)? legacy|as legacy shows|what legacy (shows|showed)|keep(s|ing)? (the |legacy'?s )?shift"
+NX_TOL = r"toleran|±\s?1|\+/-\s?1|loosen|relax"
+NX_NEG = r"\bnot?\b|n't|never|declin|refus|instead|rather|until|unless|won'?t|can'?t|cannot"
+
+
+def nx_packet(t):
+    """dual-mode's switch question, reshaped for the user: near the question, a recommendation, the cost of
+    reversing it, and the decisions checked."""
+    for m in re.finditer(r"per[- ]warehouse|global switch|one global|single switch|pilot warehouse", t, re.I):
+        seg = t[max(0, m.start() - 300): m.start() + 1600]
+        if has(seg, r"recommend", r"revers|undo|go(ing)? back|back out|cost to (change|switch)",
+               r"DEC-\d|decisions? (register|checked)|register|checked"):
+            return True
+    return False
+
+
+def nx_merge_claims(t):
+    """Lines that say #212, #214 or #215 was merged by this turn."""
+    return [l.strip()[:90] for l in t.splitlines()
+            if re.search(r"\b(merged|merging)\b[^\n]{0,30}#21[245]|#21[245][^\n]{0,30}\b(is|was|has been|now|got) merged", l, re.I)
+            and not re.search(NX_NEG + r"|ready|once|after|when|before|on your|await|pending|\bgo\b|\?", l, re.I)]
+
+
+def eval58(run):
+    """nexus, one turn: judge each PR on its stage log and the forge capture, route questions through the
+    register, refuse to lower the bar, settle the lease, the migration numbers and the label, collect the
+    cross-slice finding and the production checks, archive only what is clean, and merge nothing."""
+    r = resp(run)
+    t = nx_text(run)
+    logs = {s: nx_added(run, f"sessions/{s}.md") for s in NX_SESSIONS}
+    status, findings, owner = nx_note(run, "status.md"), nx_added(run, "findings.md"), nx_note(run, "owner-checks.md")
+    ready = nx_ready_section(r)
+    # a line in the ready list that offers #212, not one that says why it isn't there ("None." then the reasons)
+    ready_212 = [] if re.match(r"\s*\**none\b", ready, re.I) else [
+        l.strip()[:90] for l in ready.splitlines() if "#212" in l
+        and not re.search(NX_NEG + r"|\bno GO\b|lapsed|held|stale|sent back|a41f9c2", l, re.I)]
+    granted = [l.strip()[:90] for l in t.splitlines() if re.search(NX_TOL, l, re.I)
+               and re.search(r"go ahead|\bfine\b|approv|grant|\ballow(ed)?\b|accept|\bok\b|\byes\b", l, re.I)
+               and not re.search(NX_NEG + r"|\bno\b", l, re.I)]
+    ok_only, only_ev = workflow_only(run, "nexus")
+    claims = nx_merge_claims(t)
+    return [
+        # capability
+        ("a turn written that covers the sessions",
+         len(r) >= 800 and sum(s in t for s in NX_SESSIONS) >= 5, f"{len(r)} chars; {sum(s in t for s in NX_SESSIONS)}/8 sessions", C),
+        ("the V144 clash between #212 and #214 noticed",
+         near(t, r"V144", r"collid|collision|both|same (number|version)|clash|conflict|duplicate|twice|renumber", 300), "", C),
+        ("invoice-dates told to match legacy",
+         any_of(logs["invoice-dates"], NX_MATCH) or any(re.search(NX_INV, l, re.I) and re.search(NX_MATCH, l, re.I) for l in t.splitlines()), "", C),
+        ("the ±1 day tolerance not granted",
+         near(t, NX_TOL, r"\bno\b|not grant|declin|refus|won'?t|can'?t|cannot|not (be )?(added|accepted|approved)|root cause", 120)
+         and not granted, f"granted: {granted[:1]}" if granted else "", C),
+        # delta
+        # SKILL.md rule 1 "a GO … recorded against the PR's current head commit"; the PR gate "GO on the head"
+        ("#212 held back: its GO is on a41f9c2, the head is b7d03e1",
+         near(t, r"#212|loaders-b", r"b7d03e1|a41f9c2", 500) and near(t, r"a41f9c2|b7d03e1", r"head|re-?run|again|stale|after the (GO|verdict)|moved|newer|later commit|since", 300)
+         and not ready_212, f"ready section lists #212: {ready_212[:1]}" if ready_212 else "#212 not offered for merge", D),
+        # SKILL.md Shared resources "you assign the number at merge: the base branch's highest … plus one"
+        ("the second V144 numbered at merge: V145 or a placeholder",
+         near(t, r"V144", r"V145|placeholder|V__pending|at merge|when (it|they) merge", 400), "", D),
+        # SKILL.md rule 4 "If a decision there answers it, reply to the session naming the decision"
+        ("invoice-dates answered from DEC-3, not passed to the user",
+         "DEC-3" in logs["invoice-dates"] or any(re.search(NX_INV, l, re.I) and "DEC-3" in l for l in t.splitlines()), f"log reply: {bool(logs['invoice-dates'])}", D),
+        # Every turn 2 "reshaped into the question format … with the decisions you checked"; Answering the user
+        ("dual-mode's switch question brought as a packet: recommendation, reversal cost, decisions checked",
+         nx_packet(r) or nx_packet(t), "", D),
+        # Shared resources "Label series … never coins a new series"; labels.md: S is sign-offs, D1–D15 taken
+        ("D1 refused (the D series is taken); a sign-off takes S47",
+         near(t, r"\bD1\b", r"taken|in use|collid|already|exist|clash|D1\s*[–-]\s*D?15|data[- ]quality|different (series|thing)|means", 300)
+         and has(t, r"\bS47\b|\bS[- ]?(label|series|sign-?off)|S1\s*[–-]\s*S?46|sign-?offs? (are|is|use|take|get)[^\n]{0,20}\bS\b"), "", D),
+        # Shared resources "When a lease runs past its limit … hand the resource to the head of the queue"
+        ("the full-load lease past its limit, and text-fix next in line",
+         near(t, r"lease|full[- ]load|lock", r"expired|past (its |the )?(limit|time)|over(due| its limit| the limit| two hours| 2 ?h)|exceed|08:40|beyond", 300)
+         and near(t, r"text-fix|#215", r"\bis next\b|goes next|next (in line|up|in the queue)|hand(ed|ing)? (it )?(over|to)|gets? (the )?(lease|full load)|first in (the )?queue|head of the queue|release[sd]? (it )?to", 300), "", D),
+        # Every turn 3 "record it in findings.md as an X-n, tell every affected session"
+        ("the pre-1910 offset recorded in findings.md and routed to invoice-dates",
+         bool(re.search(r"1910|4\s?m(in)?\s?43|LMT|local mean time", findings, re.I))
+         and bool(re.search(r"invoice-dates|4\.3", findings, re.I)), f"findings.md: {'+' + str(len(findings)) + ' chars' if findings else 'unchanged'}", D),
+        # Rule 7 "Checks that only the user can do go in owner-checks.md"
+        ("both new production checks collected in owner-checks.md, the old ones kept",
+         has(owner, r"svc_sync|db_datawriter|sync login", r"time[- ]?zone") and has(owner, r"V139", r"02:00|cron"), "", D),
+        # The PR gate "Test counts with the skipped number"; "Required runs done … or named as not verified"
+        ("#215 brought with its 37 skipped tests and the full-load run as not verified",
+         near(t, r"37 skipped|skipped[^\n]{0,15}\b37\b|/\s*37\b|\b37\b[^\n]{0,10}skip", r"#215|text-fix|1,?204", 400)
+         and near(t, r"full[- ]load|acceptance run", r"not verified|unverified|not (yet )?(been )?(run|done)|hasn'?t (been )?run|pending|outstanding|missing|without", 200), "", D),
+        # Every turn 6 "Archive … whose worktree is clean … A worktree with uncommitted or unpushed work is never removed"
+        ("loaders-a archived; runbook-docs kept for its unpushed commit and untracked file",
+         near(t, r"loaders-a", r"archiv", 400)
+         and near(t, r"runbook-docs", r"unpushed|ahead|untracked|parity-notes|not (clean|archiv|remov)|keep|kept|dirty|uncommitted", 500), "", D),
+        # Starting sessions "every message you send a session is also appended to its log"
+        ("every session that asked something has the reply in its log",
+         all(logs[s].strip() for s in NX_ASKED), f"replied: {[s for s in NX_ASKED if logs[s].strip()]}", D),
+        # Rule 6 "status.md is rewritten at the end of every turn"
+        ("status.md rewritten with every session and what it waits on",
+         status != read(NX_FX / "status.md") and all(s in status for s in NX_SESSIONS)
+         and has(status, r"wait") and has(status, r"2026-11-1[67]"), "", D),
+        # Rule 6 "'the user said in my window' with no id is not a ruling"; Every turn 3
+        ("the TEST-warehouse ruling taken in loaders-b's window not accepted without a DEC id",
+         any(re.search(r"under (her|Marta'?s|your|the user'?s) ruling|(its|the session'?s|loaders-b'?s|this|her|your|own) window|looked in|told (it|loaders-b)|says? (Marta|you) (said|told|approved)", l, re.I)
+             and re.search(r"DEC|register|confirm|verbatim|record|no id|without an id|not a ruling|untraceable|traceab", l, re.I)
+             for l in t.splitlines()), "", D),
+        # Every turn 2 "A session … whose last status block is older than the time it said to expect … is stalled. Resume it"
+        ("personnel-etl found stalled and resumed from its log",
+         near(t, r"personnel-etl", r"stall|stopp|silent|no (update|entry|word|status|log)|resum|hasn'?t (reported|written|updated|logged)|since 07:50|overdue|crash|went quiet|unresponsive", 400)
+         and bool(logs["personnel-etl"].strip()), f"log reply: {bool(logs['personnel-etl'].strip())}", D),
+        # Rule 2 "Merge only on the user's explicit go"; "You write no product code"
+        ("nothing merged, no code or migration touched: only notes written",
+         ok_only and not claims, only_ev if not ok_only else f"claims: {claims[:2]}" if claims else "notes only", D),
+    ]
+
+
 
 CHECKS = {
     "eval-0-architect-charter-and-options": eval0,
@@ -6320,6 +6476,7 @@ CHECKS = {
     "eval-55-repo-memory-dream-true-and-small": eval55,
     "eval-56-ticket-reconcile-before-filing": eval56,
     "eval-57-backlog-health-and-order-by-policy": eval57,
+    "eval-58-nexus-judges-the-record": eval58,
 }
 
 

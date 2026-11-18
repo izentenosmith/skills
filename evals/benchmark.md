@@ -4,8 +4,8 @@
 
 | eval | from | n | delta (mean ± sd) | delta base | gain | cap | cap base |
 |---|---|---|---|---|---|---|---|
-| 0-architect-charter-and-options | i42 | 3 | 1.00 ± 0.00 | 0.00 | +1.00 | 1.00 | 1.00 |
-| 1-brief-ordered-criteria | i42 | 3 | 1.00 ± 0.00 | 0.00 | +1.00 | 0.95 | 1.00 |
+| 0-architect-charter-and-options | i45 | 3 | 1.00 ± 0.00 | 0.00 | +1.00 | 1.00 | 1.00 |
+| 1-brief-ordered-criteria | i47 | 3 | 1.00 ± 0.00 | 0.00 | +1.00 | 1.00 | 1.00 |
 | 10-hotfix-script-no-tests | i34 | 3 | 1.00 ± 0.00 | 0.20 | +0.80 | 1.00 | 1.00 |
 | 11-hotfix-routes-outage-out | i34 | 3 | 1.00 ± 0.00 | 0.00 | +1.00 | 1.00 | 1.00 |
 | 12-incident-webapp-contain-by-flag | i34 | 3 | 1.00 ± 0.00 | 0.43 | +0.57 | 1.00 | 0.50 |
@@ -16,7 +16,7 @@
 | 17-netdesign-plans-around-what-is-in-use | i21 | 3 | 0.90 ± 0.00 | 0.30 | +0.60 | 1.00 | 0.20 |
 | 18-netdiagram-canonical-views-from-model | i23 | 3 | 1.00 ± 0.00 | 0.20 | +0.80 | 1.00 | 0.00 |
 | 19-netpropose-contains-before-restructuring | i23 | 3 | 1.00 ± 0.00 | 0.70 | +0.30 | 1.00 | 0.67 |
-| 2-tdd-reads-brief-vertical | i37 | 3 | 1.00 ± 0.00 | 0.00 | +1.00 | 1.00 | 0.88 |
+| 2-tdd-reads-brief-vertical | i47 | 3 | 1.00 ± 0.00 | 0.00 | +1.00 | 1.00 | 1.00 |
 | 20-netblueprint-waits-for-acceptance | i23 | 3 | 1.00 ± 0.00 | 0.75 | +0.25 | 1.00 | 1.00 |
 | 21-terraform-review-state-and-secrets | i26 | 3 | 1.00 ± 0.00 | 0.57 | +0.43 | 1.00 | 0.83 |
 | 22-terraform-design-isolates-state | i26 | 3 | 1.00 ± 0.00 | 0.71 | +0.29 | 1.00 | 1.00 |
@@ -58,12 +58,13 @@
 | 55-repo-memory-dream-true-and-small | i34 | 3 | 1.00 ± 0.00 | 0.77 | +0.23 | 1.00 | 1.00 |
 | 56-ticket-reconcile-before-filing | i36 | 3 | 1.00 ± 0.00 | 0.71 | +0.29 | 1.00 | 1.00 |
 | 57-backlog-health-and-order-by-policy | i35 | 3 | 1.00 ± 0.00 | 0.69 | +0.31 | 1.00 | 1.00 |
+| 58-nexus-judges-the-record | i47 | 3 | 1.00 ± 0.00 | 1.00 | +0.00 | 1.00 | 1.00 |
 | 6-compose-detects-real-services | i27 | 3 | 1.00 ± 0.00 | 0.44 | +0.56 | 1.00 | 1.00 |
 | 7-postmortem-widens-range-and-describes | i34 | 3 | 1.00 ± 0.00 | 0.70 | +0.30 | 1.00 | 1.00 |
 | 8-hotfix-node-shared-cause | i34 | 3 | 1.00 ± 0.00 | 0.38 | +0.62 | 1.00 | 1.00 |
 | 9-hotfix-jvm-both-callers | i34 | 3 | 1.00 ± 0.00 | 0.71 | +0.29 | 1.00 | 1.00 |
 
-**Delta — current 0.99 vs baseline 0.50**
+**Delta — current 0.99 vs baseline 0.51**
 **Capability — current 1.00 vs baseline 0.91**
 
 ## Delta assertions the baseline also passed (still non-discriminating)
@@ -536,6 +537,23 @@
 - the three manual refund batches tied to the missing idempotency fix
 - no sizes, points or WSJF scores invented
 - nothing applied: the backlog and profile unchanged, only notes and the snapshot written
+
+**eval-58-nexus-judges-the-record**
+- #212 held back: its GO is on a41f9c2, the head is b7d03e1
+- the second V144 numbered at merge: V145 or a placeholder
+- invoice-dates answered from DEC-3, not passed to the user
+- dual-mode's switch question brought as a packet: recommendation, reversal cost, decisions checked
+- D1 refused (the D series is taken); a sign-off takes S47
+- the full-load lease past its limit, and text-fix next in line
+- the pre-1910 offset recorded in findings.md and routed to invoice-dates
+- both new production checks collected in owner-checks.md, the old ones kept
+- #215 brought with its 37 skipped tests and the full-load run as not verified
+- loaders-a archived; runbook-docs kept for its unpushed commit and untracked file
+- every session that asked something has the reply in its log
+- status.md rewritten with every session and what it waits on
+- the TEST-warehouse ruling taken in loaders-b's window not accepted without a DEC id
+- personnel-etl found stalled and resumed from its log
+- nothing merged, no code or migration touched: only notes written
 
 **eval-6-compose-detects-real-services**
 - meilisearch detected from the source
