@@ -40,7 +40,7 @@ Or one at a time:
 | dbbuild | `npx skills add izentenosmith/skills --skill dbbuild` |
 | dbquery | `npx skills add izentenosmith/skills --skill dbquery` |
 
-The installer dereferences the companion-reference symlinks, so each installed folder is self-contained. It installs the skills only — `harness/dbworkflow.py` needs a clone. The repo is private: you need read access and GitHub auth first. That setup, and the flags (`-a`, `-g`, `-y`), are in the [root README](../../README.md#install-with-npx).
+Each installed folder is self-contained: the shared companion references are committed as copies in every skill that reads them. It installs the skills only — `harness/dbworkflow.py` needs a clone. The repo is private: you need read access and GitHub auth first. That setup, and the flags (`-a`, `-g`, `-y`), are in the [root README](../../README.md#install-with-npx).
 
 ## Coordinated workflow
 
@@ -54,16 +54,16 @@ Each skill has one eval in [`evals/`](../../evals/README.md). dbquery (eval 47) 
 
 ## Companion references
 
-Shared companion references use relative symlinks to one canonical copy in this skill tree. When installing a single skill folder outside this repository, dereference its links during copy (for example, `cp -RL skills/database/dbdesign /target/skills/`).
+A shared companion reference has one canonical file and a committed copy in each skill that reads it, listed in [`skills/shared.json`](../shared.json). Edit the canonical file, then run `python3 .github/scripts/sync_shared.py` (or let the pre-commit hook do it); CI fails if a copy drifts. Copying one skill folder by hand (`cp -r skills/database/dbdesign /target/skills/`) carries everything it needs.
 
 | Reference | Home / use |
 |---|---|
-| Theory and ER modeling | Canonical files in `dbaudit/`; `dbdesign/`, `dbdiagram/`, and `dbpropose/` link to them, and `dbarchitect/` and `dbquery/` link to theory. Used for evaluation and conceptual/logical design. |
-| Scoring and detection signals | Canonical in `dbaudit/`; `dbquery/` links to both — it scores with the same formula and greps the same query shapes. |
+| Theory and ER modeling | Canonical files in `dbaudit/`; `dbarchitect/`, `dbdesign/`, `dbdiagram/`, `dbpropose/` and `dbquery/` carry copies of both. Used for evaluation and conceptual/logical design. |
+| Scoring and detection signals | Canonical in `dbaudit/`; `dbquery/` carries copies of both — it scores with the same formula and greps the same query shapes. |
 | Query rubric and plan reading | `dbquery/`; statement, plan and workload anti-patterns, and each engine's plan vocabulary. |
 | Architecture rubric and store selection | `dbarchitect/`; A1–A12 and the model, engine, replication, consistency, partitioning and integration trade-offs. |
 | Scoring, audit lenses, object rubrics, detection signals | `dbaudit/`; audit-only guidance. |
-| Physical design | Canonical file in `dbdesign/`; `dbpropose/` links to it for proposal decisions. |
+| Physical design | Canonical file in `dbdesign/`; `dbpropose/` carries a copy for proposal decisions. |
 | Requirements dossier | `dbdesign/requirements.md`; the rule catalogue, data dictionary and access matrix the design starts from. |
 | Diagram conventions | `dbdiagram/`; notation, provenance, and XML validation. |
 | Proposal rules and templates | `dbpropose/`; recommendations and implementation planning. |

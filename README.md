@@ -329,7 +329,7 @@ These carry no workflow of their own — the skill in the same folder links into
 | [scoring](skills/containers/docker-swarm/scoring.md) | docker-swarm — severity anchors and chains, confidence, the 0–10 formula, the go-live gate, templates |
 | [anatomy](skills/operations/release-notes/anatomy.md) | release-notes — the six elements and the commit→outcome translation rules |
 | [distribution](skills/operations/release-notes/distribution.md) | release-notes — depth to scope, when visuals earn their place, where to publish |
-| [diagnosis](skills/operations/hotfix/diagnosis.md) | hotfix and incident-fix (symlinked) — a red loop before any theory, minimise, ranked hypotheses, one probe at a time |
+| [diagnosis](skills/operations/hotfix/diagnosis.md) | hotfix and incident-fix (a synced copy) — a red loop before any theory, minimise, ranked hypotheses, one probe at a time |
 | [blameless-culture](skills/operations/post-mortem/blameless-culture.md) | post-mortem — why blameless is a data-collection strategy (Google SRE; Dekker) |
 | [contributing-factors](skills/operations/post-mortem/contributing-factors.md) | post-mortem — past single-root-cause; the categories to sweep and where to stop |
 | [evidence-sources](skills/operations/post-mortem/evidence-sources.md) | post-mortem — reading a git range, incident PDFs, chat exports and monitoring into a sourced timeline |
@@ -602,7 +602,7 @@ Useful flags:
 
 `npx skills update` pulls newer versions of what you installed; `npx skills remove <name>` takes one out.
 
-The installer copies each skill folder whole, dereferencing the database and networking skills' shared-doc symlinks, so every installed folder is self-contained. **It installs skills, not the [harness](harness/README.md)** — the Python orchestration in `harness/` (including `dbworkflow.py` and `networkflow.py`) needs a clone. The networking skills carry their one script, `scripts/netgraph.py`, inside each folder.
+The installer copies each skill folder whole, and every folder is self-contained: a reference doc several skills share is committed as a copy in each of them (see [Conventions](#conventions)), because the installer drops a symlink that leaves the skill folder. **It installs skills, not the [harness](harness/README.md)** — the Python orchestration in `harness/` (including `dbworkflow.py` and `networkflow.py`) needs a clone. The networking skills carry their one script, `scripts/netgraph.py`, inside each folder.
 
 ### Or copy by hand
 
@@ -640,7 +640,7 @@ The installer copies each skill folder whole, dereferencing the database and net
 
    **Copy the skill folder, not the category folder.** `development/`, `containers/`, `operations/`, `database/`, `networking/`, `infrastructure/`, `security/`, `review/` and `memory/` are scaffolding for reading this repo — the agent never sees them, and copying one wholesale just nests your skills a level too deep.
 
-   Skill folders are self-contained when installed. The database and networking skill trees share companion docs through relative symlinks; use `cp -RL` for those folders so each installed skill contains the referenced files.
+   Skill folders are self-contained: a reference doc several skills share is committed as a copy in each folder, so a plain `cp -r` is enough.
 
 3. **Invoke a skill** — either let the agent trigger it when your request matches its `description`, or call it explicitly:
 
@@ -675,7 +675,8 @@ Each family has its own README with more detail: [development](skills/developmen
 - **Every skill carries a calibration tier and a stopping rule.** The tier says how much of the skill to run before starting; the stopping rule says when to stop, so a workflow with an open-ended quality goal terminates instead of iterating on taste.
 - **Skills cross-link** with relative Markdown links to compose into pipelines.
 - **Behavioral, not procedural** — skills describe *what* to achieve and let the agent figure out *how* against the live codebase. No hard-coded file paths or line numbers.
-- **CI checks structure, not quality.** [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every PR and push to `main`, and calls no model. It checks every skill's frontmatter, every symlink and relative link, and that `evals.json`, `grade.py` and the controls agree ([`check_repo.py`](.github/scripts/check_repo.py)). It also checks eval health: a skill with no eval fails, and a skill that changed since its last scored run gets a warning, found by comparing the skill's hash with the one its scored run recorded in [`evals/scores.json`](evals/scores.json) (see [Is a score still current?](evals/README.md#is-a-score-still-current)). It also runs `actionlint`, the harness unit tests on Python 3.13 and 3.14, and every eval control. Whether a skill *works* is still the job of a scored eval run. `main` is protected by the ruleset in [`.github/rulesets/main.json`](.github/rulesets/main.json): changes arrive by pull request with all four CI checks green, and nobody (admins included) can force-push or delete the branch. To re-apply it after editing, update the existing ruleset: `gh api -X PUT repos/izentenosmith/skills/rulesets/<id> --input .github/rulesets/main.json` (`gh api repos/izentenosmith/skills/rulesets` lists the id).
+- **A shared reference doc has one source and committed copies.** Some docs (and `netgraph.py`) serve several skills, and each skill folder carries its own copy, because `npx skills add` installs one folder at a time and drops any symlink that leaves it. [`skills/shared.json`](skills/shared.json) maps each source to its copies. Edit the source only, then run `python3 .github/scripts/sync_shared.py`, or install the pre-commit hook once per clone (`git config core.hooksPath .githooks`) and it syncs and stages the copies for you. CI fails if a copy drifts from its source; the script refuses to overwrite a copy that was edited directly and names the source the edit belongs in.
+- **CI checks structure, not quality.** [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every PR and push to `main`, and calls no model. It checks every skill's frontmatter, that `skills/` has no symlinks and every shared copy matches its source, every relative link, and that `evals.json`, `grade.py` and the controls agree ([`check_repo.py`](.github/scripts/check_repo.py)). It also checks eval health: a skill with no eval fails, and a skill that changed since its last scored run gets a warning, found by comparing the skill's hash with the one its scored run recorded in [`evals/scores.json`](evals/scores.json) (see [Is a score still current?](evals/README.md#is-a-score-still-current)). It also runs `actionlint`, the harness unit tests on Python 3.13 and 3.14, and every eval control. Whether a skill *works* is still the job of a scored eval run. `main` is protected by the ruleset in [`.github/rulesets/main.json`](.github/rulesets/main.json): changes arrive by pull request with all four CI checks green, and nobody (admins included) can force-push or delete the branch. To re-apply it after editing, update the existing ruleset: `gh api -X PUT repos/izentenosmith/skills/rulesets/<id> --input .github/rulesets/main.json` (`gh api repos/izentenosmith/skills/rulesets` lists the id).
 
 ## License
 

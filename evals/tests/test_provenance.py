@@ -16,7 +16,7 @@ sys.path.insert(0, str(EVALS))
 import aggregate  # noqa: E402
 import run  # noqa: E402
 
-# incident-fix has a symlinked reference doc.
+# incident-fix carries a synced copy of hotfix's diagnosis.md.
 SKILL = REPO / "skills/operations/incident-fix"
 
 
