@@ -51,7 +51,10 @@ volatility: high
 
 **Body:** the fact, in at most 40 lines (ML10), usually two to six. Terms are copied word for word
 from the code or from the user (RM9). Code references go in backticks, as `path`, `path:line` or
-`path::symbol`, so the linter can check them. Links to other memory use `[[slug]]`.
+`path::symbol`, so the linter can check them. Links to other memory use `[[slug]]`. Time is written
+as a date (`2026-10-20`), never as "yesterday" or "last week" (ML13). A claim nobody has checked
+carries a `> unverified (<date>): <what would settle it>` line under the frontmatter, from capture
+or from a dream.
 
 ## 3. A wiki page
 

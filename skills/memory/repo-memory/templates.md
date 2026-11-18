@@ -115,6 +115,8 @@ write a secret's value here.
 | demote | INDEX.md: <section> | <a> → <b> lines | moved to <target> / deleted as transient |
 | repair | `<file>`: [[old]] → [[new]] | ML04 | |
 | link | `wiki/<entity>.md` → `docs/adr/<NNNN>.md` | the ADR's commit | new ADR / superseded → successor |
+| date | `notes/<slug>.md` | the commit that added the line | "last week" → <YYYY-MM-DD> |
+| capture | `notes/<slug>.md` (new) | every occurrence: <sha>, <sha>, PR #<n> | recurred <n> times / cost a revert |
 
 ## Kept (verified, unchanged)
 <slugs, comma-separated: these held, and only `verified` moved>
@@ -129,6 +131,16 @@ write a secret's value here.
 
 ## Couldn't verify
 - `notes/<slug>.md`: <what would settle it>
+
+## Contradictions nobody could settle
+- `notes/<a>.md` says <x>, `notes/<b>.md` says <y>. Neither the code nor an ADR decides. Which holds?
+
+## Belongs in the rules
+- <the recurring correction>, seen in <sha / PR #n / session date>. A rule for agents, so not a
+  note. Suggested for CLAUDE.md or AGENTS.md, not applied.
+
+## Gap candidates not captured
+- <one line each: what recurred, and where. Past the five-note cap, or just under the bar>
 
 ## Belongs in the code
 - `<path:line>`: <the knowledge>, as a comment or a test. Suggested, not applied.
@@ -172,3 +184,22 @@ merge it. If memlint delta shows no commits since the watermark, do nothing.
 
 A scheduled run counts as the user's standing approval for the **draft PR only**. A person still
 reviews and merges it.
+
+**A nudge at session start.** For a team that would rather be told than scheduled. `memlint.py due`
+prints one line when a dream is due and nothing when it isn't, and always exits 0. As a Claude Code
+`SessionStart` hook in the repo's `.claude/settings.json`:
+
+```json
+{
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [ { "type": "command",
+                     "command": "python3 -I \"$CLAUDE_PROJECT_DIR/tools/memlint.py\" due --root \"$CLAUDE_PROJECT_DIR\"" } ] }
+    ]
+  }
+}
+```
+
+The session sees `repo-memory: 31 commits since the last dream (16 days ago): a dream is due. …` and
+tells the user. The hook starts no dream and writes nothing
+([dreaming.md §7](dreaming.md#7-cadence)).

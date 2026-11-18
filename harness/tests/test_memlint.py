@@ -181,6 +181,21 @@ class Audit(Tree):
         self.w(".memory/notes/alpha.md", note("alpha", "a", body="line\n" * 41))
         self.assertIn("ML10", self.codes()[0])
 
+    def test_ml13_relative_dates_outside_code_and_frontmatter(self):
+        self.w(".memory/notes/alpha.md", note(
+            "alpha", "the limit changed last week", body=(
+                "Raised yesterday after the outage.\n\n`deploy --since yesterday` is a flag.\n\n"
+                "```\ncron: today\n```\nThe cap was 3 until 2026-10-20, two weeks ago.\n")))
+        hits = [f for f in self.codes()[1] if f["code"] == "ML13"]
+        # the description is frontmatter and the flag and the fence are code: only prose is read
+        self.assertEqual([f["where"].rsplit(":", 1)[1] for f in hits], ["10", "17"], hits)
+        self.assertEqual(ML.SEVERITY["ML13"], "warning")
+
+    def test_ml13_absolute_dates_and_ordinary_words_pass(self):
+        self.w(".memory/notes/alpha.md", note("alpha", "the freeze", body=(
+            "No deploys after 15:00 UTC on Fridays since 2026-10-20. The monthly job runs last.\n")))
+        self.assertNotIn("ML13", self.codes()[0])
+
     def test_ml11_symlink_out_of_memory(self):
         (self.root / "outside.md").write_text("x\n")
         (self.root / ".memory/notes/link.md").symlink_to(self.root / "outside.md")
@@ -261,6 +276,20 @@ class Cli(Tree):
         code, _ = self.run_cli("audit", "--json", str(js))
         self.assertEqual(code, 1)
         self.assertEqual(json.loads(js.read_text())["findings"][0]["code"], "ML04")
+
+    def test_due_prints_one_line_only_when_a_dream_is_due_and_exits_zero(self):
+        self.assertEqual(self.run_cli("due"), (0, ""))  # not a git repository
+        self.git("init", "-q")
+        sha = self.commit("init")
+        code, out = self.run_cli("due")
+        self.assertEqual(code, 0)
+        self.assertIn("no dream recorded", out)
+        self.assertEqual(out.count("\n"), 1)
+        self.w(".memory/.dream-state", f"watermark: {sha}\ndreamed: 2026-11-06\n")
+        self.commit("dreamed")
+        self.assertEqual(self.run_cli("due"), (0, ""))
+        shutil.rmtree(self.root / ".memory")
+        self.assertEqual(self.run_cli("due"), (0, ""))  # no memory: nothing to say
 
     def test_usage_errors(self):
         self.assertEqual(ML.main(["audit", "--root", str(self.root / "nope")]), 2)
