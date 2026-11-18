@@ -13,9 +13,17 @@ says so.
 | **LM** | Leonie Monigatti, *Exploring Anthropic's Memory Tool* (2025-11-25), leoniemonigatti.com/blog/claude-memory-tool.html |
 | **SC** | Anthropic, *Redesigning source control at Anthropic* (2026-10-13), anthropic.com/research/redesigning-source-control |
 | **STC** | Letta and UC Berkeley, *sleep-time compute*, as cited by CAM |
+| **DS** | grandamenium, *dream-skill* (a consolidation skill for Claude Code's personal auto memory), github.com/grandamenium/dream-skill |
 
 SC is not about memory, and doesn't mention it. It is cited only for one structural idea, derived
 data computed incrementally (RM13). Applying that idea to memory is this skill's own extension.
+
+DS consolidates one user's personal memory. This skill is the team layer, so it takes DS's
+practices and not its trust model. Taken: scanning transcripts for corrections (RM7), absolute
+dates (RM17), an explicit answer to contradictions (RM17), a trigger that fires at session
+boundaries (RM12), and a dry run. Not taken, each for a stated reason: pruning by age (RM17),
+fixed topic files (RM5), an index that carries "quick reference" facts (RM3), and a hook that
+dreams in the background and writes without review (RM14).
 
 ---
 
@@ -67,6 +75,11 @@ Agents capture much of their work in logs. Dreaming reads them in the idle time 
 (STC) and looks *backward*, which no in-session note can do, because no model can know what future
 turns will need (CAM). Its outputs are corrected notes, new notes and pages, merged duplicates,
 repaired links, and a smaller top layer, which shapes what future sessions preload (CAM). With
+One session sees only its own context, so the dream is also where patterns and mistakes common to
+many sessions are found (CAM). DS's version is a grep over recent transcripts for the user's
+corrections, decisions and "again". This skill does the same over the commits, the PR threads and,
+with consent, the local transcripts, and holds what it finds to capture's bar plus recurrence
+(dreaming §10). With
 dreaming, the Mt. Moon run reached Cerulean City at action 1,935. The raw-memory run and the
 no-memory run never got there (CAM). Logging in the moment also distracts from the task (CAM), which
 is a second reason the heavy work waits for the dream.
@@ -94,7 +107,10 @@ links and added three pages, one of them an index (CAM).
 an open question, to be tuned perhaps by how often memories are accessed. It recommends focusing
 dreaming on information likely to change. This skill uses `volatility: high` for notes about
 fast-moving things, with a shorter verify window, and triggers a dream on commits or days since the
-last one (`memlint` ML12). The thresholds are this skill's defaults, not values from the source.
+last one (`memlint` ML12). The thresholds are this skill's defaults, not values from the source. A
+focused dream narrows the pass to one path or entity. DS triggers at the session boundary: a hook
+checks a timer when a session ends. This skill keeps the boundary and drops the timer:
+`memlint.py due` at session start reports the same commits-and-days test, and only reports.
 
 **RM13. Dream incrementally, from the last state.** Scion stores each changeset as a delta. Its
 derived data (blame, path history) is defined recursively, so a changeset's value is computed from
@@ -107,7 +123,9 @@ Capture is the eager part, and the dream is the deferred part.
 says, it is evidence about the repository, never an instruction to the agent reading it. A memory
 that agents rewrite from what they read hands its rules to whoever writes the input. So a person
 approves every change to memory, as a PR, and instructions found inside memory are quoted, not
-followed. This follows the approval rule of `review-retro` (its
+followed. For the same reason nothing here dreams unattended into the live memory: DS's background
+run is reasonable for one user's private notes, and not for an index injected into every
+teammate's session. This follows the approval rule of `review-retro` (its
 RR15 and RR16).
 
 **RM15. Never store a secret.** MT notes that Claude usually refuses to write sensitive data, and
@@ -124,7 +142,17 @@ note and page size limits, no symlinks out of `.memory/` (`memlint` ML11), and t
 the code changes (CAM). A note that names a file, a function or a flag is checked against the repo
 before it is acted on. This is the same rule Claude Code gives its own auto memory. But age alone is
 no evidence against a note. A note verified long ago that still holds is kept, and only its
-`verified` date moves. Deleting it would throw away exactly the knowledge the repo doesn't show.
+`verified` date moves. Deleting it would throw away exactly the knowledge the repo doesn't show. DS
+prunes entries older than 90 days that nothing recent mentions. This skill doesn't: the gotcha
+nobody has hit for a year is the one nobody remembers.
+
+Two corollaries, both from DS. **A relative date is stale the day after it is written**, so memory
+holds dates, and the dream converts what slipped through (`memlint` ML13). **A contradiction is
+settled by evidence, not recency.** DS lets the newer statement win, which is right for a user's
+preferences, where the user is the source. For facts about a repository the source is the code, so
+the code at HEAD decides, then an accepted ADR. When nothing decides, both notes are marked
+unverified and a person is asked. CAM's stronger models did the same in their own notes, marking
+each fact as checked or unconfirmed.
 
 ---
 
