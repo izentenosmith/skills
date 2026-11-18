@@ -94,7 +94,7 @@ Both also publish under a deadline rather than at completeness. Release notes ar
 |-----|---------|
 | [discovery](hotfix/discovery.md) | hotfix, incident-fix (incident-fix's copy adds levers, observability, data access) — the `.workflow/env.md` profile |
 | [root-cause-note](hotfix/root-cause-note.md) | hotfix — the three-line note and the caller sweep |
-| [diagnosis](hotfix/diagnosis.md) | hotfix, incident-fix (symlinked) — a red loop before any theory, minimise, ranked falsifiable hypotheses, one probe at a time |
+| [diagnosis](hotfix/diagnosis.md) | hotfix, incident-fix (a synced copy) — a red loop before any theory, minimise, ranked falsifiable hypotheses, one probe at a time |
 | [review-checklist](hotfix/review-checklist.md) | hotfix — the review pass without a review skill |
 | [follow-up](hotfix/follow-up.md) | hotfix — what a band-aid owes |
 | [final-checklist](hotfix/final-checklist.md) | hotfix — the closing record and what counts as evidence |

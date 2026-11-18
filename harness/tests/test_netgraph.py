@@ -468,7 +468,7 @@ class Standalone(unittest.TestCase):
         for name in ("netaudit", "netdesign", "netdiagram", "netpropose", "netblueprint"):
             with self.subTest(skill=name), tempfile.TemporaryDirectory() as tmp:
                 skill = pathlib.Path(tmp, name)
-                shutil.copytree(skills / name, skill)            # follows the symlinks, as an installer would
+                shutil.copytree(skills / name, skill)            # as an installer copies it
                 (skill / "topology.json").write_text(json.dumps(uplink()))
                 p = subprocess.run([sys.executable, "-I", "scripts/netgraph.py", "analyze", "topology.json", "--json"],
                                    cwd=skill, capture_output=True, text=True, timeout=60)

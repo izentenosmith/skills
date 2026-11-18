@@ -11,7 +11,8 @@ Skills
   - `name` and `description` parse as YAML scalars (an unquoted `: ` or ` #`
     gets a skill skipped or its description cut) and the description fits
     the 1024-character limit agents load
-  - every symlink under skills/ resolves (installs dereference them)
+  - no symlinks under skills/ (`npx skills add` drops a link that leaves the
+    skill folder); every copy in skills/shared.json matches its source
   - the root README links every skill
 Links
   - every relative link in a tracked markdown file resolves, outside code
@@ -121,8 +122,15 @@ for md in tracked("skills/**/SKILL.md"):
     skills[name] = rel
 
 for link in (ROOT / "skills").rglob("*"):
-    if link.is_symlink() and not link.exists():
-        problem(f"{link.relative_to(ROOT)}: broken symlink -> {link.readlink()}")
+    if link.is_symlink():
+        problem(f"{link.relative_to(ROOT)}: a symlink — `npx skills add` drops links that leave "
+                f"the skill folder; list it as a copy in skills/shared.json instead")
+
+sys.path.insert(0, str(ROOT / ".github/scripts"))
+import sync_shared  # noqa: E402
+
+for msg in sync_shared.stale():
+    problem(msg)
 
 readme = (ROOT / "README.md").read_text()
 for name, rel in sorted(skills.items()):

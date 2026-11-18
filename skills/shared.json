@@ -1,0 +1,57 @@
+{
+ "skills/database/dbaudit/detection-signals.md": [
+  "skills/database/dbquery/detection-signals.md"
+ ],
+ "skills/database/dbaudit/er-modeling.md": [
+  "skills/database/dbarchitect/er-modeling.md",
+  "skills/database/dbdesign/er-modeling.md",
+  "skills/database/dbdiagram/er-modeling.md",
+  "skills/database/dbpropose/er-modeling.md",
+  "skills/database/dbquery/er-modeling.md"
+ ],
+ "skills/database/dbaudit/scoring.md": [
+  "skills/database/dbquery/scoring.md"
+ ],
+ "skills/database/dbaudit/theory.md": [
+  "skills/database/dbarchitect/theory.md",
+  "skills/database/dbdesign/theory.md",
+  "skills/database/dbdiagram/theory.md",
+  "skills/database/dbpropose/theory.md",
+  "skills/database/dbquery/theory.md"
+ ],
+ "skills/database/dbdesign/physical-design.md": [
+  "skills/database/dbpropose/physical-design.md"
+ ],
+ "skills/networking/netaudit/graph-theory.md": [
+  "skills/networking/netblueprint/graph-theory.md",
+  "skills/networking/netdesign/graph-theory.md",
+  "skills/networking/netpropose/graph-theory.md"
+ ],
+ "skills/networking/netaudit/scripts/netgraph.py": [
+  "skills/networking/netblueprint/scripts/netgraph.py",
+  "skills/networking/netdesign/scripts/netgraph.py",
+  "skills/networking/netdiagram/scripts/netgraph.py",
+  "skills/networking/netpropose/scripts/netgraph.py"
+ ],
+ "skills/networking/netaudit/theory.md": [
+  "skills/networking/netblueprint/theory.md",
+  "skills/networking/netdesign/theory.md",
+  "skills/networking/netpropose/theory.md"
+ ],
+ "skills/networking/netaudit/topology-modeling.md": [
+  "skills/networking/netblueprint/topology-modeling.md",
+  "skills/networking/netdesign/topology-modeling.md",
+  "skills/networking/netdiagram/topology-modeling.md",
+  "skills/networking/netpropose/topology-modeling.md"
+ ],
+ "skills/networking/netdesign/design-patterns.md": [
+  "skills/networking/netpropose/design-patterns.md"
+ ],
+ "skills/networking/netdiagram/diagram-conventions.md": [
+  "skills/networking/netblueprint/diagram-conventions.md",
+  "skills/networking/netpropose/diagram-conventions.md"
+ ],
+ "skills/operations/hotfix/diagnosis.md": [
+  "skills/operations/incident-fix/diagnosis.md"
+ ]
+}

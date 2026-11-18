@@ -41,8 +41,8 @@ Or one at a time:
 | netpropose | `npx skills add izentenosmith/skills --skill netpropose` |
 | netblueprint | `npx skills add izentenosmith/skills --skill netblueprint` |
 
-The installer dereferences the companion-reference symlinks, so each installed folder is
-self-contained, `scripts/netgraph.py` included: an installed skill computes its own metrics with
+Each installed folder is self-contained, `scripts/netgraph.py` included, because the shared
+references are committed as copies in every skill that reads them: an installed skill computes its own metrics with
 nothing else on the machine but Python 3. Only the optional coordinator (`harness/networkflow.py`,
 `netreview.py`) needs a clone. The repo is private: you need read access and GitHub auth first. That setup, and the flags (`-a`, `-g`, `-y`), are in the
 [root README](../../README.md#install-with-npx).
@@ -102,19 +102,21 @@ revised proposal needs acceptance before its blueprint is produced.
 
 ## Companion references
 
-Shared references use relative symlinks to one canonical copy. When installing a single skill folder
-outside this repository, dereference the links during copy (for example,
-`cp -RL skills/networking/netdesign /target/skills/`).
+A shared reference has one canonical file and a committed copy in each skill that reads it, listed in
+[`skills/shared.json`](../shared.json). Edit the canonical file, then run
+`python3 .github/scripts/sync_shared.py` (or let the pre-commit hook do it); CI fails if a copy drifts.
+Copying one skill folder by hand (`cp -r skills/networking/netdesign /target/skills/`) carries
+everything it needs.
 
 | Reference | Home / use |
 |---|---|
-| Theory, graph theory, topology modelling | Canonical in `netaudit/`. Linked from `netdesign/`, `netpropose/`, `netblueprint/` (and topology modelling from `netdiagram/`). The shared principles and the `topology.json` contract. |
+| Theory, graph theory, topology modelling | Canonical in `netaudit/`. Copied into `netdesign/`, `netpropose/`, `netblueprint/` (and topology modelling into `netdiagram/`). The shared principles and the `topology.json` contract. |
 | Scoring, audit lenses, domain rubrics, detection signals | `netaudit/`. Audit-only guidance: addressing, segmentation, routing, services, resilience, security. |
-| Design patterns | Canonical in `netdesign/`, linked from `netpropose/`. Topology patterns, the addressing method, segmentation, routing, failure domains. |
-| Diagram conventions | Canonical in `netdiagram/`, linked from `netpropose/` and `netblueprint/`. The required views, glyphs, IDs and validation. |
+| Design patterns | Canonical in `netdesign/`, copied into `netpropose/`. Topology patterns, the addressing method, segmentation, routing, failure domains. |
+| Diagram conventions | Canonical in `netdiagram/`, copied into `netpropose/` and `netblueprint/`. The required views, glyphs, IDs and validation. |
 | Proposal | `netpropose/`. Decision rules, posture by score band, cut-over sequencing. |
 | Blueprint | `netblueprint/`. Package layout, the IaC handoff contract, the `network-design.md` template. |
-| `scripts/netgraph.py` | Canonical in `netaudit/scripts/`, linked from each other skill's `scripts/` and from `harness/netgraph.py`. Model validation, the graph lens, address and flow checks, the diagram cross-check. |
+| `scripts/netgraph.py` | Canonical in `netaudit/scripts/`, copied into each other skill's `scripts/`; `harness/netgraph.py` links to it (the harness isn't installed). Model validation, the graph lens, address and flow checks, the diagram cross-check. |
 
 ## Measured
 

@@ -1,0 +1,4 @@
+#!/bin/sh
+# Rewrite the shared reference copies from their staged sources and stage them.
+# Install once per clone: git config core.hooksPath .githooks
+exec python3 .github/scripts/sync_shared.py --staged
