@@ -834,6 +834,71 @@ def eval11(run):
     ]
 
 
+def eval59(run):
+    """HELD-OUT (evals.json "split": "heldout"): hotfix on a Python service it was never tuned on.
+    A scope parser that keeps the space after a comma: the shared parser, an inline copy in webhook
+    delivery, CI's `make verify`, strict mode for an authorization check. A miss here is a result
+    to report, never a reason to edit the skill (README: "Held-out evals")."""
+    fx = "hotfix-py"
+    repo, r = run / "repo", resp(run)
+    t = everything(run, fx)
+    added, modified, _ = changes(run, fx)
+    nopyc = "PYTHONDONTWRITEBYTECODE=1 "
+    # The reported token works, the space-free form still does, and matching stays exact.
+    fixed, ev = sh(nopyc + "python3 -c \"import sys; from gatehouse.auth.scopes import has_scope as h; "
+                   "sys.exit(0 if h('reports:read, exports:run', 'exports:run') "
+                   "and h('reports:read, exports:run', 'reports:read') "
+                   "and h('reports:read,exports:run', 'exports:run') "
+                   "and not h('reports:read, exports:runner', 'exports:run') "
+                   "and not h('reports:read, exports:run', 'exports') "
+                   "and not h('reports:read', 'exports:run') else 1)\"", repo)
+    green, gev = sh(nopyc + "make -s verify", repo)
+    copy_fixed, _ = sh(nopyc + "python3 -c \"import sys; from gatehouse.tokens import Token; "
+                       "from gatehouse.webhooks.delivery import wants; "
+                       "sys.exit(0 if wants(Token('acme', 'reports:read, webhooks:export.finished', "
+                       "'https://acme.example/hook'), 'export.finished') else 1)\"", repo)
+    # Red on the original: the run's test files, laid over the pristine fixture, must fail CI's command.
+    tests = [f for f in added + modified
+             if re.search(r"(^|/)test_[^/]*\.py$|_test\.py$", f) or f.startswith("contract/")]
+    red, rev = False, "no test file added or changed"
+    if tests:
+        tmp = pathlib.Path(tempfile.mkdtemp(prefix="eval59-"))
+        try:
+            shutil.copytree(FIXTURES / fx, tmp / "r", ignore=shutil.ignore_patterns("__pycache__"))
+            for f in tests:
+                (tmp / "r" / f).parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy(repo / f, tmp / "r" / f)
+            passes_on_original, _ = sh(nopyc + "make -s verify", tmp / "r")
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+        red = not passes_on_original
+        rev = f"{', '.join(tests)}: {'red' if red else 'green'} on the original"
+    lines = lambda text: [l for l in text.splitlines() if l.strip()]
+    changelog = len(lines(read(repo / "CHANGELOG.md"))) > len(lines(read(FIXTURES / fx / "CHANGELOG.md")))
+    env = read(repo / ".workflow/env.md")
+    return [
+        ("the reported token is authorised, and matching stays exact", fixed, ev, C),
+        ("suite green as CI runs it", green, gev, C),
+        ("a test that is red on the original code", red and green, rev, C),
+        ("fixed in the shared parser, not patched in the exports endpoint",
+         "gatehouse/auth/scopes.py" in modified and "gatehouse/api/exports.py" not in modified,
+         f"modified: {modified}", D),
+        ("the inline copy in webhook delivery found",
+         copy_fixed or any_of(t, r"delivery\.py")
+         or near(t, r"webhook", r"duplicat|inline|cop(y|ies)\b|same (bug|defect|logic|pars\w+|split)"),
+         "fixed" if copy_fixed else "", D),
+        ("strict mode declared for an authorization check",
+         near(t, r"\bstrict", r"permission|authori[sz]|\bscopes?\b|access control|\bauth\b"), "", D),
+        ("CI's command used, not make test", any_of(t, r"make\s+(-s\s+)?verify"), "", D),
+        ("three-line root-cause note", root_cause_note(t), "", D),
+        ("environment profile written", bool(re.search(r"make\s+(-s\s+)?verify", env)), f"{len(env)} chars", D),
+        ("final checklist recorded", bool(workflow(run, "hotfix-*.md")), "", D),
+        ("the repo's changelog convention followed", "CHANGELOG.md" in modified and changelog, "", D),
+        ("ships by PR, after confirmation",
+         any_of(r, r"pull request|\bPR\b") and any_of(r, r"confirm|approv"), "", D),
+    ]
+
+
 def eval12(run):
     """incident-fix on a web app with flags: contain by flag, ask first, log durably."""
     repo, r = run / "repo", resp(run)
@@ -6477,6 +6542,7 @@ CHECKS = {
     "eval-56-ticket-reconcile-before-filing": eval56,
     "eval-57-backlog-health-and-order-by-policy": eval57,
     "eval-58-nexus-judges-the-record": eval58,
+    "eval-59-hotfix-py-scope-parser": eval59,
 }
 
 

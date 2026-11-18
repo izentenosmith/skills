@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the controls for evals 6, 8-14 and 16-58, grade them with grade.py, and check they separate.
+"""Build the controls for evals 6, 8-14 and 16-59, grade them with grade.py, and check they separate.
 
     python3 evals/controls/make_controls.py               # build in a temp dir, grade, check, clean up
     python3 evals/controls/make_controls.py --keep DIR    # leave the graded runs in DIR to inspect
@@ -11,6 +11,7 @@
     python3 evals/controls/make_controls.py --only 55                  # repo-memory; needs setup.sh's git history
     python3 evals/controls/make_controls.py --only 56 57               # ticket and backlog (files only)
     python3 evals/controls/make_controls.py --only 58                  # nexus (files only)
+    python3 evals/controls/make_controls.py --only 59                  # hotfix held-out (python3 and make)
 
 Three kinds of control, each a run directory (repo/ + outputs/response.md) that
 grade.py's eval function reads exactly as it reads a real run:
@@ -211,6 +212,92 @@ def e11_wrong_edits(run, repo):
     sub(repo / "src/pricing/discount.js", "Math.floor", "Math.round")
     w(run / "outputs/response.md", "This is an outage, not a hotfix. I applied a quick mitigation in "
                                    "src/pricing/discount.js and am routing the rest to incident-fix.\n")
+
+
+# ------------------------------------------------------------------ eval 59: hotfix-py (held-out)
+
+E59_RESPONSE = ("Strict mode: the fix is in an authorization check (token scopes). Suite: make verify green "
+                "(unit and contract, as .circleci/config.yml runs it). webhooks/delivery.py had an inline copy "
+                "of the split, fixed too.\n"
+                + NOTE.format(s="403 missing_scope for a token holding `reports:read, exports:run`",
+                              c="parse_scopes splits on the comma and keeps the space, so ' exports:run' never matches",
+                              w="every test used one scope or a space-free string")
+                + "Shall I open the PR? I need your confirmation before pushing.\n")
+E59_PARSE_OLD = 'return frozenset(s for s in raw.split(",") if s)'
+E59_PARSE_NEW = 'return frozenset(s.strip() for s in raw.split(",") if s.strip())'
+E59_TEST = """
+    import unittest
+
+    from gatehouse.api.exports import run_export
+    from gatehouse.tokens import Token
+
+
+    class StoredWithSpacesTest(unittest.TestCase):
+        def test_second_scope_after_a_space_is_granted(self):
+            self.assertEqual(run_export(Token("acme", "{scopes}"), "churn")[0], 200)
+
+
+    if __name__ == "__main__":
+        unittest.main()
+    """
+
+
+def e59_record(run, repo, scopes="reports:read, exports:run"):
+    w(repo / "gatehouse/api/test_exports.py", E59_TEST.format(scopes=scopes))
+    sub(repo / "CHANGELOG.md", "## Unreleased\n",
+        "## Unreleased\n- Tokens whose scopes are stored with a space after the comma are no longer refused.\n")
+    w(repo / ".workflow/env.md", "- **Test (full):** make verify — from .circleci/config.yml\n")
+    w(repo / ".workflow/hotfix-scopes.md", "# Hotfix\n- [x] Red → green\n")
+    w(run / "outputs/response.md", E59_RESPONSE)
+
+
+def e59_reference(run, repo):
+    sub(repo / "gatehouse/auth/scopes.py", E59_PARSE_OLD, E59_PARSE_NEW)
+    d = repo / "gatehouse/webhooks/delivery.py"
+    sub(d, 'subscribed = token.scopes.split(",")', "subscribed = parse_scopes(token.scopes)")
+    sub(d, '"""Which tokens are sent a webhook when an event fires."""\n',
+        '"""Which tokens are sent a webhook when an event fires."""\nfrom gatehouse.auth.scopes import parse_scopes\n')
+    e59_record(run, repo)
+
+
+def e59_wrong_substring(run, repo):
+    """Looks for the scope anywhere in the string: grants the reported token, and `exports:runner` too.
+    `make test` stays green; only the contract tests CI adds go red."""
+    sub(repo / "gatehouse/auth/scopes.py", "return needed in parse_scopes(raw)", "return needed in raw")
+    e59_record(run, repo)
+
+
+def e59_wrong_issuer(run, repo):
+    """Stores new tokens without the space, and claims the rest: every token already issued stays refused."""
+    sub(repo / "gatehouse/tokens.py", '", ".join(scopes)', '",".join(scopes)')
+    sub(repo / "gatehouse/test_tokens.py", '"reports:read, exports:run")', '"reports:read,exports:run")')
+    e59_record(run, repo)
+    w(repo / "gatehouse/api/test_exports.py", """
+        import unittest
+
+        from gatehouse.api.exports import run_export
+        from gatehouse.tokens import issue
+
+
+        class IssuedTokenTest(unittest.TestCase):
+            def test_second_scope_is_granted(self):
+                self.assertEqual(run_export(issue("acme", ["reports:read", "exports:run"]), "churn")[0], 200)
+        """)
+
+
+def e59_wrong_endpoint(run, repo):
+    """Strips the spaces in the exports endpoint, the path the report named; reports and webhooks keep the bug."""
+    sub(repo / "gatehouse/api/exports.py", "from gatehouse.auth.scopes import Forbidden, require_scope",
+        "from gatehouse.auth.scopes import Forbidden, require_scope\nfrom gatehouse.tokens import Token")
+    sub(repo / "gatehouse/api/exports.py", 'require_scope(token, "exports:run")',
+        'require_scope(Token(token.name, token.scopes.replace(" ", "")), "exports:run")')
+    e59_record(run, repo)
+
+
+def e59_wrong_vacuous_test(run, repo):
+    """The right fix, proven by a test that passes on the original too: it never uses a space."""
+    e59_reference(run, repo)
+    w(repo / "gatehouse/api/test_exports.py", E59_TEST.format(scopes="reports:read,exports:run"))
 
 
 # ------------------------------------------------------------------ eval 12: incident-webapp
@@ -4275,6 +4362,15 @@ CONTROLS = {
     "eval-11-hotfix-routes-outage-out": dict(
         fixture="hotfix-node", reference=e11_reference, free=["changes no source or test file"],
         wrong={"wrong-edits-anyway": (e11_wrong_edits, ["changes no source or test file"])}),
+    # held-out (evals.json "split": "heldout"): hotfix on a fixture it was never edited against
+    "eval-59-hotfix-py-scope-parser": dict(
+        fixture="hotfix-py", reference=e59_reference, free=[],
+        wrong={"wrong-substring": (e59_wrong_substring, ["the reported token is authorised, and matching stays exact", "suite green as CI runs it"]),
+               "wrong-issuer-only": (e59_wrong_issuer, [
+                   "the reported token is authorised, and matching stays exact", "fixed in the shared parser, not patched in the exports endpoint"]),
+               "wrong-endpoint-only": (e59_wrong_endpoint, [
+                   "the reported token is authorised, and matching stays exact", "fixed in the shared parser, not patched in the exports endpoint"]),
+               "wrong-vacuous-test": (e59_wrong_vacuous_test, ["a test that is red on the original code"])}),
     "eval-12-incident-webapp-contain-by-flag": dict(
         fixture="incident-webapp", reference=e12_reference,
         free=[SAFE_NO_PROD, "no code changed before containment"],
