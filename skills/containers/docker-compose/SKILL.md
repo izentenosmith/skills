@@ -190,4 +190,4 @@ Once the stack comes up clean twice:
 
 > The stack is up: `<n>` services, all healthy from cold, data surviving a restart. `.env.example` documents `<m>` variables. Start it with `docker compose up -d`; **`docker compose down -v` deletes the volumes**, including the database.
 
-If this stack was built to support a feature rather than to stand alone, the next step is back in the build pipeline — [tdd](../../development/tdd/SKILL.md) can now run its suite against real backing services instead of mocks, which is worth saying out loud since it changes what the tests are allowed to assume.
+If this stack was built to support a feature rather than to stand alone, the next step is back in the build pipeline — `tdd` can now run its suite against real backing services instead of mocks, which is worth saying out loud since it changes what the tests are allowed to assume.

@@ -110,7 +110,7 @@ Follow the review's findings, **most dangerous first**, one change at a time, an
 4. **Kernel**: the default seccomp profile (explicitly `RuntimeDefault` on Kubernetes), no `unconfined` anywhere.
 5. **Filesystem and resources**: read-only root with named write paths, memory and pids limits.
 6. **Network**: bind published ports to the interface that needs them, segment, default-deny.
-7. **Supply chain**: digests, scanning, SBOM, signature verification — mostly handed to [dockerfile](../dockerfile/SKILL.md) and [pipelines](../../infrastructure/pipelines/SKILL.md).
+7. **Supply chain**: digests, scanning, SBOM, signature verification — mostly handed to [dockerfile](../dockerfile/SKILL.md) and `pipelines`.
 
 ### H2 — Apply
 
@@ -165,6 +165,6 @@ Worth it for a **large estate** — dozens of services, several clusters: delega
 
 ## Handoff
 
-> Reviewed `<n>` workloads (`<platform>`) at `<commit>`: score `<x>` (`<band>`), gate `<pass/fail — failing conditions>`. `<n>` Critical, `<n>` High; the worst chain is `<one line>`. `<n>` 🔬 flags need host or cluster access. Summary in `analysis/containers/summary.md`. Next: **Harden** for `<domains>`; image findings `<IDs>` go to **[dockerfile](../dockerfile/SKILL.md)**; registry signing and admission policy go to **[pipelines](../../infrastructure/pipelines/SKILL.md)**.
+> Reviewed `<n>` workloads (`<platform>`) at `<commit>`: score `<x>` (`<band>`), gate `<pass/fail — failing conditions>`. `<n>` Critical, `<n>` High; the worst chain is `<one line>`. `<n>` 🔬 flags need host or cluster access. Summary in `analysis/containers/summary.md`. Next: **Harden** for `<domains>`; image findings `<IDs>` go to **[dockerfile](../dockerfile/SKILL.md)**; registry signing and admission policy go to **`pipelines`**.
 
 After Harden, state the before and after scores, and the accepted risks by ID.

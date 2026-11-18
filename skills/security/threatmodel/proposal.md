@@ -78,11 +78,11 @@ The plan routes work; it doesn't do it. Every item names the skill and owner tha
 |---|---|
 | Code — authn/authz checks, input handling, session and token handling, crypto use, dependencies | [appsec](../appsec/SKILL.md) |
 | Platform — hosts, accounts, network exposure, storage, backups, logging, deletion locks | [hardening](../hardening/SKILL.md) |
-| CI/CD — build and deploy trust, signing, secrets in pipelines, who can deploy | [pipelines](../../infrastructure/pipelines/SKILL.md) |
-| Network — zones, flows, segmentation, addressing | [netdesign](../../networking/netdesign/SKILL.md) |
-| Infrastructure code that implements any of the above | [terraform](../../infrastructure/terraform/SKILL.md) |
-| A design question the threat model surfaced but can't settle | [architect-deep-dive](../../development/architect-deep-dive/SKILL.md) |
-| A new capability to build test-first against the security requirements | [agent-brief](../../development/agent-brief/SKILL.md) → [acceptance-tests](../../development/acceptance-tests/SKILL.md) |
+| CI/CD — build and deploy trust, signing, secrets in pipelines, who can deploy | `pipelines` |
+| Network — zones, flows, segmentation, addressing | `netdesign` |
+| Infrastructure code that implements any of the above | `terraform` |
+| A design question the threat model surfaced but can't settle | `architect-deep-dive` |
+| A new capability to build test-first against the security requirements | `agent-brief` → `acceptance-tests` |
 
 ## `proposal.md` template
 

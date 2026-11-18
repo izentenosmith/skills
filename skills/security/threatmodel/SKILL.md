@@ -26,9 +26,9 @@ Three security skills, one per layer:
 
 The threat model comes first when there is one to write: it tells appsec which flows to read
 hardest and tells hardening which assets are crown jewels. Neighbours outside the family:
-[netdesign](../../networking/netdesign/SKILL.md) owns zones and flows in network depth;
-[pipelines](../../infrastructure/pipelines/SKILL.md) owns the CI/CD trust chain;
-[architect-deep-dive](../../development/architect-deep-dive/SKILL.md) resolves the non-security
+`netdesign` owns zones and flows in network depth;
+`pipelines` owns the CI/CD trust chain;
+`architect-deep-dive` resolves the non-security
 design questions a threat model surfaces.
 
 Reference docs, all in this folder:
@@ -203,8 +203,8 @@ anything live and exploitable → eliminate hazards by design → boundary contr
 assurance. **Exploitability, not domain, decides the step:** a live weakness on a privileged path
 (SMS MFA for admins, a fail-open fallback on money) gets an interim containment in the first window
 even when its full fix belongs to a later phase. Each item is routed: code to [appsec](../appsec/SKILL.md), platform to
-[hardening](../hardening/SKILL.md), CI/CD to [pipelines](../../infrastructure/pipelines/SKILL.md),
-network to [netdesign](../../networking/netdesign/SKILL.md).
+[hardening](../hardening/SKILL.md), CI/CD to `pipelines`,
+network to `netdesign`.
 
 ---
 

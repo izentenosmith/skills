@@ -106,7 +106,7 @@ is real.
 ### 6. When to stop asking here and run threatmodel
 
 The questions above cover a change inside a system whose threat model already exists (or doesn't
-need to). Hand off to [threatmodel](../../security/threatmodel/SKILL.md) when the change brings:
+need to). Hand off to `threatmodel` when the change brings:
 
 - a new trust boundary or a new external party;
 - a new data class (personal, payment, health, credentials);

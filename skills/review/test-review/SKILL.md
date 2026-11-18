@@ -24,10 +24,10 @@ every report says which checks ran and which didn't.
 |---|---|
 | **test-review** (this skill) | A change's tests need a deep read: a PR, a branch, a bug fix's regression test, an acceptance-test mapping to check, or peer-review's lens K on a test-heavy or risky change |
 | [peer-review](../peer-review/SKILL.md) | The full review. Its lens K is this skill's question at lens depth; this skill is the specialist it hands off to, and its findings go into that report |
-| [acceptance-tests](../../development/acceptance-tests/SKILL.md) | Writing the black-box tests for a criterion, before the code. test-review checks that its mapping still holds |
-| [tdd](../../development/tdd/SKILL.md) | Writing the missing or weak test, red first. Every gap this skill finds is fixed there |
-| [devils-advocate](../../development/devils-advocate/SKILL.md) → [tyr-verdict](../../development/tyr-verdict/SKILL.md) | The closing loop of your own just-built work in the development pipeline. devils-advocate falsifies tests by reading, and tyr-verdict runs the probes |
-| [refactor-review](../../development/refactor-review/SKILL.md) | The test code's structure needs cleaning on a green suite, behaviour frozen |
+| `acceptance-tests` | Writing the black-box tests for a criterion, before the code. test-review checks that its mapping still holds |
+| `tdd` | Writing the missing or weak test, red first. Every gap this skill finds is fixed there |
+| `devils-advocate` → `tyr-verdict` | The closing loop of your own just-built work in the development pipeline. devils-advocate falsifies tests by reading, and tyr-verdict runs the probes |
+| `refactor-review` | The test code's structure needs cleaning on a green suite, behaviour frozen |
 | [concurrency-review](../concurrency-review/SKILL.md) | A test is flaky because the code under it races. The interleaving and its reproduction belong there |
 | [pr-prep](../pr-prep/SKILL.md) | There are no acceptance criteria to trace tests to. The author states them first, in the PR description |
 
@@ -323,8 +323,8 @@ the evidence verdict.
 6. **Ask "would it fail?", not "how many?".** Don't ask for a coverage percentage, a mutation score,
    one assert per test, or tests of generated code or UI layout. Coverage and scores are hints.
 7. **Don't contradict the record.** An acceptance test changes only through a brief revision, never
-   to go green ([acceptance-tests](../../development/acceptance-tests/SKILL.md)). Doubles belong
-   at the system boundary ([tdd](../../development/tdd/SKILL.md)).
+   to go green (`acceptance-tests`). Doubles belong
+   at the system boundary (`tdd`).
 8. **Find, don't fix.** Name the red test that would close each gap, and leave writing it to tdd.
 9. **Never rate people.** Findings are about the tests and the code, never the author.
 10. **A human decides.** The evidence verdict is advice. Approving and merging belong to a person.
@@ -336,12 +336,12 @@ links below are for this file only.
 
 > <n> findings (<b> blockers, <m> majors). Evidence verdict: **<verdict>**: <c> of <t> criteria
 > covered, <w> weak, <x> missing. Each missing or weak test goes to
-> **[tdd](../../development/tdd/SKILL.md)** as a red test first. A missing criterion-level test
-> goes to **[acceptance-tests](../../development/acceptance-tests/SKILL.md)** through a brief
+> **`tdd`** as a red test first. A missing criterion-level test
+> goes to **`acceptance-tests`** through a brief
 > revision. These findings belong in the **[peer-review](../peer-review/SKILL.md)** report under
 > lens K.
 > <If a flaky test sits near concurrent code:> The flake at <file:line> may be a race. Give it to
 > the concurrency review.
 > <If a refusal or invalid-input test is missing on a security path:> Run
-> **[appsec](../../security/appsec/SKILL.md)** on <path>.
+> **`appsec`** on <path>.
 > After the tests are added, ask me to **re-review**, and I'll re-run the mutation on each one.

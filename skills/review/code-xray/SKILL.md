@@ -24,8 +24,8 @@ judgement about what is worth acting on.
 | **code-xray** (this skill), PR mode | A change needs its history signals: hotspot rank, missing co-changes, complexity growth, knowledge risk, suggested reviewers. It feeds [peer-review](../peer-review/SKILL.md) |
 | **code-xray**, codebase mode | "Where is our technical debt?", what to refactor first, what to leave alone, where coupling crosses boundaries, where knowledge is about to leave |
 | [peer-review](../peer-review/SKILL.md) | The change itself needs reviewing. Its [history-signals.md](../peer-review/history-signals.md) is the short version of PR mode, and this skill agrees with its thresholds |
-| [refactor-review](../../development/refactor-review/SKILL.md) | A refactoring target is being worked on. Each step is a diff to clean with behaviour frozen |
-| [architect-deep-dive](../../development/architect-deep-dive/SKILL.md) | A target is a boundary question: coupling across components, an owner to choose, a split to design |
+| `refactor-review` | A refactoring target is being worked on. Each step is a diff to clean with behaviour frozen |
+| `architect-deep-dive` | A target is a boundary question: coupling across components, an owner to choose, a split to design |
 | [review-retro](../review-retro/SKILL.md) | Review findings over time, by area. Where its recurring defect classes sit in hotspots, the two agree on what to fix first |
 
 Reference docs, all in this folder:
@@ -322,9 +322,9 @@ only, because relative paths mean nothing in a printed report.
 > are lens-J questions for its verifier.
 
 > **Codebase mode:** <n> refactoring targets (<k> now). Work each target in small steps behind a
-> pinning test, through **[tdd](../../development/tdd/SKILL.md)** for the safety net and
-> **[refactor-review](../../development/refactor-review/SKILL.md)** for each structural step,
+> pinning test, through **`tdd`** for the safety net and
+> **`refactor-review`** for each structural step,
 > behaviour frozen. Boundary and ownership targets (<list>) go to
-> **[architect-deep-dive](../../development/architect-deep-dive/SKILL.md)**. The next change into
+> **`architect-deep-dive`**. The next change into
 > <top hotspot> gets **[peer-review](../peer-review/SKILL.md)** at Deep. Re-run this X-ray in
 > about three months, or after the refactoring lands, to check it held (X22).

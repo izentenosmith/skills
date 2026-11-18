@@ -206,7 +206,7 @@ interface. They are always held apart from bugs (R2), and every one states its c
 - **History.** New complexity in a hotspot, complexity growth over 10% on the branch, surprising
   coupling ([history-signals.md](history-signals.md)).
 - **Fowler smells** (Long Method, Shotgun Surgery, Feature Envy…). Name them and hand the structural
-  fix to [refactor-review](../../development/refactor-review/SKILL.md).
+  fix to `refactor-review`.
 - **Not here:** ugliness in cold code (R26), and redesigns the change didn't ask for. A real design
   question goes to the "Questions" section, not the findings.
 - **Serves:** R23, R26.

@@ -21,8 +21,8 @@
 > spy, mock, fake), the smell names from Meszaros' *xUnit Test Patterns*, and flakiness tooling. It
 > is stated as practice, with no page cite.
 >
-> **Repo conventions** come from this repo's [acceptance-tests](../../development/acceptance-tests/SKILL.md)
-> and [tdd](../../development/tdd/SKILL.md) skills. They are cited by skill name. test-review checks
+> **Repo conventions** come from this repo's `acceptance-tests`
+> and `tdd` skills. They are cited by skill name. test-review checks
 > that their records hold. It never contradicts them.
 
 ---

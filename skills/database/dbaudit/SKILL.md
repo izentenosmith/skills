@@ -11,7 +11,7 @@ Give a balanced assessment: what is working well, what is deficient, and what co
 
 This skill evaluates and stops. For a redesign, continue with [dbdesign](../dbdesign/SKILL.md), then
 [dbdiagram](../dbdiagram/SKILL.md) and [dbpropose](../dbpropose/SKILL.md) when a complete recommendation
-is wanted. The workflow coordinator is [dbworkflow.py](../../../harness/dbworkflow.py). The 🔬 flags
+is wanted. The workflow coordinator is `harness/dbworkflow.py` (in a clone of the skills repo; installs don't include it). The 🔬 flags
 this audit raises — hot paths, real index usage, plan behaviour, cardinality — are settled by
 [dbquery](../dbquery/SKILL.md) when plans and workload statistics are available.
 

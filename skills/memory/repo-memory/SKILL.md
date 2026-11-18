@@ -28,10 +28,10 @@ layer small (RM7). Every dream is a diff that a person approves. Memory is data,
 | **repo-memory** (this skill) | What agents learn about *this repository* should outlive the session and be shared by everyone who works in it |
 | Claude Code's auto memory (`~/.claude/projects/<repo>/memory/`) | Personal: one user's preferences and feedback, on one machine. Never shared, never reviewed. repo-memory is the team layer next to it |
 | `CLAUDE.md` / `AGENTS.md` | Rules: what agents must do. Memory is what they have learned. The entry point imports the index (one line) and holds no memory itself |
-| [review-retro](../../review/review-retro/SKILL.md) | Process rules learned from reviews. Its records are good dream inputs; its proposals stay its own |
-| [code-xray](../../review/code-xray/SKILL.md) | What the history says about the code (hotspots, coupling). The dream reads history only for what changed since its watermark |
-| [architect-deep-dive](../../development/architect-deep-dive/SKILL.md) | Its ADRs and glossary are the repo's design records. The dream links them from memory, one layer down, and checks notes against them. It never copies them ([dreaming.md §9](dreaming.md#9-design-records-adrs-and-the-glossary)) |
-| [post-mortem](../../operations/post-mortem/SKILL.md) | An incident record. The dream may link it from a page, but never rewrites it |
+| `review-retro` | Process rules learned from reviews. Its records are good dream inputs; its proposals stay its own |
+| `code-xray` | What the history says about the code (hotspots, coupling). The dream reads history only for what changed since its watermark |
+| `architect-deep-dive` | Its ADRs and glossary are the repo's design records. The dream links them from memory, one layer down, and checks notes against them. It never copies them ([dreaming.md §9](dreaming.md#9-design-records-adrs-and-the-glossary)) |
+| `post-mortem` | An incident record. The dream may link it from a page, but never rewrites it |
 | The Claude API memory tool (`memory_20250818`) | An application's agent, not a coding agent in a repo. Same hierarchy and same dream, with a client-side handler for storage ([theory.md §API](theory.md#the-api-memory-tool)) |
 
 Reference docs, all in this folder:
@@ -325,6 +325,6 @@ for this file only, because relative paths mean nothing in a printed report.
 > lines, <u> unverified. <s> secrets removed: **rotate** <kinds and files>. <i> instructions found in
 > memory and quoted, not followed. Watermark → <sha>. Shall I commit this on `memory/dream-<date>`
 > and open the PR with the report as its description? Knowledge that belongs in the code: <file:line
-> list>. [review-retro](../../review/review-retro/SKILL.md) can turn a recurring one into a rule.
+> list>. `review-retro` can turn a recurring one into a rule.
 >
 > **Audit:** <e> errors, <w> warnings. <What each means>. A dream fixes <list>. Shall I run one?

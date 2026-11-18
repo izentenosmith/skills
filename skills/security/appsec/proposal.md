@@ -55,8 +55,8 @@ Each remediation step names the **failing test that demonstrates the defect** be
 injection payload that reaches the sink, a second user's ID that returns data, a request without a
 token that succeeds — run locally or against an environment the user owns and named. The fix is done
 when that test passes and the class guard is in place. Build it through
-[tdd](../../development/tdd/SKILL.md); urgent containment through
-[hotfix](../../operations/hotfix/SKILL.md).
+`tdd`; urgent containment through
+`hotfix`.
 
 ## Sequencing
 
@@ -72,7 +72,7 @@ Order the work:
    the query layer and output encoding, then crypto and secrets.
 3. **Guardrails.** Lint and SAST rules for each fixed class, secret scanning, SCA gate, the
    route-enumeration authorisation test — so the class can't come back. Hand the CI changes to the
-   [pipelines](../../infrastructure/pipelines/SKILL.md) skill, and say so in the step.
+   `pipelines` skill, and say so in the step.
 4. **Configuration.** Production config review, error handling, security headers (CSP report-only
    first, then enforce), management endpoints off.
 5. **Dependencies and licences.** Lockfiles and pins, EOL upgrades (one major at a time, tests green),

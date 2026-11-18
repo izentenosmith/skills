@@ -27,9 +27,9 @@ Three security skills, one per layer:
 - **hardening** (this skill) — whether the **platform** the code runs on is locked down: hosts,
   accounts, networks, storage, backups, monitoring, governance
 
-Neighbours outside the family: [terraform](../../infrastructure/terraform/SKILL.md) grades the IaC
-that builds the platform; [pipelines](../../infrastructure/pipelines/SKILL.md) grades the path that
-deploys to it; [netaudit](../../networking/netaudit/SKILL.md) grades network topology in depth. Where
+Neighbours outside the family: `terraform` grades the IaC
+that builds the platform; `pipelines` grades the path that
+deploys to it; `netaudit` grades network topology in depth. Where
 a hardening finding lives in Terraform code, record it here against the control and point to the
 file; the code review belongs to terraform.
 
@@ -268,7 +268,7 @@ file excerpts". Delegates stay read-only and never write to a host or an account
    (GOV-12). The skill reads their output.
 8. **Suspected compromise stops hardening.** Hardening a host that is already owned locks the
    attacker in and destroys evidence. Stop, preserve (don't run diagnostics on the live host), and
-   hand off to [incident-fix](../../operations/incident-fix/SKILL.md) (H28).
+   hand off to `incident-fix` (H28).
 9. **Observe before enforce.** Every blocking control gets a report-only phase with an end date and
    a promotion step on evidence (H24). A control stuck in observe mode is reported as a gap.
 10. **Review doesn't prescribe; design doesn't apply.** Each mode stops at its own deliverable.
@@ -279,6 +279,6 @@ file excerpts". Delegates stay read-only and never write to a host or an account
 > conditions>`. `<n>` Critical, `<n>` High. Asset register, exposure map and privilege map in
 > `analysis/hardening/summary.md`.
 > Next: **Design** to set the baseline for `<domains>`, then **Propose** for the rollout; IaC defects
-> go to **[terraform](../../infrastructure/terraform/SKILL.md)**, code-level defects to
+> go to **`terraform`**, code-level defects to
 > **[appsec](../appsec/SKILL.md)**, a suspected compromise to
-> **[incident-fix](../../operations/incident-fix/SKILL.md)**.
+> **`incident-fix`**.

@@ -62,7 +62,7 @@ thread as acted on, and a false-positive rate that counts every disagreement as 
 each with its evidence, never into the record's narrative. **Why:** A document that both
 reconstructs and prescribes is tempted to shape the reconstruction toward the prescription. This is
 practical guidance (not from the sources), the same split the repo's
-[post-mortem](../../operations/post-mortem/SKILL.md) skill makes. **Ignoring it:** A record that
+`post-mortem` skill makes. **Ignoring it:** A record that
 reads as an argument for a rule, with the findings that don't support it left out.
 
 ## Part B — Measuring

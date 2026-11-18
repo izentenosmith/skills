@@ -75,8 +75,8 @@ In the log's state block ([incident-log.md](incident-log.md)), record at declara
 
 ## 🛠️ Phase 3: Fix — through review, at most two loops
 
-- [ ] **Design, only if there are real options.** Use [architect-deep-dive](../../development/architect-deep-dive/SKILL.md) where installed; otherwise lay out the options with trade-offs and a recommendation, and let the user pick.
-- [ ] **Build it the full way**: test-first ([tdd](../../development/tdd/SKILL.md)), [refactor-review](../../development/refactor-review/SKILL.md), [devils-advocate](../../development/devils-advocate/SKILL.md), [tyr-verdict](../../development/tyr-verdict/SKILL.md) — delegating to each where installed, and working [phase-gates.md](phase-gates.md)'s fix-review checklist where not. **Tell tyr-verdict the cap is two iterations, not three**; a third NO-GO is the user's decision. Where a closing-loop runner and a red/green checker are available, use them — at the same cap.
+- [ ] **Design, only if there are real options.** Use `architect-deep-dive` where installed; otherwise lay out the options with trade-offs and a recommendation, and let the user pick.
+- [ ] **Build it the full way**: test-first (`tdd`), `refactor-review`, `devils-advocate`, `tyr-verdict` — delegating to each where installed, and working [phase-gates.md](phase-gates.md)'s fix-review checklist where not. **Tell tyr-verdict the cap is two iterations, not three**; a third NO-GO is the user's decision. Where a closing-loop runner and a red/green checker are available, use them — at the same cap.
 - [ ] **Data repair is its own artifact**, separate from the code fix, under [data-repair.md](data-repair.md) and hard gate 3: dry run by default, its own backup before any write, before/after counts, idempotent, run in a non-production environment first when one exists, and in production only with explicit confirmation.
 - [ ] **Verify, promote, verify.** Pre-production first if it exists, then promote by the repo's convention (confirmed), then verify in production. Each piece of evidence — command, result, commit — goes into the log.
 

@@ -16,7 +16,7 @@ Four container skills; this one is called when something built with the others m
 - [container-hardening](../container-hardening/SKILL.md) — how containers run, securely
 - **container-debug** (this skill) — why one isn't running the way it should
 
-Where the fix lands decides who makes it: an image defect goes to **dockerfile**, wiring between services to **docker-compose** (or the platform's manifests), a security setting to **container-hardening**, and a bug in the application itself to [hotfix](../../operations/hotfix/SKILL.md). **A production outage is an incident first** — hand it to [incident-fix](../../operations/incident-fix/SKILL.md), which contains before it diagnoses, and use this skill's tables as its evidence-gathering.
+Where the fix lands decides who makes it: an image defect goes to **dockerfile**, wiring between services to **docker-compose** (or the platform's manifests), a security setting to **container-hardening**, and a bug in the application itself to `hotfix`. **A production outage is an incident first** — hand it to `incident-fix`, which contains before it diagnoses, and use this skill's tables as its evidence-gathering.
 
 Reference docs:
 
@@ -30,7 +30,7 @@ Reference docs:
 Say which you picked:
 
 - **Local or CI** — a laptop, a CI job, a disposable environment. You may run, restart and rebuild freely once the evidence is captured.
-- **Shared or production** — read-only by default. **Capture, read, and ask** before any `exec`, restart, `rm`, `down`, scale or redeploy; each of those destroys evidence or affects users. If users are affected now, stop and hand to [incident-fix](../../operations/incident-fix/SKILL.md).
+- **Shared or production** — read-only by default. **Capture, read, and ask** before any `exec`, restart, `rm`, `down`, scale or redeploy; each of those destroys evidence or affects users. If users are affected now, stop and hand to `incident-fix`.
 - **Evidence only** — you have pasted output, logs or captured `inspect` JSON, not the system. Diagnose from it, say exactly which commands would confirm each conclusion, and mark every conclusion that rests on missing evidence.
 
 ---
@@ -95,7 +95,7 @@ Then name the symptom class — *won't start*, *won't stay up*, *can't connect*,
   | The image — wrong arch, CRLF script, missing file, wrong user, shell-form `CMD`, a write path not owned | the Dockerfile, `.gitattributes`, the build command | [dockerfile](../dockerfile/SKILL.md) |
   | Wiring — `localhost` instead of a service name, a missing network, startup order, a stale anonymous volume, a port mapping | the compose file or manifests | [docker-compose](../docker-compose/SKILL.md) |
   | Runtime limits and security — a memory limit below the working set, a dropped capability the app needs, a read-only root with an unlisted write path | the run config | [container-hardening](../container-hardening/SKILL.md) for anything that loosens security |
-  | The application — a crash, a leak, an unhandled `SIGTERM` | the code | [hotfix](../../operations/hotfix/SKILL.md) |
+  | The application — a crash, a leak, an unhandled `SIGTERM` | the code | `hotfix` |
 
 - [ ] **Never "fix" by removing a guardrail.** Raising a memory limit is right when the working set was measured and the limit was simply wrong (`docker stats` over a real workload); removing the limit hides a leak until it takes the host down. Adding `privileged`, `cap_add: SYS_ADMIN`, `seccomp=unconfined` or `user: root` to make an error go away is a security regression wearing a fix's clothes — find the one thing it needed instead.
 - [ ] **No sleeps.** A `sleep 10` before start, or a `restart: always` that eventually wins a race, is the bug made intermittent. Startup order is a health gate plus the app's own retry.
@@ -105,7 +105,7 @@ Then name the symptom class — *won't start*, *won't stay up*, *can't connect*,
 
 ## 📝 Step 5: Write it down
 
-For each symptom diagnosed, a root-cause note in three lines — the same shape [hotfix](../../operations/hotfix/root-cause-note.md) uses:
+For each symptom diagnosed, a root-cause note in three lines — the same shape the `hotfix` skill uses:
 
 ```markdown
 - **Symptom:** worker exits 137 every ~40 s; RestartCount 14

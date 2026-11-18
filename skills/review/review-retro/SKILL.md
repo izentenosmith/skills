@@ -30,7 +30,7 @@ approves every change, and it lands as its own PR.
 |---|---|
 | **review-retro** (this skill) | A PR merged or closed and its review should be kept; or a period's reviews should be turned into process changes |
 | [peer-review](../peer-review/SKILL.md) | The review itself, and the re-review that verifies fixes. It produces the findings and outcomes this skill reads |
-| [post-mortem](../../operations/post-mortem/SKILL.md) | Something broke in production. That's an incident record, not a review record |
+| `post-mortem` | Something broke in production. That's an incident record, not a review record |
 | [pr-prep](../pr-prep/SKILL.md) | A recurring process gap (no description, oversized or tangled PRs) is fixed at the author's side, before review |
 | [code-xray](../code-xray/SKILL.md) | Grouping findings by area: the hotspots tell you whether a recurring class sits where the code changes most |
 
