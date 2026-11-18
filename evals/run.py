@@ -2,7 +2,7 @@
 """Dispatch the eval runs headless, then grade and aggregate them.
 
 Usage: python3 run.py [--evals 0,5] [--reps 3] [--baseline-ref REF|none]
-                      [--workspace DIR] [--iteration N]
+                      [--baseline-reps 1] [--workspace DIR] [--iteration N]
                       [--concurrency 4] [--timeout 1800] [--model MODEL] [--dry-run]
 
 For each selected eval in evals.json this builds
@@ -10,6 +10,7 @@ For each selected eval in evals.json this builds
   <workspace>/iteration-N/eval-<id>-<name>/
   ├── with_skill/rep1..repK/{repo,outputs}/   current skill, from this checkout
   └── old_skill/{repo,outputs}/               skill as of --baseline-ref
+      (old_skill/rep1..repN/ with --baseline-reps N > 1)
 
 The current skill is staged from its repo folder: alone for an eval marked
 standalone, otherwise with harness/ beside it. Each with-skill run.json records
@@ -20,8 +21,10 @@ copies the fixture into each repo/, and launches one `claude -p` per run with
 its working directory set to that repo/. Every run is isolated (--safe-mode:
 no CLAUDE.md, no installed skills or plugins, no MCP), so the only skill it
 sees is the SKILL.md named in its prompt. A failed or timed-out run is
-recorded in run.json and the batch carries on. grade.py and aggregate.py run
-on the iteration afterwards.
+recorded in run.json and the batch carries on. Each run's full transcript
+(every message, tool call and tool result) is kept as transcript.jsonl beside
+its run.json, also when it timed out; transcript.py prints one. grade.py and
+aggregate.py run on the iteration afterwards.
 """
 import argparse
 import concurrent.futures as cf
@@ -155,7 +158,8 @@ def agent_prompt(skill_md, eval_prompt, outputs):
 
 
 def claude_cmd(run, skill_md, prompt, model):
-    cmd = ["claude", "-p", "--output-format", "json",
+    # stream-json, so the whole trajectory is kept and not just the last message.
+    cmd = ["claude", "-p", "--output-format", "stream-json", "--verbose",
            "--safe-mode", "--disable-slash-commands", "--strict-mcp-config",
            "--no-session-persistence", "--permission-mode", "bypassPermissions",
            "--add-dir", str(run)]
@@ -258,6 +262,29 @@ def stage_harness(src_root, dest_root):
     return dest_root / "harness/loop.py", dest_root / "skills"
 
 
+def baseline_dirs(ed, reps):
+    """One baseline run stays at old_skill/, where every earlier iteration has
+    it; more than one go in old_skill/rep1..repN."""
+    if reps == 1:
+        return [ed / "old_skill"]
+    return [ed / "old_skill" / f"rep{i}" for i in range(1, reps + 1)]
+
+
+def result_event(stdout):
+    """The `result` event of a stream-json run, the object `--output-format
+    json` used to print alone. It is not always the last line. {} when the run
+    never got that far."""
+    out = {}
+    for line in stdout.splitlines():
+        try:
+            ev = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(ev, dict) and ev.get("type") == "result":
+            out = ev
+    return out
+
+
 def plan_loop(ev, ed, fix, args, snap_dir, cur_dir):
     """An eval of harness/loop.py itself: no prompt, the loop drives the stages.
 
@@ -271,7 +298,7 @@ def plan_loop(ev, ed, fix, args, snap_dir, cur_dir):
     if snap_dir:
         old = stage_harness(snap_dir, snap_dir.parent / "snapshot-harness")
         if old:
-            variants.append((ed / "old_skill", old, "old_skill"))
+            variants += [(d, old, "old_skill") for d in baseline_dirs(ed, args.baseline_reps)]
         else:
             print(f"note: {ed.name} has no baseline — harness/loop.py is absent at the baseline ref",
                   file=sys.stderr)
@@ -324,7 +351,8 @@ def plan(args, ws_iter, snap_dir, cur_dir):
                     for i in range(1, args.reps + 1)]
         if snap_dir:
             # A skill that did not exist at the baseline ref gets a no-skill baseline.
-            variants.append((ed / "old_skill", find_skill(snap_dir, ev["skill"]), "old_skill"))
+            old = find_skill(snap_dir, ev["skill"])
+            variants += [(d, old, "old_skill") for d in baseline_dirs(ed, args.baseline_reps)]
         for run, skill_md, kind in variants:
             prompt = agent_prompt(skill_md, ev["prompt"], run / "outputs")
             runs.append({"eval": ed.name, "kind": kind, "run": run, "fixture": fix,
@@ -372,7 +400,10 @@ def execute(r, timeout):
             stdout, stderr = p.communicate(timeout=timeout)
         except subprocess.TimeoutExpired:
             os.killpg(p.pid, signal.SIGKILL)
-            p.communicate()
+            partial, _ = p.communicate()
+            if r.get("runner") != "loop" and partial:
+                # What it was doing when the clock ran out.
+                (run / "transcript.jsonl").write_text(partial)
             raise
         rec.update(exit_code=p.returncode, timed_out=False, stderr_tail=stderr[-2000:])
         if r.get("runner") == "loop":
@@ -383,11 +414,9 @@ def execute(r, timeout):
             rec.update(cost_usd=float(spent[-1]) if spent else None,
                        response="harness log", is_error=p.returncode not in (0, 3))
             raise _Done
-        (run / "claude.json").write_text(stdout)
-        try:
-            out = json.loads(stdout)
-        except json.JSONDecodeError:
-            out = {}
+        (run / "transcript.jsonl").write_text(stdout)
+        out = result_event(stdout)
+        (run / "claude.json").write_text(json.dumps(out, indent=2))
         rec.update(is_error=out.get("is_error"), cost_usd=out.get("total_cost_usd"),
                    num_turns=out.get("num_turns"), models=sorted(out.get("modelUsage") or {}))
         resp = run / "outputs" / "response.md"
@@ -451,6 +480,9 @@ def main():
     ap.add_argument("--reps", type=int, default=3, help="with-skill repetitions per eval")
     ap.add_argument("--baseline-ref", default=DEFAULT_BASELINE,
                     help=f"git ref for the old_skill run, or 'none' (default: {DEFAULT_BASELINE})")
+    ap.add_argument("--baseline-reps", type=int, default=1,
+                    help="baseline repetitions per eval; more than one shows how much "
+                         "the baseline itself varies (default: 1)")
     ap.add_argument("--workspace", type=pathlib.Path, help="default: ../skills-workspace "
                     "next to the main checkout")
     ap.add_argument("--iteration", type=int, help="default: the next unused number")
@@ -463,6 +495,8 @@ def main():
     ws = (args.workspace or default_workspace()).expanduser().resolve()
     ws_iter = ws / f"iteration-{args.iteration or next_iteration(ws)}"
     use_baseline = args.baseline_ref.lower() != "none"
+    if args.reps < 1 or args.baseline_reps < 1:
+        ap.error("--reps and --baseline-reps must be at least 1")
 
     with tempfile.TemporaryDirectory(prefix="skills-evals-") as tmp:
         # Snapshotted even on --dry-run (into a temp dir) so the plan's
@@ -499,7 +533,7 @@ def main():
             for f in cf.as_completed(futs):
                 rec = f.result()
                 results.append(rec)
-                name = f"{rec['eval']}/{futs[f]['run'].name}"
+                name = f"{rec['eval']}/{futs[f]['run'].relative_to(ws_iter / rec['eval'])}"
                 status = "ok" if rec["ok"] else ("TIMEOUT" if rec.get("timed_out") else "FAILED")
                 cost = f"${rec['cost_usd']:.2f}" if rec.get("cost_usd") else "-"
                 print(f"  [{len(results)}/{len(runs)}] {status:7} {rec['seconds']:>7.0f}s "
@@ -509,7 +543,9 @@ def main():
     total = sum(r.get("cost_usd") or 0 for r in results)
     version = subprocess.run(["claude", "--version"], capture_output=True, text=True).stdout.strip()
     (ws_iter / "dispatch.json").write_text(json.dumps({
-        "baseline": label, "reps": args.reps, "claude_version": version,
+        "baseline": label, "reps": args.reps,
+        "baseline_reps": args.baseline_reps if use_baseline else 0,
+        "model_arg": args.model, "claude_version": version,
         "models": sorted({m for r in results for m in r.get("models") or []}),
         "runs": len(results), "failed": len(failed), "cost_usd": round(total, 2)}, indent=2))
     print(f"\n{len(results) - len(failed)}/{len(results)} runs ok, ${total:.2f} total")

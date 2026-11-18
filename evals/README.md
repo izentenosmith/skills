@@ -14,10 +14,11 @@ evals/
 ├── evals.json      one entry per eval: a prompt and a skill, or (eval 15) a runner
 ├── run.py          dispatch the runs headless, then grade + aggregate
 ├── grade.py        assertions → grading.json per run
-├── aggregate.py    grading.json → benchmark.md/json and scores.json
+├── aggregate.py    grading.json → benchmark.md/json (scores, then a health table) and scores.json
+├── transcript.py   read one run turn by turn, or list an iteration's failed assertions
 ├── benchmark.md    the recorded result
 ├── scores.json     per eval: the iteration its score comes from, and the hash of the skill it scored
-├── tests/          unit tests for the staging hash and scores.json (CI runs them)
+├── tests/          unit tests for the staging hash, scores.json, transcripts and the health table (CI runs them)
 ├── controls/       reproducible controls (make_controls.py: evals 6, 8-14 and 16-58; eval15.py: the loop)
 └── fixtures/       the seeded repos and documents the skills work against
 ```
@@ -1039,6 +1040,7 @@ python3 run.py                      # the full benchmark: 8 evals × (3 reps + 1
 | `--evals 0,5` | all | eval ids from `evals.json` |
 | `--reps` | 3 | with-skill repetitions per eval |
 | `--baseline-ref` | `3b71f54^` | git ref for the `old_skill` run, or `none` |
+| `--baseline-reps` | 1 | baseline repetitions per eval. With one, nothing says how much the baseline varies, so the gain has no error bar |
 | `--workspace` | `../skills-workspace` next to the main checkout | |
 | `--iteration` | next unused | naming an existing one replaces the selected evals' runs in it |
 | `--concurrency`, `--timeout`, `--model` | 4, 1800 s, CLI default | `--model` is passed to `claude` |
@@ -1049,11 +1051,13 @@ The layout it builds is the one `grade.py` reads:
 <workspace>/iteration-N/
 ├── dispatch.json                       batch summary: baseline, CLI version, models, failures, cost
 └── eval-3-refactor-promotes-noted-smell/
-    ├── with_skill/rep1/{repo,outputs}/  + run.json, claude.json
+    ├── with_skill/rep1/{repo,outputs}/  + run.json, claude.json, transcript.jsonl
     ├── with_skill/rep2/{repo,outputs}/
     ├── with_skill/rep3/{repo,outputs}/
-    └── old_skill/{repo,outputs}/
+    └── old_skill/{repo,outputs}/        old_skill/rep1..repN/ with --baseline-reps N > 1
 ```
+
+`transcript.jsonl` is the run's whole trajectory: every message, tool call and tool result, as `claude -p --output-format stream-json` printed it. A run that timed out keeps what it had printed. `claude.json` is the transcript's `result` event, the same object earlier iterations stored.
 
 What it keeps out of a run's reach:
 
@@ -1106,6 +1110,39 @@ Since the closing-loop harness, the ledger has a grammar ([harness/LEDGER.md](..
 Numbering and cross-reference errors are deliberately ignored: `E01`, the `E2x`/`E3x`/`E4x` id checks and `E50`. The fixture ledgers keep their history in the old prose, for the reason given under [The fixtures](#the-fixtures). `ledger.py` reads that prose as an unparsed preamble, so every carried id (N1, N2, F1, and for eval 5 the findings F2–F5) looks undefined, and every run would fail for the fixture's sake, not the skill's. Only the shape of the stage's own lines and append-only discipline are checked against a legacy history.
 
 Checked before committing: all 12 iteration-4 runs, made with the skills as they were before the grammar existed, fail it, while a new-grammar ledger passes once its stray prose is removed, and rewriting a single word of the preamble fails it with `E60`.
+
+## Health: is the score evidence?
+
+After the score table, `aggregate.py` writes a health table. It answers what a pass rate cannot, following Anthropic's [Demystifying evals for AI agents](https://www.anthropic.com/research/demystifying-evals-for-ai-agents) and [Automating eval design and hillclimbing](https://claude.dev/blog/automating-eval-design-and-hillclimbing/):
+
+| Column or flag | What it tells you |
+|---|---|
+| `runs` 2/3, `lost` | A run timed out or left no response. `grade.py` skips it, so without this column it would only show up as a smaller `n`. That is infrastructure noise, not a skill result |
+| `all delta` 2/3, `inconsistent` | How many repetitions passed every delta assertion. A mean of 0.94 can be one miss in each of three runs; a skill that guards a safety rule has to pass every time |
+| `base n`, `noise`, `noise unknown`, `gain within noise` | With two or more runs on each side, `noise` is the standard error of the gain, and a gain under twice that is flagged. With one baseline run the noise is unknown, and the table says so |
+| `saturated` | Delta is 0.95 or more. The eval guards against regressions and cannot show that an edit improved the skill |
+| `baseline high`, `no gain` | The baseline passes 0.80 or more of the delta assertions without the skill, or as much as the skill does |
+| `cost with`, `cost base` | Mean cost of a run. When quality is saturated, cost at equal quality is the thing left to improve |
+
+Nearly every eval here is saturated: the recorded delta is 0.99. Read the suite as a regression suite. An eval that should measure an improvement needs room first: a harder fixture, or traps a bare agent and the current skill both miss.
+
+### Reading runs
+
+```bash
+python3 transcript.py --failures <workspace>/iteration-48   # every failed assertion, with the grader's evidence
+python3 transcript.py <workspace>/iteration-48/eval-27-…/with_skill/rep1   # one run, turn by turn (--full for untruncated)
+```
+
+A failed assertion is the skill's fault, the task's or the grader's, and only the run says which. Sort the failures by cause before editing anything. For a grader's fault, follow the re-grade convention in `.memory/notes/grader-fix-regrade.md`. `transcript.tool_calls(run)` gives a grader the tools a run called, for an assertion about what a run did and not what it says it did.
+
+### Changing a skill against its eval
+
+1. **Check the noise first.** Run the eval with `--reps 3 --baseline-reps 3` and read `noise`. An improvement smaller than twice the noise cannot be seen at this number of runs.
+2. **Read the failed runs, then make one change** that fixes the cause in the skill. Never copy fixture content, a planted defect or an assertion's wording into the skill: that teaches it this fixture.
+3. **Keep the change only if the eval improves and nothing else regresses.** Re-run the skill's other evals and its controls.
+4. **Two or three rounds with no gain:** stop editing and sort the remaining failures by cause. The usual finding is an ambiguous task or a grader that rejects a correct answer.
+
+Each skill has one fixture, and its skill was edited against that fixture until it passed. There is no held-out fixture, so a score here cannot tell a better skill from one fitted to its fixture. See the caveats.
 
 ## Negative controls
 
@@ -1165,14 +1202,17 @@ Eval 15's controls are a separate script, because its runs are whole loop.py run
 
 - **The fixtures are deliberately time-of-day sensitive.** The seeded cutoff tests build slots from `datetime.now()` without pinning the hour, so they collide with the opening-hours rule outside roughly 06:00–18:00 local. That is a planted defect the teardown is supposed to find — but it also means a `suite green` assertion can legitimately flip depending on when you run. Grading is stable back-to-back; it is not stable across a day boundary.
 - **n=3, one fixture, one language, one defect class** for the pipeline evals. Low variance in the recorded run, but this is not broad coverage.
-- **Eval 2's delta is read from what the run wrote down.** Each cycle's red is graded from its quoted failure in the response's cycle record, not from a transcript of the run. `run.py` keeps no tool-call log, so a run that records a failure it never saw would pass. The named tick is checked against the tests the suite actually defines.
+- **Eval 2's delta is read from what the run wrote down.** Each cycle's red is graded from its quoted failure in the response's cycle record, not from a transcript of the run, so a run that records a failure it never saw would pass. Since 2026-11-18 `run.py` keeps the transcript, and `transcript.tool_calls` reads it; the assertion has not been moved onto it yet. The named tick is checked against the tests the suite actually defines.
 - **Two sessions given the same `--iteration` share its directory.** On 2026-11-03 another session ran evals 18–20, 30 and 31 as iteration 23 at the same time as this re-run. Each `run.py` regrades and re-aggregates the whole directory when it finishes, so whichever finished last would have graded the other's runs with its own `grade.py`. Evals 2–4 were moved to iteration 24 and graded there. Leave `--iteration` unset (the default picks the next unused number), or give each concurrent run a different number. It happened again on 2026-11-05: eval 28's re-run was given `--iteration 28`, which a concurrent eval-54 run had already taken, so its finish overwrote that run's `dispatch.json` and regraded its eval 54 with this branch's `grade.py`. Eval 28 was moved to iteration 30 and graded there.
 - **Eval 15, the loop, has one with-skill run** and no baseline; every other eval has three. All are compared against a no-skill baseline rather than an older version of the skill. A single missed assertion is a signal to look at the run, not a verdict on the skill. Eval 13's repair checks and eval 33's ordering check failed runs whose output was correct by reading; #9 fixed both graders, and every run here is graded with the fixed versions.
-- **Every baseline is one run.** Evals 28 and 36 gain +0.17 and +0.18 at n=3 against n=1. Every with-skill run passed every delta assertion, and eval 28's baseline missed the same behaviours in two independent runs (iterations 6 and 16). Even so, a single baseline cannot show how much it varies.
+- **No held-out fixture.** Every skill is scored on the one fixture it was tuned against, with the grader that was fixed alongside it. A second fixture per skill, written and graded without looking at the skill's runs and never used to edit the skill, is what would show the gains carry over.
+- **Nothing tests triggering.** Every run is told to follow the skill. Whether a skill's description makes an agent pick it up when it should, and leave it alone when it should not, is not measured.
+- **Every recorded baseline is one run.** `--baseline-reps` exists since 2026-11-18; no recorded score has used it yet. Evals 28 and 36 gain +0.17 and +0.18 at n=3 against n=1. Every with-skill run passed every delta assertion, and eval 28's baseline missed the same behaviours in two independent runs (iterations 6 and 16). Even so, a single baseline cannot show how much it varies.
 - **Runs share the host's Docker daemon.** When Docker is available, the eval 28 runs build and run real images, four at a time, on one daemon. In iteration 16 one run found another run's `invoicer:*` tags and renamed its own. It then ran `docker container prune -f`, which removed every stopped container on the host, not just its own. Run the batch on a machine whose stopped containers you don't need, or with Docker unavailable, in which case the skill states that and grading takes the no-Docker branch.
 - **Eval 28 is graded from files, never built.** It checks that the Dockerfile and `.dockerignore` say the right things, not that the image builds, runs, rebuilds from cache or lands at the right size, which is exactly what the skill's own Step 4 requires and this harness cannot do without Docker.
 - **Eval 6 is graded from files, never executed.** It checks that the right compose file was written, not that the stack comes up — which is precisely the claim the skill's own Step 6 makes and this harness does not verify.
 - **Dispatch is automated, the run itself is not pinned.** `run.py` keeps the layout, the prompt and the isolation identical between runs, which manual dispatch could not. It does not pin the model or the Claude Code version, it only records them in `dispatch.json`. Two iterations run months apart can differ for reasons that have nothing to do with the skill. Check those fields before you compare them.
 - **A background shell can hold a run open.** `claude -p` waits for its own background shells before it exits. One that hangs, on input for example, holds the run until `--timeout`, and the run still reports success. In a live `harness/loop.py` run, 13 seconds of work held a stage for about 12 minutes. `run.py` passes the same settings as the loop harness to every run: `CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1`, `BASH_DEFAULT_TIMEOUT_MS=120000` and `BASH_MAX_TIMEOUT_MS=300000`. If `seconds` in a `run.json` is far above what the work needed, suspect this first.
 - **Scores up to iteration 33 carry no skill hash.** They were recorded before `run.py` kept one, and the staged copies were temp folders made from the working tree, not a commit. Comparing file times with `git log` can't settle which version a run saw. Until each eval is re-run, `check_repo.py` lists those skills as unknown, not as current.
+- **Runs before 2026-11-18 have no transcript.** They kept only the final response and the `result` object.
 - **The transcripts are not committed.** `benchmark.md` is the recorded result; the 36 run transcripts behind it were evidence for one run, not something a future run needs.

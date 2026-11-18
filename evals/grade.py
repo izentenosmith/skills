@@ -6488,8 +6488,9 @@ def main():
             continue
         fn = CHECKS[ed.name]
         runs = [p for p in sorted(ed.glob("with_skill/rep*")) if p.is_dir()]
-        if (ed / "old_skill").is_dir():
-            runs.append(ed / "old_skill")
+        # One baseline run sits at old_skill/; run.py --baseline-reps N puts N in old_skill/rep*.
+        runs += [p for p in sorted(ed.glob("old_skill/rep[0-9]*")) if p.is_dir()] or (
+            [ed / "old_skill"] if (ed / "old_skill").is_dir() else [])
         for run in runs:
             if not (run / "outputs/response.md").exists():
                 continue
