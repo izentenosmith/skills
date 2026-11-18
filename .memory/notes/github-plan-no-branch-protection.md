@@ -3,7 +3,7 @@ name: github-plan-no-branch-protection
 description: main has no enforced protection: the repo is private on GitHub Free, so rulesets, branch protection and auto-merge are unavailable
 type: fact
 source: .github/rulesets/main.json, user 2026-11-10
-verified: 2026-11-10
+verified: 2026-11-18
 volatility: high
 ---
 

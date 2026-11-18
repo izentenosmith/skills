@@ -3,7 +3,7 @@ name: eval-runs-read-working-tree
 description: run.py stages the skill from the checkout as it is on disk, uncommitted edits included, so commit dates can mislead about staleness
 type: gotcha
 source: evals/run.py::stage_skill, session 2026-11-09
-verified: 2026-11-17
+verified: 2026-11-18
 volatility: high
 ---
 
