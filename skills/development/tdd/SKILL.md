@@ -73,6 +73,19 @@ Take the answer, then write the test yourself.
 
 ## Workflow
 
+### 0. Get your bearings — every time you start or resume
+
+A build outlives the session that started it. After a usage limit, a crash, a compaction or a new conversation you remember nothing that isn't on disk, and the two ways that goes wrong are building on a tree you don't understand and deciding the work is finished because some of it is there. Before any new test, in this order:
+
+- [ ] **Where you are** — the directory, the branch, `git status`.
+- [ ] **What was recorded** — the brief's ticks and Revisions, the ledger's last section, and the last status block of your stage log if a coordinating session gave you one.
+- [ ] **What actually happened** — `git log --oneline -20` since the brief's `**Base:**`, and the uncommitted changes. Work the record doesn't explain is settled first: finish the slice it belongs to, or return to the last green commit and say so. Don't build on it as found.
+- [ ] **How to run things** — the commands your brief or `.workflow/env.md` gives. Use them; rediscover only what is missing or no longer runs.
+- [ ] **Is it green?** — run the full suite, then the acceptance command. Every test that was green stays green and every ticked criterion's test passes; a tick whose test fails is unticked, and fixing it comes before the next criterion. Where there is an app to start, start it and check its main path once as a user would.
+- [ ] **What is next** — the first unticked criterion, and only that one. "Most of it is there" is not done: done is the checklist at the end of this skill.
+
+On a first start most of these are one line each. Say what you found, then plan.
+
 ### 1. Planning
 
 **First action — load the project's development criteria** for the area you're touching (typically a per-app "dev-criteria" skill or doc named after the service/module), plus its domain glossary and any ADRs covering that area. Load each relevant one if the work spans several areas. If [architect-deep-dive](../architect-deep-dive/SKILL.md) already loaded them, reload only what covers ground it didn't. This skill stays repo-agnostic on purpose: the *process* lives here, the *project-specific rules* live in those criteria. Test names and interface vocabulary follow the glossary.

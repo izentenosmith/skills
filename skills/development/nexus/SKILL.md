@@ -27,6 +27,8 @@ Every session reads and writes one shared folder, outside any worktree so that i
 ```
 .workflow/nexus/
 ├── status.md          the whole state: sessions, PRs, base head, leases, what waits on whom
+├── env.md             how to build, test, start and smoke-check this repo, and the base's baseline
+├── increment.json     what the increment must deliver: every entry failing until proven on the base
 ├── decisions.md       the user's decisions, DEC-n — read before any question is asked
 ├── findings.md        findings that touch more than one slice, X-n
 ├── labels.md          every label series in use and its next free id
@@ -37,11 +39,23 @@ Every session reads and writes one shared folder, outside any worktree so that i
 
 Create the folder and every file in it before the first session starts, even the ones that begin empty: a session told to read `decisions.md` before asking must find it. The register outlives the increment — it is the project's record of the owner's rulings — so offer to keep a copy in version control (a `RULINGS.md`, say) if the repo has no such record.
 
+## Before the first session — set up the increment
+
+Your first turn on an increment is different from every later one: it builds what all the others stand on. Nothing here is product code. Do it once, in this order, before any session starts:
+
+1. **Decompose.** The slices come from architect-deep-dive's decomposition, one PR each. If there is none, that design review comes first — in this conversation, with the user, not in a sub-session.
+2. **Create the notes folder** and every file in it (above).
+3. **Write [env.md](notes.md#envmd--how-to-run-this-repo):** the commands to test, lint, build, start and smoke-check the repo, taken from its instructions, CI and manifests. Every session gets them in its brief, so none spends a turn working out how to run the code, and no two work it out differently.
+4. **Record the baseline.** Run the full suite — and the smoke check, where there is one — on the base branch's head, and write the counts into `env.md`. A base that is red goes to the user before any session starts: a session built on a red base cannot tell its own failures from the ones it inherited.
+5. **Write [increment.json](notes.md#incrementjson--what-the-increment-must-deliver):** one entry per requirement and per user journey in the design, each with the steps that would check it from outside and the slice that delivers it, **all failing**. An entry with no slice is a hole in the decomposition; a journey that crosses slices goes to the slice that merges last. Bring the list to the user once, in the first digest, with the holes named: their confirmation is a `DEC-n`, and from then on the list is the increment's definition of done.
+
+For a coordination that is already running without these two files, write them at your next turn from the design and the sessions' briefs, mark as passing only what you can see passing on the base's head, and don't hold a PR that was already at the gate for it.
+
 ## Starting sessions
 
-1. **Decompose first.** The increments come from architect-deep-dive's decomposition, one PR each. If there is none, that design review comes first — in this conversation, with the user, not in a sub-session.
-2. **One session per PR, at most four running at once** unless the user sets another limit. Each runs in its own worktree. Before each batch, check free disk: worktrees, build caches and scratch databases add up, and a session that dies of a full disk dies mid-stage.
-3. **Brief each session with the contract.** Paste the text in [contract.md](contract.md) into its first message, filled in: the slice, the notes folder's absolute path, the base branch, its own log path, its scratch names and ports. A session that never read the contract will free-text its questions and coin its own label series.
+1. **One session per slice, at most four running at once** unless the user sets another limit. Each runs in its own worktree. Before each batch, check free disk: worktrees, build caches and scratch databases add up, and a session that dies of a full disk dies mid-stage.
+2. **Brief each session with the contract.** Paste the text in [contract.md](contract.md) into its first message, filled in: the slice, the notes folder's absolute path, the base branch, its own log path, its scratch names and ports, the commands and baseline from `env.md`, and the `increment.json` entries it delivers. A session that never read the contract will free-text its questions, coin its own label series and rediscover how to run the tests.
+3. **Carry the entries into the brief.** Each entry a slice delivers becomes an acceptance criterion in that slice's brief, so stage 3 writes the test that will later prove it.
 4. **Record it** in `status.md` the moment it starts: its slug, its id or link in your environment, its worktree, its slice, its parent if it has one.
 
 Use whatever your environment offers to start and message sessions — a desktop app's session tools, a terminal `claude` per worktree. Whatever the transport, every message you send a session is **also appended to its log** under `## From nexus`, with the time. A message that exists only in transport is lost the first time either side is compacted.
@@ -59,10 +73,10 @@ The tree has **one root**: registries, the register, leases and the user stay wi
 
 ## Every turn — read, route, record
 
-Each time you are woken — a session ended a turn, the user wrote, a lease expired — work through this in order:
+Each time you are woken — a session ended a turn, the user wrote, a lease expired — work through this in order. **If you don't remember your last turn** — a new conversation, a compaction, a summary where the detail used to be — get your bearings first, from disk and not from the summary: `status.md`, then `increment.json`, `decisions.md` and `findings.md`, then the base branch's `git log --oneline -20` against the head `status.md` names. A base that moved without a merge you recorded is the first thing to explain.
 
 1. **Read every log that changed** since your last turn, to its last status block. A log whose last block is older than its last edit is mid-turn: leave it.
-2. **Find the stalled sessions.** A session that isn't `done` or `waiting`, whose last status block is older than the time it said to expect, or that stopped mid-stage — a usage limit, a crash, a closed window — is stalled. Resume it: point it at its own log, whose last block is its hand-over, and record that you did. Don't let a silent session look like a busy one in `status.md`.
+2. **Find the stalled sessions.** A session that isn't `done` or `waiting`, whose last status block is older than the time it said to expect, or that stopped mid-stage — a usage limit, a crash, a closed window — is stalled. Resume it: point it at its own log, whose last block is its hand-over, and at the contract's **Start of every session**, which it works through before anything new, and record that you did. Don't let a silent session look like a busy one in `status.md`.
 3. **Route each question** (the format is in [contract.md](contract.md#questions)):
    - answered by a decision in the register → reply naming it (`DEC-n`) and why it applies;
    - a question only the user can answer → into the digest below, reshaped into the question format if the session didn't use it, with the decisions you checked;
@@ -96,6 +110,7 @@ Check every line against the record, not the session's summary. A line you could
 - [ ] **Findings settled.** Every finding in the session's ledger is closed or refuted; nothing INCONCLUSIVE carried into the GO.
 - [ ] **Test counts with the skipped number.** Passed, failed **and skipped**, from the run on the head. A count with no skipped number is incomplete: a suite that skips tests is not the suite that passes them.
 - [ ] **CI ran something.** A green check counts only if its log shows the tests ran: a pipeline whose stages were skipped, or that ran zero tests, is green and proves nothing.
+- [ ] **Entries claimed, each with its test.** The log has a `Delivers:` line for every `increment.json` entry the slice was given, naming a test that exists and ran in the count above — or a `Not delivered:` line, which reaches the user as a decision, not as a merge.
 - [ ] **Required runs done** — the acceptance run, the full load, whatever the slice's brief requires — or named as not verified.
 - [ ] **Integrated with today's base.** In a scratch worktree, merge the latest base (and any PR going in ahead of this one) into the branch, then build, compile every test, and run the suite on the result. Two branches that each pass alone can fail together. Conflicts that are rows added to the same shared document keep every row; any other conflict goes back to the session — you don't resolve code.
 - [ ] **Mergeable** according to the forge (GitHub, GitLab…), no conflict with the base branch, and targeting the base branch — a PR stacked on another branch is retargeted once its parent merges, before it does.
@@ -104,7 +119,7 @@ Check every line against the record, not the session's summary. A line you could
 
 A PR that fails a line goes back to its session with the line, the evidence and what would satisfy it.
 
-**After a merge:** confirm the base branch gained only that PR's files. Then tell every open session that the base moved — the new head, and whether they must rebase or renumber — and update `status.md`.
+**After a merge:** confirm the base branch gained only that PR's files. Run the suite on the base's new head, and for each entry the PR delivered, see its test pass there: only then set `"passes": true` in `increment.json`, with the test, the PR, the head and the date as its evidence. An entry that was passing and whose test now fails goes back to `false`, becomes an `X-n`, and is routed to the session whose merge broke it. Then tell every open session that the base moved — the new head, and whether they must rebase or renumber — and update `status.md`.
 
 ## Answering the user — the digest
 
@@ -132,6 +147,7 @@ Each answer to the user leads with what needs them and nothing else, so it can b
 - <check> — from <session>, since <date>
 
 ## Where things stand
+**Increment:** <n> of <total> entries passing on the base · failing again: <REQ-ids or none>
 <one line per session: slice · stage · waiting on · next — stalled sessions marked as such>
 ```
 
@@ -139,4 +155,6 @@ Empty sections say `none`. Then, briefly, what you settled yourself — question
 
 ## When the increment is done
 
-Every PR merged or closed, every session archived, `findings.md` with no open X-n that belongs to this increment, and the owner checks listed for the user. Close `status.md` with the increment's summary: PRs merged, decisions taken, sign-offs issued, what was never verified.
+Merged PRs are not the test: **`increment.json` is.** The increment is done when every entry passes on the base branch's current head or carries the `DEC-n` under which the user dropped it — checked by one last run of the suite and the smoke check on that head, not by adding up the merges. An entry still failing when the last PR has merged is work nobody was given: say so, and ask the user whether it becomes a new slice or a dropped entry. You never close it yourself.
+
+Then: every PR merged or closed, every session archived, `findings.md` with no open X-n that belongs to this increment, and the owner checks listed for the user. Close `status.md` with the increment's summary: entries passing and dropped, PRs merged, decisions taken, sign-offs issued, what was never verified.
