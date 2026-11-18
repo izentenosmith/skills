@@ -3,20 +3,24 @@
 
     python3 -I memlint.py audit --root . [--today YYYY-MM-DD] [--json audit.json]
     python3 -I memlint.py delta --root . [--today YYYY-MM-DD] [--json delta.json]
+    python3 -I memlint.py due   --root . [--today YYYY-MM-DD]
 
 audit  checks the tree against layout.md: the index budget, frontmatter, links, code and commit
        references that no longer resolve, secret-like strings, orphans, stale and oversized notes,
-       likely duplicates, and whether a dream is due. Codes ML01-ML12, below.
+       likely duplicates, whether a dream is due, and relative dates. Codes ML01-ML13, below.
 delta  the dream's input: the watermark in .memory/.dream-state, the commits since it, the notes and
        pages whose referenced files those commits touched, the memory files captured since, the
        design records (ADRs, glossary) added or changed since, and the notes past their verified
        window. With no watermark, every note is listed for verification.
+due    one line when a dream is due (ML12's test), and nothing when it isn't or when there is no
+       .memory/ in a git repository. Always exits 0, so a session-start hook can run it
+       (templates.md §6). The line is a fact for the session to mention, never an order to dream.
 
 Every command prints markdown; `--json PATH` also writes the full result. Stdlib only, Python 3.10+,
 read-only: it reads files and runs `git rev-parse`, `git rev-list`, `git log` and `git cat-file`, and
 never writes to the repo. A secret-like string is reported by its kind and location, never its value.
 
-Exit: 0 no errors · 1 audit found errors · 2 usage (no such root, bad date).
+Exit: 0 no errors (`due`: always) · 1 audit found errors · 2 usage (no such root, bad date).
 """
 from __future__ import annotations
 
@@ -54,6 +58,7 @@ SEVERITY = {
     "ML10": "warning",  # oversized note or page
     "ML11": "error",    # symlink or path that escapes .memory/
     "ML12": "info",     # dream due, or no dream recorded
+    "ML13": "warning",  # relative date: "yesterday", "last week", "recently"
 }
 
 FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n?", re.S)
@@ -72,6 +77,12 @@ SHA = re.compile(r"(?<![\w-])[0-9a-f]{7,40}(?![\w-])")
 STOP = set("the and for with that this from are was were has have not but its into when then than any all "
            "each per via use used uses using our their they them there here what which who will would should "
            "can could must may also only always never does did done".split())
+_DAYS = r"(?:mon|tues|wednes|thurs|fri|satur|sun)day"
+# words that mean a different day every day after they were written
+RELDATE = re.compile(
+    r"(?i)\b(?:yesterday|today|tonight|tomorrow|recently|"
+    rf"(?:last|next|this|past|earlier this) (?:week|month|quarter|year|sprint|{_DAYS})|"
+    r"(?:\d+|an?|a few|a couple of|two|three|several) (?:days?|weeks?|months?|years?) ago)\b")
 SECRETS = [
     ("a private key block", re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----")),
     ("an AWS access key", re.compile(r"\b(AKIA|ASIA)[0-9A-Z]{16}\b")),
@@ -341,6 +352,16 @@ def audit(mem, today):
                     add("ML06", f".memory/{rel}:{i}", f"{kind} (value not shown): remove it and rotate it")
                     break
 
+    for rel in ["INDEX.md"] * (index is not None) + mem.notes + mem.pages:
+        # blank the frontmatter rather than cut it, so line numbers stay the file's own
+        text = FRONTMATTER.sub(lambda m: "\n" * m.group(0).count("\n"), mem.files[rel])
+        text = CODESPAN.sub("", FENCE.sub(lambda m: "\n" * m.group(0).count("\n"), text))
+        for i, line in enumerate(text.splitlines(), 1):
+            m = RELDATE.search(line)
+            if m:
+                add("ML13", f".memory/{rel}:{i}", f"\"{m.group(0)}\" means a different day to every later "
+                                                  f"reader: write the date (YYYY-MM-DD)")
+
     if index is not None:
         seen, todo = {"INDEX.md"}, ["INDEX.md"]
         edges = {}
@@ -506,7 +527,7 @@ def md_delta(d):
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0],
                                  formatter_class=argparse.RawDescriptionHelpFormatter, epilog=__doc__)
-    ap.add_argument("command", choices=["audit", "delta"])
+    ap.add_argument("command", choices=["audit", "delta", "due"])
     ap.add_argument("--root", default=".", help="the repository root (default .)")
     ap.add_argument("--memory", default=".memory", help="the memory directory, relative to --root (default .memory)")
     ap.add_argument("--today", help="YYYY-MM-DD, for staleness (default: today)")
@@ -525,9 +546,14 @@ def main(argv=None):
         sys.stdout.write(md_audit(mem, findings, info))
         result = {"findings": findings, "dream": info}
         code = 1 if any(f["severity"] == "error" for f in findings) else 0
-    else:
+    elif a.command == "delta":
         result = delta(mem, today)
         sys.stdout.write(md_delta(result))
+        code = 0
+    else:
+        result = dream_info(mem, today) if mem.git and mem.dir.is_dir() else {"due": ""}
+        if result["due"]:
+            print(f"repo-memory: {result['due']}. Tell the user; a dream starts only when they ask for one.")
         code = 0
     if a.json:
         a.json.write_text(json.dumps(result, indent=2) + "\n")

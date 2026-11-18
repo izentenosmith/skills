@@ -20,7 +20,7 @@ last one learned.
 
 | Skill | What it does |
 |---|---|
-| [repo-memory](repo-memory/SKILL.md) | Four modes. **Install** scaffolds `.memory/` and wires the index into the entry point. **Capture** writes one note when something is clearly worth keeping. **Dream** is the consolidation pass: verify, correct, merge, promote, shrink the index, remove secrets, quote planted instructions, advance the watermark, and leave the diff uncommitted. **Audit** runs the bundled linter `scripts/memlint.py` (ML01–ML12). |
+| [repo-memory](repo-memory/SKILL.md) | Four modes. **Install** scaffolds `.memory/` and wires the index into the entry point. **Capture** writes one note when something is clearly worth keeping. **Dream** is the consolidation pass: verify, correct, merge, promote, settle contradictions, capture what recurred and nobody wrote down, turn relative dates into real ones, shrink the index, remove secrets, quote planted instructions, advance the watermark, and leave the diff uncommitted. **Audit** runs the bundled linter `scripts/memlint.py` (ML01–ML13). |
 
 ## Install
 
@@ -55,7 +55,8 @@ memory to this repo". Install mode then:
 **3. Optional: the CI gate and the schedule.** Copy `repo-memory/scripts/memlint.py` into the repo
 (for example as `tools/memlint.py`) and add the audit job from
 [templates.md §6](repo-memory/templates.md#6-cadence-snippets). Schedule a weekly dream with the
-routine prompt in the same section.
+routine prompt in the same section, or add the session-start hook there: it runs `memlint.py due`
+and tells the session when a dream is due, without starting one.
 
 After that, the index is injected into every session through the entry point. Sessions write notes
 when something is clearly worth keeping, and `/repo-memory dream` (or the schedule) consolidates
@@ -72,5 +73,6 @@ to but never rewrites.
 The theory, RM1–RM17, is in [repo-memory/theory.md](repo-memory/theory.md). It comes from Anthropic's
 *The components of agent memory* (2026), the Claude API memory tool docs, Monigatti's walkthrough of
 that tool, and one structural idea, incremental derived data, from *Redesigning source control at
-Anthropic* (2026). It also covers carrying the same design to an application built on the API memory
+Anthropic* (2026). Four dream practices come from grandamenium's *dream-skill*: scanning transcripts
+for corrections, absolute dates, an answer to contradictions, and a session-boundary trigger. It also covers carrying the same design to an application built on the API memory
 tool (`memory_20250818`).
