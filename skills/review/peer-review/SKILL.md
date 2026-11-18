@@ -30,17 +30,17 @@ review literature says that engine misses:
 |---|---|
 | **peer-review** (this skill) | Someone's change, or your own before you ask a human, needs a full peer review: a PR, a branch, a diff, a re-review of fixes |
 | built-in `/code-review` | A fast bug-only pass, where intent, omissions and evolvability don't matter yet |
-| [refactor-review](../../development/refactor-review/SKILL.md) | You own the change and want its structure cleaned, behaviour frozen, on a green suite |
-| [devils-advocate](../../development/devils-advocate/SKILL.md) → [tyr-verdict](../../development/tyr-verdict/SKILL.md) | The closing loop of the development pipeline: an adversarial teardown of work you just built, then a go/no-go |
-| [appsec](../../security/appsec/SKILL.md) | The change trips an escalation trigger in the security lens, or the ask is a security review |
+| `refactor-review` | You own the change and want its structure cleaned, behaviour frozen, on a green suite |
+| `devils-advocate` → `tyr-verdict` | The closing loop of the development pipeline: an adversarial teardown of work you just built, then a go/no-go |
+| `appsec` | The change trips an escalation trigger in the security lens, or the ask is a security review |
 | [test-review](../test-review/SKILL.md) · [concurrency-review](../concurrency-review/SKILL.md) | Lens K or lens G needs more depth than a lens pass: the specialists for test adequacy and for concurrency, returning candidates in this skill's shape |
 | [pr-prep](../pr-prep/SKILL.md) | Before review: the author prepares and describes the change, or a readiness check says whether it can be reviewed with confidence at all |
 | [code-xray](../code-xray/SKILL.md) | The history signals in depth, with a script that computes them, or a codebase-wide hotspot and refactoring-target analysis |
 | [review-retro](../review-retro/SKILL.md) | After merge: a record of the review, metrics across reviews, and checklist and rule proposals |
 
-Fixes go through [tdd](../../development/tdd/SKILL.md) with a red test first, or
-[hotfix](../../operations/hotfix/SKILL.md) when it's urgent. A finding that is really a design
-question goes to [architect-deep-dive](../../development/architect-deep-dive/SKILL.md).
+Fixes go through `tdd` with a red test first, or
+`hotfix` when it's urgent. A finding that is really a design
+question goes to `architect-deep-dive`.
 
 Reference docs, all in this folder:
 
@@ -300,7 +300,7 @@ hallucinated defect introduces a real one (R28). Apply fixes in severity order, 
 time, with the smallest change that resolves it. Say what each fix changes and what it leaves
 alone. Run the relevant tests after each. A bug fix with no
 covering test gets a red test first. Evolvability fixes follow the
-[refactor-review](../../development/refactor-review/SKILL.md) discipline: behaviour frozen, green
+`refactor-review` discipline: behaviour frozen, green
 before and after. Then re-report every finding with its outcome: `fixed`, `skipped` (real, not
 applied, and why), or `no_change_needed` (it turned out wrong). Through the findings tool, re-call
 it with an `outcome` on each.
@@ -393,10 +393,10 @@ End the report with the next step that fits what you found. In the report, name 
 links below are for this file only, because relative paths mean nothing in a printed report.
 
 > <n> findings (<b> blockers, <m> majors). Recommendation: **<recommendation>**. The fixes go
-> through **[tdd](../../development/tdd/SKILL.md)** with a red test first. Structural findings go
-> through **[refactor-review](../../development/refactor-review/SKILL.md)**.
+> through **`tdd`** with a red test first. Structural findings go
+> through **`refactor-review`**.
 > <If the security lens escalated:> The change tripped <trigger>. Run
-> **[appsec](../../security/appsec/SKILL.md)** in PR-review tier before merging.
+> **`appsec`** in PR-review tier before merging.
 > After the fixes, ask me to **re-review**, and I'll verify each finding against the new revision.
 > After merge, **[review-retro](../review-retro/SKILL.md)** records the review and its outcomes.
 

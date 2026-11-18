@@ -2,7 +2,7 @@
 
 > How a peer review is graded and written down. A diff review gets **findings and a
 > recommendation, not a 0–10 score**. A score belongs to a codebase audit, which is what
-> [appsec](../../security/appsec/SKILL.md) and the other audit skills produce. Every finding names
+> `appsec` and the other audit skills produce. Every finding names
 > its principle from [theory.md](theory.md) (R-n) or a heuristic ID from
 > [heuristics.md](heuristics.md). A finding with neither is taste.
 

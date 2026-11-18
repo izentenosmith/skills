@@ -7,7 +7,7 @@ description: A fast, still-disciplined lane for an urgent bug in a running syste
 
 ## Where this fits
 
-The [development pipeline](../../development/README.md) is the right way to build a change and the wrong way to fix a wrong number on an invoice page by lunchtime. This lane is the short path between them: **every discipline that catches a bad fix, none of the ceremony that designs a good feature.** It is not a lighter standard — the red test, the shared-cause fix and the review pass are all mandatory. What it drops is the design dialogue, the plan document and the review *loop*.
+The development pipeline (architect-deep-dive through tyr-verdict) is the right way to build a change and the wrong way to fix a wrong number on an invoice page by lunchtime. This lane is the short path between them: **every discipline that catches a bad fix, none of the ceremony that designs a good feature.** It is not a lighter standard — the red test, the shared-cause fix and the review pass are all mandatory. What it drops is the design dialogue, the plan document and the review *loop*.
 
 It leans on six reference docs:
 
@@ -50,7 +50,7 @@ This lane only works for bugs that can wait an hour. Check, in order, and **stop
 
 - **Down, degraded, exposing data, or corrupting data now** — discovery showed what the report didn't → stop exactly as the outage gate above says: no further file or command, and the handoff to **[incident-fix](../incident-fix/SKILL.md)** is your output.
 - **It needs a second team** — fixing or containing it takes people or access outside this team → hand it to **[incident-fix](../incident-fix/SKILL.md)** the same way. That's one of the declare-early signals ([severity.md](../incident-fix/severity.md)): the coordination an incident brings is the point, even when nothing is down. A bug customers can see is still a hotfix while the system is up and the damage isn't spreading.
-- **Real design ambiguity** — several reasonable fixes with different trade-offs, or a fix that needs a new boundary → stop. Recommend the repo's design workflow ([architect-deep-dive](../../development/architect-deep-dive/SKILL.md) → [agent-brief](../../development/agent-brief/SKILL.md) where installed), or a short options-and-trade-offs discussion where not.
+- **Real design ambiguity** — several reasonable fixes with different trade-offs, or a fix that needs a new boundary → stop. Recommend the repo's design workflow (`architect-deep-dive` → `agent-brief` where installed), or a short options-and-trade-offs discussion where not.
 - **The fix touches persistent data, money, permissions or tenancy** — database writes, migrations, financial or inventory figures, file deletion, an authorization check, an isolation boundary → **stay, in strict mode.** Step 4 becomes blocking. These are the failures a green suite is worst at catching, and a two-line diff is perfectly capable of causing one.
 
 **Also ask whether the fix is a revert.** If one identifiable commit introduced the bug and reverting it loses nothing still wanted, the revert *is* the hotfix — the red test still applies.
@@ -77,7 +77,7 @@ Write the note in [root-cause-note.md](root-cause-note.md): **symptom · cause �
 
 ## 🔥 Step 4: One adversarial review pass
 
-Scoped to **the diff only**, and **one pass — no loop**. Where [devils-advocate](../../development/devils-advocate/SKILL.md) and [tyr-verdict](../../development/tyr-verdict/SKILL.md) are installed, run them back to back: one teardown, one adjudication, cap one iteration. Where they aren't, work [review-checklist.md](review-checklist.md) yourself, after re-reading the diff as if someone else wrote it.
+Scoped to **the diff only**, and **one pass — no loop**. Where `devils-advocate` and `tyr-verdict` are installed, run them back to back: one teardown, one adjudication, cap one iteration. Where they aren't, work [review-checklist.md](review-checklist.md) yourself, after re-reading the diff as if someone else wrote it.
 
 - **Confirmed blockers get fixed now**, red→green like the original bug.
 - **Everything else becomes a follow-up item** ([follow-up.md](follow-up.md)), not a second round.

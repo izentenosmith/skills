@@ -11,7 +11,7 @@
 >
 > **Find, then fix.** Record what each item finds. Fix after the sweep, smallest change first, and
 > show the list to the author before applying anything. A behaviour fix gets a red test first,
-> through [tdd](../../development/tdd/SKILL.md).
+> through `tdd`.
 >
 > Each item is a true/false statement about the change. Tick it only when it is true.
 

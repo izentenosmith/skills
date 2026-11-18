@@ -27,8 +27,8 @@ This one makes that review possible, and cheaper.
 | **pr-prep, author mode** (this skill) | You wrote the change and are about to ask for review: "prep my branch", "write the PR description", "is this too big?", "split this" |
 | **pr-prep, readiness mode** (this skill) | A PR arrived and you want to know if it is reviewable before spending a review on it, or the PR harness runs it first |
 | [peer-review](../peer-review/SKILL.md) | The PR is ready and needs the review itself: findings, verification, a recommendation |
-| [refactor-review](../../development/refactor-review/SKILL.md) | The split plan puts a structural refactor first, and you want that refactor cleaned on a green suite |
-| [agent-brief](../../development/agent-brief/SKILL.md) | There are no acceptance criteria anywhere, and the work is big enough to need a plan before more code |
+| `refactor-review` | The split plan puts a structural refactor first, and you want that refactor cleaned on a green suite |
+| `agent-brief` | There are no acceptance criteria anywhere, and the work is big enough to need a plan before more code |
 | [code-xray](../code-xray/SKILL.md) | The self-review's co-change check, computed: `xray.py pr --base <base>` lists the files history says should travel with yours |
 
 Reference docs, all in this folder:
@@ -130,7 +130,7 @@ then move to the next. Read the diff in a different view from your editor (`git 
   exactly, or record that it wasn't run and why (PP8).
 - [ ] **Fix what you find.** Show the list first. Apply mechanical removals (a debug line, a stray
   file) when the author says yes. A behaviour fix goes through
-  [tdd](../../development/tdd/SKILL.md) with a red test first. Re-check the items already done when
+  `tdd` with a red test first. Re-check the items already done when
   a fix touches their ground.
 
 ### A4 — Commit hygiene

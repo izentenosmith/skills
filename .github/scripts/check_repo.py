@@ -17,6 +17,8 @@ Skills
 Links
   - every relative link in a tracked markdown file resolves, outside code
     spans and fences; eval fixtures are skipped (their content is planted)
+  - a link inside a skill folder stays within its family: installs are flat,
+    so `../../<family>/...` only resolves in this repo
 Evals
   - evals.json parses, ids are unique, and each eval names a skill that exists
     (or the loop runner) and a fixture folder that exists
@@ -153,6 +155,13 @@ for md in tracked("*.md"):
         path = target.split("#", 1)[0]
         if path and not (md.parent / path).exists():
             problem(f"{rel}: broken link ({target})")
+        elif path and rel.parts[0] == "skills" and len(rel.parts) >= 4:
+            # Installs are flat (~/.agents/skills/<skill>/), so a link inside a
+            # skill only resolves there if it stays within the skill's family.
+            family = (ROOT / "skills" / rel.parts[1]).resolve()
+            if not (md.parent / path).resolve().is_relative_to(family):
+                problem(f"{rel}: link {target} leaves the {rel.parts[1]} family, so it breaks "
+                        f"once installed; name the skill in backticks instead")
 
 # ----------------------------------------------------------------- evals
 

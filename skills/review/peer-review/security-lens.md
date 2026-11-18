@@ -7,7 +7,7 @@
 > the PDF page − 1). See [theory.md](theory.md).
 >
 > The deep review, with an endpoint inventory, nine domains, a score and a gate, is
-> [appsec](../../security/appsec/SKILL.md). This lens finds what a diff introduces and escalates
+> `appsec`. This lens finds what a diff introduces and escalates
 > what it can't settle.
 
 ---
@@ -140,7 +140,7 @@ the code is the review.
 
 ## 4. Escalate to appsec
 
-Recommend [appsec](../../security/appsec/SKILL.md) in **PR-review tier** before merge, in the report
+Recommend `appsec` in **PR-review tier** before merge, in the report
 and the handoff, when the change touches any of these (OCR p.12, p.26–27, p.62, p.84–117,
 p.119–124, p.137, p.176–184, p.210–211):
 

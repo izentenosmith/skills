@@ -11,7 +11,7 @@
 > heuristic match with no cost is taste, and taste is dropped in Phase 3.
 >
 > Fowler's smell catalogue (Long Method, Feature Envy, Shotgun Surgery…) belongs to
-> [refactor-review](../../development/refactor-review/SKILL.md). Name a Fowler smell when it fits,
+> `refactor-review`. Name a Fowler smell when it fits,
 > but hand the structural fix to that skill. This file holds what Clean Code adds beyond Fowler.
 
 ---

@@ -117,7 +117,7 @@ That's a good outcome. Don't invent work to fill the report.
 ## 9. Design records: ADRs and the glossary
 
 ADRs and the glossary are already in the repository, written by
-[architect-deep-dive](../../development/architect-deep-dive/SKILL.md) or by hand. Memory doesn't copy
+`architect-deep-dive` or by hand. Memory doesn't copy
 them (RM4). It makes them findable, and it holds itself to them.
 
 - **One line in the index, not one per ADR.** `INDEX.md` carries a single line pointing at the ADR

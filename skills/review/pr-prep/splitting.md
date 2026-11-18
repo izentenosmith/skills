@@ -59,7 +59,7 @@ Never split a test away from the code it tests. A step that adds behaviour carri
 | Pattern | Use when | Shape |
 |---|---|---|
 | **Formatting first** | A reformat or import sort rode along | PR 1: the formatter run alone, nothing else. PR 2: the change, on top |
-| **Refactor first** | The change needs a seam, an extraction or a rename before it fits | PR 1: the structural change, behaviour frozen, tests unchanged and green. PR 2: the behaviour change, now small. The refactor PR can go through [refactor-review](../../development/refactor-review/SKILL.md) |
+| **Refactor first** | The change needs a seam, an extraction or a rename before it fits | PR 1: the structural change, behaviour frozen, tests unchanged and green. PR 2: the behaviour change, now small. The refactor PR can go through `refactor-review` |
 | **Mechanical and behavioural commits** | One PR is right, but it carries a rename or move | Commit 1: mechanical, with how it was produced. Commit 2: behavioural. The reading order says "read commit 2; check commit 1 by its command" |
 | **Stacked PRs** | A large feature with a natural dependency order | PR 1 against `main`, PR 2 against PR 1's branch, and so on. Each one reviewable alone, each description saying where it sits in the stack. Merge bottom up |
 | **Parallel change** | Replacing a component that callers use | Liddament's four steps: deprecate the old one; add the new one behind a facade; switch callers over; remove the old one (ECR, "Small commits"). Each step lands alone |

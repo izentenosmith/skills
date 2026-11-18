@@ -324,7 +324,7 @@ them only behind authentication, or not at all; GraphQL introspection off in pro
 Lint the spec on every change (Spectral, `vacuum` or equivalent) with the rules in
 [detection-signals.md](detection-signals.md) — every operation has `security`, bodies are closed,
 lengths and maxima set, `401/403/429` defined, no `http://` servers. The pipeline mechanics belong
-to [pipelines](../../infrastructure/pipelines/SKILL.md).
+to `pipelines`.
 
 ### Authorisation matrix as tests
 

@@ -78,7 +78,7 @@ Order the work:
 0. **Suspected compromise?** If the review found signs that a host is already owned — unexplained
    UID 0 accounts, new `authorized_keys`, `ld.so.preload` entries, unknown listeners, a Tor daemon,
    logs with gaps — **this plan stops here.** Isolate it, preserve evidence (no diagnostics on the
-   live host), and hand off to [incident-fix](../../operations/incident-fix/SKILL.md); the host is
+   live host), and hand off to `incident-fix`; the host is
    rebuilt, not hardened in place, and every credential it held is rotated (H28).
 1. **Containment.** Close internet-facing admin interfaces; close open mail relays and
    internet-facing recursion/zone transfers; remove anonymous or empty-password database accounts; make public data stores private; rotate

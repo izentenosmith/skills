@@ -23,10 +23,10 @@ Three security skills, one per layer:
 - [hardening](../hardening/SKILL.md) — whether the **platform** the code runs on is locked down:
   hosts, accounts, networks, storage, backups, monitoring, governance
 
-Neighbours outside the family: [pipelines](../../infrastructure/pipelines/SKILL.md) grades the
-supply chain in CI (pinned actions, untrusted triggers, signing); [dockerfile](../../containers/dockerfile/SKILL.md)
-builds the image. Fixes go through [tdd](../../development/tdd/SKILL.md) with a red test first, or
-[hotfix](../../operations/hotfix/SKILL.md) when it's urgent. Where a finding is a design flaw rather
+Neighbours outside the family: `pipelines` grades the
+supply chain in CI (pinned actions, untrusted triggers, signing); `dockerfile`
+builds the image. Fixes go through `tdd` with a red test first, or
+`hotfix` when it's urgent. Where a finding is a design flaw rather
 than a coding one — no authorisation model at all, a trust boundary in the wrong place — record it
 here and hand the redesign to threatmodel.
 
@@ -244,7 +244,7 @@ CSRF/CORS/framing/cookie scope · browser contract · API contract · crypto and
 secrets · configuration and headers · dependency and licence policy · security events · abuse cases ·
 traceability · validation checklist · open questions. Write code only to show a control's shape (a
 policy-layer signature, a cookie configuration, a CSP header); the build goes through
-[tdd](../../development/tdd/SKILL.md).
+`tdd`.
 
 ---
 
@@ -318,5 +318,5 @@ user hasn't named.
 > conditions>`. `<n>` Critical, `<n>` High across `<OWASP categories>`. Endpoint inventory in
 > `analysis/appsec/summary.md`.
 > Next: **Design** for `<domains>`, then **Propose** for the order; fixes go through
-> **[tdd](../../development/tdd/SKILL.md)**, design flaws to **[threatmodel](../threatmodel/SKILL.md)**,
+> **`tdd`**, design flaws to **[threatmodel](../threatmodel/SKILL.md)**,
 > platform gaps to **[hardening](../hardening/SKILL.md)**.

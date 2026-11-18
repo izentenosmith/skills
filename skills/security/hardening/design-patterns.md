@@ -308,7 +308,7 @@ Name the generic control first; the vendor feature second. On-prem has an answer
 Provider minimums for platform subnets (Azure Bastion `/26`, VPN `GatewaySubnet` `/27` recommended,
 and their equivalents) belong in the network design; size application subnets per component
 (small, e.g. `/29`–`/27`, grown deliberately) and keep every plan non-overlapping (NET-07). For a
-full addressing design, use [netdesign](../../networking/netdesign/SKILL.md).
+full addressing design, use `netdesign`.
 
 ---
 

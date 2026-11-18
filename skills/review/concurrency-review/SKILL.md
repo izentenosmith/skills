@@ -22,9 +22,9 @@ that fails when re-run is the confirmation. "This looks racy" is neither.
 |---|---|
 | [peer-review](../peer-review/SKILL.md) lens G | Every Standard and Deep review runs its short concurrency checklist when state is reachable from two actors |
 | **concurrency-review** (this skill) | Lens G needs depth: the change touches threads, async, locks, transactions, queues, retries, caches, leases or schedulers, or the ask is "is this race-free?" |
-| [appsec](../../security/appsec/SKILL.md) | A race guards money, a limit, a one-time token or an identity (CK-35), or a file path an attacker controls (CK-34) |
-| [tdd](../../development/tdd/SKILL.md) | Fixing a finding: the forced-schedule reproduction becomes the red test |
-| [architect-deep-dive](../../development/architect-deep-dive/SKILL.md) | The fix is a design change: an outbox, a single writer, leader election, moving the invariant into the database |
+| `appsec` | A race guards money, a limit, a one-time token or an identity (CK-35), or a file path an attacker controls (CK-34) |
+| `tdd` | Fixing a finding: the forced-schedule reproduction becomes the red test |
+| `architect-deep-dive` | The fix is a design change: an outbox, a single writer, leader election, moving the invariant into the database |
 | [test-review](../test-review/SKILL.md) | A test is flaky and the cause isn't a race: wall clock, randomness, order or shared fixtures |
 
 Reference docs, all in this folder:
@@ -308,13 +308,13 @@ End the report with the next step that fits. In the report, name the skills. The
 this file only, because relative paths mean nothing in a printed report.
 
 > <n> findings (<b> blockers, <m> majors), <q> topology questions. Recommendation:
-> **<recommendation>**. Fixes go through **[tdd](../../development/tdd/SKILL.md)** with a red test
+> **<recommendation>**. Fixes go through **`tdd`** with a red test
 > first: the finding's forced-schedule reproduction as the red test, then a stress test with more
 > actors than cores as the regression guard.
 > <If CK-35, a security CK-34 or an identity leak in CK-20 was found:> Run
-> **[appsec](../../security/appsec/SKILL.md)** on the race before merging.
+> **`appsec`** on the race before merging.
 > <If a fix needs a design change, such as an outbox, a single writer, leader election or moving the
-> invariant into the database:> Take it to **[architect-deep-dive](../../development/architect-deep-dive/SKILL.md)**.
-> <If CK-38 was found:> The restructuring goes through **[refactor-review](../../development/refactor-review/SKILL.md)**.
+> invariant into the database:> Take it to **`architect-deep-dive`**.
+> <If CK-38 was found:> The restructuring goes through **`refactor-review`**.
 > When **[peer-review](../peer-review/SKILL.md)** called this skill, these findings go back into its
 > report under lens G.
