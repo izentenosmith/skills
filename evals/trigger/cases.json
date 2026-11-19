@@ -1,0 +1,395 @@
+{
+ "_about": "Triggering cases. See README.md in this folder. `skill` is the description under test; `expected` is the skill that should be picked first (null: none of this repo's skills). Only `train` cases may be read while editing a description.",
+ "split": {
+  "method": "random, stratified: one of every three cases per (skill, should_trigger) held out",
+  "seed": 20261118,
+  "train": 32,
+  "heldout": 16
+ },
+ "cases": [
+  {
+   "id": "hotfix-yes-1",
+   "skill": "hotfix",
+   "should_trigger": true,
+   "expected": "hotfix",
+   "split": "train",
+   "prompt": "The CSV export on the invoices page puts the tax column in the wrong place since yesterday's deploy. Everything else works, but finance needs it right before they close the month tomorrow. Can you get a fix out today?"
+  },
+  {
+   "id": "hotfix-yes-2",
+   "skill": "hotfix",
+   "should_trigger": true,
+   "expected": "hotfix",
+   "split": "train",
+   "prompt": "Customers with an apostrophe in their surname get a 500 when they save their profile. Site is otherwise fine. Support has had about a dozen complaints this morning, so I want this patched and shipped this afternoon."
+  },
+  {
+   "id": "hotfix-yes-3",
+   "skill": "hotfix",
+   "should_trigger": true,
+   "expected": "hotfix",
+   "split": "heldout",
+   "prompt": "Prod bug, not an emergency but annoying: the password-reset email links to the staging domain. Find it, fix it properly and get it released before end of day."
+  },
+  {
+   "id": "hotfix-no-1",
+   "skill": "hotfix",
+   "should_trigger": false,
+   "expected": "incident-fix",
+   "split": "heldout",
+   "prompt": "Checkout has been returning 502s for the last twenty minutes and the error rate is still climbing. We're losing orders. Help me get this under control."
+  },
+  {
+   "id": "hotfix-no-2",
+   "skill": "hotfix",
+   "should_trigger": false,
+   "expected": "incident-fix",
+   "split": "train",
+   "prompt": "The nightly billing job double-charged a few hundred customers last night and it will run again in three hours. What do we do?"
+  },
+  {
+   "id": "hotfix-no-3",
+   "skill": "hotfix",
+   "should_trigger": false,
+   "expected": null,
+   "split": "train",
+   "prompt": "There's a typo in the footer, it says 'Copyrigth'. Fix it whenever, it can go out with the next regular release."
+  },
+  {
+   "id": "incident-fix-yes-1",
+   "skill": "incident-fix",
+   "should_trigger": true,
+   "expected": "incident-fix",
+   "split": "train",
+   "prompt": "I just got paged. The API is timing out for everyone in the EU region and the status page is lighting up. Where do we start?"
+  },
+  {
+   "id": "incident-fix-yes-2",
+   "skill": "incident-fix",
+   "should_trigger": true,
+   "expected": "incident-fix",
+   "split": "heldout",
+   "prompt": "Someone noticed that the admin audit-log endpoint has been answering without authentication since the last release. It is live right now. Need to deal with this immediately."
+  },
+  {
+   "id": "incident-fix-yes-3",
+   "skill": "incident-fix",
+   "should_trigger": true,
+   "expected": "incident-fix",
+   "split": "train",
+   "prompt": "We shipped a quick patch for the rounding bug on Monday, but the monthly revenue report is still off by thousands and now the ledger table has rows that don't balance. This looks bigger than we thought."
+  },
+  {
+   "id": "incident-fix-no-1",
+   "skill": "incident-fix",
+   "should_trigger": false,
+   "expected": "hotfix",
+   "split": "heldout",
+   "prompt": "The date picker on the booking form shows Sunday as the first day of the week for Spanish users. It is live and a client complained. Nothing is broken otherwise. Can we patch it today?"
+  },
+  {
+   "id": "incident-fix-no-2",
+   "skill": "incident-fix",
+   "should_trigger": false,
+   "expected": "post-mortem",
+   "split": "train",
+   "prompt": "Last Thursday's outage is fully resolved and the fix has been in for days. I need the written account of what happened between the 12th and the 14th for the client, from the commits and the Slack export in docs/incident/."
+  },
+  {
+   "id": "incident-fix-no-3",
+   "skill": "incident-fix",
+   "should_trigger": false,
+   "expected": null,
+   "split": "train",
+   "prompt": "What's the difference between an SLO and an SLA? Two or three sentences is enough."
+  },
+  {
+   "id": "dbaudit-yes-1",
+   "skill": "dbaudit",
+   "should_trigger": true,
+   "expected": "dbaudit",
+   "split": "heldout",
+   "prompt": "Here's the schema dump of the ERP database we inherited (schema.sql). Before we decide anything, tell me how good or bad it is and where the risks are."
+  },
+  {
+   "id": "dbaudit-yes-2",
+   "skill": "dbaudit",
+   "should_trigger": true,
+   "expected": "dbaudit",
+   "split": "train",
+   "prompt": "Can you go through db/structure.sql and grade the data model? I want strengths, weaknesses and a number I can compare against after we clean it up."
+  },
+  {
+   "id": "dbaudit-yes-3",
+   "skill": "dbaudit",
+   "should_trigger": true,
+   "expected": "dbaudit",
+   "split": "train",
+   "prompt": "We're about to take over maintenance of a client's Postgres database. I've put the DDL in client-ddl/. Give me an honest assessment of its quality, I'm not asking you to change anything."
+  },
+  {
+   "id": "dbaudit-no-1",
+   "skill": "dbaudit",
+   "should_trigger": false,
+   "expected": "dbdesign",
+   "split": "heldout",
+   "prompt": "We're starting a clinic appointment system: patients, practitioners, rooms, bookings, cancellations. What tables do we need? Give me the schema for Postgres."
+  },
+  {
+   "id": "dbaudit-no-2",
+   "skill": "dbaudit",
+   "should_trigger": false,
+   "expected": "dbquery",
+   "split": "train",
+   "prompt": "This report query takes 40 seconds. I've pasted the EXPLAIN ANALYZE output into plan.txt. Why is it slow and what should I change?"
+  },
+  {
+   "id": "dbaudit-no-3",
+   "skill": "dbaudit",
+   "should_trigger": false,
+   "expected": "dbpropose",
+   "split": "train",
+   "prompt": "The assessment of the orders database is done and so is the target model with its diagrams. Now I need the plan to get from one to the other that the client can sign off on: what we change, in what order, how each step is rolled back."
+  },
+  {
+   "id": "dbdesign-yes-1",
+   "skill": "dbdesign",
+   "should_trigger": true,
+   "expected": "dbdesign",
+   "split": "heldout",
+   "prompt": "Model this domain for me: a library with members, copies of books, loans, reservations and fines. I want proper keys and constraints, running on SQL Server."
+  },
+  {
+   "id": "dbdesign-yes-2",
+   "skill": "dbdesign",
+   "should_trigger": true,
+   "expected": "dbdesign",
+   "split": "train",
+   "prompt": "The review of our inventory schema came back with a pile of normalization problems (report in audit/report.md). Redo the schema so those go away."
+  },
+  {
+   "id": "dbdesign-yes-3",
+   "skill": "dbdesign",
+   "should_trigger": true,
+   "expected": "dbdesign",
+   "split": "train",
+   "prompt": "Is this table design in third normal form? orders(order_id, customer_id, customer_email, product_id, product_name, qty, unit_price). If it isn't, show me what it should look like."
+  },
+  {
+   "id": "dbdesign-no-1",
+   "skill": "dbdesign",
+   "should_trigger": false,
+   "expected": "dbaudit",
+   "split": "train",
+   "prompt": "Take a look at legacy.sql and tell me how much trouble this database is in. I only want the evaluation and a score for now."
+  },
+  {
+   "id": "dbdesign-no-2",
+   "skill": "dbdesign",
+   "should_trigger": false,
+   "expected": "dbarchitect",
+   "split": "heldout",
+   "prompt": "Product search is getting slow on Postgres. Should we add Elasticsearch next to it, or just put Redis in front? Which one ends up owning the product data?"
+  },
+  {
+   "id": "dbdesign-no-3",
+   "skill": "dbdesign",
+   "should_trigger": false,
+   "expected": "dbbuild",
+   "split": "train",
+   "prompt": "The database proposal was accepted on Friday (proposal/proposal.md). Write the SQL scripts that create it."
+  },
+  {
+   "id": "peer-review-yes-1",
+   "skill": "peer-review",
+   "should_trigger": true,
+   "expected": "peer-review",
+   "split": "train",
+   "prompt": "Can you look over the changes on feature/rate-limiter before I merge it into main? Tell me whether it's safe to merge."
+  },
+  {
+   "id": "peer-review-yes-2",
+   "skill": "peer-review",
+   "should_trigger": true,
+   "expected": "peer-review",
+   "split": "heldout",
+   "prompt": "Marta opened a pull request for the new refund flow, it's the top commit range on origin/refunds. Go through it properly and write the comments I should leave on it."
+  },
+  {
+   "id": "peer-review-yes-3",
+   "skill": "peer-review",
+   "should_trigger": true,
+   "expected": "peer-review",
+   "split": "train",
+   "prompt": "I addressed the comments from the last round on the payments branch. Check the new commits and tell me if anything is still wrong."
+  },
+  {
+   "id": "peer-review-no-1",
+   "skill": "peer-review",
+   "should_trigger": false,
+   "expected": "pr-prep",
+   "split": "train",
+   "prompt": "My branch is done. Write the pull request description for it and tell me if I should break it into smaller PRs before I ask anyone to look at it."
+  },
+  {
+   "id": "peer-review-no-2",
+   "skill": "peer-review",
+   "should_trigger": false,
+   "expected": "test-review",
+   "split": "heldout",
+   "prompt": "Ignore the production code on this branch. I only care about the tests that came with it: would they actually fail if the behaviour broke?"
+  },
+  {
+   "id": "peer-review-no-3",
+   "skill": "peer-review",
+   "should_trigger": false,
+   "expected": null,
+   "split": "train",
+   "prompt": "Explain what `git rebase --onto` does, with a small example."
+  },
+  {
+   "id": "pr-prep-yes-1",
+   "skill": "pr-prep",
+   "should_trigger": true,
+   "expected": "pr-prep",
+   "split": "train",
+   "prompt": "I've finished the work on feature/audit-export. Get it into shape so a colleague can go through it: clean up the commits and write up what it does and how to verify it."
+  },
+  {
+   "id": "pr-prep-yes-2",
+   "skill": "pr-prep",
+   "should_trigger": true,
+   "expected": "pr-prep",
+   "split": "train",
+   "prompt": "This branch ended up at about 1,200 changed lines with a refactor mixed into the feature. How should I cut it up before I open it for the team?"
+  },
+  {
+   "id": "pr-prep-yes-3",
+   "skill": "pr-prep",
+   "should_trigger": true,
+   "expected": "pr-prep",
+   "split": "heldout",
+   "prompt": "Dani asked me to look at their pull request on origin/notifications, but I can't tell what it's supposed to do. Before I spend an hour on it: is it in a state where it can be looked at at all, or should I send it back?"
+  },
+  {
+   "id": "pr-prep-no-1",
+   "skill": "pr-prep",
+   "should_trigger": false,
+   "expected": "peer-review",
+   "split": "train",
+   "prompt": "Go through the diff between main and feature/cache-layer and find the bugs. File and line, how bad each one is, and whether you'd merge it."
+  },
+  {
+   "id": "pr-prep-no-2",
+   "skill": "pr-prep",
+   "should_trigger": false,
+   "expected": "review-retro",
+   "split": "heldout",
+   "prompt": "PR 212 was merged yesterday after a long discussion. Write up what was decided in that discussion and what happened to each comment, so we can find it later."
+  },
+  {
+   "id": "pr-prep-no-3",
+   "skill": "pr-prep",
+   "should_trigger": false,
+   "expected": "release-notes",
+   "split": "train",
+   "prompt": "We just tagged v2.4.0. Write the changelog entry our customers will read."
+  },
+  {
+   "id": "ticket-yes-1",
+   "skill": "ticket",
+   "should_trigger": true,
+   "expected": "ticket",
+   "split": "train",
+   "prompt": "Log a bug for the login timeout problem we just found: sessions expire after 5 minutes instead of 30. Put it in the current sprint."
+  },
+  {
+   "id": "ticket-yes-2",
+   "skill": "ticket",
+   "should_trigger": true,
+   "expected": "ticket",
+   "split": "train",
+   "prompt": "I spent three hours today on the SSO migration task. Record that against it and move it to In Review."
+  },
+  {
+   "id": "ticket-yes-3",
+   "skill": "ticket",
+   "should_trigger": true,
+   "expected": "ticket",
+   "split": "heldout",
+   "prompt": "Here are the six problems QA found this afternoon (qa-notes.md). Get each of them into the tracker, and don't duplicate ones that are already there."
+  },
+  {
+   "id": "ticket-no-1",
+   "skill": "ticket",
+   "should_trigger": false,
+   "expected": "backlog",
+   "split": "heldout",
+   "prompt": "Our board has about 140 open items and nobody knows what to pick up next. Go through it and tell me what state it's in and what order things should go in."
+  },
+  {
+   "id": "ticket-no-2",
+   "skill": "ticket",
+   "should_trigger": false,
+   "expected": "backlog",
+   "split": "train",
+   "prompt": "We have one giant epic called 'Customer portal'. Help me cut it into pieces we can deliver and demo one at a time, with a first release that works end to end."
+  },
+  {
+   "id": "ticket-no-3",
+   "skill": "ticket",
+   "should_trigger": false,
+   "expected": null,
+   "split": "train",
+   "prompt": "What's the difference between a story and a task in Scrum? Short answer please."
+  },
+  {
+   "id": "backlog-yes-1",
+   "skill": "backlog",
+   "should_trigger": true,
+   "expected": "backlog",
+   "split": "heldout",
+   "prompt": "Planning is on Thursday. Go through the next batch of work in the tracker and get it ready: anything too big gets cut down and everything needs criteria we can check."
+  },
+  {
+   "id": "backlog-yes-2",
+   "skill": "backlog",
+   "should_trigger": true,
+   "expected": "backlog",
+   "split": "train",
+   "prompt": "Everything on the board has been 'in progress' for weeks and nothing gets finished. Look at the board and tell me why work is stuck."
+  },
+  {
+   "id": "backlog-yes-3",
+   "skill": "backlog",
+   "should_trigger": true,
+   "expected": "backlog",
+   "split": "train",
+   "prompt": "We're starting the supplier onboarding initiative from scratch. Lay out the whole user journey and tell me what goes into the first release and what waits."
+  },
+  {
+   "id": "backlog-no-1",
+   "skill": "backlog",
+   "should_trigger": false,
+   "expected": "ticket",
+   "split": "train",
+   "prompt": "Close the item about the broken PDF export, it shipped this morning. Link the commit that fixed it."
+  },
+  {
+   "id": "backlog-no-2",
+   "skill": "backlog",
+   "should_trigger": false,
+   "expected": "ticket",
+   "split": "train",
+   "prompt": "Raise a task for upgrading the Node version on the build agents and assign it to me."
+  },
+  {
+   "id": "backlog-no-3",
+   "skill": "backlog",
+   "should_trigger": false,
+   "expected": "release-notes",
+   "split": "heldout",
+   "prompt": "List what shipped in this release in language a customer would understand, for the 'what's new' panel in the app."
+  }
+ ]
+}
