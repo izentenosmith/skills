@@ -374,10 +374,10 @@
     },
     "eval-58-nexus-judges-the-record": {
       "skill": "nexus",
-      "iteration": "iteration-49",
+      "iteration": "iteration-50",
       "n": 3,
       "staging": "standalone",
-      "skill_hash": "dc44431c7107d5f3c63806b36a63977a9bdf61e94ccdecb193c80af191e23773"
+      "skill_hash": "2503cf55f7505f960814ef50655ce2a7a9a6bb498840c988f5f170af1a45e170"
     },
     "eval-6-compose-detects-real-services": {
       "skill": "docker-compose",

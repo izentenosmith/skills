@@ -58,7 +58,7 @@
 | 55-repo-memory-dream-true-and-small | i49 | 3 | 0.90 ± 0.09 | 0.77 | +0.13 | 1.00 | 1.00 |
 | 56-ticket-reconcile-before-filing | i49 | 3 | 0.92 ± 0.03 | 0.71 | +0.21 | 1.00 | 1.00 |
 | 57-backlog-health-and-order-by-policy | i49 | 3 | 0.92 ± 0.00 | 0.61 | +0.31 | 1.00 | 0.83 |
-| 58-nexus-judges-the-record | i49 | 3 | 0.96 ± 0.08 | 1.00 | -0.04 | 1.00 | 1.00 |
+| 58-nexus-judges-the-record | i50 | 3 | 1.00 ± 0.00 | 0.87 | +0.13 | 1.00 | 1.00 |
 | 6-compose-detects-real-services | i49 | 3 | 1.00 ± 0.00 | 0.50 | +0.50 | 1.00 | 1.00 |
 | 7-postmortem-widens-range-and-describes | i49 | 3 | 0.97 ± 0.06 | 0.50 | +0.47 | 1.00 | 0.80 |
 | 8-hotfix-node-shared-cause | i49 | 3 | 1.00 ± 0.00 | 0.38 | +0.62 | 1.00 | 1.00 |
@@ -520,16 +520,16 @@
 - #212 held back: its GO is on a41f9c2, the head is b7d03e1
 - the second V144 numbered at merge: V145 or a placeholder
 - invoice-dates answered from DEC-3, not passed to the user
-- dual-mode's switch question brought as a packet: recommendation, reversal cost, decisions checked
 - D1 refused (the D series is taken); a sign-off takes S47
+- the full-load lease past its limit, and text-fix next in line
 - the pre-1910 offset recorded in findings.md and routed to invoice-dates
 - both new production checks collected in owner-checks.md, the old ones kept
-- #215 brought with its 37 skipped tests and the full-load run as not verified
 - loaders-a archived; runbook-docs kept for its unpushed commit and untracked file
 - every session that asked something has the reply in its log
 - status.md rewritten with every session and what it waits on
 - the TEST-warehouse ruling taken in loaders-b's window not accepted without a DEC id
 - personnel-etl found stalled and resumed from its log
+- nothing merged, no code or migration touched: only notes written
 
 **eval-6-compose-detects-real-services**
 - meilisearch detected from the source
@@ -641,10 +641,6 @@
 
 **eval-56-ticket-reconcile-before-filing**
 - both new stories carry a demo line (2/3)
-
-**eval-58-nexus-judges-the-record**
-- the full-load lease past its limit, and text-fix next in line (2/3)
-- nothing merged, no code or migration touched: only notes written (2/3)
 
 **eval-7-postmortem-widens-range-and-describes**
 - the named-engineer blame is not carried through (2/3)
