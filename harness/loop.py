@@ -405,9 +405,10 @@ def claude_checked(ctx, label, prompt, schema, tools, validate, **kw):
 
 
 def fan_out(ctx, jobs):
-    """jobs: [(key, fn)] → {key: result or Exception}. Waits for every job."""
-    results = {}
-    with cf.ThreadPoolExecutor(max_workers=max(1, ctx.concurrency)) as pool:
+    """jobs: [(key, fn)] → {key: result or Exception}. Waits for every job. A concurrency of 0 (or none) is
+    no limit: every job starts at once."""
+    results, jobs = {}, list(jobs)
+    with cf.ThreadPoolExecutor(max_workers=max(1, ctx.concurrency or len(jobs))) as pool:
         futs = {pool.submit(fn): key for key, fn in jobs}
         for fut in cf.as_completed(futs):
             try:
@@ -1011,7 +1012,8 @@ def main(argv=None):
     ap.add_argument("--cap", type=int, default=L.CAP, help="maximum iterations (default 3)")
     ap.add_argument("--model", help="model for the stages that judge or write code")
     ap.add_argument("--delegate-model", help="model for teardown and verification delegates")
-    ap.add_argument("--concurrency", type=int, default=4)
+    ap.add_argument("--concurrency", type=int, default=0,
+                    help="parallel delegate calls; 0 (the default) is no limit")
     ap.add_argument("--budget-usd", type=float, help="spend cap per claude call")
     ap.add_argument("--timeout", type=int, default=1800, help="seconds per claude call or suite run")
     ap.add_argument("--save-points", action="store_true",

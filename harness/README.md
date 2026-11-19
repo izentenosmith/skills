@@ -88,6 +88,19 @@ The model, budget, cap and concurrency flags are `loop.py`'s. State is `.workflo
 
 **What you give up by not pausing.** The brief's approval gate exists because the brief is the last cheap place to change your mind. Running straight through treats the design conversation as that approval, and the brief says so rather than looking reviewed. Use `--pause-at-brief` when the design left real latitude.
 
+## Long runs — what carries a build across sessions
+
+Every headless `claude -p` call starts with no memory of the one before it, so nothing here depends on one. The state is files, and a re-run reads them:
+
+| What | Where | Who writes it |
+|---|---|---|
+| Which stage is done | `.workflow/pipeline.json`, then the ledger once the loop starts | the harness |
+| What is built | the brief's ticks, and one commit per green slice from the brief's `**Base:**` | tdd; the harness with `--save-points` |
+| What was found and decided | `.workflow/ledger.md`, append-only | the harness only; an agent's edit is restored |
+| Whether the tree is healthy | the suite and the acceptance command, run as gates before and after each stage | code |
+
+Stop it at any point — a usage limit, Ctrl-C, a red gate — and the next run resumes at the first stage the files don't show as done. `pipeline.py` runs one change. For several at once, with one session per PR, the [nexus](../skills/development/nexus/SKILL.md) skill coordinates them from a shared notes folder and adds what one pipeline doesn't have: the repo's commands and baseline written once, and `increment.json`, the list of what the whole increment must deliver. How this maps to Anthropic's long-running-agent harness, and what is still missing, is in the [development README](../skills/development/README.md#work-that-outlives-one-session).
+
 ## What moved from prose into code
 
 | Rule the skills state | Who enforces it now |
@@ -127,7 +140,7 @@ The first run remembers `--test-cmd` and `--base` in `.workflow/harness.json`, s
 | `--base` | the brief's `**Base:**`, else the merge-base with `main` | what the diff is measured against; `HEAD` (pinned to its commit) when you're on the base branch itself with the change uncommitted |
 | `--skills` | `../skills` next to this folder | where the `SKILL.md` folders are; the repo's `.claude/skills` is searched too |
 | `--model`, `--delegate-model` | your Claude default | e.g. a stronger model for the stages that judge or write code, a cheaper one for delegates |
-| `--concurrency` | 4 | parallel delegate calls |
+| `--concurrency` | 0, no limit | parallel delegate calls: every delegate of a fan-out starts at once. Set a number to cap them |
 | `--budget-usd` | none | spend cap per `claude` call |
 | `--cap` | 3 | iterations |
 | `--acceptance-cmd` | the **Command** stage 3 recorded in the brief | runs only the acceptance tests; every gate requires them green too (remembered) |
