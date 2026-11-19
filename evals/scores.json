@@ -3,409 +3,409 @@
   "evals": {
     "eval-0-architect-charter-and-options": {
       "skill": "architect-deep-dive",
-      "iteration": "iteration-45",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": "package",
-      "skill_hash": "94c9d6700a559918318b1d81e9277425d92855cb3c710bc73f9f6966910390ec"
+      "staging": "harness",
+      "skill_hash": "365a18cd92b70a09b8588386fa59f3c9f23b177358a07773156b218e17e67776"
     },
     "eval-1-brief-ordered-criteria": {
       "skill": "agent-brief",
-      "iteration": "iteration-47",
+      "iteration": "iteration-49",
       "n": 3,
       "staging": "harness",
       "skill_hash": "f8ab7533ee5cec39421a7eeba1fe285398908eb244484633373d8c249a98862b"
     },
     "eval-10-hotfix-script-no-tests": {
       "skill": "hotfix",
-      "iteration": "iteration-34",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "fcb9c322c9269ff2d08d32bd3a51deae0954a042ac64199c13c7e6506d7fb9cc"
     },
     "eval-11-hotfix-routes-outage-out": {
       "skill": "hotfix",
-      "iteration": "iteration-34",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "fcb9c322c9269ff2d08d32bd3a51deae0954a042ac64199c13c7e6506d7fb9cc"
     },
     "eval-12-incident-webapp-contain-by-flag": {
       "skill": "incident-fix",
-      "iteration": "iteration-34",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "3575924df9af43f7c9d1cae0d95364aabf8e718b9780da92db35caf900b7ed0f"
     },
     "eval-13-incident-batch-repair-artifact": {
       "skill": "incident-fix",
-      "iteration": "iteration-34",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "3575924df9af43f7c9d1cae0d95364aabf8e718b9780da92db35caf900b7ed0f"
     },
     "eval-14-incident-library-no-deploy": {
       "skill": "incident-fix",
-      "iteration": "iteration-34",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "3575924df9af43f7c9d1cae0d95364aabf8e718b9780da92db35caf900b7ed0f"
     },
     "eval-16-netaudit-hub-spoke-recovers-and-scores": {
       "skill": "netaudit",
-      "iteration": "iteration-21",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "8ce5bd872ea848cda8e14a06a773b0e8bb5f3b6acdbf391c193b80a20c3655a6"
     },
     "eval-17-netdesign-plans-around-what-is-in-use": {
       "skill": "netdesign",
-      "iteration": "iteration-21",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "85b8267eb20b6cd2058e6fce637c05a9476b0c5207928317284cdd2fa93686ee"
     },
     "eval-18-netdiagram-canonical-views-from-model": {
       "skill": "netdiagram",
-      "iteration": "iteration-23",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "1b9cb06905821fd6cf59c89c953af2e2c7d4fa4c50355f4a6629c097cc185394"
     },
     "eval-19-netpropose-contains-before-restructuring": {
       "skill": "netpropose",
-      "iteration": "iteration-23",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "b48a85950727ea7c862dd2670eda29a61b9451709142848f951c44fd3d899730"
     },
     "eval-2-tdd-reads-brief-vertical": {
       "skill": "tdd",
-      "iteration": "iteration-47",
+      "iteration": "iteration-49",
       "n": 3,
       "staging": "harness",
-      "skill_hash": "405b2f9dae8bde007fcfff757fd1785119a417f7bed7ceddbf9ba03f3f991941"
+      "skill_hash": "4b5231aa716ce4067ed146767e95f66a78929345b5d791132b596b637520ab0f"
     },
     "eval-20-netblueprint-waits-for-acceptance": {
       "skill": "netblueprint",
-      "iteration": "iteration-23",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "ce24ed0a3dec780b2c9d256d7c2cb0deb7fee491fa3e0378772bd5add971878f"
     },
     "eval-21-terraform-review-state-and-secrets": {
       "skill": "terraform",
-      "iteration": "iteration-26",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "3497fa1e6909ed575e0613ca552c822962e023397fd79b11c72778c0b4ae611a"
     },
     "eval-22-terraform-design-isolates-state": {
       "skill": "terraform",
-      "iteration": "iteration-26",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "3497fa1e6909ed575e0613ca552c822962e023397fd79b11c72778c0b4ae611a"
     },
     "eval-23-terraform-propose-no-recreate": {
       "skill": "terraform",
-      "iteration": "iteration-26",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "3497fa1e6909ed575e0613ca552c822962e023397fd79b11c72778c0b4ae611a"
     },
     "eval-24-pipelines-review-untrusted-and-rebuild": {
       "skill": "pipelines",
-      "iteration": "iteration-26",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "83e1c9a55b2da77753e073400aa636040700e4aa673546da9e8f7bd430419022"
     },
     "eval-25-pipelines-design-build-once-progressive": {
       "skill": "pipelines",
-      "iteration": "iteration-26",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "83e1c9a55b2da77753e073400aa636040700e4aa673546da9e8f7bd430419022"
     },
     "eval-26-pipelines-propose-keeps-prod-up": {
       "skill": "pipelines",
-      "iteration": "iteration-26",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "83e1c9a55b2da77753e073400aa636040700e4aa673546da9e8f7bd430419022"
     },
     "eval-27-acceptance-tests-red-for-the-right-reason": {
       "skill": "acceptance-tests",
-      "iteration": "iteration-37",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": "package",
-      "skill_hash": "48c4034c4f30a59c64ef9fb6ce358982b1362c81c0bbea24ee24805cc65c357a"
+      "staging": "harness",
+      "skill_hash": "7365625b761ad280b7e8dab85f1adef5e1ee545d5e5c0c99fcac15dd7b1b3893"
     },
     "eval-28-dockerfile-repair-pins-and-drops-root": {
       "skill": "dockerfile",
-      "iteration": "iteration-30",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "bd89e6e269487b7a1458d5702d9832774542eac264f27b68b089a25a8cdfbddb"
     },
     "eval-29-release-notes-translates-drops-and-leads-with-breaking": {
       "skill": "release-notes",
-      "iteration": "iteration-33",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "cd3bdaf66752c3060112b555519b6f3c0c39ebb7ffc5b16a15036d0c868c1533"
     },
     "eval-3-refactor-promotes-noted-smell": {
       "skill": "refactor-review",
-      "iteration": "iteration-37",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": "package",
-      "skill_hash": "735d5b82f23d4a49c42798dd6d14fa911bb38f921311c238c6baf1ffc0cb19a4"
+      "staging": "harness",
+      "skill_hash": "a1f0d07cbb67f5ddf0b83de415d7defa47ec926cfa23ad9caf020772950b5a7d"
     },
     "eval-30-dbaudit-postgres-dump-scored-not-fixed": {
       "skill": "dbaudit",
-      "iteration": "iteration-23",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "217c66cbc3d8382133913faf8c49822773835e6e91dd41e5212b9953053ab32c"
     },
     "eval-31-dbdesign-sqlite-from-requirements-traps": {
       "skill": "dbdesign",
-      "iteration": "iteration-23",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "8b581cd86db7a153e37524ff8d2c0ea8fadd06024522fd8ef51b2de3e6f90a5f"
     },
     "eval-32-dbdiagram-barker-and-relational-from-design": {
       "skill": "dbdiagram",
-      "iteration": "iteration-18",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "dc918072a9a8ba0e2899ad2e4fabc621c1976fc3f0875ddab1e55d64e1c60a4c"
     },
     "eval-33-dbpropose-orphans-before-constraints": {
       "skill": "dbpropose",
-      "iteration": "iteration-18",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "c1d87b3d8aed8056388c1669834fd58fb6db198ecb4a0d25b884216f0b695a85"
     },
     "eval-34-dbbuild-executable-ddl-from-accepted-proposal": {
       "skill": "dbbuild",
-      "iteration": "iteration-18",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "6344fb48780f883646e1a01097a29167599f9d23e916f211b7e15c414f739da4"
     },
     "eval-35-container-hardening-review-socket-and-firewall": {
       "skill": "container-hardening",
-      "iteration": "iteration-16",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "c1687e49e04d389eed801993e1c54910d191c82bdb00221d0cc437d2aa0baad1"
     },
     "eval-36-container-debug-oom-localhost-crlf": {
       "skill": "container-debug",
-      "iteration": "iteration-27",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "b3c33c4dfa6b1c056700a5bdb9e4527e86ebcd502f6764c7ae2a96d3e8caae9c"
     },
     "eval-37-docker-swarm-review-quorum-and-state": {
       "skill": "docker-swarm",
-      "iteration": "iteration-27",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "e2e3245c78ddc5bd18639bef086a40be68720cbe9816d0e464a1933e534f08b0"
     },
     "eval-38-threatmodel-review-design-abuse-and-fallback": {
       "skill": "threatmodel",
-      "iteration": "iteration-26",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "2ff5788c2ddc10aee602e8ec26148dc0a17b92dc385b64ff240c14a64c867e4b"
     },
     "eval-39-threatmodel-design-abusers-and-traps": {
       "skill": "threatmodel",
-      "iteration": "iteration-33",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "2ff5788c2ddc10aee602e8ec26148dc0a17b92dc385b64ff240c14a64c867e4b"
     },
     "eval-4-teardown-finds-vacuous-test": {
       "skill": "devils-advocate",
-      "iteration": "iteration-37",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": "package",
-      "skill_hash": "446733d59cf7bdbae66003603e2ac2d0690e036342f334411accbe426dd5e7e1"
+      "staging": "harness",
+      "skill_hash": "75c89ec031b55a94fea2df4eb95d9e17f4d18e9d48da60c1b25b77639415d570"
     },
     "eval-40-threatmodel-propose-contain-then-design-out": {
       "skill": "threatmodel",
-      "iteration": "iteration-14",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "2ff5788c2ddc10aee602e8ec26148dc0a17b92dc385b64ff240c14a64c867e4b"
     },
     "eval-41-appsec-review-inventory-and-secrets": {
       "skill": "appsec",
-      "iteration": "iteration-26",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "0b291929a6767f4143f90f9cf33cc6d8cc4f27a914d30516c2ecc93043b6ec62"
     },
     "eval-42-appsec-design-reshapes-the-quick-wins": {
       "skill": "appsec",
-      "iteration": "iteration-26",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "0b291929a6767f4143f90f9cf33cc6d8cc4f27a914d30516c2ecc93043b6ec62"
     },
     "eval-43-appsec-propose-contain-then-fix-the-class": {
       "skill": "appsec",
-      "iteration": "iteration-33",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "0b291929a6767f4143f90f9cf33cc6d8cc4f27a914d30516c2ecc93043b6ec62"
     },
     "eval-44-hardening-review-mixed-estate": {
       "skill": "hardening",
-      "iteration": "iteration-26",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "ede412e9f3caa7f8d4b9feba0c936902e8d7de2b00b53d8106581731c2ff0650"
     },
     "eval-45-hardening-design-tier-aware-baseline": {
       "skill": "hardening",
-      "iteration": "iteration-26",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "ede412e9f3caa7f8d4b9feba0c936902e8d7de2b00b53d8106581731c2ff0650"
     },
     "eval-46-hardening-propose-no-lockout": {
       "skill": "hardening",
-      "iteration": "iteration-33",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "ede412e9f3caa7f8d4b9feba0c936902e8d7de2b00b53d8106581731c2ff0650"
     },
     "eval-47-dbquery-workload-ranked-plans-read-indexes-weighed": {
       "skill": "dbquery",
-      "iteration": "iteration-18",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "3389c1dca2d431a92d8f70f13affc234a764abfe738a8627d87120992822bf20"
     },
     "eval-48-dbarchitect-one-system-of-record-no-dual-writes": {
       "skill": "dbarchitect",
-      "iteration": "iteration-18",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "d31ac57d019a00f935ae2c0218bf91a55154ec88185ad4f10eae7e8b14535bfb"
     },
     "eval-49-peer-review-claim-omission-injection": {
       "skill": "peer-review",
-      "iteration": "iteration-25",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "standalone",
+      "skill_hash": "eecfa4f5b0c3adea04a9500668b761e1216c52505b95c510bec59238104bce0b"
     },
     "eval-5-verdict-cuts-and-slices": {
       "skill": "tyr-verdict",
-      "iteration": "iteration-37",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": "package",
-      "skill_hash": "89cab58c2a5509e3f722f600c4586832df39f524f35237de0fa90202ec6cce58"
+      "staging": "harness",
+      "skill_hash": "9c0fac2d97b1a7e2510bc2bdfd596a0378eeb65163520f19ccc481d7277cfa9e"
     },
     "eval-50-pr-prep-splits-and-discloses": {
       "skill": "pr-prep",
-      "iteration": "iteration-25",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "standalone",
+      "skill_hash": "f5cbb72cdfcf22bcf559431199c78a6f8ab057a6ffc018b7487200569d4c62f7"
     },
     "eval-51-code-xray-hotspots-not-cold-giants": {
       "skill": "code-xray",
-      "iteration": "iteration-25",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "standalone",
+      "skill_hash": "0faaaf001f4b4ea383a663c60633644c447d1f3dbf31d816538164ed0a3cd1f6"
     },
     "eval-52-test-review-would-it-fail": {
       "skill": "test-review",
-      "iteration": "iteration-25",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "standalone",
+      "skill_hash": "b3028426ab70fc6ca17ddbd356de3f1b2f739e0ecbb5421a4416d363d3f780a2"
     },
     "eval-53-concurrency-review-interleavings-and-replicas": {
       "skill": "concurrency-review",
-      "iteration": "iteration-25",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "standalone",
+      "skill_hash": "303c61fe38a6886534a94a1d5de48298accf9eb19d141e32f48fa4dea1bd7a62"
     },
     "eval-54-review-retro-areas-not-people": {
       "skill": "review-retro",
-      "iteration": "iteration-29",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "standalone",
+      "skill_hash": "3c799ca412e157d813cf58b6c43cf989a8cb53638624efdb08273b64042ac966"
     },
     "eval-55-repo-memory-dream-true-and-small": {
       "skill": "repo-memory",
-      "iteration": "iteration-34",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "standalone",
+      "skill_hash": "4f86382db3aa4bd3a48e4c45a81f34e720c38e9694876ec693cb89e701256ee2"
     },
     "eval-56-ticket-reconcile-before-filing": {
       "skill": "ticket",
-      "iteration": "iteration-36",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": "package",
-      "skill_hash": "96e6dbd09e1539d84a7ccd849d5df7f13ec60169d2b7585a1c118a565485bcaf"
+      "staging": "standalone",
+      "skill_hash": "20101d80ebeaa3a2aae205cced55825d125cf3515205f34e789bdb785258b17a"
     },
     "eval-57-backlog-health-and-order-by-policy": {
       "skill": "backlog",
-      "iteration": "iteration-35",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "standalone",
+      "skill_hash": "16089773305d52c998a6adda34748ae230762dea127d90b4fcb5a3f07519e3ef"
     },
     "eval-58-nexus-judges-the-record": {
       "skill": "nexus",
-      "iteration": "iteration-47",
+      "iteration": "iteration-49",
       "n": 3,
       "staging": "standalone",
-      "skill_hash": "a95cf06e1220a9060274b3010419d8f3a8fdce5d97be595d2278b8e6f6188d6a"
+      "skill_hash": "dc44431c7107d5f3c63806b36a63977a9bdf61e94ccdecb193c80af191e23773"
     },
     "eval-6-compose-detects-real-services": {
       "skill": "docker-compose",
-      "iteration": "iteration-27",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "971b64f4ce3fa2d85b30cf4d59af2f7492b3e0fa5a29101444a83c77dddf6fa4"
     },
     "eval-7-postmortem-widens-range-and-describes": {
       "skill": "post-mortem",
-      "iteration": "iteration-34",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "bbb5a880e645bd68b70153d5a1af13a6fe020c15e42186cf5a0d8c312c7d0cc4"
     },
     "eval-8-hotfix-node-shared-cause": {
       "skill": "hotfix",
-      "iteration": "iteration-34",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "fcb9c322c9269ff2d08d32bd3a51deae0954a042ac64199c13c7e6506d7fb9cc"
     },
     "eval-9-hotfix-jvm-both-callers": {
       "skill": "hotfix",
-      "iteration": "iteration-34",
+      "iteration": "iteration-49",
       "n": 3,
-      "staging": null,
-      "skill_hash": null
+      "staging": "harness",
+      "skill_hash": "fcb9c322c9269ff2d08d32bd3a51deae0954a042ac64199c13c7e6506d7fb9cc"
     }
   }
 }

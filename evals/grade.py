@@ -5972,15 +5972,17 @@ def tracker_text(run, fixture, skip=()):
     return "\n\n".join([resp(run), *wf_docs(run, fixture, skip).values(), *md])
 
 
-def workflow_only(run, fixture, allowed=r"\.(md|csv)$"):
+def workflow_only(run, fixture, allowed=r"\.(md|csv)$", also=()):
     """No fixture file outside .workflow/ changed or deleted, nothing but markdown added there, and every file
-    the run added under .workflow/ matches `allowed`."""
+    the run added under .workflow/ matches `allowed`. `also` names the exact paths a skill's own notes add in
+    another format: they are that skill's working files, not code."""
     added, modified, deleted = changes(run, fixture)
-    bad = modified + deleted + [f for f in added if not f.endswith(".md")]
+    bad = modified + deleted + [f for f in added if not f.endswith(".md") and f not in also]
     root, fx = run / "repo/.workflow", FIXTURES / fixture / ".workflow"
     if root.is_dir():
         bad += [f".workflow/{p.relative_to(root).as_posix()}" for p in root.rglob("*") if p.is_file()
-                and not (fx / p.relative_to(root)).exists() and not re.search(allowed, p.name)]
+                and not (fx / p.relative_to(root)).exists() and not re.search(allowed, p.name)
+                and f".workflow/{p.relative_to(root).as_posix()}" not in also]
     return not bad, f"touched: {bad[:6]}" if bad else "nothing outside .workflow/ changed"
 
 
@@ -6344,7 +6346,8 @@ def eval58(run):
     granted = [l.strip()[:90] for l in t.splitlines() if re.search(NX_TOL, l, re.I)
                and re.search(r"go ahead|\bfine\b|approv|grant|\ballow(ed)?\b|accept|\bok\b|\byes\b", l, re.I)
                and not re.search(NX_NEG + r"|\bno\b", l, re.I)]
-    ok_only, only_ev = workflow_only(run, "nexus")
+    # increment.json is the nexus's own notes file (notes.md), JSON by design.
+    ok_only, only_ev = workflow_only(run, "nexus", also=(".workflow/nexus/increment.json",))
     claims = nx_merge_claims(t)
     return [
         # capability
