@@ -3,7 +3,7 @@ name: eval-iterations-1-36-missing
 description: Iterations 1-36 were deleted from ../skills-workspace to free disk space, so benchmark.md can't be rebuilt from the curated list; replace rows instead
 type: gotcha
 source: evals/README.md, evals/aggregate.py, user 2026-11-12
-verified: 2026-11-12
+verified: 2026-11-19
 volatility: high
 ---
 
@@ -18,3 +18,9 @@ new iterations without `--record`, then replace only the re-scored evals' rows i
 `evals/benchmark.md` and their entries in `evals/scores.json`; recompute the two overall lines from
 the table. [[benchmark-from-curated-list]] no longer applies to iterations before 37. Old iterations
 may be deleted again for space, so check which folders exist before any rebuild.
+
+**Since 2026-11-19 the benchmark no longer depends on them.** Iteration 49 re-ran all 59 evals, and
+`evals/benchmark.md` and `evals/scores.json` were recorded from it alone
+(`aggregate.py --record <workspace>/iteration-49`). The warning above now applies to iteration 49:
+after a partial re-run, pass iteration 49 and then the new iteration, oldest first, and check that
+all 59 rows are still there before keeping a `--record`.

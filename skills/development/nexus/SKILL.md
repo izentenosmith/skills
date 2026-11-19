@@ -53,7 +53,7 @@ For a coordination that is already running without these two files, write them a
 
 ## Starting sessions
 
-1. **One session per slice, at most four running at once** unless the user sets another limit. Each runs in its own worktree. Before each batch, check free disk: worktrees, build caches and scratch databases add up, and a session that dies of a full disk dies mid-stage.
+1. **One session per slice, as many at once as the slices allow.** There is no fixed cap: start every slice that is ready, and hold one back only for a reason you can name — it needs something another slice builds, the disk is short, or the user set a limit, which you record in the register and in `status.md`. Each runs in its own worktree. Before each batch, check free disk: worktrees, build caches and scratch databases add up, and a session that dies of a full disk dies mid-stage.
 2. **Brief each session with the contract.** Paste the text in [contract.md](contract.md) into its first message, filled in: the slice, the notes folder's absolute path, the base branch, its own log path, its scratch names and ports, the commands and baseline from `env.md`, and the `increment.json` entries it delivers. A session that never read the contract will free-text its questions, coin its own label series and rediscover how to run the tests.
 3. **Carry the entries into the brief.** Each entry a slice delivers becomes an acceptance criterion in that slice's brief, so stage 3 writes the test that will later prove it.
 4. **Record it** in `status.md` the moment it starts: its slug, its id or link in your environment, its worktree, its slice, its parent if it has one.

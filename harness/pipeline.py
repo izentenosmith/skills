@@ -483,7 +483,8 @@ def main(argv=None):
     ap.add_argument("--cap", type=int, default=L.CAP, help="maximum closing-loop iterations (default 3)")
     ap.add_argument("--model", help="model for the stages that judge or write code")
     ap.add_argument("--delegate-model", help="model for teardown and verification delegates")
-    ap.add_argument("--concurrency", type=int, default=4)
+    ap.add_argument("--concurrency", type=int, default=0,
+                    help="parallel delegate calls; 0 (the default) is no limit")
     ap.add_argument("--budget-usd", type=float, help="spend cap per claude call")
     ap.add_argument("--timeout", type=int, default=3600, help="seconds per claude call or suite run")
     ap.add_argument("--dry-run", action="store_true", help="write the next stage's prompt and stop")

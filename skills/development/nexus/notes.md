@@ -24,7 +24,7 @@ Rewritten, not appended, at the end of every nexus turn. It is what the nexus re
 
 ```markdown
 # Nexus — <increment>
-**Updated:** <YYYY-MM-DD HH:MM> · **Base:** <branch> at `<sha>` · **Running:** <n> of <limit> · **Free disk:** <n> GB
+**Updated:** <YYYY-MM-DD HH:MM> · **Base:** <branch> at `<sha>` · **Running:** <n> (limit: <the user's, with its DEC-n, or "none">) · **Free disk:** <n> GB
 **Increment:** <n> of <total> entries passing on the base · <n> dropped · failing again: <REQ-ids or none>
 
 | Session | Parent | Slice or track | PR | Stage | Waiting on | Next |
@@ -44,7 +44,7 @@ Rewritten, not appended, at the end of every nexus turn. It is what the nexus re
 
 ## `env.md` — how to run this repo
 
-Written once, before the first session, so that no session spends its first turn working out how to build, test and start the code — and so that four sessions don't each work it out differently. Its commands go into every brief.
+Written once, before the first session, so that no session spends its first turn working out how to build, test and start the code — and so that several sessions don't each work it out differently. Its commands go into every brief.
 
 Take each command from where the project itself trusts it, in this order: the repo's agent and contributor instructions, then **CI configuration** (the command a pipeline runs is the one that counts, and it often differs from the obvious one), then build manifests and task runners. A `.workflow/env.md` that the hotfix or incident-fix lane left is a starting point: check that each command still resolves. What can't be found is asked once, in the first digest. Then run the full suite on the base branch and record the counts: that is the baseline every session compares against.
 
