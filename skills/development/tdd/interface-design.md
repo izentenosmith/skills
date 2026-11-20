@@ -1,6 +1,6 @@
 # Interface Design for Testability
 
-Companion reference for the [tdd](SKILL.md) skill: how to shape an interface so a test can drive it with minimal setup and assert on observable output. Read this during the Planning step when you "design interfaces for testability."
+Companion reference for the [tdd](SKILL.md) skill: how to shape an interface so a test can drive it with minimal setup and assert on observable output. Read this when you add or change a public interface, or a test needs heavy setup or patching to reach the behavior.
 
 A testable interface and a *good* interface are usually the same thing. If something is painful to test, the pain is signal — the design is leaking. These principles remove the pain at the source instead of papering over it with mocks.
 

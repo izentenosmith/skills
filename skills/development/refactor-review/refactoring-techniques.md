@@ -1,6 +1,6 @@
 # 🔧 Refactoring Techniques Catalog
 
-**Refactoring** = changing the internal structure of code without changing its observable behavior. Each technique below is a *named, mechanical* transformation: a recipe with a known before/after. This catalog follows the six groups from Refactoring Guru (Martin Fowler's *Refactoring*, 2nd ed.). Use it to pick a *treatment* once [code-smells.md](code-smells.md) has named the symptom, then drive it through the [code review](SKILL.md) checklist.
+**Refactoring** = changing the internal structure of code without changing its observable behavior. Each technique below is a *named, mechanical* transformation: a recipe with a known before/after. This catalog follows the six groups from Refactoring Guru (Martin Fowler's *Refactoring*, 2nd ed.). Use it to pick a *treatment* once [code-smells.md](code-smells.md) has named the symptom, then drive it through the [refactor review](SKILL.md) checklist.
 
 > **The one rule:** behavior is frozen. Have tests green before you start, take small steps, and re-run tests after each step. If behavior changed, it wasn't a refactor.
 
@@ -108,9 +108,9 @@ Reorganize inheritance hierarchies — moving behavior up, down, in, and out.
 
 ## How to Apply a Refactoring Safely
 
-1. **Green first.** Confirm tests pass before touching anything.
+1. **Green first, on a saved tree.** Confirm tests pass before touching anything, and take a checkpoint: standalone, the diff under review may itself be uncommitted, and an undo on an unsaved tree takes the user's work with the step. Either commit it on the branch (the Save points rules), or run `git stash push -u -m refactor-review-checkpoint` then `git stash apply`, which leaves a copy in the stash.
 2. **One technique at a time.** Don't interleave two transformations.
 3. **Smallest viable step.** Extract, then move; don't extract-and-move in one leap.
-4. **Re-run tests after each step.** A red bar means *undo*, not *push on*.
+4. **Re-run tests after each step.** A red bar means *undo*, not *push on*. Undo that step alone, back to the checkpoint: reverse only the step's own edits in the files it touched, or revert its commit with a new revert commit. Never a hard reset or a whole-tree checkout — they discard work that is not this step's.
 5. **Commit per refactor.** Each commit is one behavior-preserving transformation, reviewable on its own.
 6. **No behavior changes.** New features and bug fixes belong in separate commits — never smuggled inside a refactor.

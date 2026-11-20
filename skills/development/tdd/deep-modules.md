@@ -1,6 +1,6 @@
 # Deep Modules
 
-Companion reference for the [tdd](SKILL.md) skill: how to design modules with maximum power behind minimum interface. Read this during the Planning step when you "identify opportunities for deep modules" and design interfaces.
+Companion reference for the [tdd](SKILL.md) skill: how to design modules with maximum power behind minimum interface. Read this when a slice adds a module or class, or you want to test internals: it shows how to find the small interface with the complexity behind it.
 
 From John Ousterhout's *A Philosophy of Software Design*.
 
@@ -39,7 +39,7 @@ A deep module is the easiest thing in the world to test well:
 ## Red flags (shallow modules)
 
 - **Classitis** — many tiny classes/modules, each doing almost nothing; the complexity moves to the *connections between* them.
-- **Pass-through / middle-man methods** — a method whose only job is to call another method with the same arguments (see *Middle Man* in code-smells.md).
+- **Pass-through / middle-man methods** — a method whose only job is to call another method with the same arguments (the *Middle Man* smell in the refactor-review skill's `code-smells.md`).
 - **Configuration overload** — pushing decisions onto the caller via dozens of options/flags instead of choosing sane defaults internally.
 - **Leaky getters/setters** — exposing internal state so callers can manipulate it, rather than offering an operation that does the work.
 - **Temporal decomposition** — splitting modules by *order of execution* (step1, step2, step3) instead of by *information hidden*.

@@ -53,5 +53,39 @@
  ],
  "skills/operations/hotfix/diagnosis.md": [
   "skills/operations/incident-fix/diagnosis.md"
+ ],
+ "skills/development/architect-deep-dive/pipeline.md": [
+  "skills/development/acceptance-tests/pipeline.md",
+  "skills/development/agent-brief/pipeline.md",
+  "skills/development/devils-advocate/pipeline.md",
+  "skills/development/nexus/pipeline.md",
+  "skills/development/refactor-review/pipeline.md",
+  "skills/development/tdd/pipeline.md",
+  "skills/development/tyr-verdict/pipeline.md"
+ ],
+ "harness/LEDGER.md": [
+  "skills/development/devils-advocate/ledger-format.md",
+  "skills/development/nexus/ledger-format.md",
+  "skills/development/refactor-review/ledger-format.md",
+  "skills/development/tdd/ledger-format.md",
+  "skills/development/tyr-verdict/ledger-format.md"
+ ],
+ "harness/ledger.py": [
+  "skills/development/devils-advocate/scripts/ledger.py",
+  "skills/development/nexus/scripts/ledger.py",
+  "skills/development/refactor-review/scripts/ledger.py",
+  "skills/development/tdd/scripts/ledger.py",
+  "skills/development/tyr-verdict/scripts/ledger.py"
+ ],
+ "harness/redgreen.py": [
+  "skills/development/acceptance-tests/scripts/redgreen.py",
+  "skills/development/tdd/scripts/redgreen.py"
+ ],
+ "harness/brief.py": [
+  "skills/development/acceptance-tests/scripts/brief.py",
+  "skills/development/agent-brief/scripts/brief.py",
+  "skills/development/nexus/scripts/brief.py",
+  "skills/development/tdd/scripts/brief.py",
+  "skills/development/tyr-verdict/scripts/brief.py"
  ]
 }
