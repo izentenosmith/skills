@@ -1,7 +1,11 @@
 """Ledger grammar and loop rules. Run: python3 -m unittest discover harness/tests"""
+import contextlib
+import io
+import json
 import pathlib
 import re
 import sys
+import tempfile
 import unittest
 
 HERE = pathlib.Path(__file__).resolve().parent
@@ -68,6 +72,16 @@ class SpecExample(unittest.TestCase):
         self.assertEqual(rep["errors"], [])
         self.assertEqual(rep["computed"]["outcome"], "GO")
         self.assertEqual(rep["next_stage"], "done")
+
+
+    def test_the_red_run_example_is_valid_goes_no_go_then_go(self):
+        example = re.findall(r"```markdown\n(.*?)```", SPEC, re.S)[1]
+        self.assertIn("R1 — red run:", example)
+        rep = L.status("# Ledger — cutoff\n\n" + example)
+        self.assertEqual(rep["errors"], [])
+        self.assertEqual(rep["computed"]["outcome"], "GO")
+        first = L.status("# Ledger — cutoff\n\n" + example.split("## Iteration 2")[0])
+        self.assertEqual((first["errors"], first["computed"]["outcome"]), ([], "NO-GO"))
 
 
 class RoundTrip(unittest.TestCase):
@@ -205,6 +219,85 @@ class Verdicts(unittest.TestCase):
         self.assertEqual(L.status(text)["errors"], [])
 
 
+class RedRun(unittest.TestCase):
+    """tyr-verdict's own run before a GO was red: a slice with an R id, no finding behind it."""
+    RED = L.red_run_slice("R1", "`test_cutoff_reads_config`, `test_accept`")
+
+    def one(self, outcome="NO-GO", slices=None):
+        return HEAD + iteration(1, slices=[self.RED] if slices is None else slices, outcome=outcome)
+
+    def test_a_red_run_is_no_go_and_goes_back_to_tdd(self):
+        self.assertIn("- [ ] [blocker] R1 — red run: `test_cutoff_reads_config`, `test_accept`", self.one())
+        rep = L.status(self.one())
+        self.assertEqual(rep["errors"], [])
+        self.assertEqual(rep["computed"]["outcome"], "NO-GO")
+        self.assertIn("the run before the verdict was red (R1)", rep["computed"]["reason"])
+        self.assertEqual((rep["iteration"], rep["next_stage"]), (2, "fix"))
+        self.assertEqual(rep["open_red"], ["R1"])
+        self.assertEqual(rep["open_slices"][0]["id"], "R1")
+        self.assertEqual(rep["next_ids"]["R"], "R2")
+
+    def test_a_go_stated_over_a_red_run_does_not_check(self):
+        self.assertIn("E50", codes(self.one(outcome="GO")))
+
+    def test_the_next_iteration_closes_it_naming_the_test(self):
+        text = self.one() + iteration(2, closed=[{"finding": "R1", "test": "test_cutoff_reads_config"}], outcome="GO")
+        rep = L.status(text)
+        self.assertEqual(rep["errors"], [])
+        self.assertEqual((rep["computed"]["outcome"], rep["next_stage"], rep["open_red"]), ("GO", "done", []))
+        self.assertIn("E32", codes(text.replace(" — verified by `test_cutoff_reads_config`", " — fixed")))
+
+    def test_left_open_it_stalls_and_at_the_cap_escalates(self):
+        text = self.one() + iteration(2, closed=[], outcome="ESCALATED")
+        rep = L.status(text)
+        self.assertEqual(rep["errors"], [])
+        self.assertIn("stalled", rep["computed"]["reason"])
+
+    def test_it_sits_beside_a_confirmed_finding(self):
+        text = HEAD + iteration(1, findings=[finding("F1")], verdicts=[confirmed("F1", "minor")],
+                                slices=[slice_("F1", "minor"), self.RED], outcome="NO-GO")
+        rep = L.status(text)
+        self.assertEqual(rep["errors"], [])
+        self.assertEqual([s["id"] for s in rep["open_slices"]], ["F1", "R1"])
+
+    def test_a_malformed_red_run_is_e33(self):
+        not_blocker = {**self.RED, "severity": "major"}
+        no_marker = {**self.RED, "behavior": "the suite failed"}
+        names_nothing = self.one().replace("red run: `test_cutoff_reads_config`, `test_accept`", "red run:")
+        self.assertIn("E33", codes(self.one(slices=[not_blocker])))
+        self.assertIn("E33", codes(self.one(slices=[no_marker])))
+        self.assertTrue({"E33", "E04"} & set(codes(names_nothing)))
+
+    def test_a_red_run_id_is_never_reused(self):
+        text = self.one() + iteration(2, closed=[{"finding": "R1", "test": "t"}], slices=[self.RED], outcome="NO-GO")
+        self.assertIn("E34", codes(text))
+
+    def test_closing_an_unknown_red_run_is_e32(self):
+        text = HEAD + iteration(1, outcome="GO") + iteration(2, closed=[{"finding": "R7", "test": "t"}], outcome="GO")
+        self.assertIn("E32", codes(text))
+
+    def test_a_red_run_cannot_be_waived(self):
+        text = self.one().replace("\n### Verdict: NO-GO", "\n### Decisions\n- **R1** — waived: ship it\n\n### Verdict: GO")
+        self.assertTrue(codes(text))
+
+
+class Unchanged(unittest.TestCase):
+    """Ledgers written before the red-run slice existed read exactly as they did."""
+    def test_ledgers_without_a_red_run_compute_what_they_always_did(self):
+        f1 = dict(findings=[finding("F1")], verdicts=[confirmed("F1")], slices=[slice_("F1")], outcome="NO-GO")
+        cases = {
+            "GO": HEAD + iteration(1, outcome="GO"),
+            "NO-GO": HEAD + iteration(1, **f1),
+            "GO ": HEAD + iteration(1, **f1) + iteration(2, closed=[{"finding": "F1", "test": "t"}], outcome="GO"),
+            "ESCALATED": HEAD + iteration(1, **f1) + iteration(2, closed=[], outcome="ESCALATED"),
+        }
+        for outcome, text in cases.items():
+            rep = L.status(text)
+            self.assertEqual(rep["errors"], [], outcome)
+            self.assertEqual(rep["computed"]["outcome"], outcome.strip())
+            self.assertEqual(rep["open_red"], [])
+
+
 class Resume(unittest.TestCase):
     def test_partial_iteration_resumes_at_the_missing_stage(self):
         text = HEAD + L.render_iteration(1) + L.render_smells([], [])
@@ -222,6 +315,83 @@ class Legacy(unittest.TestCase):
         self.assertEqual(rep["errors"], [])
         self.assertEqual(rep["next_ids"]["F"], "F6")
         self.assertEqual(rep["next_stage"], "refactor")
+
+    def test_a_verdict_or_waiver_on_a_preamble_only_id_is_e20_and_reusing_it_is_e10(self):
+        head = HEAD + "\nLegacy notes: F7 was discussed before the grammar existed.\n\n"
+        text = head + iteration(1, verdicts=[confirmed("F7")], slices=[slice_("F7")], outcome="NO-GO")
+        self.assertIn("E20", codes(text))
+        text = head + iteration(1, outcome="GO").replace(
+            "\n### Verdict: GO", "\n### Decisions\n- **F7** — waived: user accepts\n\n### Verdict: GO")
+        self.assertEqual(codes(text), ["E20"])
+        self.assertEqual(L.status(text)["waived"], [])
+        self.assertIn("E10", codes(head + iteration(1, findings=[finding("F7")], verdicts=[refuted("F7")], outcome="GO")))
+
+
+WAIVED = (HEAD + iteration(1, findings=[finding("F1"), finding("F2")], verdicts=[confirmed("F1"), confirmed("F2")],
+                           slices=[slice_("F1"), slice_("F2")], outcome="NO-GO"))
+WAIVED_F2 = WAIVED.replace("\n### Verdict: NO-GO", "\n### Decisions\n- **F2** — waived: user accepts\n\n### Verdict: NO-GO")
+
+
+class Cli(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.dir = pathlib.Path(self.tmp.name)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def ledger(self, text, name="ledger.md"):
+        (self.dir / name).write_text(text)
+        return str(self.dir / name)
+
+    def cli(self, *args):
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = L.main(list(args))
+        return code, out.getvalue(), err.getvalue()
+
+    def test_check_and_status_on_a_path_that_is_not_a_file_exit_2(self):
+        for path in (str(self.dir / "nope.md"), str(self.dir)):
+            for cmd in ("check", "status"):
+                for extra in ((), ("--json",)):
+                    code, out, err = self.cli(cmd, path, *extra)
+                    self.assertEqual((code, out), (2, ""), (cmd, path))
+                    self.assertIn(f"no such file: {path}", err)
+
+    def test_check_against_a_missing_older_copy_exits_2(self):
+        code, out, err = self.cli("check", self.ledger(WAIVED), "--against", str(self.dir / "old.md"))
+        self.assertEqual((code, out), (2, ""))
+        self.assertIn("no such file", err)
+
+    def test_next_id_on_a_ledger_not_yet_written_is_the_first_id(self):
+        for kind in "FNR":
+            self.assertEqual(self.cli("next-id", str(self.dir / "nope.md"), kind), (0, f"{kind}1\n", ""))
+        self.assertEqual(self.cli("next-id", str(self.dir), "F")[0], 2)
+        self.assertEqual(self.cli("next-id", self.ledger(WAIVED), "F"), (0, "F3\n", ""))
+
+    def test_an_existing_ledger_still_checks(self):
+        self.assertEqual(self.cli("check", self.ledger(WAIVED))[:2], (0, "0 error(s), 0 warning(s)\n"))
+
+    def test_status_prints_the_waived_ids_on_one_line(self):
+        code, out, _ = self.cli("status", self.ledger(WAIVED_F2))
+        self.assertEqual(code, 0, out)
+        lines = out.splitlines()
+        self.assertIn("waived: F2", lines)
+        self.assertIn("open blocking: F1", lines)
+        self.assertEqual(lines[0], "iteration 2 · next stage: fix")
+        _, out, _ = self.cli("status", self.ledger(WAIVED_F2.replace("- **F2** — waived", "- **F1** — waived: ok\n- **F2** — waived")
+                                                   .replace("### Verdict: NO-GO", "### Verdict: GO")))
+        self.assertIn("waived: F1, F2", out.splitlines())
+
+    def test_status_says_waived_none(self):
+        _, out, _ = self.cli("status", self.ledger(WAIVED))
+        self.assertIn("waived: none", out.splitlines())
+
+    def test_json_carries_the_waived_ids(self):
+        for cmd in ("status", "check"):
+            _, out, _ = self.cli(cmd, self.ledger(WAIVED_F2), "--json")
+            self.assertEqual(json.loads(out)["waived"], ["F2"])
+        self.assertEqual(L.status(WAIVED)["waived"], [])
 
 
 if __name__ == "__main__":

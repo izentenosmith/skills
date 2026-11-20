@@ -1,6 +1,6 @@
 # harness — the rules the skills state, run by code
 
-Eight harnesses and the tools they share. Each one runs a skill's judgment through headless `claude -p` calls and enforces in code everything that isn't judgment.
+Nine harnesses and the tools they share. Each one runs a skill's judgment through headless `claude -p` calls and enforces in code everything that isn't judgment.
 
 | Harness | Runs | Returns |
 |---|---|---|
@@ -34,7 +34,8 @@ This folder makes the referee a program. The model still does every judgment; th
 | [`loop.py`](loop.py) | The orchestrator. Drives stages 5–7 and the loop back through tdd with headless `claude -p` calls. |
 | [`ledger.py`](ledger.py) | The ledger's grammar as code: parser, checker, verdict arithmetic, and the only writer `loop.py` uses. Works on its own against a ledger the skills wrote by hand. |
 | [`LEDGER.md`](LEDGER.md) | The grammar and the rules, for people. |
-| [`redgreen.py`](redgreen.py) | Proves new tests were **red on the pre-fix code** and are green with the fix, for any language. `loop.py` uses it before closing a remediation slice; hotfix, tdd and incident-fix can call it directly. |
+| [`brief.py`](brief.py) | The brief's shape as code: a linter for `.workflow/brief.md` — status, sections, the criterion → test mapping, tdd's ticks and `**Base:**` — and the one place `loop.py` and `pipeline.py` take their brief parsing from. Works on its own. |
+| [`redgreen.py`](redgreen.py) | Proves new tests were **red on the pre-fix code** and are green with the fix, for any language. `loop.py` uses it before closing a remediation slice; hotfix, acceptance-tests, tdd and incident-fix can call it directly. |
 | [`incident.py`](incident.py) | The incident-fix log: entries stamped from the system clock, production actions refused without their own confirmation, a closing gate on contributing factors, and a timeline for the post-mortem. |
 | [`fix.py`](fix.py) | Bug report → pull request. Discover, triage, root cause, red, fix, review, ship, each gated; `--profile incident` runs the full loop capped at two and adds a data-repair artifact. |
 | [`postmortem.py`](postmortem.py) | Resolved incident log → post-mortem. Widens the git range, lints for blame and prescription, drafts the follow-through and waits for owners. |
@@ -48,14 +49,16 @@ This folder makes the referee a program. The model still does every judgment; th
 
 Stdlib Python 3.10+, no dependencies. The skills don't need any of this — every skill folder still works copied on its own, in Cursor or Claude Code. The harness is an optional layer that enforces what they ask for when you want it enforced.
 
+Four files here are also the sources of copies the development skills carry, so an installed skill can check its own output without this folder: `ledger.py`, `redgreen.py` and `brief.py` go to `scripts/` in the skills that run them, and `LEDGER.md` to `ledger-format.md` beside the stages that write or check the ledger. [`skills/shared.json`](../skills/shared.json) maps each source to its copies. Edit the file here, never a copy, then run `python3 .github/scripts/sync_shared.py`; CI fails on a copy that drifted.
+
 ## The whole pipeline — `pipeline.py`
 
 `loop.py` starts where tdd ends. `pipeline.py` starts where **you** end: you work the design with architect-deep-dive, in conversation, and it writes the design to its own file, `.workflow/designs/<YYYYMMDD-HHMM>-<slug>.md`. Everything after that runs without you.
 
 ```
  architect-deep-dive ──► .workflow/designs/… ──► agent-brief ─► acceptance-tests ─► tdd ─► loop.py ──► GO        exit 0
- (you, one question       Status: resolved        brief.md       red, on behavior    green,   stages 5–7  ESCALATED exit 3
-  at a time)                                                                         committed
+ (you, rounds of up       Status: resolved        brief.md       red, on behavior    green,   stages 5–7  ESCALATED exit 3
+  to 3 questions)                                                                    committed
 ```
 
 ```bash
@@ -63,30 +66,31 @@ python3 path/to/skills/harness/pipeline.py --repo . --design .workflow/designs/2
     --test-cmd ".venv/bin/python -m pytest -q"
 ```
 
-**One file per design, nothing shared.** A repo holds several designs at once — parallel sessions, worktrees, branches that will merge — so each has a name made of when and what, and none overwrites or conflicts with another. `--design` picks the one to build; with a single `resolved` design in the folder it is found without being named, with several the harness lists them and asks, and it is remembered for the resume. On **GO** the design is marked `built` and the change's working files — brief, ledger, report, state — move to `.workflow/archive/<design name>/`, so the shared `brief.md` and `ledger.md` paths are empty again and two branches that each built something never meet in the same file. An ESCALATED change stays where it is, to be resumed.
+**One file per design, nothing shared.** A repo holds several designs at once — parallel sessions, worktrees, branches that will merge — so each has a name made of when and what, and none overwrites or conflicts with another. `--design` picks the one to build; with a single `resolved` design in the folder it is found without being named, with several the harness lists them and asks, and it is remembered for the resume. On **GO** the design is marked `built` and the change's working files — brief, ledger, report, state — move to `.workflow/archive/<design name>/` (or `<design name>-2`, `-3`, … when that folder already exists: nothing in the archive is ever overwritten), so the shared `brief.md` and `ledger.md` paths are empty again and two branches that each built something never meet in the same file. An ESCALATED change stays where it is, to be resumed.
 
 Stage 1 stays a conversation on purpose: a design is decided with you, and a headless call can't ask you anything. The harness refuses a design that isn't `**Status:** resolved`.
 
 | Stage | What the model does | What code checks |
 |---|---|---|
 | before anything | — | a resolved design; no brief or ledger left from other work; a clean tree; a green suite; a working branch (created as `pipeline/<slug>` when you start on the default branch) |
-| brief | **agent-brief**, from the design file | nothing outside `.workflow/` changed; the brief has criteria. The assumptions it had to make are logged and put in the report. Status becomes `approved — from the resolved design … (no separate review)` |
+| brief | **agent-brief**, from the design file | nothing outside `.workflow/` changed; the brief has criteria. The assumptions it had to make are logged and put in the report. Status stays `draft — awaiting approval` — the pipeline never approves a brief, and sets it back to draft if the stage wrote anything else — unless you passed `--approve-brief` |
 | acceptance | **acceptance-tests** | a `**Command:**` is recorded; it is **red**; no line of its output is a load or import error |
 | build | **tdd**, committing each green slice | suite and acceptance tests green, or tdd is called again with what is still red (`--build-attempts`, default 2); `**Base:**` written into the brief before the first slice; anything left uncommitted becomes one commit |
 | loop | `loop.py`, unchanged, with save points | everything in the table below |
 
 | Flag | |
 |---|---|
-| `--pause-at-brief` | stop once after the brief is written (exit 5) so you can read or edit it; re-run without the flag to build it |
-| `--from-brief` | no design: build the `.workflow/brief.md` that is already there |
+| `--pause-at-brief` | stop once after the brief is written (exit 5) so you can read or edit it; re-run without the flag to build it. Re-running is not an approval: add `--approve-brief` if you approve it |
+| `--approve-brief` | your approval of the brief, given at launch: Status becomes `approved — by the user at launch (`pipeline.py --approve-brief`, <date>)` and the same is logged under **Revisions**. Without it the brief is built as a draft |
+| `--from-brief` | no design: build the `.workflow/brief.md` that is already there. A brief you already approved is left as written; a draft stays a draft unless you add `--approve-brief` |
 | `--skip-acceptance` | the Trivial tier: no stage 3 |
 | `--design` | the design file to build (default: the only resolved one in `.workflow/designs/`) |
 | `--branch`, `--build-attempts` | the working branch's name, tdd calls before giving up |
 | `--dry-run` | write the next stage's prompt and call nothing |
 
-The model, budget, cap and concurrency flags are `loop.py`'s. State is `.workflow/pipeline.json`: re-running resumes at the first stage not done, and once the loop has started the ledger is the state, as before. It ends with `pipeline-report.md` (in the archive folder on GO, in `.workflow/` otherwise) — the verdict, the commits, what was assumed for you, and the ship-checklist items still open. Nothing is pushed, merged or deployed. Exit 5 means it needs you: no resolved design, a brief that belongs to other work, a dirty tree, or the pause you asked for.
+The model, budget, cap and concurrency flags are `loop.py`'s. State is `.workflow/pipeline.json`: re-running resumes at the first stage not done, and once the loop has started the ledger is the state, as before. It ends with `pipeline-report.md` (in the archive folder on GO, in `.workflow/` otherwise) — the verdict, the commits, the brief's status, what was assumed for you, and the ship-checklist items still open. Nothing is pushed, merged or deployed. Exit 5 means it needs you: no resolved design, a brief that belongs to other work, a dirty tree, or the pause you asked for.
 
-**What you give up by not pausing.** The brief's approval gate exists because the brief is the last cheap place to change your mind. Running straight through treats the design conversation as that approval, and the brief says so rather than looking reviewed. Use `--pause-at-brief` when the design left real latitude.
+**Only you approve a brief.** The skills' rule is that agent-brief's approval gate is the single place Status becomes `approved`, on the user's explicit yes; with nobody to answer, the brief stays `draft — awaiting approval` and later stages go ahead and say so. The pipeline follows it: a headless run has nobody to answer, so it never writes an approval of its own. Running straight through builds on the draft, and the run says so plainly in three places — the report's `**Brief:**` line, the last line of the log (`note: this run was built on an UNAPPROVED brief …`), and the GO verdict's reason in the ledger. `--approve-brief` is your yes, given at launch, for a design that left the brief no latitude; `--pause-at-brief` then `--approve-brief` is the yes given after reading it. No stage prompt tells a stage to set or assume approval.
 
 ## Long runs — what carries a build across sessions
 
@@ -110,6 +114,8 @@ Stop it at any point — a usage limit, Ctrl-C, a red gate — and the next run 
 | The change is measured against the commit tdd started from, not against `HEAD` | `--base`, else the remembered base, else the brief's `**Base:**` line, else the merge-base with `main`. `HEAD` is pinned to a commit on first use, and a tree that doesn't differ from its base **stops the loop** instead of producing a clean teardown of nothing |
 | Every green state is a save point | With `--save-points`, one commit after each tdd and refactor-review stage that passes its gates. The stages are told not to commit; the harness does it, and only on a working branch that started clean |
 | A GO names the ship-checklist items still open | Read from the brief at GO and written into the verdict's reason. They never change the verdict |
+| A stage that works from a draft brief says so | `loop.py` warns at the start, and a GO's reason ends "Judged against an unapproved brief" when the brief's Status is not `approved`. It never changes the verdict |
+| A red run before the verdict is no GO | tyr-verdict records it as `- [ ] [blocker] R<id> — red run: <failing tests>` under `### Remediation slices`; `ledger.judge()` then computes NO-GO, the fix stage hands the slice to tdd, and it closes under `### Closed slices` once the gate is green and the named test exists (there may be no new test to prove red, so `redgreen.py` is not asked). `loop.py` itself never writes one: its own gate stops on a red suite (exit 4) before tyr is called |
 | The teardown **does not execute** — no suite, no test, no mutation | Delegates get `--tools Read,Grep,Glob`. They *can't* run anything, rather than being asked not to |
 | A delegate that never returns is an **unattacked surface**, not a clean one | Recorded under `### Surfaces` by the harness |
 | A teardown nobody ran found nothing, which is not the same as a clean one | When **no** delegate returns, the loop stops with an error and writes nothing, so the next run retries the teardown — "no findings" from a teardown that never happened used to compute GO |
@@ -171,8 +177,36 @@ The checker is useful on its own, against a ledger the skills wrote by hand:
 ```bash
 python3 harness/ledger.py check  .workflow/ledger.md            # grammar + every loop rule
 python3 harness/ledger.py check  .workflow/ledger.md --against old-ledger.md   # + append-only
-python3 harness/ledger.py status .workflow/ledger.md            # computed verdict, what's open, next stage
+python3 harness/ledger.py status .workflow/ledger.md            # computed verdict, what's open, what's waived, next stage
 ```
+
+`status` always prints one `waived:` line — the findings waived under `### Decisions` (`waived: F3, F7`) or `waived: none` — and `--json` carries them as `waived`. `check` and `status` exit 2 with `ledger.py: no such file: <path>` when the path (or `--against`) names no file; `next-id` alone accepts a ledger not yet written and answers `F1`, `N1` or `R1`.
+
+### Checking the brief — `brief.py`
+
+```bash
+python3 harness/brief.py check .workflow/brief.md            # exit 0 clean · 1 problems · 2 usage or no such file
+python3 harness/brief.py check .workflow/brief.md --json
+```
+
+It checks what the skills promise about the brief and prints each problem as `error: <code> line <n>: …`:
+
+| Code | Problem |
+|---|---|
+| `B01` | no `# Build Plan: <name>` title |
+| `B02` | `**Status:**` is neither `draft — awaiting approval` nor `approved[ — <who, how>]` |
+| `B10` | a required section is missing: Summary, Current behavior, Desired behavior, Key interfaces, Acceptance criteria, Test seams, Out of scope, `## Revisions` |
+| `B11` | the Acceptance criteria section has no `- [ ]` criterion |
+| `B20` | the **Acceptance tests** section is filled but names no `- **Command:** `<command>`` |
+| `B21` | a criterion is not mapped — to a test, or as `Not acceptance-testable` with a reason |
+| `B22` | a criterion is mapped more than once |
+| `B23` | a line there is neither `- [ ] <criterion> → `<test id>`` nor `- Not acceptance-testable: <criterion> — <why>` |
+| `B30` | a ticked criterion names no test (`- [x] <criterion> — verified by <test name>`) |
+| `B31` | a criterion is ticked but `**Base:**` names no commit |
+
+The mapping checks start once stage 3 has filled the section (a Command or any mapping line). A mapping line is tied to its criterion by `Criterion <n>` or by its wording; where a line is worded too freely to tie to one, the linter falls back to counting lines against criteria. `Journey:` lines are extra and map nothing.
+
+Notes are information and never change the exit status: `I01` lists every **Revisions** entry marked `unconfirmed` — what a stage assumed with nobody to ask, waiting for you; `I02` a brief with no Status line (it reads as a draft); `I03` a brief with no Ship checklist.
 
 ### Proving a test red — `redgreen.py`
 
@@ -183,7 +217,12 @@ python3 harness/redgreen.py check --repo . --cmd "<test command>"            # t
 python3 harness/redgreen.py check --repo . --cmd "<cmd>" --base HEAD~1       # fix already committed
 python3 harness/redgreen.py snapshot --repo .                                # pin "before" when the tree is already dirty
 python3 harness/redgreen.py check --repo . --cmd "pytest {tests}" --expect "AssertionError"   # focused, and failing for the right reason
+python3 harness/redgreen.py check --repo . --cmd "make lint && make test" --shell           # a command that needs a shell: your decision
 ```
+
+`--cmd` is split into words and run **without a shell**; leading `NAME=value` words become environment variables, so `PYTHONPATH=. pytest -q` works as written, and nothing is expanded (no globs, no `~`). A command that needs a shell — `;`, `|`, `&`, `>`, `<`, a backtick, `$(`, `${`, `$NAME` — is refused with exit status 2 unless you pass `--shell`. That flag is a person's decision: the command usually comes from `.workflow/brief.md`, which anyone who can push can edit, and a shell runs whatever it says. `loop.py` and `fix.py` pass the command they already run through a shell at their own gates (your `--test-cmd`). A `--repo` that is not a directory, or a `--tests` path that exists neither in your tree nor at the base, is also exit status 2.
+
+The before-run is not sealed off: the temporary worktree links to the repo's real `.venv`, `node_modules`, `vendor`, `target` and the like, so a test command that writes there writes into the real ones.
 
 It checks out the base in a temporary worktree, copies in only the test files that changed (found by path shape across ecosystems, or given with `--tests`), runs the command there — it must **fail** — and runs it again in your tree, where it must **pass**. Your index and working tree are never touched. Verdicts: `red-green`, `not-red` (the test passes without the fix), `not-green`, `wrong-reason`, `no-tests`. `wrong-reason` means the before-run failed without testing the behavior: it doesn't match `--expect`, or — with no `--expect`, which is how `loop.py` calls it — the tests never ran because they couldn't be collected, imported, compiled or linked (pytest collection errors, `ImportError`, javac `cannot find symbol`, Node `Cannot find module`, `error TS…`, Go `[build failed]`, and so on). A test that imports a symbol the fix adds is red before the fix whether or not the behavior was ever broken; reach the new code through something that already exists, or pass `--expect` when the missing import *is* the bug.
 

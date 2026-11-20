@@ -175,6 +175,7 @@ elif stage.startswith("pl-"):
     # pipeline.py's stages 2–4. FAKE_PL: ok (default) · strays (the brief stage edits code) · nocriteria ·
     # accept-green (an acceptance test that passes now) · accept-load (one that cannot import) ·
     # build-slow (red after the first tdd call, green after the second) · build-never
+    # self-approved (the brief stage writes Status: approved with nobody there to say yes)
     import subprocess
     PL = os.environ.get("FAKE_PL", "ok")
     brief = cwd / ".workflow" / "brief.md"
@@ -183,7 +184,8 @@ elif stage.startswith("pl-"):
         title = re.search(r"^# Design:\s*(.+)$", pathlib.Path(design).read_text(), re.M).group(1)
         crit = "" if PL == "nocriteria" else ("- [ ] Tracer bullet: the cutoff defaults to 120 minutes\n"
                                               "- [ ] Edge case: an empty config still yields the default\n")
-        brief.write_text(f"# Build Plan: {title}\n\n**Status:** draft — awaiting approval\n\n"
+        said = "approved" if PL == "self-approved" else "draft — awaiting approval"
+        brief.write_text(f"# Build Plan: {title}\n\n**Status:** {said}\n\n"
                          f"**Acceptance criteria** (ordered):\n{crit}\n**Out of scope:**\n- admin override\n\n"
                          "**Ship checklist** (what no test can prove):\n- [ ] Rollback: revert the commit\n\n"
                          "**Base:** —\n\n**Acceptance tests** (filled in by stage 3):\n- **Command:** —\n\n"

@@ -1,16 +1,20 @@
 #!/usr/bin/env python3
 """Read, check, judge and write a .workflow/ledger.md.
 
-The ledger is an append-only event log; the grammar is in LEDGER.md next to this
-file. This module is the single place that grammar lives: loop.py writes through
+The ledger is an append-only event log; the grammar is in LEDGER.md, which ships with
+this file (named ledger-format.md when copied beside a skill). This module is the single place that grammar lives: loop.py writes through
 the render_* functions and reads back through parse()/replay(), and anyone running
 the skills by hand can check their ledger with the CLI.
 
-    python3 ledger.py check  <ledger.md> [--against <older.md>] [--cap 3] [--json]
-    python3 ledger.py status <ledger.md> [--cap 3] [--json]
-    python3 ledger.py next-id <ledger.md> F|N
+    python3 -I ledger.py check  <ledger.md> [--against <older.md>] [--cap 3] [--json]
+    python3 -I ledger.py status <ledger.md> [--cap 3] [--json]
+    python3 -I ledger.py next-id <ledger.md> F|N|R
 
-Exit status: 0 clean, 1 errors found, 2 usage error.
+`check` and `status` need the file to exist: a path that names no file is a wrong path, not an
+empty ledger. `next-id` alone accepts one — before the first stage has written the ledger, the
+next id is F1, N1 or R1.
+
+Exit status: 0 clean, 1 errors found, 2 usage error (or no such file).
 """
 from __future__ import annotations
 
@@ -50,11 +54,13 @@ NONE_RE = re.compile(r"^- none\s*$", re.I)
 SMELL_RE = re.compile(r"^- \*\*(N\d+)\*\*\s+(.*)$")
 SMELL_ACTION_RE = re.compile(r"^—\s*(left|promoted|retired)\b[^:]*:\s*(.*)$", re.I)
 SMELL_NOTED_RE = re.compile(r"^(.*?)\s+—\s+noted\b[^:]*:\s*(.*)$", re.I)
-SLICE_RE = re.compile(r"^- (?:\[ \]\s*)?\[(blocker|major|minor)\]\s+(F\d+)\s+—\s+(.+)$", re.I)
-CLOSED_RE = re.compile(r"^- \[x\]\s+(F\d+)\s+—\s+(.*)$", re.I)
+SLICE_RE = re.compile(r"^- (?:\[ \]\s*)?\[(blocker|major|minor)\]\s+([FR]\d+)\s+—\s+(.+)$", re.I)
+CLOSED_RE = re.compile(r"^- \[x\]\s+([FR]\d+)\s+—\s+(.*)$", re.I)
+# A red run before the verdict: a remediation slice with an R id, no finding behind it.
+RED_RUN_RE = re.compile(r"^red run:\s*(\S.*)$", re.I)
 SURFACE_RE = re.compile(r"^- \*\*(Swept|Unattacked):\*\*\s*(.+)$", re.I)
 DECISION_RE = re.compile(r"^- \*\*(F\d+)\*\*\s+—\s+waived:\s*(.+)$", re.I)
-ID_RE = re.compile(r"\b([FN])(\d+)\b")
+ID_RE = re.compile(r"\b([FNR])(\d+)\b")
 
 
 # ------------------------------------------------------------------ data model
@@ -92,6 +98,8 @@ class Ledger:
         for it in self.iterations:
             if kind == "F":
                 seen |= {int(f.fid[1:]) for f in it.sections.get("findings", [])}
+            elif kind == "R":
+                seen |= {int(s["id"][1:]) for s in it.sections.get("slices", []) if s["id"][0] == "R"}
             else:
                 seen |= {int(s["id"][1:]) for s in it.sections.get("smells", [])}
         return seen
@@ -246,8 +254,19 @@ class FindingState:
 
 
 @dc.dataclass
+class RedRun:
+    """A `[blocker] R<id> — red run: …` slice: the suite or the acceptance command failed before the verdict."""
+    fid: str
+    opened: int
+    slice: dict
+    closed: int = 0
+    waived: bool = False        # never set: a red suite is fixed, not waived
+
+
+@dc.dataclass
 class State:
     findings: dict = dc.field(default_factory=dict)
+    red_runs: dict = dc.field(default_factory=dict)     # id -> RedRun
     smells: dict = dc.field(default_factory=dict)       # id -> {"status", "what", "promote_if", "since"}
     computed: dict = dc.field(default_factory=dict)     # iteration -> (outcome, reason)
     progress: dict = dc.field(default_factory=dict)     # iteration -> count closed this pass
@@ -262,8 +281,11 @@ class State:
     def open_inconclusive(self):
         return [f for f in self.findings.values() if f.open_inconclusive()]
 
+    def open_red(self):
+        return [r for r in self.red_runs.values() if not r.closed]
+
     def open_slices(self):
-        return [f for f in self.findings.values() if f.slice and not f.closed and not f.waived]
+        return [f for f in self.findings.values() if f.slice and not f.closed and not f.waived] + self.open_red()
 
     def refuted(self):
         return [f for f in self.findings.values() if f.latest and f.latest[1] == "REFUTED"]
@@ -274,18 +296,21 @@ class State:
 
 def judge(state: State, n: int, cap: int = CAP):
     """The verdict at the end of iteration n. Pure arithmetic over the replayed state."""
-    blocking, inconc = state.open_blocking(), state.open_inconclusive()
+    blocking, inconc, red = state.open_blocking(), state.open_inconclusive(), state.open_red()
     twice = [f.fid for f in inconc if f.inconclusive_count() >= 2]
     if twice:
         return "ESCALATED", f"{', '.join(twice)} came back INCONCLUSIVE a second time — this is the user's call"
-    if n >= cap and (blocking or inconc):
-        still = [f.fid for f in blocking + inconc]
-        return "ESCALATED", (f"iteration {n} of {cap} still has {len(still)} finding(s) open "
+    if n >= cap and (blocking or inconc or red):
+        still = [f.fid for f in blocking + inconc + red]
+        return "ESCALATED", (f"iteration {n} of {cap} still has {len(still)} "
+                             f"{'finding(s)' if not red else 'item(s)'} open "
                              f"({', '.join(still)}) — the plan, not the code, is the likely problem")
-    if n >= 2 and state.progress.get(n, 0) == 0 and (blocking or inconc):
+    if n >= 2 and state.progress.get(n, 0) == 0 and (blocking or inconc or red):
         return "ESCALATED", f"iteration {n} closed nothing while findings stay open — the loop has stalled"
-    if blocking or inconc:
+    if blocking or inconc or red:
         parts = []
+        if red:
+            parts.append(f"the run before the verdict was red ({', '.join(r.fid for r in red)})")
         if blocking:
             parts.append(f"{len(blocking)} confirmed blocker/major open ({', '.join(f.fid for f in blocking)})")
         if inconc:
@@ -315,7 +340,7 @@ def replay(ledger: Ledger, cap: int = CAP):
         progress = 0
 
         for c in it.sections.get("closed", []):
-            f = st.findings.get(c["id"])
+            f = st.findings.get(c["id"]) or st.red_runs.get(c["id"])
             if not f or not f.slice:
                 errors.append(("E32", n, c["line"], f"{c['id']} closed but no remediation slice was opened for it"))
                 continue
@@ -434,6 +459,17 @@ def replay(ledger: Ledger, cap: int = CAP):
 
         sliced = set()
         for s in it.sections.get("slices", []):
+            if s["id"][0] == "R":
+                if s["id"] in st.red_runs or s["id"] in ledger.reserved:
+                    errors.append(("E34", n, s["line"], f"red-run id {s['id']} is already in use"))
+                    continue
+                if s["severity"] != "blocker" or not RED_RUN_RE.match(s["text"]):
+                    errors.append(("E33", n, s["line"], f"{s['id']} is not `[blocker] {s['id']} — red run: "
+                                                        "<the failing tests>`"))
+                    continue
+                st.red_runs[s["id"]] = RedRun(s["id"], n, s)
+                progress += 1                           # a red run found is news, like a finding newly confirmed
+                continue
             f = st.findings.get(s["id"])
             if not f or not f.latest or f.latest[0] != n or f.latest[1] != "CONFIRMED":
                 errors.append(("E31", n, s["line"], f"slice for {s['id']}, which was not CONFIRMED in iteration {n}"))
@@ -506,6 +542,8 @@ def status(text: str, cap: int = CAP):
         "open_blocking": [f.fid for f in st.open_blocking()],
         "open_minor": [f.fid for f in st.open_minor()],
         "open_inconclusive": [f.fid for f in st.open_inconclusive()],
+        "open_red": [r.fid for r in st.open_red()],
+        "waived": [f.fid for f in st.findings.values() if f.waived],
         "open_slices": [{"id": f.fid, "severity": f.slice["severity"], "behavior": f.slice["text"]}
                         for f in st.open_slices()],
         "refuted": [{"id": f.fid, "claim": f.fields.get("claim challenged", ""),
@@ -515,7 +553,7 @@ def status(text: str, cap: int = CAP):
                           "pass": f.inconclusive_count()} for f in st.open_inconclusive()],
         "carried_smells": [{"id": k, **{x: v[x] for x in ("status", "what", "promote_if", "since")}}
                            for k, v in st.active_smells().items()],
-        "next_ids": {"F": led.next_id("F"), "N": led.next_id("N")},
+        "next_ids": {"F": led.next_id("F"), "N": led.next_id("N"), "R": led.next_id("R")},
         "errors": [_fmt(e) for e in errors],
         "warnings": [_fmt(w) for w in warnings],
     }
@@ -628,6 +666,11 @@ def render_slices(slices):
     return "\n### Remediation slices\n" + ("\n".join(body) or "- none") + "\n"
 
 
+def red_run_slice(rid, failing):
+    """The slice tyr-verdict records when its own run before the verdict is red; pass it to render_slices."""
+    return {"severity": "blocker", "finding": rid, "behavior": f"red run: {failing}"}
+
+
 def render_outcome(outcome, reason, note=""):
     out = f"\n### Verdict: {outcome}\n{_field('Reason', reason)}\n"
     if note:
@@ -651,10 +694,16 @@ def main(argv=None):
     s.add_argument("--json", action="store_true")
     i = sub.add_parser("next-id", help="the next free finding or smell id")
     i.add_argument("ledger")
-    i.add_argument("kind", choices=["F", "N"])
+    i.add_argument("kind", choices=["F", "N", "R"])
     a = ap.parse_args(argv)
 
     path = pathlib.Path(a.ledger)
+    older = pathlib.Path(a.against) if a.cmd == "check" and a.against else None
+    # A ledger nobody has written yet has a next id; it has nothing to check or report.
+    for needed in ([] if a.cmd == "next-id" and not path.exists() else [path]) + ([older] if older else []):
+        if not needed.is_file():
+            print(f"ledger.py: no such file: {needed}", file=sys.stderr)
+            return 2
     text = path.read_text() if path.exists() else ""
 
     if a.cmd == "next-id":
@@ -662,8 +711,8 @@ def main(argv=None):
         return 0
 
     rep = status(text, a.cap)
-    if a.cmd == "check" and a.against:
-        ok, _ = append_only(pathlib.Path(a.against).read_text(), text)
+    if older:
+        ok, _ = append_only(older.read_text(), text)
         if not ok:
             rep["errors"].append("E60 ledger: the older copy is not a prefix — something above the end was rewritten")
 
@@ -680,9 +729,10 @@ def main(argv=None):
         print(f"iteration {rep['iteration']} · next stage: {rep['next_stage']}")
         if comp:
             print(f"computed verdict: {comp['outcome']} — {comp['reason']}")
-        for k in ("open_blocking", "open_inconclusive", "open_minor"):
+        for k in ("open_red", "open_blocking", "open_inconclusive", "open_minor"):
             if rep[k]:
                 print(f"{k.replace('_', ' ')}: {', '.join(rep[k])}")
+        print(f"waived: {', '.join(rep['waived']) or 'none'}")
         for sl in rep["open_slices"]:
             print(f"open slice: [{sl['severity']}] {sl['id']} — {sl['behavior']}")
         for sm in rep["carried_smells"]:

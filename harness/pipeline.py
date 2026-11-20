@@ -10,15 +10,19 @@
     python3 harness/pipeline.py --repo . --design .workflow/designs/20261112-1105-cutoff.md --test-cmd "pytest -q"
     python3 harness/pipeline.py --repo .                       # resume: design, settings and progress are remembered
     python3 harness/pipeline.py --repo . --pause-at-brief      # stop once, after the brief, for your review
-    python3 harness/pipeline.py --repo . --from-brief          # no design: start from an approved brief.md
+    python3 harness/pipeline.py --repo . --approve-brief       # you approve the brief, here, at launch
+    python3 harness/pipeline.py --repo . --from-brief          # no design: start from the brief.md already there
 
-Stage 1 stays a conversation: a design is decided with you, one question at a time, and a headless
+Stage 1 stays a conversation: a design is decided with you, in rounds of up to three questions, and a headless
 call cannot ask you anything. Everything after it runs here, each stage a headless `claude -p` call
 following its skill, each gated by code:
 
 - the design must say `**Status:** resolved`; an unfinished design is not built on;
 - the suite is green and the tree clean before anything starts, and the work happens on a branch;
 - the brief stage may change nothing outside `.workflow/`, and the brief must have criteria;
+- the pipeline never approves a brief: it stays `draft — awaiting approval`, and the report says the
+  run was built on an unapproved brief, unless you pass --approve-brief (your approval, recorded as
+  given at launch) or the brief you supplied with --from-brief already says `approved`;
 - the acceptance tests must be red — and red on behavior, not on a load error — before any code;
 - tdd is done when the suite *and* the acceptance tests are green, and gets told what is still red;
 - every stage that leaves the tree green ends in a commit; `**Base:**` is recorded before the first;
@@ -28,8 +32,9 @@ Each design is its own file, so several can sit in one repo; --design picks one,
 resolved design in .workflow/designs/ it is found without being named. State is
 `.workflow/pipeline.json`; re-running resumes at the first stage not done. On GO the design is marked
 `built` and the change's working files (brief, ledger, report, state) move to
-`.workflow/archive/<design name>/`, so the shared paths are free for the next change and two
-branches that each built something never meet in the same file when they merge.
+`.workflow/archive/<design name>/` (`-2`, `-3`, … when that folder is already there: nothing in the
+archive is ever overwritten), so the shared paths are free for the next change and two branches
+that each built something never meet in the same file when they merge.
 Exit status: 0 GO · 1 error · 3 ESCALATED · 4 a gate failed · 5 needs you (no resolved design,
 a brief that belongs to other work, or the pause you asked for).
 """
@@ -46,14 +51,16 @@ import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+import brief as B  # noqa: E402
 import ledger as L  # noqa: E402
 import loop  # noqa: E402
 import redgreen  # noqa: E402
 
 EXIT_GO, EXIT_ERROR, EXIT_ESCALATED, EXIT_GATE, EXIT_INPUT = 0, 1, 3, 4, 5
 STAGES = ("brief", "acceptance", "build", "loop")
-APPROVED_BY_DESIGN = "approved — from the resolved design, by harness/pipeline.py (no separate review)"
-APPROVED_BY_USER = "approved — reviewed at the pause, then re-run"
+DRAFT = "draft — awaiting approval"
+# Written only when the person launching the run passed --approve-brief. Nothing else here approves.
+APPROVED_AT_LAUNCH = "approved — by the user at launch (`pipeline.py --approve-brief`, {date})"
 
 
 class NeedsInput(Exception):
@@ -75,8 +82,10 @@ HEADER = """HARNESS-STAGE: {stage} · HARNESS-ITERATION: 0
 
 You are one stage of an automated harness running a seven-stage development workflow from a \
 resolved design to a verdict. The user is not available: do not ask questions — where your skill \
-says to ask or to wait for approval, make the narrowest reasonable assumption, record it, and \
-finish the job. Return your structured result. Skip your skill's handoff prompt — the harness \
+says to ask, make the narrowest reasonable assumption, record it, and finish the job. Nobody here \
+can approve anything: never set the brief's `**Status:**`, and never treat a brief as approved \
+unless its Status line says so — on a draft you go ahead, as your skill says, and report that your \
+work rests on an unapproved brief. Return your structured result. Skip your skill's handoff prompt — the harness \
 runs the next stage.
 
 """
@@ -89,8 +98,8 @@ in it is settled; do not reopen one. Where it leaves something the plan needs un
 the narrowest reading, write the plan on it, and return it under `assumptions`, one sentence each, \
 so the user can see what was decided for them.
 
-Leave `**Status:** draft — awaiting approval` exactly as the template has it: the harness sets \
-the status. Change no file outside `.workflow/` — this stage writes a plan, not code.
+Leave `**Status:** draft — awaiting approval` exactly as the template has it: nobody can answer \
+your approval gate in this run, and only the user's explicit yes changes that line. Change no file outside `.workflow/` — this stage writes a plan, not code.
 """
 
 ACCEPT_PROMPT = """Read the skill at `{skill}` and follow it: write the acceptance tests for the \
@@ -143,6 +152,7 @@ class Run:
             concurrency=a.concurrency, budget=a.budget_usd, timeout=a.timeout, dry=a.dry_run, run_dir=run_dir,
             claude_bin=os.environ.get("HARNESS_CLAUDE", "claude"), save_points=True)
         self.assumptions = self.state.get("assumptions", [])
+        self.unapproved = False
         self.spent = 0.0
 
     def save(self):
@@ -192,8 +202,8 @@ def find_design(r):
     waiting = [f"{rel(d)} ({design_status(d) or 'no status'})" for d in found]
     raise NeedsInput(
         "no resolved design in .workflow/designs/ — run architect-deep-dive first; it writes the design to "
-        "its own file there and sets `**Status:** resolved` at its handoff (or start from a brief you already "
-        "approved with --from-brief)" + (". Found: " + "; ".join(waiting) if waiting else ""))
+        "its own file there and sets `**Status:** resolved` at its handoff (or start from a brief that is "
+        "already written with --from-brief)" + (". Found: " + "; ".join(waiting) if waiting else ""))
 
 
 def set_line(path, key, value, after=r"^\*\*Status:\*\*.*\n"):
@@ -223,6 +233,39 @@ def set_status(brief, value):
     brief.write_text(text)
 
 
+def approved(brief):
+    return (loop.brief_status(brief) or "").lower().startswith("approved")
+
+
+def settle_status(r):
+    """Who may approve a brief: the user, and nobody else. The pipeline records an approval only when the
+    person who launched it passed --approve-brief; a brief the user supplied already approved is left as
+    written; anything else is — and is made to say — a draft."""
+    brief, a = r.ctx.brief, r.a
+    if a.approve_brief and not approved(brief):
+        today = dt.date.today().isoformat()
+        set_status(brief, APPROVED_AT_LAUNCH.format(date=today))
+        log_revision(brief, f"{today}: approved by the user at launch (`pipeline.py --approve-brief`)")
+        loop.log("  brief: approved by you at launch (--approve-brief)")
+    elif not a.from_brief and (approved(brief) or loop.brief_status(brief) is None):
+        # The brief stage has nobody to ask, so an approval it wrote is not one.
+        if approved(brief):
+            loop.log(f"  brief: Status said `{loop.brief_status(brief)}` with nobody there to approve it — "
+                     "set back to draft")
+        set_status(brief, DRAFT)
+    if not approved(brief):
+        loop.log("  brief: still `draft — awaiting approval` — the build goes ahead on an unapproved brief "
+                 "(pass --approve-brief to record your approval)")
+    r.state["brief_approved"] = approved(brief)
+
+
+def log_revision(brief, entry):
+    text = brief.read_text()
+    if re.search(r"^## Revisions\s*$", text, re.M):
+        text = text.rstrip("\n") + f"\n- {entry}\n"
+        brief.write_text(text)
+
+
 def set_base(brief, sha):
     text = brief.read_text()
     line = f"**Base:** `{sha}`"
@@ -237,9 +280,7 @@ def set_base(brief, sha):
 
 def criteria(brief):
     """(ticked, total) over the brief's Acceptance criteria section."""
-    m = re.search(r"\*\*Acceptance criteria\*\*[^\n]*\n(.*?)(?=\n\s*\n\*\*|\n##|\Z)", brief.read_text(), re.S)
-    items = re.findall(r"^\s*-\s*\[([ xX])\]", m.group(1), re.M) if m else []
-    return sum(1 for i in items if i != " "), len(items)
+    return B.criteria_counts(brief.read_text())
 
 
 def commit_rest(r, message):
@@ -340,11 +381,10 @@ def stage_brief(r):
     if a.pause_at_brief and not r.state.get("paused"):
         r.state["paused"] = True
         r.save()
-        raise NeedsInput("paused after the brief, as asked: read .workflow/brief.md, edit it if you want, "
-                         "then re-run without --pause-at-brief to build it")
-    status = loop.brief_status(ctx.brief) or ""
-    if not status.lower().startswith("approved"):
-        set_status(ctx.brief, APPROVED_BY_USER if r.state.get("paused") else APPROVED_BY_DESIGN)
+        raise NeedsInput("paused after the brief, as asked: read .workflow/brief.md, then re-run without "
+                         "--pause-at-brief to build it — with --approve-brief if you approve it; without, it is "
+                         "built as the draft it is, and the report says so")
+    settle_status(r)
     return True
 
 
@@ -430,6 +470,24 @@ def stage_loop(r):
 RUN = {"brief": stage_brief, "acceptance": stage_acceptance, "build": stage_build}
 
 
+UNAPPROVED = ("this run was built on an UNAPPROVED brief — its Status does not say `approved`. Nobody agreed "
+              "to the plan the verdict was judged against: read the brief before you rely on the verdict")
+
+
+def brief_line(r):
+    status = loop.brief_status(r.ctx.brief)
+    return f"`{status}`" if approved(r.ctx.brief) else f"`{status or 'no Status line'}` — {UNAPPROVED}"
+
+
+def free_dir(path):
+    """`path`, or `path-2`, `path-3`, … — the first that isn't there. The archive is never written over."""
+    n, free = 1, path
+    while free.exists():
+        n += 1
+        free = path.with_name(f"{path.name}-{n}")
+    return free
+
+
 def report(r):
     ctx, st = r.ctx, r.state
     commits = git(r.repo, "log", "--format=- %h %s", f"{st['base']}..HEAD", check=False) or "- none"
@@ -437,6 +495,7 @@ def report(r):
     lines = [f"# Pipeline report — {loop.brief_title(ctx)}", "",
              f"**Verdict:** {st.get('verdict', '—')} — {st.get('reason', '')}",
              f"**Branch:** `{st.get('branch')}` · **Base:** `{st['base'][:12]}` · **Spent:** ${st.get('cost', 0):.2f}",
+             f"**Brief:** {brief_line(r)}",
              "", "## Commits", commits, "",
              "## Decided for you (assumptions the brief was written on)",
              "\n".join(f"- {s}" for s in r.assumptions) or "- none", "",
@@ -445,15 +504,16 @@ def report(r):
              "The plan is `.workflow/brief.md`, the loop's record `.workflow/ledger.md`. Nothing was pushed.", ""]
     (r.wf / "pipeline-report.md").write_text("\n".join(lines))
     loop.log(f"report: .workflow/pipeline-report.md · {st.get('verdict', '—')}")
+    r.unapproved = not approved(ctx.brief)
 
 
 def archive(r):
     """On GO the change is finished: its working files leave the shared paths for a folder named after
-    the design, and the design says it was built. The next change — here or on a branch that will merge
+    the design (`-2`, `-3`, … when one by that name is already there), and the design says it was built. The next change — here or on a branch that will merge
     with this one — starts from empty paths and never meets this one's brief or ledger."""
     name = r.design.stem if r.design else dt.datetime.now().strftime("%Y%m%d-%H%M-") + slug(loop.brief_title(r.ctx))
-    dest = r.wf / "archive" / name
-    dest.mkdir(parents=True, exist_ok=True)
+    dest = free_dir(r.wf / "archive" / name)
+    dest.mkdir(parents=True)
     r.save()
     for f in ("brief.md", "ledger.md", "pipeline-report.md", "pipeline.json", "harness.json"):
         if (r.wf / f).exists():
@@ -476,6 +536,9 @@ def main(argv=None):
                     help="skip stage 2: build the .workflow/brief.md that is already there")
     ap.add_argument("--pause-at-brief", action="store_true",
                     help="stop once after the brief is written, so you can review it before anything is built")
+    ap.add_argument("--approve-brief", action="store_true",
+                    help="you approve the brief: its Status records that the user approved it at launch. "
+                         "Without this the pipeline never marks a brief approved — it builds on the draft and says so")
     ap.add_argument("--skip-acceptance", action="store_true", help="skip stage 3 (the Trivial tier)")
     ap.add_argument("--branch", help="working branch to create when started on the default branch")
     ap.add_argument("--build-attempts", type=int, default=2, help="tdd calls before giving up on green (default 2)")
@@ -509,6 +572,8 @@ def main(argv=None):
         if code == EXIT_ESCALATED:
             loop.log("your call: accept the risk and waive (### Decisions in the ledger), fix by hand, or take it "
                      "back to the design — the last `### Verdict` in .workflow/ledger.md says what is open")
+        if r.unapproved:
+            loop.log(f"note: {UNAPPROVED}")
     except NeedsInput as e:
         loop.log(f"needs you: {e}")
         code = EXIT_INPUT
