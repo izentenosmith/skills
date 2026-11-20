@@ -3,8 +3,9 @@
  "split": {
   "method": "random, stratified: one of every three cases per (skill, should_trigger) held out",
   "seed": 20261118,
-  "train": 32,
-  "heldout": 16
+  "train": 56,
+  "heldout": 28,
+  "added": "2026-11-20: 36 cases for six development skills whose descriptions changed (agent-brief, architect-deep-dive, devils-advocate, tyr-verdict, refactor-review, nexus), split the same way with seed 20261120; no earlier case moved"
  },
  "cases": [
   {
@@ -390,6 +391,294 @@
    "expected": "release-notes",
    "split": "heldout",
    "prompt": "List what shipped in this release in language a customer would understand, for the 'what's new' panel in the app."
+  },
+  {
+   "id": "agent-brief-yes-1",
+   "skill": "agent-brief",
+   "should_trigger": true,
+   "expected": "agent-brief",
+   "split": "train",
+   "prompt": "The design for the refund-window feature is settled and recorded under .workflow/designs/. Write the build plan from it so we can start building test-first."
+  },
+  {
+   "id": "agent-brief-yes-2",
+   "skill": "agent-brief",
+   "should_trigger": true,
+   "expected": "agent-brief",
+   "split": "heldout",
+   "prompt": "We've agreed how rate limiting should work: per API key, a 429 with Retry-After, limits in config. Now write the brief: ordered acceptance criteria, where to test, what's out of scope."
+  },
+  {
+   "id": "agent-brief-yes-3",
+   "skill": "agent-brief",
+   "should_trigger": true,
+   "expected": "agent-brief",
+   "split": "train",
+   "prompt": "I need a spec for this feature before anyone codes it. It's CSV import for contacts, and the decisions are all made: sync under 5,000 rows, duplicates matched on email, a per-account limit. Turn them into something a developer can build against, criterion by criterion."
+  },
+  {
+   "id": "agent-brief-no-1",
+   "skill": "agent-brief",
+   "should_trigger": false,
+   "expected": "architect-deep-dive",
+   "split": "train",
+   "prompt": "We want to add CSV import for contacts but nothing is decided yet: sync or async, what to do with duplicates, what the limits are. Work the design with me before we plan anything."
+  },
+  {
+   "id": "agent-brief-no-2",
+   "skill": "agent-brief",
+   "should_trigger": false,
+   "expected": "acceptance-tests",
+   "split": "train",
+   "prompt": "The build plan in .workflow/brief.md is approved. Turn its acceptance criteria into failing end-to-end tests before we write any code."
+  },
+  {
+   "id": "agent-brief-no-3",
+   "skill": "agent-brief",
+   "should_trigger": false,
+   "expected": "ticket",
+   "split": "heldout",
+   "prompt": "Write up a Jira story for the CSV import feature, with acceptance criteria, and put it in the next sprint."
+  },
+  {
+   "id": "architect-deep-dive-yes-1",
+   "skill": "architect-deep-dive",
+   "should_trigger": true,
+   "expected": "architect-deep-dive",
+   "split": "train",
+   "prompt": "Design this with me: we need multi-currency support in invoicing. I don't want code yet, I want the decisions made properly."
+  },
+  {
+   "id": "architect-deep-dive-yes-2",
+   "skill": "architect-deep-dive",
+   "should_trigger": true,
+   "expected": "architect-deep-dive",
+   "split": "train",
+   "prompt": "Before we build the notification service I want an architecture review. What are the trade-offs between a queue and a cron poller, and where should the boundaries go?"
+  },
+  {
+   "id": "architect-deep-dive-yes-3",
+   "skill": "architect-deep-dive",
+   "should_trigger": true,
+   "expected": "architect-deep-dive",
+   "split": "heldout",
+   "prompt": "We're about to add tenant-level feature flags. Work the design: take me through the open questions a few at a time, with the options and what each costs to reverse."
+  },
+  {
+   "id": "architect-deep-dive-no-1",
+   "skill": "architect-deep-dive",
+   "should_trigger": false,
+   "expected": "agent-brief",
+   "split": "train",
+   "prompt": "The design for tenant-level feature flags is done and recorded in the repo. Write the build plan from it, with the criteria in the order we should build them."
+  },
+  {
+   "id": "architect-deep-dive-no-2",
+   "skill": "architect-deep-dive",
+   "should_trigger": false,
+   "expected": "dbdesign",
+   "split": "heldout",
+   "prompt": "Model this domain for me: clinics, practitioners, appointments and invoices. What tables do we need, with keys and constraints?"
+  },
+  {
+   "id": "architect-deep-dive-no-3",
+   "skill": "architect-deep-dive",
+   "should_trigger": false,
+   "expected": null,
+   "split": "train",
+   "prompt": "In a couple of paragraphs, what's the difference between hexagonal architecture and clean architecture?"
+  },
+  {
+   "id": "devils-advocate-yes-1",
+   "skill": "devils-advocate",
+   "should_trigger": true,
+   "expected": "devils-advocate",
+   "split": "train",
+   "prompt": "I just finished the cutoff feature and the tests are green. Tear this apart before I ship it: assume it's wrong and show me where."
+  },
+  {
+   "id": "devils-advocate-yes-2",
+   "skill": "devils-advocate",
+   "should_trigger": true,
+   "expected": "devils-advocate",
+   "split": "heldout",
+   "prompt": "Red-team this change. What did we miss? I want every edge we didn't handle, with evidence for each."
+  },
+  {
+   "id": "devils-advocate-yes-3",
+   "skill": "devils-advocate",
+   "should_trigger": true,
+   "expected": "devils-advocate",
+   "split": "train",
+   "prompt": "The suite passes on what we just built, but I don't trust it. Are the tests lying? Try to falsify them."
+  },
+  {
+   "id": "devils-advocate-no-1",
+   "skill": "devils-advocate",
+   "should_trigger": false,
+   "expected": "peer-review",
+   "split": "train",
+   "prompt": "Review this PR for bugs: Dani's branch origin/export-filters against main. File and line for each, and whether you'd merge it."
+  },
+  {
+   "id": "devils-advocate-no-2",
+   "skill": "devils-advocate",
+   "should_trigger": false,
+   "expected": "tyr-verdict",
+   "split": "train",
+   "prompt": "The teardown left six findings in the ledger. Go through them, decide which are real, and tell me go or no-go."
+  },
+  {
+   "id": "devils-advocate-no-3",
+   "skill": "devils-advocate",
+   "should_trigger": false,
+   "expected": "threatmodel",
+   "split": "heldout",
+   "prompt": "Red-team the design for our new login flow before we build it: who would attack it, how, and what should we require of it?"
+  },
+  {
+   "id": "tyr-verdict-yes-1",
+   "skill": "tyr-verdict",
+   "should_trigger": true,
+   "expected": "tyr-verdict",
+   "split": "heldout",
+   "prompt": "The teardown is done and its findings are in .workflow/ledger.md. Adjudicate the findings: which are real, which are noise, and what do we have to fix."
+  },
+  {
+   "id": "tyr-verdict-yes-2",
+   "skill": "tyr-verdict",
+   "should_trigger": true,
+   "expected": "tyr-verdict",
+   "split": "train",
+   "prompt": "Is this ready to merge? The adversarial pass raised eight issues on the cutoff change. Weigh each one against its evidence and give me a go/no-go."
+  },
+  {
+   "id": "tyr-verdict-yes-3",
+   "skill": "tyr-verdict",
+   "should_trigger": true,
+   "expected": "tyr-verdict",
+   "split": "train",
+   "prompt": "Triage the teardown from this morning. Cut the false claims and turn the confirmed defects into fix slices we can build test-first."
+  },
+  {
+   "id": "tyr-verdict-no-1",
+   "skill": "tyr-verdict",
+   "should_trigger": false,
+   "expected": "devils-advocate",
+   "split": "train",
+   "prompt": "The feature is built and cleaned up. Now assume all of it is wrong and hunt for defects. I want the harshest pass you can do before anyone makes the final call."
+  },
+  {
+   "id": "tyr-verdict-no-2",
+   "skill": "tyr-verdict",
+   "should_trigger": false,
+   "expected": "peer-review",
+   "split": "train",
+   "prompt": "Is Marta's pull request ready to merge? Go through the diff on origin/refunds and give me your recommendation."
+  },
+  {
+   "id": "tyr-verdict-no-3",
+   "skill": "tyr-verdict",
+   "should_trigger": false,
+   "expected": "pr-prep",
+   "split": "heldout",
+   "prompt": "Is my branch ready for someone to look at? Check the description and tell me whether I should split it first."
+  },
+  {
+   "id": "refactor-review-yes-1",
+   "skill": "refactor-review",
+   "should_trigger": true,
+   "expected": "refactor-review",
+   "split": "heldout",
+   "prompt": "The TDD cycle is done and everything is green. Check what I just built for code smells and clean it up before we move on."
+  },
+  {
+   "id": "refactor-review-yes-2",
+   "skill": "refactor-review",
+   "should_trigger": true,
+   "expected": "refactor-review",
+   "split": "train",
+   "prompt": "Refactor before merge: look at the diff on this branch for duplication and long methods, and apply the behaviour-preserving fixes with the tests run between each one."
+  },
+  {
+   "id": "refactor-review-yes-3",
+   "skill": "refactor-review",
+   "should_trigger": true,
+   "expected": "refactor-review",
+   "split": "train",
+   "prompt": "Clean up after TDD. The new rules module works but it's ugly. Structure only, don't change what it does."
+  },
+  {
+   "id": "refactor-review-no-1",
+   "skill": "refactor-review",
+   "should_trigger": false,
+   "expected": "peer-review",
+   "split": "train",
+   "prompt": "Review this PR for bugs: origin/cache-layer against main. I want correctness problems with file and line, not style."
+  },
+  {
+   "id": "refactor-review-no-2",
+   "skill": "refactor-review",
+   "should_trigger": false,
+   "expected": "code-xray",
+   "split": "heldout",
+   "prompt": "Which parts of this codebase are the worst to work in? Find the hotspots: the files that change often and are complex."
+  },
+  {
+   "id": "refactor-review-no-3",
+   "skill": "refactor-review",
+   "should_trigger": false,
+   "expected": null,
+   "split": "train",
+   "prompt": "Rename the variable `tmp2` to `pending_orders` in billing/export.py."
+  },
+  {
+   "id": "nexus-yes-1",
+   "skill": "nexus",
+   "should_trigger": true,
+   "expected": "nexus",
+   "split": "heldout",
+   "prompt": "Increment 3 splits into four PRs. Coordinate the sessions: brief each one, keep track of where they are, and bring me their questions in one batch."
+  },
+  {
+   "id": "nexus-yes-2",
+   "skill": "nexus",
+   "should_trigger": true,
+   "expected": "nexus",
+   "split": "train",
+   "prompt": "I've got five slices to build and I want to run these in parallel, one session per pull request. You orchestrate the sub-sessions and don't write the code yourself."
+  },
+  {
+   "id": "nexus-yes-3",
+   "skill": "nexus",
+   "should_trigger": true,
+   "expected": "nexus",
+   "split": "train",
+   "prompt": "Be the harness for this migration: several sessions will each build a PR through the full pipeline, you judge them on what they recorded, and nothing merges without my go."
+  },
+  {
+   "id": "nexus-no-1",
+   "skill": "nexus",
+   "should_trigger": false,
+   "expected": "tdd",
+   "split": "train",
+   "prompt": "Build the cutoff feature from the brief, test-first, one slice at a time."
+  },
+  {
+   "id": "nexus-no-2",
+   "skill": "nexus",
+   "should_trigger": false,
+   "expected": "backlog",
+   "split": "heldout",
+   "prompt": "We have 30 open items for the billing rewrite. Split the next release into thin stories and tell me what order to pull them in."
+  },
+  {
+   "id": "nexus-no-3",
+   "skill": "nexus",
+   "should_trigger": false,
+   "expected": null,
+   "split": "train",
+   "prompt": "Run the test suite and the linter at the same time and tell me which one fails."
   }
  ]
 }
