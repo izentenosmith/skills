@@ -60,7 +60,9 @@ IGNORE = [".pytest_cache", "__pycache__"]
 HARNESS_ONLY = {"incident": ["README.md", "make-history.sh"],
                 "release-notes": ["README.md", "make-history.sh"],
                 **{f: ["README.md", "make-history.sh"] for f in
-                   ("pr-review", "pr-prep", "code-xray", "test-review", "concurrency", "repo-memory")}}
+                   ("pr-review", "pr-prep", "code-xray", "test-review", "concurrency", "repo-memory")},
+                "refactor-standalone": ["make-history.sh"],
+                **{f: ["make-history.sh", ".gitignore"] for f in ("teardown-empty", "teardown-weakened")}}
 
 
 def fixture_dir(name):

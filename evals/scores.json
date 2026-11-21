@@ -421,12 +421,96 @@
       "staging": "harness",
       "skill_hash": "b02da6ad7517fe792ed5c458ff650cbda51dacdcd5af03223cd674709b9cc0bf"
     },
+    "eval-64-acceptance-tests-red-baseline-writes-nothing": {
+      "skill": "acceptance-tests",
+      "iteration": "iteration-57",
+      "n": 3,
+      "staging": "harness",
+      "skill_hash": "e5a24bcfb43f31fac91d80d120ebad2938d87f53c026519e7403c06b5927a541"
+    },
+    "eval-65-acceptance-tests-declares-the-missing-interface": {
+      "skill": "acceptance-tests",
+      "iteration": "iteration-57",
+      "n": 3,
+      "staging": "harness",
+      "skill_hash": "e5a24bcfb43f31fac91d80d120ebad2938d87f53c026519e7403c06b5927a541"
+    },
+    "eval-66-refactor-standalone-no-ledger": {
+      "skill": "refactor-review",
+      "iteration": "iteration-57",
+      "n": 3,
+      "staging": "standalone",
+      "skill_hash": "fe338eeeba887761bda585ba93f13168627dc68342ea7c5e7895222cd5789b34"
+    },
+    "eval-67-refactor-uncovered-smell-left": {
+      "skill": "refactor-review",
+      "iteration": "iteration-57",
+      "n": 3,
+      "staging": "harness",
+      "skill_hash": "fe338eeeba887761bda585ba93f13168627dc68342ea7c5e7895222cd5789b34"
+    },
+    "eval-68-teardown-empty-diff-stops": {
+      "skill": "devils-advocate",
+      "iteration": "iteration-57",
+      "n": 3,
+      "staging": "harness",
+      "skill_hash": "d8db4d3e80cec9d3c769995eab690a6956a888c99011eafd089f8db4dbfd2eee"
+    },
+    "eval-69-teardown-finds-the-lowered-bar": {
+      "skill": "devils-advocate",
+      "iteration": "iteration-57",
+      "n": 3,
+      "staging": "harness",
+      "skill_hash": "d8db4d3e80cec9d3c769995eab690a6956a888c99011eafd089f8db4dbfd2eee"
+    },
     "eval-7-postmortem-widens-range-and-describes": {
       "skill": "post-mortem",
       "iteration": "iteration-49",
       "n": 3,
       "staging": "harness",
       "skill_hash": "bbb5a880e645bd68b70153d5a1af13a6fe020c15e42186cf5a0d8c312c7d0cc4"
+    },
+    "eval-70-verdict-red-run-blocks-go": {
+      "skill": "tyr-verdict",
+      "iteration": "iteration-57",
+      "n": 3,
+      "staging": "harness",
+      "skill_hash": "e5d52e56393d910ff68d3dad67522cd94587fab6748a2042e297d80868e0b1c9"
+    },
+    "eval-71-verdict-weakened-check-not-refuted-by-green": {
+      "skill": "tyr-verdict",
+      "iteration": "iteration-57",
+      "n": 3,
+      "staging": "harness",
+      "skill_hash": "e5d52e56393d910ff68d3dad67522cd94587fab6748a2042e297d80868e0b1c9"
+    },
+    "eval-72-nexus-sets-up-the-increment": {
+      "skill": "nexus",
+      "iteration": "iteration-57",
+      "n": 3,
+      "staging": "standalone",
+      "skill_hash": "47e08b6be30f26505deeec91c642efb62ac8209e36d27dace11ff2c3420f15db"
+    },
+    "eval-73-nexus-merges-on-the-go-and-cleans-up": {
+      "skill": "nexus",
+      "iteration": "iteration-57",
+      "n": 3,
+      "staging": "standalone",
+      "skill_hash": "47e08b6be30f26505deeec91c642efb62ac8209e36d27dace11ff2c3420f15db"
+    },
+    "eval-74-architect-adr-binds-the-round": {
+      "skill": "architect-deep-dive",
+      "iteration": "iteration-57",
+      "n": 3,
+      "staging": "harness",
+      "skill_hash": "6abad36261746e8101f3c4ab981dc23efb98979ea307a28bbe9b303c706303fc"
+    },
+    "eval-75-brief-archives-finished-change": {
+      "skill": "agent-brief",
+      "iteration": "iteration-57",
+      "n": 3,
+      "staging": "harness",
+      "skill_hash": "4820b6c0bd1a48a04a74c74d0a42d6e76a1c56c369e89b2ce7da2f87f6b46599"
     },
     "eval-8-hotfix-node-shared-cause": {
       "skill": "hotfix",
