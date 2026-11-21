@@ -17,6 +17,7 @@
     python3 evals/controls/make_controls.py --only 75                  # agent-brief over a finished change (files only)
     python3 evals/controls/make_controls.py --only 64 65               # acceptance-tests, more; need setup.sh's at-* venvs
     python3 evals/controls/make_controls.py --only 70 71               # tyr-verdict, iteration 2 (files only)
+    python3 evals/controls/make_controls.py --only 66 67               # refactor-review; 66 needs setup.sh's git history, 67 its venv
 
 Three kinds of control, each a run directory (repo/ + outputs/response.md) that
 grade.py's eval function reads exactly as it reads a real run:
@@ -7565,6 +7566,288 @@ CONTROLS_VERDICT2 = {
         }),
 }
 CONTROLS.update(CONTROLS_VERDICT2)
+
+# ------------------------------------------------------------------ evals 66-67: refactor-review standalone, and an uncovered smell
+
+E66_GIT = "git -c user.name=Run -c user.email=run@example.invalid"
+E66_HELPER = '''def _base_price(weight_kg, zone):
+    """The zone's base rate plus its per-kilo rate, unrounded: each quote rounds once, at the end."""
+    if zone not in ZONE_RATES:
+        raise UnknownZone(zone)
+    if weight_kg <= 0:
+        raise ValueError("weight must be positive")
+    return ZONE_RATES[zone] + PER_KG[zone] * Decimal(str(weight_kg))
+
+
+def standard_quote(weight_kg, zone):
+    """Base rate for the zone plus a per-kilo rate, rounded half up to the cent."""
+    return _base_price(weight_kg, zone).quantize(CENT, rounding=ROUND_HALF_UP)
+'''
+E66_STANDARD = '''def standard_quote(weight_kg, zone):
+    """Base rate for the zone plus a per-kilo rate, rounded half up to the cent."""
+    if zone not in ZONE_RATES:
+        raise UnknownZone(zone)
+    if weight_kg <= 0:
+        raise ValueError("weight must be positive")
+    price = ZONE_RATES[zone] + PER_KG[zone] * Decimal(str(weight_kg))
+    return price.quantize(CENT, rounding=ROUND_HALF_UP)
+'''
+E66_EXPRESS_OLD = '''    # check the zone is one we ship to
+    if zone not in ZONE_RATES:
+        raise UnknownZone(zone)
+    # check the weight makes sense
+    if weight_kg <= 0:
+        raise ValueError("weight must be positive")
+    # work out the standard price first
+    price = ZONE_RATES[zone] + PER_KG[zone] * Decimal(str(weight_kg))
+'''
+E66_EXPRESS = '''EXPRESS_MARKUP = Decimal("1.6")
+SATURDAY_SURCHARGE = Decimal("5.00")
+
+
+def express_quote(weight_kg, zone, saturday=False):
+    """Standard price plus 60%, and a flat Saturday surcharge except abroad, rounded once at the end."""
+    price = {base} * EXPRESS_MARKUP
+    if saturday and zone != "international":
+        price += SATURDAY_SURCHARGE
+    return price.quantize(CENT, rounding=ROUND_HALF_UP)
+'''
+E66_LABELS = '''"""Shipping labels."""
+
+WIDTH = 32
+
+
+def _fit(text):
+    return text[:WIDTH]
+
+
+def format_label(name, street, city, postcode, country, weight_kg, service):
+    lines = [name.strip().upper(), street.strip(), (postcode.strip() + " " + city.strip()).strip(), country.strip().upper()]
+    weight_line = "%.1f kg  %s" % (weight_kg, service.upper())
+    return "\\n".join([_fit(line) for line in lines] + [weight_line])
+'''
+E66_RESPONSE = """**Pass:** small diff — one inline pass (`main...feature/express-quotes`: `parcels/rates.py` +18, `tests/test_rates.py` +24).
+
+The tree was clean, so the change reviewed is the branch against its merge-base with `main`. Suite first:
+`python3 -m unittest discover -s tests -t .` — 13 tests, OK.
+
+There is no `.workflow/` folder here, so no brief and no ledger: the carried smells were unavailable, and I did not
+create a ledger. The noted smells and their promotion conditions are below instead.
+
+## Findings
+> **Type:** Dispensables · **Subtype:** Duplicate Code · **Location:** `express_quote` repeats `standard_quote`'s zone and weight checks and its price · **Severity:** worthwhile
+> **Type:** Dispensables · **Subtype:** Comments · **Location:** `express_quote`, a comment on every line restating the code · **Severity:** worthwhile
+> **Type:** Bloaters · **Subtype:** Primitive Obsession · **Location:** zones as bare strings in `express_quote` · **Severity:** noted
+> **Type:** Dispensables · **Subtype:** Comments · **Location:** `parcels/labels.py` `format_label` — on `main`, not in this diff · **Severity:** noted
+
+## Action items
+1. `[worthwhile]` Duplicate Code → Extract Function: `_base_price` holds the checks and the unrounded price; `standard_quote` rounds it. Tests green; committed.
+2. `[worthwhile]` Comments → removed, with the 60% and the surcharge named as constants; `express_quote` multiplies the unrounded base, so it still rounds once. Tests green; committed.
+3. `[noted]` Primitive Obsession on zones → recorded, not acted on: three zones, one comparison.
+   - **Promote if:** a fourth zone, or a second rule that branches on the zone
+4. `[noted]` `format_label` in `parcels/labels.py` → recorded, not acted on: outside the diff, and nothing in the change needs it.
+   - **Promote if:** a change has to touch `format_label`
+
+**Stopping rule:** met — no blocking smell remains; every remaining smell is recorded with its reason and promote condition;
+no prior noted smells to re-read (no ledger); the last pass surfaced no new blocking finding.
+
+Handed on, still blocking: none. Out-of-scope failing tests: none.
+
+The structure is clean and the suite is GREEN — 2 smell(s) fixed, 2 noted and carried. Run **devils-advocate** next.
+"""
+E66_INVENTED = E66_RESPONSE.replace("""There is no `.workflow/` folder here, so no brief and no ledger: the carried smells were unavailable, and I did not
+create a ledger. The noted smells and their promotion conditions are below instead.""",
+                                    "Opened `.workflow/ledger.md` at `## Iteration 1` and filed the noted smells there; carried smells: none."
+                                    ).replace("no prior noted smells to re-read (no ledger)", "nothing carried (this is Iteration 1)")
+E66_LEDGER = """# Ledger — express quotes
+
+## Iteration 1
+
+### Smells
+- **N1** Bloaters / Primitive Obsession at zones in `express_quote` — noted: three zones, one comparison
+  - **Promote if:** a fourth zone, or a second rule that branches on the zone
+"""
+
+
+def e66(base="_base_price(weight_kg, zone)", red_first=False, labels=False, commit=True, ledger=False, response=E66_RESPONSE):
+    def build(run, repo):
+        git, rates = repo / "repo", repo / "repo/parcels/rates.py"
+        step = lambda msg: sh(f"{E66_GIT} commit -qam '{msg}'", git) if commit else None
+        sub(rates, E66_STANDARD, E66_HELPER)
+        if red_first:   # an intermediate step that broke the suite, committed anyway
+            sub(rates, E66_EXPRESS_OLD, "    price = _base_price(weight_kg)\n")
+            step("Extract _base_price")
+            sub(rates, "    price = _base_price(weight_kg)\n", "    price = _base_price(weight_kg, zone)\n")
+            step("Fix the _base_price call")
+        else:
+            sub(rates, E66_EXPRESS_OLD, "    price = _base_price(weight_kg, zone)\n")
+            step("Extract _base_price, shared by both quotes")
+        text = rates.read_text()
+        rates.write_text(text[: text.index("def express_quote")] + E66_EXPRESS.format(base=base))
+        step("Name the express markup and Saturday surcharge; drop the narrating comments")
+        if labels:
+            (git / "parcels/labels.py").write_text(E66_LABELS)
+            step("Tidy format_label")
+        if ledger:
+            w(git / ".workflow/ledger.md", E66_LEDGER)
+        w(run / "outputs/response.md", response)
+    return build
+
+
+E67_COMMENTS_OLD = '''    # get the window length for this account
+    window = config.get("cutoff_minutes")
+    # no window configured means the default
+    if window is None:
+        window = DEFAULT_CUTOFF_MINUTES
+    # older accounts store it as text
+    if isinstance(window, str):
+        window = _parse_window(window)
+    # how long until the slot starts
+    now = clock()
+    until_slot = booking.slot - now
+    # the boundary is exclusive: a slot exactly at the edge is accepted
+'''
+E67_COMMENTS_NEW = '''    window = config.get("cutoff_minutes")
+    if window is None:
+        window = DEFAULT_CUTOFF_MINUTES
+    if isinstance(window, str):   # accounts migrated from the old system hold it as text
+        window = _parse_window(window)
+    until_slot = booking.slot - clock()
+    # the boundary is exclusive: a slot exactly at the edge is accepted
+'''
+E67_PARSE_START, E67_PARSE_END = "def _parse_window(value):\n", "\n\ndef check_cutoff"
+E67_REGEX = '''_WINDOW_TEXT = re.compile(r"(?:(\\d+)h)?(?:(\\d+)(?:{suffix}))?")
+
+
+def _parse_window(value):
+    text = value.strip().lower()
+    if text.isdigit():
+        return int(text)
+    match = _WINDOW_TEXT.fullmatch(text)
+    if match and (match.group(1) or match.group(2)):
+        return int(match.group(1) or 0) * 60 + int(match.group(2) or 0)
+    return DEFAULT_CUTOFF_MINUTES
+'''
+E67_TEXT_TEST = '''
+
+@pytest.mark.parametrize("text,inside,outside", [("90m", 80, 90), ("2h", 110, 120), ("1h30min", 80, 90)])
+def test_text_windows_from_migrated_accounts(text, inside, outside):
+    with pytest.raises(Rejected):
+        service(cutoff_minutes=text).submit("acct-1", "venue-1", in_minutes(inside), 2)
+    assert service(cutoff_minutes=text).submit("acct-1", "venue-1", in_minutes(outside), 2).party_size == 2
+'''
+E67_LEDGER = """# Ledger — cancellation cutoff
+
+## Iteration 1
+
+### Smells
+- **N1** Dispensables / Duplicate Code at `_parse_window` in `reservations/rules.py` — noted: no test exercises it, so it was not refactored
+  - **Promote if:** a covering test exists for text windows ("90m", "2h", "1h30m")
+"""
+E67_LEDGER_NONE = "# Ledger — cancellation cutoff\n\n## Iteration 1\n\n### Smells\n- none\n"
+E67_HEAD = """**Pass:** small diff — one inline pass (the cutoff rule and its text-window helper in `reservations/rules.py`).
+
+Suite first: `.venv/bin/python -m pytest tests/ -q` — 11 passed.
+
+## Findings
+> **Type:** Dispensables · **Subtype:** Comments · **Location:** `check_cutoff`, comments restating each line · **Severity:** worthwhile
+"""
+E67_UNCOVERED = """> **Type:** Dispensables · **Subtype:** Duplicate Code · **Location:** `_parse_window`, the hours-and-minutes branch written twice (`m` and `min`) · **Severity:** noted
+
+`_parse_window` has no covering test: every test sets `cutoff_minutes` to an integer or leaves it unset, so nothing
+exercises the text path. Rules of Engagement 2: the refactoring stops there. It is recorded as N1 in
+`.workflow/ledger.md` with "a covering test exists" as its promote condition, and no test is written here — that is
+tdd's stage.
+
+## Action items
+1. `[worthwhile]` Comments in `check_cutoff` → removed the ones that restate code, kept the boundary rule. Tests green.
+2. `[noted]` Duplicate Code in `_parse_window` → recorded, not acted on: no test exercises it.
+   - **Promote if:** a covering test exists for text windows
+"""
+E67_TAIL = """
+No ledger existed, so `.workflow/ledger.md` was created with `## Iteration 1` and the smell above; `ledger.py check` is clean.
+Saved points: none — the fixture has no git repository, so nothing was committed.
+
+**Stopping rule:** met — no blocking smell remains; the one remaining smell is recorded with its reason and promote
+condition; no earlier iteration to re-read; the last pass surfaced no new blocking finding.
+
+Handed on, still blocking: none. Out-of-scope failing tests: none.
+
+The structure is clean and the suite is GREEN — 1 smell(s) fixed, 1 noted and carried. Run **devils-advocate** next.
+"""
+E67_REWROTE = """
+## Action items
+1. `[worthwhile]` Comments in `check_cutoff` → removed the ones that restate code. Tests green.
+2. `[worthwhile]` Duplicate Code in `_parse_window` → Substitute Algorithm: one regular expression replaces the six branches. Tests green.
+"""
+E67_WROTE_TEST = """
+`_parse_window` had no covering test, so I wrote `test_text_windows_from_migrated_accounts` first, then replaced its six
+branches with one regular expression (Substitute Algorithm). Tests green.
+"""
+
+
+def e67(parse=None, test=False, ledger=E67_LEDGER, response=E67_HEAD + E67_UNCOVERED + E67_TAIL):
+    def build(run, repo):
+        rules = repo / "reservations/rules.py"
+        sub(rules, E67_COMMENTS_OLD, E67_COMMENTS_NEW)
+        if parse:
+            text = rules.read_text()
+            start, end = text.index(E67_PARSE_START), text.index(E67_PARSE_END)
+            rules.write_text(text[:start].replace("from datetime", "import re\nfrom datetime", 1) + parse + text[end:])
+        if test:
+            tests = repo / "tests/test_cutoff.py"
+            tests.write_text(tests.read_text() + E67_TEXT_TEST)
+        w(repo / ".workflow/ledger.md", ledger)
+        w(run / "outputs/response.md", response)
+    return build
+
+
+CONTROLS_REFACTOR_REVIEW = {
+    "eval-66-refactor-standalone-no-ledger": dict(
+        fixture="refactor-standalone", reference=e66(),
+        free=["no .workflow/ or ledger created", "code outside the diff untouched, and main not moved"],
+        wrong={
+            # builds express from the rounded standard quote: the tests use whole kilos and stay green
+            "wrong-rounds-twice": (e66(base="standard_quote(weight_kg, zone)"),
+                                   ["behaviour preserved: every quote on the grid, fractional weights included, as before"]),
+            # opens a ledger the skill says not to create outside the pipeline
+            "wrong-invents-ledger": (e66(ledger=True, response=E66_INVENTED),
+                                     ["no .workflow/ or ledger created", "the response says the carried smells were unavailable"]),
+            # tidies the smelly label code on main as well
+            "wrong-tidies-labels": (e66(labels=True), ["code outside the diff untouched, and main not moved"]),
+            # one step left the suite red and was committed anyway
+            "wrong-red-step": (e66(red_first=True), ["refactoring committed on the branch, every new commit green"]),
+            # refactors in place and leaves it all uncommitted, without a word
+            "wrong-uncommitted": (e66(commit=False), ["refactoring committed on the branch, every new commit green"]),
+        }),
+    "eval-67-refactor-uncovered-smell-left": dict(
+        fixture="refactor-uncovered", reference=e67(),
+        free=["_parse_window, which no test exercises, left as it was", "no test for text windows written in this stage"],
+        wrong={
+            # rewrites the uncovered helper (behaviour kept on every probed input) and says nothing about coverage
+            "wrong-refactors-uncovered": (
+                e67(parse=E67_REGEX.replace("{suffix}", "min|m"), ledger=E67_LEDGER_NONE, response=E67_HEAD + E67_REWROTE + E67_TAIL),
+                ["_parse_window, which no test exercises, left as it was",
+                 "ledger: _parse_window noted, promoted only once a covering test exists", "the response names _parse_window as uncovered"]),
+            # covers it first, then rewrites it: tdd's work done in this stage
+            "wrong-writes-the-test": (
+                e67(parse=E67_REGEX.replace("{suffix}", "min|m"), test=True, ledger=E67_LEDGER_NONE,
+                    response=E67_HEAD + E67_WROTE_TEST + E67_TAIL),
+                ["_parse_window, which no test exercises, left as it was", "no test for text windows written in this stage",
+                 "ledger: _parse_window noted, promoted only once a covering test exists"]),
+            # leaves it alone and records nothing about it
+            "wrong-silent": (
+                e67(ledger=E67_LEDGER_NONE, response=E67_HEAD + "\n## Action items\n1. `[worthwhile]` Comments in `check_cutoff` → removed. Tests green.\n" + E67_TAIL),
+                ["ledger: _parse_window noted, promoted only once a covering test exists", "the response names _parse_window as uncovered"]),
+            # a rewrite that drops "90min": nothing catches it, because nothing covers it
+            "wrong-changes-behaviour": (
+                e67(parse=E67_REGEX.replace("{suffix}", "m"), ledger=E67_LEDGER_NONE, response=E67_HEAD + E67_REWROTE + E67_TAIL),
+                ["behaviour preserved: the window read for integer and text configs as before",
+                 "_parse_window, which no test exercises, left as it was",
+                 "ledger: _parse_window noted, promoted only once a covering test exists", "the response names _parse_window as uncovered"]),
+        }),
+}
+CONTROLS.update(CONTROLS_REFACTOR_REVIEW)
 
 
 def build(ws, eval_name, control, fn, fixture):

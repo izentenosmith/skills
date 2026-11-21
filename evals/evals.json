@@ -549,6 +549,23 @@
    "expected_output": "An approved brief for a new public method, BookingService.check(account_id, venue_id, slot, party_size) -> list[str], that runs submit's rules without saving or raising; the method does not exist. Expected: BookingService.check declared in reservations/api.py with the brief's signature and a body that only raises NotImplementedError, and nothing else in reservations/ changed; one black-box test per criterion through BookingService with the existing FakeStore/FakeConfig, every one red on NotImplementedError or an assertion, none on AttributeError or an import error, none passing; the pre-existing suite green. Executed by the grader: the tests pass once a correct check is laid over the repo, and fail on a check that saves an acceptable booking, one that keeps only the first code, and one that ignores the account's config. The brief gains an **Acceptance tests** section whose **Command:** runs exactly the new tests and which maps each of the five criteria exactly once, logged under Revisions; the response hands off to tdd."
   },
   {
+   "id": 66,
+   "name": "refactor-standalone-no-ledger",
+   "skill": "refactor-review",
+   "fixture": "refactor-standalone",
+   "standalone": true,
+   "prompt": "The express-quotes work on feature/express-quotes in repo/ is done and its tests pass. Review it for code smells and clean up the structure before I open the PR.",
+   "expected_output": "refactor-review outside the pipeline: a git repo with no .workflow/, so no brief and no ledger, on a clean branch, so the change is main...feature/express-quotes (merge-base with main), named as such. The suite (python3 -m unittest discover -s tests -t .) is run first and is green. The new express_quote duplicates standard_quote's validation and price (Duplicate Code) and narrates itself in comments; each smell is rated blocking, worthwhile or noted and treated by behaviour-preserving steps, each committed on the branch on green, e.g. an unrounded base-price helper both quotes share. Express must stay rounded once: express_quote = standard_quote * 1.6 rounds twice and changes fractional weights (2.345 kg domestic: 10.20, not 10.21), which the tests don't pin and a behaviour probe catches. parcels/labels.py, smelly but not in the diff, is left byte-identical (at most noted). No .workflow/ or ledger is created; the noted smells and their Promote if conditions are in the response, which says the carried smells were unavailable. main is untouched and the suite stays green."
+  },
+  {
+   "id": 67,
+   "name": "refactor-uncovered-smell-left",
+   "skill": "refactor-review",
+   "fixture": "refactor-uncovered",
+   "prompt": "Review the cutoff changes in reservations/rules.py.",
+   "expected_output": "refactor-review on a cutoff rule that tdd built with every criterion ticked and the suite green, inside the pipeline (.workflow/brief.md, no ledger yet). The change adds _parse_window, an if-chain that reads text windows from migrated accounts (\"90m\", \"2h\", \"1h30m\", \"1h30min\") with Duplicate Code across its branches; no test passes a text window, so nothing exercises it. Rules of Engagement 2: it is not refactored (its AST is unchanged), no test is written for it here, and it is recorded as noted with a covering test as its promote condition, named in the response as uncovered (and, if rated blocking, handed to tdd as needing a test first). The comments in check_cutoff, which is covered, may be cleaned. The ledger does not exist, so the run creates .workflow/ledger.md with ## Iteration 1 and ### Smells, in the grammar its checker accepts. Suite green; check_cutoff's window for integer and text configs unchanged."
+  },
+  {
    "id": 70,
    "name": "verdict-red-run-blocks-go",
    "skill": "tyr-verdict",

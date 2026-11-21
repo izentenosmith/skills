@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # Prepare the eval fixtures. Run once after cloning.
 #   - the five pipeline fixtures, and the variants the later pipeline evals (60-75) use, get a virtualenv with pytest (build output, gitignored)
-#   - the incident, release-notes, review and repo-memory fixtures get their git history built (nested repos, gitignored)
+#   - the incident, release-notes, review, repo-memory and refactor-standalone fixtures get their git history built (nested repos, gitignored)
 #   - the compose fixture needs nothing: it is graded from files, never executed
 set -euo pipefail
 cd "$(dirname "$0")/fixtures"
 
 echo "== pipeline fixtures =="
 for f in base tdd refactor teardown verdict tdd-planted tdd-contradiction brief-nexus design-round2 design-adr \
-         at-red-baseline at-stub; do
+         at-red-baseline at-stub refactor-uncovered; do
   [ -d "$f/.venv" ] || python3 -m venv "$f/.venv"
   "$f/.venv/bin/pip" -q install pytest
   printf '%-10s ' "$f"
@@ -49,6 +49,11 @@ done
 echo
 echo "== repo-memory fixture (eval 55) =="
 ./repo-memory/make-history.sh
+
+echo
+echo "== refactor-standalone fixture (eval 66) =="
+./refactor-standalone/make-history.sh
+echo "$(git -C refactor-standalone/repo rev-list --all --count) commits"
 
 echo
 echo "== compose fixture =="

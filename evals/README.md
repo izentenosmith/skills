@@ -1239,6 +1239,39 @@ Eval 5 adjudicates iteration 1 of a ledger whose history is legacy prose, so it 
 
 **Where the skill text left the grader a choice:** "Before a GO" says to run the suite before a GO, and a run could read it as needed only when the findings point to GO. Here they do, so both readings run it. Eval 71's severity accepts major as well as blocker: the blocker definition names "a core acceptance criterion that does not actually hold", and whether an edge case is core is a judgment.
 
+### refactor-review outside the pipeline, and an uncovered smell (evals 66–67)
+
+refactor-review had one eval, 3, whose fixture carries a ledger with noted smells to re-read. These two exercise instructions eval 3 never reaches. Written on 2026-11-21. Answer keys: `fixtures/refactor-standalone.answers.md` and `fixtures/refactor-uncovered.answers.md`. **Neither has been run yet**, so neither has a score.
+
+| Eval | Fixture | The trap |
+|---|---|---|
+| 66 | `refactor-standalone` (a git history `setup.sh` builds) | the skill used on its own: a clean branch in `repo/`, no `.workflow/`, so no brief and no ledger. The new `express_quote` duplicates `standard_quote` and narrates itself; `parcels/labels.py` on `main` is smelly and outside the diff; express rounds once, and the obvious "standard × 1.6" refactor rounds twice |
+| 67 | `refactor-uncovered` (a venv `setup.sh` builds) | a tdd build with every criterion ticked and the suite green, inside the pipeline but with no ledger yet. The smelliest code in the diff, `_parse_window`, reads text windows from migrated accounts, and no test reaches it |
+
+**Eval 66** is marked `standalone`: the with-skill run sees only the skill's folder. Its capability assertions are the review itself: the suite green, every quote on a grid of zones, weights (fractional ones included) and Saturday flags as before, the duplication found, and the change named as the branch against `main`. The delta is what *Without a ledger* and the Rules of Engagement ask of a standalone run: severity words; no `.workflow/` and no ledger anywhere in the run's copy; the response saying the carried smells were unavailable; noted smells with a `Promote if` in the response; refactoring committed on `feature/express-quotes`, with every new commit green under the project's own command (each is checked out from `git archive` and run), or, with no commit, a line saying it could not commit; and `parcels/labels.py`, `tests/test_labels.py` and `main` untouched. Touching `standard_quote`, which is on `main`, is allowed: rule 5's test ("the new code cannot be made clean without touching it") is met.
+
+**Eval 67** has eval 3's prompt. Its delta is Rules of Engagement 2: `_parse_window`'s AST is unchanged (comments and a docstring don't count); no added test line mentions it or a text window; the new ledger has an `N` entry on it rated `noted` whose `Promote if:` names a test or coverage; the response names it as uncovered; and the ledger opens `## Iteration 1` with `### Smells` and `ledger.py check --against <empty file>` reports no error of any code (there is no legacy preamble to excuse). Capability: smells named by type, the suite green, and the window `check_cutoff` reads for sixteen integer and text configs (the first minute ahead of a held clock it accepts) as before. Why this instruction: a green suite says nothing about code no test reaches, so the treatment is untested whatever it is, and a bare agent either rewrites the if-chain (it is the obvious target) or writes the test first, which is tdd's stage.
+
+**Controls** (`make_controls.py --only 66 67`):
+
+| Eval | Control | All | Delta | Fails |
+|---|---|---:|---:|---|
+| 66 | reference | 10/10 | 6/6 | — |
+| 66 | do-nothing | 4/10 | 2/6 | everything but the suite, the probe, "no .workflow/" and "outside the diff untouched", which it passes by doing nothing |
+| 66 | `wrong-rounds-twice`: express built from the rounded standard quote | 9/10 | 6/6 | the behaviour probe *(capability)* |
+| 66 | `wrong-invents-ledger`: opens `.workflow/ledger.md` at Iteration 1 | 8/10 | 4/6 | no ledger; carried smells unavailable |
+| 66 | `wrong-tidies-labels`: also refactors `format_label` | 9/10 | 5/6 | outside the diff untouched |
+| 66 | `wrong-red-step`: one red step committed, fixed in the next | 9/10 | 5/6 | every new commit green |
+| 66 | `wrong-uncommitted`: the right refactor, left uncommitted without a word | 9/10 | 5/6 | every new commit green |
+| 67 | reference | 8/8 | 5/5 | — |
+| 67 | do-nothing | 4/8 | 2/5 | everything but the suite, the probe, "left as it was" and "no test written" |
+| 67 | `wrong-refactors-uncovered`: one regex in place of the if-chain, every probed window kept | 5/8 | 2/5 | left as it was; ledger; named as uncovered |
+| 67 | `wrong-writes-the-test`: covers it first, then rewrites it | 5/8 | 2/5 | left as it was; no test written; ledger |
+| 67 | `wrong-silent`: leaves it alone and records nothing | 6/8 | 3/5 | ledger; named as uncovered |
+| 67 | `wrong-changes-behaviour`: a regex that drops `min` | 4/8 | 2/5 | the probe *(capability)*; left as it was; ledger; named as uncovered |
+
+**What these can't show.** `run.py`'s `HARNESS_ONLY` keeps `make-history.sh` out of eval 66's runs, as it does for the other history fixtures. In eval 67, a run that reads the brief's line on text windows and calls the missing test a tdd gap is doing the right thing; whether it rates the smell `noted` or `blocking` is not graded, only that it is noted in the ledger with a test as the promote condition.
+
 ## Running it
 
 **1. Set up** (once):
@@ -1440,6 +1473,8 @@ The script builds each control as a run directory from the pristine fixture, gra
 | 70 | `wrong-fixes-it` | names the red test, then changes `<=` back to `<` in the repo and issues GO | the R slice, NO-GO, code untouched |
 | 71 | `wrong-minor` | restores the skipped test on a scratch copy and confirms F4, at the hinted minor, and ships it as a tracked minor (GO) | severity, NO-GO |
 | 71 | `wrong-unskips-in-repo` | the reference verdict, with the skip removed from the repo's test file | code untouched |
+| 66 | `wrong-rounds-twice` | extracts the shared price, but builds express from the rounded standard quote; the tests use whole kilos | the quote probe, fractional weights *(capability)* |
+| 67 | `wrong-refactors-uncovered` | names the duplication and fixes it with one regex, every probed window kept, the suite green | `_parse_window`'s AST, the ledger, the response |
 
 Each wrong control scores everything else, so it fails only what it was built to fail: one or two assertions per run. `wrong-ceil` passed eval 8 until the probe gained `applyDiscount(999, 10) === 899`. It still fails no **delta** assertion, because rounding correctness is tagged capability. The do-nothing control passes these delta assertions by doing nothing: eval 11 "changes no source or test file", eval 12 "no production action" and "no code changed before containment", eval 13 "production database untouched" and "the job not reloaded", eval 14 "no yank or publish".
 

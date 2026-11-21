@@ -7507,6 +7507,274 @@ def eval71(run):
     ]
 
 
+# ------------------------------------------------- refactor-review standalone, and an uncovered smell (66-67)
+
+RS = "refactor-standalone"
+RS_BRANCH = "feature/express-quotes"
+RS_OUT_OF_DIFF = ("parcels/labels.py", "tests/test_labels.py")   # on main, untouched by the branch
+# Every quote over a grid that includes fractional weights: express rounds once, at the end, and a refactor
+# that builds it from the rounded standard quote changes 2.345 kg domestic from 10.20 to 10.21.
+RS_PROBE = r'''
+import json, sys
+sys.path.insert(0, sys.argv[1])
+from parcels import rates
+out = {}
+for fn in ("standard_quote", "express_quote"):
+    for zone in ("domestic", "regional", "international", "mars"):
+        for w in (0.5, 1, 2.345, 3.3333, 7.125, 10, 0, -1):
+            for args in ([(w, zone)] if fn == "standard_quote" else [(w, zone, False), (w, zone, True)]):
+                try:
+                    v = str(getattr(rates, fn)(*args))
+                except Exception as e:
+                    v = type(e).__name__
+                out[fn + repr(args)] = v
+print(json.dumps(out, sort_keys=True))
+'''
+RS_UNAVAILABLE = (r"unavailable|not available|no ledger|without a ledger|no `?\.workflow|nothing (to|was) re-?read"
+                  r"|none to re-?read|no (prior|earlier|previous) (pass|ledger|review)")
+_RS = {}
+
+
+def rs_git(repo, *a):
+    return subprocess.run(["git", "-C", str(repo), *a], capture_output=True, text=True).stdout.strip()
+
+
+def rs_unittest(root):
+    """(green, last line) for the project's own suite command, run in root."""
+    try:
+        r = subprocess.run([sys.executable, "-B", "-m", "unittest", "discover", "-s", "tests", "-t", "."],
+                           cwd=root, capture_output=True, text=True, stdin=subprocess.DEVNULL, timeout=120)
+        tail = (r.stdout + r.stderr).strip().splitlines()[-1:] or [""]
+        return r.returncode == 0, tail[0][:120]
+    except Exception as e:
+        return False, str(e)[:120]
+
+
+def rs_probe(root):
+    try:
+        r = subprocess.run([sys.executable, "-I", "-B", "-c", RS_PROBE, str(root)],
+                           capture_output=True, text=True, stdin=subprocess.DEVNULL, timeout=60)
+        return json.loads(r.stdout)
+    except Exception:
+        return None
+
+
+def rs_fixture():
+    """The fixture branch's tip and main, and the quotes its working tree gives."""
+    if not _RS:
+        fx = FIXTURES / RS / "repo"
+        _RS.update(tip=rs_git(fx, "rev-parse", RS_BRANCH), main=rs_git(fx, "rev-parse", "main"), probe=rs_probe(fx))
+    return _RS
+
+
+def rs_commits(repo, tip):
+    """[(sha, green, evidence)] for every commit the run added on top of the fixture's branch tip."""
+    out = []
+    for sha in rs_git(repo, "rev-list", "--reverse", f"{tip}..HEAD").split():
+        tmp = pathlib.Path(tempfile.mkdtemp(prefix="rs-commit-"))
+        try:
+            arc = subprocess.run(["git", "-C", str(repo), "archive", sha], capture_output=True)
+            subprocess.run(["tar", "-x", "-C", str(tmp)], input=arc.stdout, capture_output=True)
+            green, ev = rs_unittest(tmp)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+        out.append((sha[:7], green, ev))
+    return out
+
+
+def eval66(run):
+    """refactor-review standalone: a branch in a git repo, no .workflow/, no brief and no ledger. Review the
+    branch's change, refactor it in green steps on the branch, and keep the noted smells in the response."""
+    repo, r = run / "repo" / "repo", resp(run)
+    fx = rs_fixture()
+    green, gev = rs_unittest(repo)
+    probe = rs_probe(repo)
+    diffs = sorted(k for k in fx["probe"] or {} if (probe or {}).get(k) != fx["probe"][k])
+    kept = subprocess.run(["git", "-C", str(repo), "merge-base", "--is-ancestor", fx["tip"], "HEAD"],
+                          capture_output=True).returncode == 0
+    on_branch = rs_git(repo, "symbolic-ref", "-q", "--short", "HEAD") == RS_BRANCH
+    commits = rs_commits(repo, fx["tip"]) if kept else []
+    red = [s for s, ok, _ in commits if not ok]
+    said_no_commit = near(r, r"\bcommit", r"can(no|')t|could(n'| no)t|unable|not able|not permitted|no permission", 80)
+    touched = [f for f in RS_OUT_OF_DIFF if read(repo / f) != read(FIXTURES / RS / "repo" / f)]
+    touched += [f for f in rs_git(repo, "diff", "--name-only", fx["tip"], "HEAD").split() if f in RS_OUT_OF_DIFF]
+    main_moved = rs_git(repo, "rev-parse", "main") != fx["main"]
+    invented = [p.relative_to(run / "repo").as_posix() for p in (run / "repo").rglob("*")
+                if p.name == ".workflow" or (p.name == "ledger.md" and ".git" not in p.parts)]
+    return [
+        # capability
+        ("suite green after the refactor", green, gev, C),
+        ("behaviour preserved: every quote on the grid, fractional weights included, as before",
+         bool(probe) and bool(fx["probe"]) and not diffs,
+         f"{len(diffs)} differ, e.g. {diffs[0]}: {fx['probe'][diffs[0]]} → {(probe or {}).get(diffs[0])}" if diffs
+         else "probe failed to run" if not probe else "identical", C),
+        ("the duplication in express_quote found", near(r, r"express_quote|standard_quote", r"duplicat", 300), "", C),
+        ("the change reviewed is the branch against main",
+         any_of(r, r"merge-?base", r"main\s*\.\.\.?\s*(HEAD|feature|`)", r"\.\.\.\s*feature/express",
+                r"(against|vs\.?|versus|relative to|compared (to|with)|off|from) `?(origin/)?main\b"), "", C),
+        # delta
+        ("severity vocabulary applied to findings",
+         any_of(r, r"\bblocking\b", r"\bworthwhile\b") and any_of(r, r"\bnoted\b"), "blocking or worthwhile, and noted", D),
+        # "Without a ledger … don't create one"
+        ("no .workflow/ or ledger created", not invented, f"created: {invented[:3]}" if invented else "", D),
+        # "… and say the carried smells were unavailable"
+        ("the response says the carried smells were unavailable",
+         near(r, r"carried|prior (pass|smell)|earlier (pass|smell)|previous (pass|smell)|re-?read|ledger", RS_UNAVAILABLE, 160), "", D),
+        # "put the noted smells and their promotion conditions in your response"
+        ("noted smells kept in the response with a promotion condition",
+         any_of(r, r"[Pp]romote if") and any_of(r, r"\bnoted\b"), "", D),
+        # Rules of Engagement 3: one technique, run tests, commit; never on the default branch
+        ("refactoring committed on the branch, every new commit green",
+         on_branch and kept and ((bool(commits) and not red) or (not commits and said_no_commit)),
+         f"HEAD on {RS_BRANCH}: {on_branch}; history kept: {kept}; commits: {[(s, ok) for s, ok, _ in commits]}"
+         + ("; said it could not commit" if said_no_commit and not commits else ""), D),
+        # Rules of Engagement 5 "New code only", and Save points "never on the default branch"
+        ("code outside the diff untouched, and main not moved",
+         not touched and not main_moved, f"touched: {sorted(set(touched))}; main moved: {main_moved}", D),
+    ]
+
+
+RU = "refactor-uncovered"
+RU_TEXT_TEST = r"_parse_window|parse_window|cutoff_minutes['\"]?\s*[:=]\s*['\"]|['\"]\s*\d+\s*(h|m|min|hours?|minutes?)\b"
+RU_UNCOVERED = (r"no test|not covered|uncovered|untested|no covering|without (a |any )?(covering )?tests?|coverage"
+                r"|not exercised|nothing exercises|never (runs|exercised|executed)")
+RU_CONFIGS = [None, 30, 120, "90m", "90min", "2h", "1h30m", "1h30min", " 2H ", "45", "1.5h", "", "abc", "0h", "1h30", "5h"]
+# The first minute ahead of a held clock that the cutoff accepts, per config: the window the rule reads.
+RU_PROBE = r'''
+import json, sys
+from datetime import datetime, timedelta
+sys.path.insert(0, sys.argv[1])
+from reservations import rules
+from reservations.booking import Booking
+now = datetime(2026, 11, 18, 12, 0)
+rules.clock = lambda: now
+out = {}
+for cfg in json.loads(sys.argv[2]):
+    config = {"opens_at": 0, "closes_at": 24, **({} if cfg is None else {"cutoff_minutes": cfg})}
+    first = None
+    for m in range(0, 400):
+        if "CUTOFF_WINDOW" not in rules.validate(Booking("a", "v", now + timedelta(minutes=m), 2), config):
+            first = m
+            break
+    out[repr(cfg)] = first
+print(json.dumps(out))
+'''
+_RU = {}
+
+
+def ru_window(root):
+    try:
+        r = subprocess.run([sys.executable, "-I", "-B", "-c", RU_PROBE, str(root), json.dumps(RU_CONFIGS)],
+                           capture_output=True, text=True, stdin=subprocess.DEVNULL, timeout=60)
+        return json.loads(r.stdout)
+    except Exception:
+        return None
+
+
+def ru_func(src, name):
+    """ast.dump of a top-level function, its docstring left out (a docstring is not a refactoring)."""
+    try:
+        tree = ast.parse(src)
+    except SyntaxError:
+        return None
+    for node in tree.body:
+        if isinstance(node, ast.FunctionDef) and node.name == name:
+            body = node.body[1:] if (node.body and isinstance(node.body[0], ast.Expr)
+                                     and isinstance(getattr(node.body[0], "value", None), ast.Constant)
+                                     and isinstance(node.body[0].value.value, str)) else node.body
+            return ast.dump(ast.Module(body=body, type_ignores=[])) + ast.dump(node.args)
+    return None
+
+
+def ru_added_test_lines(run):
+    """Lines the run added to any test file, new files included."""
+    added = []
+    for p in sorted((run / "repo/tests").rglob("*.py")) if (run / "repo/tests").is_dir() else []:
+        old = read(FIXTURES / RU / "tests" / p.relative_to(run / "repo/tests")).splitlines()
+        added += [l[1:] for l in difflib.unified_diff(old, read(p).splitlines(), lineterm="", n=0)
+                  if l.startswith("+") and not l.startswith("+++")]
+    return added
+
+
+def ru_entries(ledger):
+    """[(entry line, its indented fields)] for every `- **N<id>**` line in the ledger."""
+    out, lines = [], ledger.splitlines()
+    for i, l in enumerate(lines):
+        if re.match(r"\s*-\s*\*\*N\d+\*\*", l) and not l.startswith(" "):
+            fields = []
+            for f in lines[i + 1:]:
+                if not f.startswith(" ") or not f.strip():
+                    break
+                fields.append(f)
+            out.append((l, "\n".join(fields)))
+    return out
+
+
+def ru_ledger_check(ledger):
+    """(ok, evidence): ledger.py finds no error at all in a ledger the run created from nothing."""
+    if not ledger.exists():
+        return False, "no .workflow/ledger.md"
+    empty = pathlib.Path(tempfile.mkdtemp(prefix="ru-ledger-")) / "empty.md"
+    empty.write_text("")
+    try:
+        r = subprocess.run([sys.executable, str(LEDGER_PY), "check", "--json", "--against", str(empty), str(ledger)],
+                           capture_output=True, text=True, timeout=60)
+        errors = json.loads(r.stdout)["errors"]
+    except Exception as e:
+        return False, f"ledger.py check failed to run: {e}"
+    finally:
+        shutil.rmtree(empty.parent, ignore_errors=True)
+    return not errors, "; ".join(errors)[:240] or "no errors"
+
+
+def eval67(run):
+    """refactor-review on a change with one uncovered helper: _parse_window, which no test reaches, is left as
+    it is and recorded as noted until a covering test exists; no test is written for it in this stage."""
+    repo, r = run / "repo", resp(run)
+    rules_src = read(repo / "reservations/rules.py")
+    res, green, gev = pl_suite(run, RU)
+    if not _RU:
+        _RU.update(fn=ru_func(read(FIXTURES / RU / "reservations/rules.py"), "_parse_window"), window=ru_window(FIXTURES / RU))
+    now_fn = ru_func(rules_src, "_parse_window")
+    window = ru_window(repo)
+    wdiff = sorted(k for k in _RU["window"] or {} if (window or {}).get(k) != _RU["window"][k])
+    test_lines = [l.strip()[:80] for l in ru_added_test_lines(run) if re.search(RU_TEXT_TEST, l, re.I)]
+    ledger_path = repo / ".workflow/ledger.md"
+    ledger = read(ledger_path)
+    held = [(e, f) for e, f in ru_entries(ledger)
+            if re.search(r"parse_window|text (window|value|format)|window (text|string)", e, re.I)
+            and re.search(r"\bnoted\b", e, re.I)
+            and re.search(r"Promote if:?\**:?[^\n]*(test|cover)", f, re.I)]
+    lok, lev = ru_ledger_check(ledger_path)
+    return [
+        # capability
+        ("smells named by type/subtype",
+         any_of(r, r"Dispensables|Bloaters|Couplers|Change Preventers|Object-Orientation"), "", C),
+        ("suite green after the pass", green, gev, C),
+        ("behaviour preserved: the window read for integer and text configs as before",
+         bool(window) and bool(_RU["window"]) and not wdiff,
+         f"{len(wdiff)} differ, e.g. {wdiff[0]}: {_RU['window'][wdiff[0]]} → {(window or {}).get(wdiff[0])}" if wdiff
+         else "probe failed to run" if not window else "identical", C),
+        # delta
+        # Rules of Engagement 2 "where no test exercises the code a refactoring would touch, stop that refactoring"
+        ("_parse_window, which no test exercises, left as it was",
+         now_fn is not None and now_fn == _RU["fn"], "unchanged" if now_fn == _RU["fn"] else
+         "removed or moved" if now_fn is None else "rewritten", D),
+        # "Don't write the missing tests here — that is tdd's stage"
+        ("no test for text windows written in this stage", not test_lines, f"added: {test_lines[:2]}" if test_lines else "", D),
+        # "record the smell as noted with 'a covering test exists' as its promote condition"
+        ("ledger: _parse_window noted, promoted only once a covering test exists", bool(held),
+         held[0][0].strip()[:120] if held else f"{len(ru_entries(ledger))} N entries, none on _parse_window with a test condition", D),
+        # "… and report it"
+        ("the response names _parse_window as uncovered",
+         near(r, r"_parse_window|parse_window", RU_UNCOVERED, 250), "", D),
+        # "Inside the pipeline, where .workflow/ exists but the ledger doesn't yet … create the file and open ## Iteration 1"
+        ("ledger created with ## Iteration 1 and ### Smells, clean under its checker",
+         lok and bool(re.search(r"^## Iteration 1\s*$", ledger, re.M)) and bool(re.search(r"^### Smells\s*$", ledger, re.M)),
+         lev, D),
+    ]
+
+
 CHECKS = {
     "eval-0-architect-charter-and-options": eval0,
     "eval-1-brief-ordered-criteria": eval1,
@@ -7578,6 +7846,8 @@ CHECKS = {
     "eval-65-acceptance-tests-declares-the-missing-interface": eval65,
     "eval-70-verdict-red-run-blocks-go": eval70,
     "eval-71-verdict-weakened-check-not-refuted-by-green": eval71,
+    "eval-66-refactor-standalone-no-ledger": eval66,
+    "eval-67-refactor-uncovered-smell-left": eval67,
 }
 
 
