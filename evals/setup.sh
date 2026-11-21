@@ -8,7 +8,7 @@ cd "$(dirname "$0")/fixtures"
 
 echo "== pipeline fixtures =="
 for f in base tdd refactor teardown verdict tdd-planted tdd-contradiction brief-nexus design-round2 design-adr \
-         at-red-baseline at-stub refactor-uncovered; do
+         at-red-baseline at-stub refactor-uncovered brief-archive; do
   [ -d "$f/.venv" ] || python3 -m venv "$f/.venv"
   "$f/.venv/bin/pip" -q install pytest
   printf '%-10s ' "$f"
