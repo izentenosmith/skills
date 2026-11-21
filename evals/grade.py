@@ -7365,6 +7365,148 @@ def eval65(run):
     ]
 
 
+# -- evals 70-71: tyr-verdict on a ledger written wholly in the grammar (no legacy preamble), iteration 2
+
+TV_EDGE = "test_slot_exactly_at_window_edge_is_accepted"
+TV_CONFIG = "test_window_length_reads_from_account_config"
+TV_SKIP_GONE = (r"un-?skip|without (the |its |a |any )?skip|no (longer )?skip|skip\w* (marker |decorator )?(is |are )?(removed|gone|dropped)"
+                r"|remov\w* (the |its )?(skip|@pytest\.mark\.skip)|restor")
+
+
+def tv_appended(run, fixture):
+    """What the run added below the fixture's ledger (the whole file when it rewrote what was there)."""
+    old, new = read(FIXTURES / fixture / ".workflow/ledger.md"), read(run / "repo/.workflow/ledger.md")
+    return new[len(old):] if new.startswith(old) else new
+
+
+def tv_verdicts(text):
+    """{F id: (verdict, severity)} for every `#### F<n> — …` verdict heading in text."""
+    return {m.group(1): (m.group(2).upper(), (m.group(3) or "").lower())
+            for m in re.finditer(r"^#### (F\d+)\s+—\s+(CONFIRMED|REFUTED|INCONCLUSIVE)\b[ \t]*(blocker|major|minor)?",
+                                 text, re.M | re.I)}
+
+
+def tv_entry(text, fid):
+    """The verdict block for fid: its heading and the lines up to the next heading."""
+    m = re.search(rf"^#### {fid}\b[^\n]*(?:\n(?!#)[^\n]*)*", text, re.M)
+    return m.group(0) if m else ""
+
+
+def tv_outcome(text):
+    """(outcome, reason) of the last `### Verdict:` in text, or (None, "")."""
+    ms = list(re.finditer(r"^### Verdict:\s*(GO|NO-GO|ESCALATED)\s*$((?:\n(?!#)[^\n]*)*)", text, re.M | re.I))
+    if not ms:
+        return None, ""
+    reason = re.search(r"\*\*Reason:\*\*\s*([^\n]*)", ms[-1].group(2))
+    return ms[-1].group(1).upper(), reason.group(1) if reason else ""
+
+
+def tv_slices(text, prefix):
+    """Every remediation slice line (with its continuation lines) whose id starts with prefix (F4, R)."""
+    return [m.group(0) for m in re.finditer(
+        rf"^- (?:\[ \]\s*)?\[(?:blocker|major|minor)\]\s+{prefix}\d*\s+—[^\n]*(?:\n(?!- |#|\s*$)[^\n]*)*", text, re.M | re.I)]
+
+
+def tv_clean(run, fixture):
+    """A verdict appended, and ledger.py check clean against the fixture's ledger: every code, since the
+    fixture has no legacy preamble for the numbering checks to trip on (unlike evals 3-5)."""
+    if not re.search(r"^### Verdict:", tv_appended(run, fixture), re.M):
+        return False, "no ### Verdict: appended"
+    try:
+        r = subprocess.run([sys.executable, str(LEDGER_PY), "check", "--json",
+                            "--against", str(FIXTURES / fixture / ".workflow/ledger.md"),
+                            str(run / "repo/.workflow/ledger.md")], capture_output=True, text=True, timeout=60)
+        out = json.loads(r.stdout)
+    except Exception as e:
+        return False, f"ledger.py check failed to run: {e}"
+    return not out["errors"], "; ".join(out["errors"])[:240] or f"0 errors, computed {out.get('computed')}"
+
+
+def tv_code_changed(run, fixture):
+    """Source and test files that differ from the fixture's: the verdict stage runs evidence on a scratch copy."""
+    out = []
+    for sub in ("reservations", "tests"):
+        a = {p.relative_to(FIXTURES / fixture): p.read_bytes() for p in (FIXTURES / fixture / sub).rglob("*.py")}
+        b = {p.relative_to(run / "repo"): p.read_bytes() for p in (run / "repo" / sub).rglob("*.py")}
+        out += [str(k) for k in set(a) | set(b) if a.get(k) != b.get(k)]
+    return sorted(out)
+
+
+def eval70(run):
+    """Iteration 2: tdd closed F1 and F2, the teardown found only a repeat and a mutation question, and the
+    suite is red. The arithmetic over the findings says GO; the run before the verdict says no."""
+    fx = "verdict-red"
+    r, added = resp(run), tv_appended(run, fx)
+    v = tv_verdicts(added)
+    outcome, reason = tv_outcome(added)
+    red = tv_slices(added, "R")
+    red_ok = [s for s in red if re.search(r"\[blocker\]\s+R\d+\s+—\s+red run:", s, re.I) and TV_EDGE in s and TV_CONFIG in s]
+    changed = tv_code_changed(run, fx)
+    return [
+        # capability
+        ("F4 and F5 each adjudicated", {"F4", "F5"} <= set(v), f"verdicts: {sorted(v)}", C),
+        ("F4 REFUTED", v.get("F4", ("",))[0] == "REFUTED", "", C),
+        ("a verdict stated in the ledger", outcome is not None, outcome or "none", C),
+        # delta
+        # SKILL.md rule 1 "REFUTED is sticky … strike it in one line citing the prior verdict"
+        ("F4 struck as F3's repeat, citing it",
+         v.get("F4", ("",))[0] == "REFUTED" and bool(re.search(r"\bF3\b|iteration 1|already refuted|prior", tv_entry(added, "F4"), re.I)),
+         tv_entry(added, "F4")[:160], D),
+        # Mandate "Running the evidence is your job … its Would be settled by line is the run to make"
+        ("F5 settled by running its mutation: REFUTED, not sent back",
+         v.get("F5", ("",))[0] == "REFUTED", f"F5: {v.get('F5')}", D),
+        # Merge verdict "Before a GO" 1-2: run the full suite; red → `[blocker] R<id> — red run: <the failing tests, by name>`
+        ("the red run recorded as a [blocker] R slice naming both failing tests",
+         bool(red_ok), (red or ["no R slice"])[0][:200], D),
+        ("the verdict NO-GO, its Reason naming the red run",
+         outcome == "NO-GO" and bool(re.search(r"\bR\d+\b", reason)), f"{outcome}: {reason[:120]}", D),
+        # the closed slices checked against the run: the test tdd closed F1 and F2 with is red
+        ("the response says the test F1 and F2 were closed by is red",
+         near3(r, TV_CONFIG, r"fail|\bred\b", r"\bF1\b|\bF2\b|clos"), "", D),
+        # NO-GO handoff "iteration <i> of at most 3"
+        ("iteration 2 of at most 3 stated",
+         any_of(r, r"[Ii]teration 2") and any_of(r, r"of (at most )?(3|three)\b|at most (3|three)|\bcap\b|third (iteration|pass)"), "", D),
+        # Mandate: every reproduction, mutation and restored check runs in a scratch copy
+        ("the code and tests left untouched", not changed, f"changed: {changed[:4]}" if changed else "", D),
+        ("the appended ledger clean under ledger.py check", *tv_clean(run, fx), D),
+    ]
+
+
+def eval71(run):
+    """Iteration 2: tdd made the suite green by skipping the window-edge test as flaky on a fixed clock.
+    special-findings.md 'Findings about the bar itself': a green suite refutes nothing there."""
+    fx = "verdict-bar"
+    r, added = resp(run), tv_appended(run, fx)
+    v = tv_verdicts(added)
+    outcome, reason = tv_outcome(added)
+    f4 = v.get("F4", ("", ""))
+    slices = tv_slices(added, "F4")
+    changed = tv_code_changed(run, fx)
+    return [
+        # capability
+        ("F4 adjudicated", "F4" in v, f"F4: {v.get('F4')}", C),
+        ("F5 adjudicated", "F5" in v, f"F5: {v.get('F5')}", C),
+        ("a verdict stated in the ledger", outcome is not None, outcome or "none", C),
+        # delta
+        # special-findings "A green suite refutes nothing here … restore it on a scratch copy … and run it"
+        ("F4 CONFIRMED, not refuted by the green suite or sent back", f4[0] == "CONFIRMED", f"F4: {f4}", D),
+        # "Severity follows what the weakened check was guarding, not how small the diff line is"
+        ("F4's severity follows what the check guarded: blocker or major, not the hinted minor",
+         f4[0] == "CONFIRMED" and f4[1] in ("blocker", "major"), f"F4: {f4}", D),
+        ("the skipped test restored on a scratch copy and seen to fail",
+         near3(r, TV_SKIP_GONE, r"fail|\bred\b|CUTOFF_WINDOW|Rejected", rf"{TV_EDGE}|window edge|edge test|criterion 4"), "", D),
+        # "The slice restores the check, then fixes what it catches"
+        ("F4's slice restores the check: the edge test runs un-skipped and passes",
+         any(re.search(rf"{TV_EDGE}|edge test|window edge|exactly at the (window )?edge", s, re.I)
+             and re.search(TV_SKIP_GONE, s, re.I) and re.search(r"pass", s, re.I) for s in slices),
+         (slices or ["no F4 slice"])[0][:200], D),
+        ("the verdict NO-GO, its Reason naming F4",
+         outcome == "NO-GO" and bool(re.search(r"\bF4\b", reason)), f"{outcome}: {reason[:120]}", D),
+        ("the code and tests left untouched", not changed, f"changed: {changed[:4]}" if changed else "", D),
+        ("the appended ledger clean under ledger.py check", *tv_clean(run, fx), D),
+    ]
+
+
 CHECKS = {
     "eval-0-architect-charter-and-options": eval0,
     "eval-1-brief-ordered-criteria": eval1,
@@ -7434,6 +7576,8 @@ CHECKS = {
     "eval-75-brief-archives-finished-change": eval75,
     "eval-64-acceptance-tests-red-baseline-writes-nothing": eval64,
     "eval-65-acceptance-tests-declares-the-missing-interface": eval65,
+    "eval-70-verdict-red-run-blocks-go": eval70,
+    "eval-71-verdict-weakened-check-not-refuted-by-green": eval71,
 }
 
 

@@ -16,6 +16,7 @@
     python3 evals/controls/make_controls.py --only 74                  # architect-deep-dive bound by ADRs (files only)
     python3 evals/controls/make_controls.py --only 75                  # agent-brief over a finished change (files only)
     python3 evals/controls/make_controls.py --only 64 65               # acceptance-tests, more; need setup.sh's at-* venvs
+    python3 evals/controls/make_controls.py --only 70 71               # tyr-verdict, iteration 2 (files only)
 
 Three kinds of control, each a run directory (repo/ + outputs/response.md) that
 grade.py's eval function reads exactly as it reads a real run:
@@ -7407,6 +7408,163 @@ CONTROLS_ADR = {
         }),
 }
 CONTROLS.update(CONTROLS_ADR)
+
+# -- evals 70-71: tyr-verdict, iteration 2 on a grammar-only ledger (verdict-red, verdict-bar)
+
+TV_EDGE, TV_CONFIG = "`test_slot_exactly_at_window_edge_is_accepted`", "`test_window_length_reads_from_account_config`"
+TV_F4_STICKY = """#### F4 — REFUTED
+- **Reason:** repeats F3, refuted in iteration 1 on the same evidence; `test_party_size_rule[12-expected1]` passes
+- **Reopens only if:** a failing test that submits a party of exactly 12 under the default config
+"""
+TV_F5_REFUTED = """#### F5 — REFUTED
+- **Reason:** on a scratch copy with `check_cutoff` on `DEFAULT_CUTOFF_MINUTES`, the `240-180-True` case fails: the test catches an ignored config
+- **Reopens only if:** a mutation of `check_cutoff` that ignores config and leaves every case passing
+"""
+TV_F5_INCONCLUSIVE = """#### F5 — INCONCLUSIVE
+- **Reason:** whether the replacement test catches an ignored config was not exercised
+- **Settled by:** devils-advocate re-run with the mutation applied
+- **Pass:** 1
+"""
+TV_R1 = f"- [ ] [blocker] R1 — red run: {TV_EDGE}, {TV_CONFIG}`[240-240-False]` (2 failed, 10 passed)\n"
+TV_GO = "\n### Verdict: GO\n- **Reason:** nothing open\n"
+
+
+def tv(append, response, edits=()):
+    def build(run, repo):
+        p = repo / ".workflow/ledger.md"
+        p.write_text(p.read_text() + append)
+        for path, old, new in edits:
+            sub(repo / path, old, new)
+        w(run / "outputs/response.md", response)
+    return build
+
+
+E70_APPEND = ("\n### Verdicts\n" + TV_F4_STICKY + "{f5}" + "\n### Remediation slices\n" + TV_R1
+              + "\n### Verdict: NO-GO\n- **Reason:** {reason}\n")
+E70_RESPONSE = f"""
+Iteration 2 of at most 3. Carrying no open finding; F3 already refuted in iteration 1. tdd closed F1 and F2 this pass.
+
+- **F4 — REFUTED.** F3 again, on the same evidence: struck citing the prior verdict.
+- **F5 — {{f5}}**
+
+The suite before the verdict (run on a scratch copy of the tree): 2 failed, 10 passed. Failing: {TV_EDGE}
+and {TV_CONFIG}`[240-240-False]`. That second test is the one tdd closed F1 and F2 with, so their closing
+claim does not hold on this run: it is red, because `check_cutoff` now compares with `<=`.
+Recorded as R1, a blocker red-run slice.
+
+Shipping with 1 noted smell: N1. The brief has no ship checklist.
+
+Verdict: **NO-GO** — 0 confirmed defects and 1 red run (`R1`) remain open, iteration 2 of at most 3. Run tdd next.
+"""
+E70_F5_RAN = "REFUTED.** Ran its mutation on a scratch copy: the `240-180-True` case fails, so the test does catch an ignored config."
+
+
+def e70(f5=TV_F5_REFUTED, reason="the run before the verdict was red (R1)", f5_said=E70_F5_RAN):
+    return tv(E70_APPEND.format(f5=f5, reason=reason), E70_RESPONSE.format(f5=f5_said))
+
+
+E71_F4 = """#### F4 — CONFIRMED {sev}
+- **Reason:** a finding about the bar: the suite is green because the edge test is skipped; restored on a scratch copy it fails (`<=` in `check_cutoff`), and the clock is fixed, so "flaky" is no reason
+"""
+E71_SLICE = f"- [ ] [{{sev}}] F4 — {TV_EDGE} runs un-skipped and passes: a slot exactly 120 minutes out is accepted\n"
+E71_RESPONSE = f"""
+Iteration 2 of at most 3. F3 already refuted in iteration 1; tdd closed F1 and F2.
+
+- **F4 — {{f4}}**
+- **F5 — REFUTED.** Ran its mutation on a scratch copy: the `240-180-True` case fails.
+
+Suite before the verdict: 10 passed, 1 skipped.
+
+Verdict: **{{outcome}}**
+"""
+E71_F4_RAN = (f"CONFIRMED {{sev}}.** A finding about the bar: the green suite refutes nothing here. On a scratch copy I removed "
+              f"the skip from {TV_EDGE} and ran it: it fails with `Rejected: CUTOFF_WINDOW`. It guards criterion 4.")
+
+
+def e71(sev="blocker", outcome="NO-GO", reason="1 confirmed blocker open (F4)", f4=None, slice_=True, f4_said=None, edits=()):
+    f4 = E71_F4.format(sev=sev) if f4 is None else f4
+    append = ("\n### Verdicts\n" + f4 + TV_F5_REFUTED
+              + ("\n### Remediation slices\n" + E71_SLICE.format(sev=sev) if slice_ else "")
+              + f"\n### Verdict: {outcome}\n- **Reason:** {reason}\n")
+    said = E71_F4_RAN.format(sev=sev) if f4_said is None else f4_said
+    return tv(append, E71_RESPONSE.format(f4=said, outcome=outcome), edits)
+
+
+CONTROLS_VERDICT2 = {
+    "eval-70-verdict-red-run-blocks-go": dict(
+        fixture="verdict-red", reference=e70(),
+        free=["the code and tests left untouched"],
+        wrong={
+            # trusts tdd's closing lines and the teardown's reading; never runs the suite
+            "wrong-go-on-trust": (
+                tv("\n### Verdicts\n" + TV_F4_STICKY + TV_F5_REFUTED + TV_GO,
+                   "Iteration 2 of at most 3. tdd closed F1 and F2; F4 repeats F3 and is struck; F5 refuted by its "
+                   "mutation on a scratch copy. Nothing open.\n\nVerdict: **GO**.\n"),
+                ["the red run recorded as a [blocker] R slice naming both failing tests",
+                 "the verdict NO-GO, its Reason naming the red run",
+                 "the response says the test F1 and F2 were closed by is red"]),
+            # sees the red run, but files it as a finding of its own instead of an R slice
+            "wrong-red-as-finding": (
+                tv("\n### Verdicts\n" + TV_F4_STICKY + TV_F5_REFUTED
+                   + "#### F6 — CONFIRMED blocker\n- **Reason:** the suite is red: " + TV_EDGE + " and " + TV_CONFIG + " fail\n"
+                   + "\n### Remediation slices\n- [ ] [blocker] F6 — " + TV_EDGE + " and " + TV_CONFIG + " pass\n"
+                   + "\n### Verdict: NO-GO\n- **Reason:** 1 confirmed blocker open (F6)\n",
+                   E70_RESPONSE.format(f5=E70_F5_RAN).replace("Recorded as R1, a blocker red-run slice.",
+                                                              "Recorded as F6, a confirmed blocker.")),
+                ["the red run recorded as a [blocker] R slice naming both failing tests",
+                 "the verdict NO-GO, its Reason naming the red run",
+                 "the appended ledger clean under ledger.py check"]),
+            # fixes the comparison in the repo, gets a green suite, and issues GO
+            "wrong-fixes-it": (
+                tv("\n### Verdicts\n" + TV_F4_STICKY + TV_F5_REFUTED + TV_GO,
+                   f"Iteration 2 of at most 3. The suite was red: {TV_CONFIG}`[240-240-False]` failed, the test tdd "
+                   "closed F1 and F2 with. I changed `<=` back to `<` in `check_cutoff`; now 12 passed.\n\nVerdict: **GO**.\n",
+                   edits=[("reservations/rules.py", "booking.slot - now <= window", "booking.slot - now < window")]),
+                ["the red run recorded as a [blocker] R slice naming both failing tests",
+                 "the verdict NO-GO, its Reason naming the red run", "the code and tests left untouched"]),
+            # reads F5's settling run as someone else's job and sends it back
+            "wrong-sends-f5-back": (
+                e70(f5=TV_F5_INCONCLUSIVE, reason="the run before the verdict was red (R1); 1 INCONCLUSIVE open (F5)",
+                    f5_said="INCONCLUSIVE.** Sent back to devils-advocate for the mutation."),
+                ["F5 settled by running its mutation: REFUTED, not sent back"]),
+        }),
+    "eval-71-verdict-weakened-check-not-refuted-by-green": dict(
+        fixture="verdict-bar", reference=e71(),
+        free=["the code and tests left untouched"],
+        wrong={
+            # the green suite taken as the refutation
+            "wrong-refuted-by-green": (
+                e71(outcome="GO", reason="nothing open", slice_=False,
+                    f4="#### F4 — REFUTED\n- **Reason:** the suite is green, 10 passed and 1 skipped; the skip is tdd's call on a flaky test\n"
+                       "- **Reopens only if:** the edge test fails in CI on a fixed clock\n",
+                    f4_said="REFUTED.** The suite is green; the skip is a flakiness call."),
+                ["F4 CONFIRMED, not refuted by the green suite or sent back",
+                 "F4's severity follows what the check guarded: blocker or major, not the hinted minor",
+                 "the skipped test restored on a scratch copy and seen to fail",
+                 "F4's slice restores the check: the edge test runs un-skipped and passes",
+                 "the verdict NO-GO, its Reason naming F4"]),
+            # confirmed, but rated by the size of the diff line; ships as a tracked minor
+            "wrong-minor": (
+                e71(sev="minor", outcome="GO", reason="nothing open; F4 ships as a tracked minor"),
+                ["F4's severity follows what the check guarded: blocker or major, not the hinted minor",
+                 "the verdict NO-GO, its Reason naming F4"]),
+            # can't settle it by reading, so sends it back instead of running it
+            "wrong-sends-it-back": (
+                e71(reason="1 INCONCLUSIVE open (F4)", slice_=False,
+                    f4="#### F4 — INCONCLUSIVE\n- **Reason:** whether the edge test is flaky was not exercised\n"
+                       "- **Settled by:** devils-advocate re-run of the edge test on a fixed clock\n- **Pass:** 1\n",
+                    f4_said="INCONCLUSIVE.** Sent back to devils-advocate to settle whether the test is flaky."),
+                ["F4 CONFIRMED, not refuted by the green suite or sent back",
+                 "F4's severity follows what the check guarded: blocker or major, not the hinted minor",
+                 "the skipped test restored on a scratch copy and seen to fail",
+                 "F4's slice restores the check: the edge test runs un-skipped and passes"]),
+            # right verdict, but removes the skip in the repo instead of a scratch copy
+            "wrong-unskips-in-repo": (
+                e71(edits=[("tests/test_booking.py", '@pytest.mark.skip(reason="flaky: depends on the wall clock")\n', "")]),
+                ["the code and tests left untouched"]),
+        }),
+}
+CONTROLS.update(CONTROLS_VERDICT2)
 
 
 def build(ws, eval_name, control, fn, fixture):

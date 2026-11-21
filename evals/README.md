@@ -1207,6 +1207,38 @@ Eval 27 is acceptance-tests' only other eval, and it is saturated. These two exe
 | 65 | `wrong-vacuous-persist`: never-saves checked on a rejected booking | 17/18 | 11/11 | the saving mutant survives *(capability)* |
 | 65 | `wrong-reaches-internals`: the both-codes test calls `Booking.validate` | 15/18 | 9/11 | no internals; red now; the first-code mutant survives *(capability)* |
 
+### `verdict-red` and `verdict-bar`: tyr-verdict in iteration 2 (evals 70–71)
+
+Eval 5 adjudicates iteration 1 of a ledger whose history is legacy prose, so it never sees a second pass, a red suite or a weakened check, and its ledger assertion has to ignore the numbering codes. These two were written on 2026-11-21. Their fixtures are the pipeline service with a clock seam (`BookingService(clock=…)`, every test on a fixed `NOW`, so nothing depends on the time of day) and a ledger written **wholly in the grammar**: iteration 1 confirmed F1 (the window ignores config) and F2 (a vacuous test), refuted F3, and went NO-GO; in iteration 2 tdd closed F1 and F2 `verified by test_window_length_reads_from_account_config`, and refactor-review left N1. `ledger.py check` reads both fixtures with 0 errors, so both evals grade the run's ledger with **every** code, `E50` included: the stated verdict must be the computed one. `setup.sh` builds a venv in each. Answer keys: `fixtures/verdict-red.answers.md`, `fixtures/verdict-bar.answers.md`. **Neither has been run yet.**
+
+| Eval | Fixture | The trap |
+|---|---|---|
+| 70 | `verdict-red` | the fix changed `<` to `<=`: the edge test and the `240-240` case of the very test F1 and F2 were closed by fail (2 failed, 10 passed). The teardown only reads, so it reported F4 (F3 again) and F5 (a mutation question) and swept the closed slices as correct. Adjudicate those two and the arithmetic says GO |
+| 71 | `verdict-bar` | tdd made the suite green by putting `@pytest.mark.skip(reason="flaky: depends on the wall clock")` on the window-edge test (criterion 4), on a fixed clock. The teardown reports it as F4, hint `minor`, unproven, settled by restoring the test on a scratch copy |
+
+**Eval 70** tests "Before a GO": run the full suite yourself, and a red run is a `[blocker] R<id> — red run:` slice naming the failing tests, and NO-GO, whatever the findings add up to. The delta: F4 struck as F3's repeat; F5 settled by running its mutation (REFUTED, since `240-180-True` fails under it), not sent back; the R slice naming both failing tests; NO-GO with a Reason naming the R id; the response saying the test F1 and F2 were closed by is red (the closed slices checked against the run); iteration 2 of at most 3 stated; the code and tests untouched, since every reproduction runs on a scratch copy; and the ledger clean under `ledger.py check --against` the fixture's.
+
+**Eval 71** tests special-findings.md, "Findings about the bar itself", which eval 5 never reaches. It was chosen over the security rules and the three-iteration cap because it inverts the evidence a bare agent leans on: the green suite *is* the symptom, and the finding's own hint says minor. A bare agent plausibly refutes it on the green run, confirms it at the hinted minor and ships it as a tracked follow-up, or sends it back as unproven. The cap is arithmetic `ledger.py` already computes, so a run that reads it gets it right; the security rules need a second domain in the fixture. The delta: F4 CONFIRMED; its severity blocker or major (what the check guarded: a core criterion that does not hold), never minor; the response saying the test was restored on a scratch copy and failed; F4's slice naming the edge test as running un-skipped and passing; NO-GO with a Reason naming F4; the code and tests untouched; the ledger clean. The `240-240` case tdd also dropped is a second weakening the teardown missed; naming it is right and not graded.
+
+**Controls** (`make_controls.py --only 70 71`):
+
+| Eval | Control | All | Delta | Fails |
+|---|---|---:|---:|---|
+| 70 | reference | 11/11 | 8/8 | — |
+| 70 | do-nothing | 1/11 | 1/8 | everything but "code and tests untouched" |
+| 70 | `wrong-go-on-trust`: GO on tdd's closing lines, suite never run | 8/11 | 5/8 | R slice; NO-GO; closing test named red |
+| 70 | `wrong-red-as-finding`: the red run filed as a finding F6 | 8/11 | 5/8 | R slice; NO-GO naming it; `ledger.py check` |
+| 70 | `wrong-fixes-it`: `<=` changed back in the repo, then GO | 8/11 | 5/8 | R slice; NO-GO; code untouched |
+| 70 | `wrong-sends-f5-back`: F5 INCONCLUSIVE instead of run | 10/11 | 7/8 | F5 settled |
+| 71 | reference | 10/10 | 7/7 | — |
+| 71 | do-nothing | 1/10 | 1/7 | everything but "code and tests untouched" |
+| 71 | `wrong-refuted-by-green`: F4 REFUTED on the green suite, GO | 5/10 | 2/7 | CONFIRMED; severity; restored and failed; slice; NO-GO |
+| 71 | `wrong-minor`: confirmed at the hinted minor, GO | 8/10 | 5/7 | severity; NO-GO |
+| 71 | `wrong-sends-it-back`: F4 INCONCLUSIVE, NO-GO | 6/10 | 3/7 | CONFIRMED; severity; restored and failed; slice |
+| 71 | `wrong-unskips-in-repo`: the reference verdict, skip removed in the repo | 9/10 | 6/7 | code untouched |
+
+**Where the skill text left the grader a choice:** "Before a GO" says to run the suite before a GO, and a run could read it as needed only when the findings point to GO. Here they do, so both readings run it. Eval 71's severity accepts major as well as blocker: the blocker definition names "a core acceptance criterion that does not actually hold", and whether an edge case is core is a judgment.
+
 ## Running it
 
 **1. Set up** (once):
@@ -1370,6 +1402,7 @@ python3 evals/controls/make_controls.py --only 49 50 51 52 53 54   # the review 
 python3 evals/controls/make_controls.py --only 60 61 62 63   # the pipeline, harder; 60 and 62 run pytest in a fixture venv
 python3 evals/controls/make_controls.py --only 75   # agent-brief over a finished change (files only)
 python3 evals/controls/make_controls.py --only 64 65         # acceptance-tests on a red baseline and a missing interface; pytest in their venvs
+python3 evals/controls/make_controls.py --only 70 71         # tyr-verdict, iteration 2 (files only)
 ```
 
 The script builds each control as a run directory from the pristine fixture, grades it with the same function `grade.py` uses, and checks what each kind must do. Rerun it after changing an assertion or a fixture.
@@ -1402,6 +1435,11 @@ The script builds each control as a run directory from the pristine fixture, gra
 | 64 | `wrong-skips-the-red` | stops on the red baseline, after marking the red test `skip` | the red test is run and must still fail |
 | 65 | `wrong-no-stub` | five tests, "all red", on an `AttributeError` | interface declared; red for the right reason (executed) |
 | 65 | `wrong-stub-returns-empty` | declares `check`, but it returns `[]` | interface declared; red now (executed) |
+| 70 | `wrong-go-on-trust` | adjudicates F4 and F5 correctly and issues GO on tdd's closing lines, never running the suite | the R slice, NO-GO naming it, F1's closing test named red |
+| 70 | `wrong-red-as-finding` | runs the suite and goes NO-GO, but files the red run as a finding F6 of its own | the R slice, the Reason, `ledger.py check` (`E20`) |
+| 70 | `wrong-fixes-it` | names the red test, then changes `<=` back to `<` in the repo and issues GO | the R slice, NO-GO, code untouched |
+| 71 | `wrong-minor` | restores the skipped test on a scratch copy and confirms F4, at the hinted minor, and ships it as a tracked minor (GO) | severity, NO-GO |
+| 71 | `wrong-unskips-in-repo` | the reference verdict, with the skip removed from the repo's test file | code untouched |
 
 Each wrong control scores everything else, so it fails only what it was built to fail: one or two assertions per run. `wrong-ceil` passed eval 8 until the probe gained `applyDiscount(999, 10) === 899`. It still fails no **delta** assertion, because rounding correctness is tagged capability. The do-nothing control passes these delta assertions by doing nothing: eval 11 "changes no source or test file", eval 12 "no production action" and "no code changed before containment", eval 13 "production database untouched" and "the job not reloaded", eval 14 "no yank or publish".
 

@@ -549,6 +549,22 @@
    "expected_output": "An approved brief for a new public method, BookingService.check(account_id, venue_id, slot, party_size) -> list[str], that runs submit's rules without saving or raising; the method does not exist. Expected: BookingService.check declared in reservations/api.py with the brief's signature and a body that only raises NotImplementedError, and nothing else in reservations/ changed; one black-box test per criterion through BookingService with the existing FakeStore/FakeConfig, every one red on NotImplementedError or an assertion, none on AttributeError or an import error, none passing; the pre-existing suite green. Executed by the grader: the tests pass once a correct check is laid over the repo, and fail on a check that saves an acceptable booking, one that keeps only the first code, and one that ignores the account's config. The brief gains an **Acceptance tests** section whose **Command:** runs exactly the new tests and which maps each of the five criteria exactly once, logged under Revisions; the response hands off to tdd."
   },
   {
+   "id": 70,
+   "name": "verdict-red-run-blocks-go",
+   "skill": "tyr-verdict",
+   "fixture": "verdict-red",
+   "prompt": "Adjudicate the teardown findings in the ledger.",
+   "expected_output": "Iteration 2 of the closing loop, with the ledger in the harness grammar. Iteration 1 confirmed F1 (the window ignores config) and F2 (a vacuous test), refuted F3 (party size at the limit) and went NO-GO; in iteration 2 tdd closed F1 and F2, both `verified by test_window_length_reads_from_account_config`, and the teardown reported F4 (F3 again, same evidence) and F5 (the replacement test may be vacuous; settled by a mutation). The suite is red: the fix changed `<` to `<=`, so `test_slot_exactly_at_window_edge_is_accepted` and the `240-240-False` case of the very test F1 and F2 were closed by fail. Expected: F4 REFUTED citing F3; F5 settled by running its mutation on a scratch copy (REFUTED: the `240-180-True` case fails under it); the full suite run before the verdict, and because it is red, a `[blocker] R1 — red run:` slice naming both failing tests; the verdict NO-GO with a Reason naming R1, never GO; the response saying the test F1's closure names is red and stating iteration 2 of at most 3; the code and tests left untouched; and the appended ledger clean under ledger.py check against the fixture's."
+  },
+  {
+   "id": 71,
+   "name": "verdict-weakened-check-not-refuted-by-green",
+   "skill": "tyr-verdict",
+   "fixture": "verdict-bar",
+   "prompt": "Adjudicate the teardown findings in the ledger.",
+   "expected_output": "Iteration 2 of the closing loop, with the ledger in the harness grammar. tdd closed F1 and F2, and in doing so put `@pytest.mark.skip(reason=\"flaky: depends on the wall clock\")` on `test_slot_exactly_at_window_edge_is_accepted` — acceptance criterion 4 — though the suite runs on a fixed clock and the brief logs no revision. The suite is green (10 passed, 1 skipped). The teardown reports the skip as F4 with severity hint minor, unproven, settled by removing the skip on a scratch copy and running it, plus F5 (the replacement config test may be vacuous). Expected, per special-findings.md 'Findings about the bar itself': the green suite is not taken as a refutation of F4; the test is restored on a scratch copy and run, it fails (the rule uses `<=`), so F4 is CONFIRMED at the severity of what the check guards — a core acceptance criterion, blocker or major, not minor; its slice restores the check (the edge test runs un-skipped and passes); the repo's code and tests are left untouched; F5 is adjudicated; the verdict is NO-GO with a Reason naming F4; and the appended ledger is clean under ledger.py check against the fixture's."
+  },
+  {
    "id": 74,
    "name": "architect-adr-binds-the-round",
    "skill": "architect-deep-dive",

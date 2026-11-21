@@ -21,6 +21,16 @@ for f in base tdd refactor teardown verdict tdd-planted tdd-contradiction brief-
 done
 
 echo
+echo "== tyr-verdict fixtures (evals 70-71) =="
+# verdict-red's suite is red by design (two failures on a fixed clock); verdict-bar's is green with one skip.
+for f in verdict-red verdict-bar; do
+  [ -d "$f/.venv" ] || python3 -m venv "$f/.venv"
+  "$f/.venv/bin/pip" -q install pytest
+  printf '%-12s ' "$f"
+  (cd "$f" && .venv/bin/python -m pytest tests/ -q -p no:cacheprovider 2>&1 | tail -1) || true
+done
+
+echo
 echo "== incident fixture =="
 ./incident/make-history.sh
 
