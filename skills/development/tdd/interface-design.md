@@ -58,7 +58,7 @@ function isExpired(token, now):
 
 - Fewer methods = fewer tests needed.
 - Fewer parameters = simpler test setup.
-- A small interface is also a [deep module's](deep-modules.md) defining trait — design for both at once.
+- A small interface is also a deep module's defining trait (`deep-modules.md`) — design for both at once.
 
 ## Smell check: is the interface leaking?
 
@@ -69,4 +69,4 @@ If testing a unit requires any of these, the interface is leaking and should be 
 - Setting environment variables to steer logic
 - Asserting on *how* collaborators were called instead of *what* came out
 
-Only genuine system boundaries should be substituted in a test — and for those, design for it deliberately ([mocking.md](mocking.md)).
+Only genuine system boundaries should be substituted in a test — and for those, design for it deliberately (`mocking.md`).

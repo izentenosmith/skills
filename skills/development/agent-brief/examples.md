@@ -3,6 +3,12 @@
 > Read this when you are unsure what a good criterion or a good brief looks like.
 > The domain here (exporting invoices) is only an illustration: take the shape, not the content.
 
+## Contents
+
+- [Good and bad sentences](#good-and-bad-sentences)
+- [Good build plan (enhancement)](#good-build-plan-enhancement)
+- [Bad build plan](#bad-build-plan)
+
 ## Good and bad sentences
 
 - **Good (behavior):** "When an export is requested for a range longer than the limit, it is rejected with error code `RANGE_TOO_LARGE`."

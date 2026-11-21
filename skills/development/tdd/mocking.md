@@ -1,13 +1,13 @@
 # When to Mock
 
-Companion reference for the [tdd](SKILL.md) skill: what to substitute in a test and what to leave real. Over-mocking is the most common way good intentions produce [bad tests](good-tests.md) — tests that pass when the system is broken and break when it isn't.
+Companion reference for the [tdd](SKILL.md) skill: what to substitute in a test and what to leave real. Over-mocking is the most common way good intentions produce bad tests (`good-tests.md`) — tests that pass when the system is broken and break when it isn't.
 
 ## The one rule: mock only at the system boundary
 
 Substitute a dependency **only** when it crosses out of your system. A dependency qualifies if it is:
 
 - **Out of process** — external APIs (payment, email), third-party SDKs, message brokers
-- **Nondeterministic** — time, randomness, generated IDs (better: inject them — see [interface-design.md](interface-design.md))
+- **Nondeterministic** — time, randomness, generated IDs (better: inject them — see `interface-design.md`)
 - **Slow or unavailable in tests** — sometimes the network or file system
 - **Not under your control** — code you can't change and shouldn't depend on the internals of
 
@@ -44,7 +44,7 @@ result = checkout(cart, fakePayment)
 assert result.status == "confirmed"
 ```
 
-Verify **state and observable output** (what the caller can see), not the conversation between internals. See the red flags in [good-tests.md](good-tests.md).
+Verify **state and observable output** (what the caller can see), not the conversation between internals. See the red flags in `good-tests.md`.
 
 ## Designing for mockability
 

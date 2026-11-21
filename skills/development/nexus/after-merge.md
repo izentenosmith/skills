@@ -43,7 +43,7 @@ A finished session left standing costs disk, keeps leases and scratch names nobo
 - [ ] **Archive the session**, with whatever your environment offers, **then remove the worktree and delete the merged branch** — `git worktree remove` and `git branch -d`, never their forced forms: both refuse when work would be lost, and a refusal is a reason to stop and ask, not to force. An unforced `git worktree remove` refuses only for modified or untracked files (and for submodules); ignored files do not stop it and go with the worktree, which is what the check above allows. After a squash merge `git branch -d` refuses a branch you have just shown to be merged: leave that branch and note it in `status.md` rather than forcing it. The remote branch is the forge's or the user's to delete.
 - [ ] **Record it** under `## Archived` in `status.md`: the slug, the PR, the merge commit, the date, and that the worktree is gone.
 
-**A PR closed without merging** is cleaned up the same way only when the user closed it or confirmed the close (a `DEC-n`) — anyone on the forge can close a PR — and its branch is pushed, so the work survives the worktree; the branch itself is kept. Otherwise report the close and leave everything in place. **A track's child** is cleaned up by its owner ([tracks.md](tracks.md)).
+**A PR closed without merging** is cleaned up the same way only when the user closed it or confirmed the close (a `DEC-n`) — anyone on the forge can close a PR — and its branch is pushed, so the work survives the worktree; the branch itself is kept. Otherwise report the close and leave everything in place. **A track's child** is cleaned up by its owner (`tracks.md`).
 
 ## When the increment is done
 
