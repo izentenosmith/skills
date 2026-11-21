@@ -3,9 +3,9 @@
  "split": {
   "method": "random, stratified: one of every three cases per (skill, should_trigger) held out",
   "seed": 20261118,
-  "train": 56,
-  "heldout": 28,
-  "added": "2026-11-20: 36 cases for six development skills whose descriptions changed (agent-brief, architect-deep-dive, devils-advocate, tyr-verdict, refactor-review, nexus), split the same way with seed 20261120; no earlier case moved"
+  "train": 76,
+  "heldout": 38,
+  "added": "2026-11-20: 36 cases for six development skills whose descriptions changed (agent-brief, architect-deep-dive, devils-advocate, tyr-verdict, refactor-review, nexus), split the same way with seed 20261120; no earlier case moved; 2026-11-21: 30 cases for the five database skills that had none (dbquery, dbpropose, dbbuild, dbdiagram, dbarchitect), split the same way with seed 20261121; no earlier case moved"
  },
  "cases": [
   {
@@ -679,6 +679,246 @@
    "expected": null,
    "split": "train",
    "prompt": "Run the test suite and the linter at the same time and tell me which one fails."
+  },
+  {
+   "id": "dbquery-yes-1",
+   "skill": "dbquery",
+   "should_trigger": true,
+   "expected": "dbquery",
+   "split": "train",
+   "prompt": "Our order history page got slow after the last release. pg_stat_statements output and EXPLAIN (ANALYZE, BUFFERS) for the top statements are in perf/. Which statements cost the most and what should we change?"
+  },
+  {
+   "id": "dbquery-yes-2",
+   "skill": "dbquery",
+   "should_trigger": true,
+   "expected": "dbquery",
+   "split": "train",
+   "prompt": "The dashboard view fires about 300 SQL queries per page load; the ORM's query log is in logs/sql.log. Review the SQL it's generating and tell me what's wrong."
+  },
+  {
+   "id": "dbquery-yes-3",
+   "skill": "dbquery",
+   "should_trigger": true,
+   "expected": "dbquery",
+   "split": "heldout",
+   "prompt": "The DBA wants to add four indexes (perf/proposed-indexes.sql). Using last month's Query Store export in qs/, tell me which ones actually help the workload and which only slow down the inserts."
+  },
+  {
+   "id": "dbquery-no-1",
+   "skill": "dbquery",
+   "should_trigger": false,
+   "expected": "dbaudit",
+   "split": "heldout",
+   "prompt": "Here's the full DDL of our warehouse database (ddl/warehouse.sql). Grade the schema itself, keys, normalization and constraints. We don't have any query logs."
+  },
+  {
+   "id": "dbquery-no-2",
+   "skill": "dbquery",
+   "should_trigger": false,
+   "expected": "dbdesign",
+   "split": "train",
+   "prompt": "We need tables for a ride-sharing app: drivers, riders, vehicles, trips and ratings. Design the schema for MySQL with proper keys and constraints."
+  },
+  {
+   "id": "dbquery-no-3",
+   "skill": "dbquery",
+   "should_trigger": false,
+   "expected": null,
+   "split": "train",
+   "prompt": "What's the difference between a LEFT JOIN and an INNER JOIN? A short example is enough."
+  },
+  {
+   "id": "dbpropose-yes-1",
+   "skill": "dbpropose",
+   "should_trigger": true,
+   "expected": "dbpropose",
+   "split": "train",
+   "prompt": "We have the audit report (audit/report.md), the target design (design/) and both diagrams. Write up the recommendation for the steering committee: which changes, in what order, what each one risks, and what we still have to decide."
+  },
+  {
+   "id": "dbpropose-yes-2",
+   "skill": "dbpropose",
+   "should_trigger": true,
+   "expected": "dbpropose",
+   "split": "heldout",
+   "prompt": "Turn these findings and the new data model into a migration plan the client can approve before anyone writes DDL. Every step needs a rollback and a way to check it worked."
+  },
+  {
+   "id": "dbpropose-yes-3",
+   "skill": "dbpropose",
+   "should_trigger": true,
+   "expected": "dbpropose",
+   "split": "train",
+   "prompt": "Our legacy billing database has orphaned rows and no foreign keys, and the redesign is finished. What should we actually do, and in what order, without breaking the nightly jobs? I need a document for sign-off, not SQL."
+  },
+  {
+   "id": "dbpropose-no-1",
+   "skill": "dbpropose",
+   "should_trigger": false,
+   "expected": "dbbuild",
+   "split": "train",
+   "prompt": "The migration plan was approved yesterday (proposal/proposal.md). Generate the .sql files for PostgreSQL 16."
+  },
+  {
+   "id": "dbpropose-no-2",
+   "skill": "dbpropose",
+   "should_trigger": false,
+   "expected": "dbaudit",
+   "split": "heldout",
+   "prompt": "Before we plan anything I need to know how healthy the schema in legacy/schema.sql is. Score it and list its weaknesses."
+  },
+  {
+   "id": "dbpropose-no-3",
+   "skill": "dbpropose",
+   "should_trigger": false,
+   "expected": "dbdiagram",
+   "split": "train",
+   "prompt": "Draw the ER model and the relational model for the design in design/model.md as draw.io files."
+  },
+  {
+   "id": "dbbuild-yes-1",
+   "skill": "dbbuild",
+   "should_trigger": true,
+   "expected": "dbbuild",
+   "split": "train",
+   "prompt": "Proposal accepted (proposal/proposal.md, with the design in design/). Generate the DDL scripts for SQL Server 2022 in the order they have to run."
+  },
+  {
+   "id": "dbbuild-yes-2",
+   "skill": "dbbuild",
+   "should_trigger": true,
+   "expected": "dbbuild",
+   "split": "train",
+   "prompt": "The client signed off on the new schema. Write the CREATE TABLE, constraint and index scripts for SQLite, with a few negative tests that prove the constraints reject bad rows."
+  },
+  {
+   "id": "dbbuild-yes-3",
+   "skill": "dbbuild",
+   "should_trigger": true,
+   "expected": "dbbuild",
+   "split": "heldout",
+   "prompt": "Everything's approved. Turn the accepted plan into ordered .sql files for Postgres that we can review and apply ourselves. Don't run them."
+  },
+  {
+   "id": "dbbuild-no-1",
+   "skill": "dbbuild",
+   "should_trigger": false,
+   "expected": "dbpropose",
+   "split": "heldout",
+   "prompt": "The audit and the target model are done. Before any SQL gets written I need the plan the client signs: the decisions, their order, and a rollback for each step."
+  },
+  {
+   "id": "dbbuild-no-2",
+   "skill": "dbbuild",
+   "should_trigger": false,
+   "expected": "dbdesign",
+   "split": "train",
+   "prompt": "Nothing is designed yet, there are only the requirements in docs/requirements.md for a school enrolment system. What should the tables be?"
+  },
+  {
+   "id": "dbbuild-no-3",
+   "skill": "dbbuild",
+   "should_trigger": false,
+   "expected": "dbquery",
+   "split": "train",
+   "prompt": "An UPDATE in our nightly batch locks the table for ten minutes. The plan and the slow log are in batch/. Why does it happen, and how should we rewrite it?"
+  },
+  {
+   "id": "dbdiagram-yes-1",
+   "skill": "dbdiagram",
+   "should_trigger": true,
+   "expected": "dbdiagram",
+   "split": "train",
+   "prompt": "Draw the entity-relationship diagram for design/model.md in Barker notation, plus a relational diagram with every table, key and foreign key, as editable draw.io files."
+  },
+  {
+   "id": "dbdiagram-yes-2",
+   "skill": "dbdiagram",
+   "should_trigger": true,
+   "expected": "dbdiagram",
+   "split": "heldout",
+   "prompt": "Our old ER diagram uses Chen notation (described in docs/er.md). Redraw it in Oracle CASE*METHOD notation."
+  },
+  {
+   "id": "dbdiagram-yes-3",
+   "skill": "dbdiagram",
+   "should_trigger": true,
+   "expected": "dbdiagram",
+   "split": "train",
+   "prompt": "Make me a schema diagram from schema.sql that I can edit in diagrams.net, with the tables, columns, primary keys and foreign keys."
+  },
+  {
+   "id": "dbdiagram-no-1",
+   "skill": "dbdiagram",
+   "should_trigger": false,
+   "expected": "dbdesign",
+   "split": "heldout",
+   "prompt": "Here are the requirements for a veterinary clinic (docs/requirements.md). Work out the entities, keys and normal forms, and give me the DDL."
+  },
+  {
+   "id": "dbdiagram-no-2",
+   "skill": "dbdiagram",
+   "should_trigger": false,
+   "expected": "netdiagram",
+   "split": "train",
+   "prompt": "Draw our office network as a draw.io diagram: two VLANs, the firewall, and the site-to-site VPN to AWS."
+  },
+  {
+   "id": "dbdiagram-no-3",
+   "skill": "dbdiagram",
+   "should_trigger": false,
+   "expected": "dbaudit",
+   "split": "train",
+   "prompt": "Look at the DDL in db/schema.sql and tell me whether the relationships are modelled correctly. Grade it and don't change anything."
+  },
+  {
+   "id": "dbarchitect-yes-1",
+   "skill": "dbarchitect",
+   "should_trigger": true,
+   "expected": "dbarchitect",
+   "split": "heldout",
+   "prompt": "We're splitting the monolith. Orders live in Postgres, the team wants MongoDB for the catalogue and Kafka between services. Which store should own each piece of data, and how do the others stay in sync?"
+  },
+  {
+   "id": "dbarchitect-yes-2",
+   "skill": "dbarchitect",
+   "should_trigger": true,
+   "expected": "dbarchitect",
+   "split": "train",
+   "prompt": "Our request handlers write to Postgres and then to Redis and Elasticsearch, and the three keep disagreeing. What should the data architecture be?"
+  },
+  {
+   "id": "dbarchitect-yes-3",
+   "skill": "dbarchitect",
+   "should_trigger": true,
+   "expected": "dbarchitect",
+   "split": "train",
+   "prompt": "Analytics dashboards are hammering the primary database. Should we add a read replica, a warehouse or something else, and how stale can each report afford to be?"
+  },
+  {
+   "id": "dbarchitect-no-1",
+   "skill": "dbarchitect",
+   "should_trigger": false,
+   "expected": "dbdesign",
+   "split": "heldout",
+   "prompt": "We've settled on Postgres as the only store. Now design the tables for subscriptions, invoices and payments with proper keys."
+  },
+  {
+   "id": "dbarchitect-no-2",
+   "skill": "dbarchitect",
+   "should_trigger": false,
+   "expected": "dbquery",
+   "split": "train",
+   "prompt": "One endpoint is slow, and its EXPLAIN output shows a sequential scan over 20 M rows. What index or rewrite fixes it?"
+  },
+  {
+   "id": "dbarchitect-no-3",
+   "skill": "dbarchitect",
+   "should_trigger": false,
+   "expected": "docker-compose",
+   "split": "train",
+   "prompt": "Give me a compose file that runs our API with Postgres and Redis locally, with health checks so the API waits for both."
   }
  ]
 }

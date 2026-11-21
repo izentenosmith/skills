@@ -192,10 +192,10 @@
     },
     "eval-34-dbbuild-executable-ddl-from-accepted-proposal": {
       "skill": "dbbuild",
-      "iteration": "iteration-56",
+      "iteration": "iteration-60",
       "n": 3,
       "staging": "harness",
-      "skill_hash": "98d5aeabb719e3d49712ca40a34c760e0ea3b4e7ad3b984c03ea6a7f2129edc6"
+      "skill_hash": "f37adf8153ca727bc93ac9f32291f7649eb31a20156d224f437199eb0aac086e"
     },
     "eval-35-container-hardening-review-socket-and-firewall": {
       "skill": "container-hardening",
@@ -297,10 +297,10 @@
     },
     "eval-48-dbarchitect-one-system-of-record-no-dual-writes": {
       "skill": "dbarchitect",
-      "iteration": "iteration-56",
+      "iteration": "iteration-60",
       "n": 3,
       "staging": "harness",
-      "skill_hash": "7fb83f5cf5690ebc0a2a23b23faca14bed189b29e71606bfefe11d55768800fe"
+      "skill_hash": "8c1c3cbf774e22256a2530a8123a4656439d079141e45d4afb1bf26cb1c68c50"
     },
     "eval-49-peer-review-claim-omission-injection": {
       "skill": "peer-review",

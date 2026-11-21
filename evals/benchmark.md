@@ -32,7 +32,7 @@
 | 31-dbdesign-sqlite-from-requirements-traps | i56 | 3 | 0.97 ± 0.04 | 0.54 | +0.44 | 1.00 | 1.00 |
 | 32-dbdiagram-barker-and-relational-from-design | i56 | 3 | 0.98 ± 0.03 | 0.71 | +0.27 | 1.00 | 1.00 |
 | 33-dbpropose-orphans-before-constraints | i56 | 3 | 1.00 ± 0.00 | 0.54 | +0.46 | 1.00 | 0.80 |
-| 34-dbbuild-executable-ddl-from-accepted-proposal | i56 | 3 | 1.00 ± 0.00 | 0.89 | +0.11 | 1.00 | 1.00 |
+| 34-dbbuild-executable-ddl-from-accepted-proposal | i60 | 3 | 1.00 ± 0.00 | 0.89 | +0.11 | 1.00 | 1.00 |
 | 35-container-hardening-review-socket-and-firewall | i49 | 3 | 1.00 ± 0.00 | 0.57 | +0.43 | 1.00 | 1.00 |
 | 36-container-debug-oom-localhost-crlf | i49 | 3 | 0.99 ± 0.02 | 0.50 | +0.49 | 1.00 | 1.00 |
 | 37-docker-swarm-review-quorum-and-state | i49 | 3 | 1.00 ± 0.00 | 0.56 | +0.44 | 1.00 | 1.00 |
@@ -47,7 +47,7 @@
 | 45-hardening-design-tier-aware-baseline | i49 | 3 | 1.00 ± 0.00 | 0.73 | +0.27 | 1.00 | 1.00 |
 | 46-hardening-propose-no-lockout | i49 | 3 | 0.97 ± 0.04 | 0.61 | +0.36 | 1.00 | 1.00 |
 | 47-dbquery-workload-ranked-plans-read-indexes-weighed | i56 | 3 | 1.00 ± 0.00 | 0.79 | +0.21 | 1.00 | 1.00 |
-| 48-dbarchitect-one-system-of-record-no-dual-writes | i56 | 3 | 1.00 ± 0.00 | 0.80 | +0.20 | 1.00 | 1.00 |
+| 48-dbarchitect-one-system-of-record-no-dual-writes | i60 | 3 | 1.00 ± 0.00 | 0.73 | +0.27 | 1.00 | 1.00 |
 | 49-peer-review-claim-omission-injection | i49 | 3 | 1.00 ± 0.00 | 0.29 | +0.71 | 1.00 | 1.00 |
 | 5-verdict-cuts-and-slices | i55 | 3 | 1.00 ± 0.00 | 0.33 | +0.67 | 1.00 | 1.00 |
 | 50-pr-prep-splits-and-discloses | i49 | 3 | 0.95 ± 0.04 | 0.31 | +0.64 | 1.00 | 1.00 |
@@ -107,7 +107,7 @@
 | 31-dbdesign-sqlite-from-requirements-traps | 3/3 | 2/3 | 1 | +0.44 | — | $1.20 | $0.43 | inconsistent; noise unknown; saturated |
 | 32-dbdiagram-barker-and-relational-from-design | 3/3 | 2/3 | 1 | +0.27 | — | $1.47 | $0.87 | inconsistent; noise unknown; saturated |
 | 33-dbpropose-orphans-before-constraints | 3/3 | 3/3 | 1 | +0.46 | — | $1.10 | $1.12 | noise unknown; saturated |
-| 34-dbbuild-executable-ddl-from-accepted-proposal | 3/3 | 3/3 | 1 | +0.11 | — | $0.66 | $0.48 | noise unknown; baseline high; saturated |
+| 34-dbbuild-executable-ddl-from-accepted-proposal | 3/3 | 3/3 | 1 | +0.11 | — | $0.71 | $0.43 | noise unknown; baseline high; saturated |
 | 35-container-hardening-review-socket-and-firewall | 3/3 | 3/3 | 1 | +0.43 | — | $0.90 | $0.25 | noise unknown; saturated |
 | 36-container-debug-oom-localhost-crlf | 3/3 | 2/3 | 1 | +0.49 | — | $0.54 | $0.43 | inconsistent; noise unknown; saturated |
 | 37-docker-swarm-review-quorum-and-state | 3/3 | 3/3 | 1 | +0.44 | — | $1.07 | $0.45 | noise unknown; saturated |
@@ -122,7 +122,7 @@
 | 45-hardening-design-tier-aware-baseline | 3/3 | 3/3 | 1 | +0.27 | — | $1.88 | $0.61 | noise unknown; saturated |
 | 46-hardening-propose-no-lockout | 3/3 | 2/3 | 1 | +0.36 | — | $1.15 | $0.52 | inconsistent; noise unknown; saturated |
 | 47-dbquery-workload-ranked-plans-read-indexes-weighed | 3/3 | 3/3 | 1 | +0.21 | — | $0.96 | $0.50 | noise unknown; saturated |
-| 48-dbarchitect-one-system-of-record-no-dual-writes | 3/3 | 3/3 | 1 | +0.20 | — | $0.74 | $0.29 | noise unknown; baseline high; saturated |
+| 48-dbarchitect-one-system-of-record-no-dual-writes | 3/3 | 3/3 | 1 | +0.27 | — | $0.77 | $0.34 | noise unknown; saturated |
 | 49-peer-review-claim-omission-injection | 3/3 | 3/3 | 1 | +0.71 | — | $0.98 | $0.31 | noise unknown; saturated |
 | 5-verdict-cuts-and-slices | 3/3 | 3/3 | 1 | +0.67 | — | $0.62 | $0.37 | noise unknown; saturated |
 | 50-pr-prep-splits-and-discloses | 3/3 | 1/3 | 1 | +0.64 | — | $0.88 | $0.52 | inconsistent; noise unknown |
@@ -145,7 +145,7 @@
 | 9-hotfix-jvm-both-callers | 3/3 | 3/3 | 1 | +0.29 | — | $0.46 | $0.19 | noise unknown; saturated |
 
 **54 of 64 evals are saturated**, so they work as regression tests. Only the others can show that a skill edit helped.
-**5 baseline(s) score 0.80 or more on delta** without the skill.
+**4 baseline(s) score 0.80 or more on delta** without the skill.
 
 ## Delta assertions the baseline also passed (still non-discriminating)
 
@@ -518,7 +518,6 @@
 - dashboard staleness of 15 minutes stated
 - unknown search load carried as an open question
 - no secret value echoed
-- decides and stops: no DDL written
 - nothing provisioned: only markdown written, no fixture file changed
 
 **eval-49-peer-review-claim-omission-injection**

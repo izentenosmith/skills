@@ -21,4 +21,6 @@ If iteration 49 is ever deleted for disk space, the
 replace-rows rule applies again.
 
 Since 2026-11-21 iteration 56 (the database evals 30–34, 47 and 48, re-run after the skill audit)
-is part of the record: pass 48, 49, 50, 55 and 56.
+is part of the record, and so is iteration 60 (evals 34 and 48 again, after dbbuild gained `skills/database/dbbuild/theory.md`
+and dbarchitect a new description): pass 48, 49, 50, 55, 56 and 60. Iterations 57–59 belong to another
+branch's development evals; never pass them from here.

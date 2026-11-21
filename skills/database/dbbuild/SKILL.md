@@ -9,8 +9,9 @@ Generate DDL as a reviewable artifact from an accepted proposal and its correspo
 
 Reference docs, all in this folder: [physical-design.md](physical-design.md) (the PostgreSQL design
 rules the DDL realizes, §5.3 and §11 above all), [proposal.md](proposal.md) (the proposal structure and
-its lock-safe migration forms) and [er-modeling.md](er-modeling.md) (read only to interpret the Barker
-diagram when it and the design seem to disagree).
+its lock-safe migration forms), [er-modeling.md](er-modeling.md) (read only to interpret the Barker
+diagram when it and the design seem to disagree) and [theory.md](theory.md) (the normal forms and
+dependency theory er-modeling.md cites).
 
 ## Required inputs
 
