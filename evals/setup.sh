@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Prepare the eval fixtures. Run once after cloning.
 #   - the five pipeline fixtures, and the variants the later pipeline evals (60-75) use, get a virtualenv with pytest (build output, gitignored)
-#   - the incident, release-notes, review, repo-memory and refactor-standalone fixtures get their git history built (nested repos, gitignored)
+#   - the incident, release-notes, review, repo-memory, refactor-standalone, teardown-empty and teardown-weakened fixtures get their git history built (nested repos, gitignored)
 #   - the compose fixture needs nothing: it is graded from files, never executed
 set -euo pipefail
 cd "$(dirname "$0")/fixtures"
@@ -54,6 +54,14 @@ echo
 echo "== refactor-standalone fixture (eval 66) =="
 ./refactor-standalone/make-history.sh
 echo "$(git -C refactor-standalone/repo rev-list --all --count) commits"
+
+echo
+echo "== devils-advocate fixtures (evals 68-69) =="
+for f in teardown-empty teardown-weakened; do
+  printf '%-18s ' "$f"
+  ./$f/make-history.sh
+  echo "$(git -C $f/repo rev-list --all --count) commits, HEAD $(git -C $f/repo rev-parse --short HEAD)"
+done
 
 echo
 echo "== compose fixture =="

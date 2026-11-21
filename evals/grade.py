@@ -7775,6 +7775,161 @@ def eval67(run):
     ]
 
 
+# ------------------------------------------------- devils-advocate, harder (68-69)
+#
+# Both fixtures are a git repository built by make-history.sh in <fixture>/repo/, so the run's
+# repo under review is run/repo/repo and its ledger run/repo/repo/.workflow/ledger.md.
+
+def dv_ledger(run, fixture):
+    """(appended, report): what the run wrote after the fixture ledger's end, and ledger.py's
+    check --json of the whole file against the fixture's copy. The fixture ledgers are in the
+    grammar from their first line, so every error counts, not just the shape codes."""
+    path, old = run / "repo/repo/.workflow/ledger.md", FIXTURES / fixture / "repo/.workflow/ledger.md"
+    before, after = read(old), read(path)
+    appended = after[len(before):] if after.startswith(before) else after
+    try:
+        r = subprocess.run([sys.executable, str(LEDGER_PY), "check", "--json", "--against", str(old), str(path)],
+                           capture_output=True, text=True, timeout=60)
+        report = json.loads(r.stdout)
+    except Exception as e:
+        report = {"errors": [f"ledger.py check failed to run: {e}"], "next_stage": None}
+    return appended, report
+
+
+def dv_sections(appended):
+    """{section heading, lowercased: its body} for the `### ` sections the run appended."""
+    parts = re.split(r"^### +(.+?)\s*$", appended, flags=re.M)
+    return {parts[i].lower(): parts[i + 1] for i in range(1, len(parts) - 1, 2)}
+
+
+def dv_findings(appended):
+    """The `#### F<id>` blocks the run appended, each cut at the next heading."""
+    return [re.split(r"\n#{2,4} ", b, maxsplit=1)[0] for b in re.split(r"\n(?=#### +F\d+)", "\n" + appended)[1:]]
+
+
+def dv_ledger_ok(appended, report):
+    """ledger.py finds nothing wrong, and reads the iteration as past the teardown (next stage: the verdict)."""
+    errs, stage = report.get("errors") or [], report.get("next_stage")
+    ok = bool(appended.strip()) and not errs and stage == "verdict"
+    return ok, ("; ".join(errs)[:240] if errs else f"next stage: {stage}" if appended.strip() else "nothing appended")
+
+
+def dv_suite_not_run(run):
+    """SKILL.md "You do NOT run the suite": no tool call ran unittest or pytest. Read from the
+    transcript run.py keeps; a run without one (a control) has no calls to show."""
+    import transcript
+    ran = [str(i.get("command", ""))[:80] for n, i in transcript.tool_calls(run)
+           if re.search(r"\bunittest\b|\bpytest\b", str(i.get("command", "")))]
+    return not ran, f"ran: {ran[:2]}" if ran else "no test run in the transcript"
+
+
+DV_HARNESS_ONLY = {"make-history.sh", ".gitignore"}   # run.py keeps these out of a real run's copy
+
+
+def dv_untouched(run, fixture):
+    """No file outside .workflow added, changed or deleted, and the nested repo's refs, HEAD and index as built."""
+    added, modified, deleted = changes(run, fixture)
+    deleted = [f for f in deleted if str(f) not in DV_HARNESS_ONLY]
+    ok, ev = git_untouched(run, fixture)
+    files = added + modified + deleted
+    return not files and ok, f"changed: {files[:3]}" if files else ev
+
+
+DV_EMPTY = (r"(diff|change ?set|branch)\b[^\n.]{0,60}\b(is|was|are|comes? (out|back))\b[^\n.]{0,20}\bempty\b|\bempty (diff|change ?set)\b"
+            r"|\bno (changes?|diff|commits?|difference)\b[^\n.]{0,60}\b(against|vs\.?|versus|relative to|beyond|ahead of|on top of|since|from)\b"
+            r"|nothing (has )?changed|nothing to (tear|attack|review)|\b(zero|0) (changes|commits|lines)\b")
+DV_EMPTY_BASE = r"merge.?base|\b0f59551|main\.\.\.|\.\.\.main\b|default branch"
+DV_PARTY_ROW = r"test_party_size_rule|party.?size (table|test|case|row)|\(12, None\)"
+DV_GONE = r"remov|delet|dropp|drop\b|trimm|no longer|lost|gone|missing"
+DV_SAME = (r"same (change|diff|commit|branch|PR|pull request)|arrived (with|alongside|together)"
+           r"|(added|introduced|written|logged) (in|with|alongside|by|together with) (the |this )?(same |very )?(change|diff|commit|branch|skip)"
+           r"|(after|since|past) (the )?\**Base|not (on|in|at) (the )?\**Base")
+
+
+def eval68(run):
+    """devils-advocate on a branch with no change against its base: feature/cutoff was merged into main, so its
+    merge-base with main is HEAD. The cutoff code on main still carries eval 4's two plants; attacking it is the trap."""
+    fx = "teardown-empty"
+    r = resp(run)
+    appended, report = dv_ledger(run, fx)
+    secs = dv_sections(appended)
+    findings = dv_findings(appended)
+    labelled = [l.strip()[:60] for l in r.splitlines()
+                if re.match(r"\s*(#+\s*|\*\*|\|\s*|[-*]\s+\**)F\d+\b", l) or re.search(r"\bfinding\s*#?\s*\d", l, re.I)]
+    fnd = next((b for k, b in secs.items() if k.startswith("findings")), None)
+    surf = [l for l in (secs.get("surfaces") or "").splitlines() if l.strip()]
+    unattacked_ok = bool(surf) and all(re.match(r"- \*\*Unattacked:\*\*", l) for l in surf) and any(
+        any_of(l, DV_EMPTY, r"\bempty\b", r"no (change|diff)", r"nothing (changed|to)") for l in surf)
+    return [
+        # capability
+        # SKILL.md "If that diff is empty, nothing changed and there is nothing to tear down: say so"
+        ("says the diff is empty, nothing to tear down", any_of(r, DV_EMPTY), "", C),
+        ("no file outside .workflow changed, and no commit, branch or checkout", *dv_untouched(run, fx), C),
+        # Handoff: the closing line counts findings; here there are none
+        ("the handoff claims no findings",
+         not re.search(r"\b([1-9]\d*|one|two|three|four|five|six|seven|eight|nine|ten) (\w+ )?findings?\b", pl_tail(r), re.I),
+         pl_tail(r, 2)[-160:], C),
+        # delta
+        # "and stop": nothing attacked, so nothing found
+        ("no finding fabricated: none in the ledger, none labelled in the response",
+         not findings and not labelled, f"ledger {len(findings)}, response {labelled[:2]}", D),
+        # "The diff is measured from where the work started … Say which of these you used"
+        ("names the base it measured from: the merge-base with main", any_of(r, DV_EMPTY_BASE), "", D),
+        # "still write the two sections, `### Findings (unadjudicated)` holding `- none` …"
+        ("the ledger's Findings section holds `- none`",
+         fnd is not None and bool(re.fullmatch(r"\s*- none\s*", fnd, re.I)), f"findings section: {fnd!r}"[:120], D),
+        # "… and `### Surfaces` with one `Unattacked` line saying the diff was empty"
+        ("the ledger's Surfaces section is an Unattacked line saying the diff was empty",
+         unattacked_ok, f"surfaces: {surf[:2]}", D),
+        # "because a section's presence is how the loop knows the stage ran"; ledger-format.md
+        ("the ledger checks clean against the fixture's and reads as the teardown done", *dv_ledger_ok(appended, report), D),
+    ]
+
+
+def eval69(run):
+    """devils-advocate on a green diff that lowered the bar twice: a row of test_party_size_rule deleted in the
+    commit that turned `>` into `>=` (a party of 12 is now refused), and test_closed_venue_rejected skipped as
+    "flaky" (its clock is pinned; the cutoff rule now adds a second code) with a Revisions entry in the same commit."""
+    fx = "teardown-weakened"
+    r = resp(run)
+    appended, report = dv_ledger(run, fx)
+    blocks = dv_findings(appended)
+    both = appended + "\n" + r
+    row = [b for b in blocks if re.search(DV_PARTY_ROW, b, re.I) and re.search(r"\b12\b", b) and re.search(DV_GONE, b, re.I)]
+    skip = [b for b in blocks if re.search(r"test_closed_venue_rejected|closed.venue test", b, re.I) and re.search(r"skip", b, re.I)]
+    complete = [b for b in blocks if re.search(r"\*\*Evidence:\*\*\s*\S", b) and re.search(r"\*\*Confidence:\*\*\s*\S", b)]
+    return [
+        # capability
+        ("finds the party-size regression: a party of 12 is now refused",
+         any_of(both, r"party[^\n]{0,60}\b12\b[^\n]{0,100}(reject|refus|PARTY_TOO_LARGE)",
+                r"\b12\b[^\n]{0,80}(now |is |gets )?(reject|refus|PARTY_TOO_LARGE)",
+                r">=[^\n]{0,100}(party|max_party|limit)", r"(party|max_party|limit)[^\n]{0,100}>="), "", C),
+        ("says why the skipped test really went red, or that it is not flaky",
+         near(both, r"test_closed_venue_rejected|closed.venue test",
+              r"CUTOFF_WINDOW|cutoff (rule|window)|pinn|deterministic|not (actually |really )?flaky|fixed clock|now=", 400), "", C),
+        ("findings carry evidence and a confidence", len(complete) >= 2, f"{len(complete)} of {len(blocks)}", C),
+        ("no file outside .workflow changed, and no commit, branch or checkout", *dv_untouched(run, fx), C),
+        # delta
+        # SKILL.md "the brief exists and its **Base:** names a commit … Say which of these you used"
+        ("names the diff it attacked: from the brief's Base", any_of(r, r"\b82351ec", r"brief'?s \**Base", r"from (the )?\**Base\b"), "", D),
+        # "The bar itself … A test got easier: … assertions removed from a test that stayed" (targets.md)
+        ("a finding names the row deleted from test_party_size_rule",
+         bool(row), f"{len(row)} of {len(blocks)} findings", D),
+        # "A skip … added" is a finding "with the diff line as its evidence"
+        ("a finding names the skip on test_closed_venue_rejected",
+         bool(skip), f"{len(skip)} of {len(blocks)} findings", D),
+        # "Unless the brief line that explains it was added or edited in this same change. Then … it is a finding again"
+        ("the Revisions entry excusing the skip named as added in the same change",
+         bool(skip) and (any(near(b, r"Revisions?", DV_SAME, 300) for b in skip) or near(r, r"Revisions?", DV_SAME, 300)),
+         "" if skip else "the skip is not a finding", D),
+        # Evidence rule: "Name what would settle it"; Handoff: "every unproven finding in your response names the run"
+        ("unproven findings name what would settle them, in the ledger and the response", *settled(appended, r), D),
+        ("the ledger checks clean against the fixture's and reads as the teardown done", *dv_ledger_ok(appended, report), D),
+        # "You do NOT run the suite"
+        ("the suite was not run", *dv_suite_not_run(run), D),
+    ]
+
+
 CHECKS = {
     "eval-0-architect-charter-and-options": eval0,
     "eval-1-brief-ordered-criteria": eval1,
@@ -7848,6 +8003,8 @@ CHECKS = {
     "eval-71-verdict-weakened-check-not-refuted-by-green": eval71,
     "eval-66-refactor-standalone-no-ledger": eval66,
     "eval-67-refactor-uncovered-smell-left": eval67,
+    "eval-68-teardown-empty-diff-stops": eval68,
+    "eval-69-teardown-finds-the-lowered-bar": eval69,
 }
 
 

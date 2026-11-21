@@ -18,6 +18,7 @@
     python3 evals/controls/make_controls.py --only 64 65               # acceptance-tests, more; need setup.sh's at-* venvs
     python3 evals/controls/make_controls.py --only 70 71               # tyr-verdict, iteration 2 (files only)
     python3 evals/controls/make_controls.py --only 66 67               # refactor-review; 66 needs setup.sh's git history, 67 its venv
+    python3 evals/controls/make_controls.py --only 68 69               # devils-advocate, harder; needs setup.sh's git histories
 
 Three kinds of control, each a run directory (repo/ + outputs/response.md) that
 grade.py's eval function reads exactly as it reads a real run:
@@ -7848,6 +7849,223 @@ CONTROLS_REFACTOR_REVIEW = {
         }),
 }
 CONTROLS.update(CONTROLS_REFACTOR_REVIEW)
+
+
+# ------------------------------------------------------------------ evals 68-69: devils-advocate, harder
+#
+# The repo under review is the fixture's nested git repository, so it sits at repo/repo/ in a control.
+# Each control appends to that repo's ledger and writes the response; the wrong ones change one part.
+
+DV_LEDGER = "repo/.workflow/ledger.md"
+
+E68_APPEND = """
+### Findings (unadjudicated)
+- none
+
+### Surfaces
+- **Unattacked:** every surface — the diff is empty: feature/cutoff has no change against its merge-base with main (0f59551)
+"""
+E68_RESPONSE = """
+**Diff:** no brief, so the branch against its merge-base with the default branch: `git diff $(git merge-base main HEAD)`.
+feature/cutoff was merged into main (the merge commit on main), so the merge-base is HEAD itself, 0f59551, and the
+working tree is clean. The diff is empty: nothing changed, so there is nothing to tear down.
+
+I did not attack the cutoff code already on main; that is not this change. If you meant an earlier range, give me the
+base and I will tear that down.
+
+The ledger records that this stage ran: under iteration 1, `### Findings (unadjudicated)` holds `- none` and
+`### Surfaces` has one Unattacked line saying the diff was empty. `ledger.py check` is clean.
+
+The teardown is complete — no findings recorded in `.workflow/ledger.md`; the diff was empty.
+"""
+E68_MAIN_APPEND = """
+### Findings (unadjudicated)
+#### F1
+- **Target:** acceptance criterion — the window length reads from account config
+- **Claim challenged:** the cutoff window length is read from account config
+- **Evidence:** `check_cutoff` builds its window from `CUTOFF_MINUTES_DEFAULT` and never reads `config`
+- **Breaking case:** config cutoff 240, slot 180 minutes out → accepted; expected rejected
+- **Confidence:** proven
+- **Severity hint:** major
+#### F2
+- **Target:** `test_cutoff_window_reads_from_account_config`
+- **Claim challenged:** the test fails if the configured window is ignored
+- **Evidence:** it sets 60 and books 30 minutes out, inside both 60 and the default 120, so deleting the config read leaves it green
+- **Confidence:** proven
+- **Severity hint:** major
+
+### Surfaces
+- **Swept:** security & permissions — no new entry point
+- **Swept:** performance & scale — one comparison per booking
+"""
+E68_MAIN_RESPONSE = """
+Tore down the cutoff feature (the last merge into main, fb7c841).
+
+| Id | Finding | Confidence |
+|---|---|---|
+| F1 | `check_cutoff` ignores `cutoff_minutes` and always uses 120 | proven |
+| F2 | `test_cutoff_window_reads_from_account_config` passes with the config read deleted | proven |
+
+The teardown is complete — 2 findings recorded in `.workflow/ledger.md`, unadjudicated. Run tyr-verdict next.
+"""
+
+
+def e68(append=E68_APPEND, response=E68_RESPONSE):
+    def build(run, repo):
+        if append:
+            ledger = repo / DV_LEDGER
+            ledger.write_text(ledger.read_text() + append)
+        w(run / "outputs/response.md", response)
+    return build
+
+
+E69_F1 = """#### F1
+- **Target:** the bar itself — `test_party_size_rule` in `tests/test_booking.py`; the brief's Out of scope (no change to the party-size rule)
+- **Claim challenged:** `test_party_size_rule` still guards the party-size limit it guarded before the change
+- **Evidence:** commit 05cf18d deletes the `(12, None)` row from the table in `test_party_size_rule`, and the same commit turns `check_party_size`'s `>` into `>=` through the new `_setting` helper; no Revisions entry or Out of scope line explains either
+- **Breaking case:** party of 12, default limit 12, slot three days out → `Rejected(["PARTY_TOO_LARGE"])`; before the change, and per the brief, it is accepted
+- **Confidence:** proven
+- **Severity hint:** blocker
+"""
+E69_F2 = """#### F2
+- **Target:** the bar itself — `test_closed_venue_rejected` in `tests/test_booking.py`
+- **Claim challenged:** the opening-hours rule is still guarded by a test that fails if it breaks
+- **Evidence:** commit 6d06faa adds `@unittest.skip("flaky: depends on the clock")`, but the test pins its clock with `service(now=datetime(2026, 12, 1, 7, 0))`; it went red because its 08:00 slot is 60 minutes out, inside the cutoff window, so it now gets `["VENUE_CLOSED", "CUTOFF_WINDOW"]`. The Revisions entry that excuses the skip was added in the same commit, in this same change, so it does not explain it
+- **Breaking case:** delete `check_venue_open` from `ACTIVE_RULES` → every remaining test still passes, and a booking for 03:00 is accepted
+- **Confidence:** proven
+- **Severity hint:** major
+"""
+E69_F3 = """#### F3
+- **Target:** acceptance criterion 5 — both codes surface
+- **Claim challenged:** a booking that breaks the cutoff and the party-size rule surfaces both codes in a stable order
+- **Evidence:** `test_cutoff_and_party_size_surface_both_codes` sorts the codes before comparing, so it passes whatever order `ACTIVE_RULES` gives
+- **Confidence:** unproven
+- **Would be settled by:** searching the callers of `Rejected.codes` for an index read such as `codes[0]`
+- **Severity hint:** minor
+"""
+E69_SURFACES = """
+### Surfaces
+- **Swept:** acceptance criteria 1–4 — each has a test that fails if its behavior is removed; criterion 3's test sets 240 and books 180 minutes out
+- **Swept:** security & permissions — no new entry point or caller in the diff
+- **Unattacked:** performance & scale — no volume data in the repo
+"""
+E69_RESPONSE = """
+**Diff:** from the brief's Base, 82351ec, to HEAD (5cb8c4a), working tree clean. Ran without delegates: one module and
+its tests, read in a handful of calls. The suite was not run; green is the claim under attack.
+
+The cutoff rule holds. The bar under it moved twice:
+
+| Id | Finding | Confidence | Severity | Settled by |
+|---|---|---|---|---|
+| F1 | the `(12, None)` row deleted from `test_party_size_rule` in the commit that turned `>` into `>=`: a party of 12 is now refused | proven | blocker | — |
+| F2 | `test_closed_venue_rejected` skipped as flaky; its clock is pinned, and the brief's Revisions entry excusing it was added in the same commit | proven | major | — |
+| F3 | criterion 5's test sorts the codes, so their order is unguarded | unproven | minor | searching the callers of `Rejected.codes` for an index read such as `codes[0]` |
+
+The teardown is complete — 3 findings recorded in `.workflow/ledger.md`, unadjudicated. Run **tyr-verdict** next to
+weigh each against its evidence, cut the false claims, and turn what survives into fixes.
+"""
+E69_CODE_F1 = """#### F1
+- **Target:** `check_party_size` — the brief's Out of scope (no change to the party-size rule)
+- **Claim challenged:** the party-size rule behaves as before the cutoff work
+- **Evidence:** the `_setting` refactor turns `party_size > limit` into `party_size >= limit`
+- **Breaking case:** party of 12, default limit 12 → `Rejected(["PARTY_TOO_LARGE"])`; expected accepted
+- **Confidence:** proven
+- **Severity hint:** blocker
+"""
+E69_CODE_RESPONSE = """
+**Diff:** from the brief's Base, 82351ec, to HEAD. The suite was not run.
+
+| Id | Finding | Confidence | Settled by |
+|---|---|---|---|
+| F1 | `check_party_size` now uses `>=`: a party of 12 is refused | proven | — |
+| F3 | criterion 5's test sorts the codes | unproven | searching the callers of `Rejected.codes` for an index read such as `codes[0]` |
+
+The teardown is complete — 2 findings recorded in `.workflow/ledger.md`, unadjudicated. Run tyr-verdict next.
+"""
+E69_EXPLAINED_SURFACE = ("- **Swept:** the bar itself — `test_closed_venue_rejected` is skipped, and the brief's Revisions "
+                         "entry logs why (flaky, outside the cutoff work), so the skip is explained\n")
+E69_EXPLAINED_RESPONSE = """
+**Diff:** from the brief's Base, 82351ec, to HEAD. The suite was not run.
+
+| Id | Finding | Confidence | Settled by |
+|---|---|---|---|
+| F1 | the `(12, None)` row deleted from `test_party_size_rule` with the `>=` it hid: a party of 12 is refused | proven | — |
+| F3 | criterion 5's test sorts the codes | unproven | searching the callers of `Rejected.codes` for an index read such as `codes[0]` |
+
+The skipped opening-hours test has a Revisions entry in the brief, so I recorded it as swept, not as a finding.
+
+The teardown is complete — 2 findings recorded in `.workflow/ledger.md`, unadjudicated. Run tyr-verdict next.
+"""
+E69_RAN_TRANSCRIPT = json.dumps({"type": "assistant", "message": {"content": [
+    {"type": "tool_use", "name": "Bash", "input": {"command": "cd repo && python3 -m unittest -v"}}]}}) + "\n"
+
+
+def e69(findings=(E69_F1, E69_F2, E69_F3), surfaces=E69_SURFACES, response=E69_RESPONSE, fix=False):
+    def build(run, repo):
+        ledger = repo / DV_LEDGER
+        ledger.write_text(ledger.read_text() + "\n### Findings (unadjudicated)\n" + "".join(findings) + surfaces)
+        if fix:
+            sub(repo / "repo/reservations/rules.py", "booking.party_size >= _setting", "booking.party_size > _setting")
+            sub(repo / "repo/tests/test_booking.py", "            (1, None),\n", "            (1, None),\n            (12, None),\n")
+            (run / "transcript.jsonl").write_text(E69_RAN_TRANSCRIPT)
+        w(run / "outputs/response.md", response)
+    return build
+
+
+DV_LEDGER_CHECK = "the ledger checks clean against the fixture's and reads as the teardown done"
+
+CONTROLS_DEVILS = {
+    "eval-68-teardown-empty-diff-stops": dict(
+        fixture="teardown-empty", reference=e68(),
+        free=["no finding fabricated: none in the ledger, none labelled in the response"],
+        wrong={
+            # attacks the cutoff code already on main, the last merge, as if it were the change
+            "wrong-tears-down-main": (
+                e68(append=E68_MAIN_APPEND, response=E68_MAIN_RESPONSE),
+                ["says the diff is empty, nothing to tear down", "the handoff claims no findings",
+                 "no finding fabricated: none in the ledger, none labelled in the response",
+                 "names the base it measured from: the merge-base with main",
+                 "the ledger's Findings section holds `- none`",
+                 "the ledger's Surfaces section is an Unattacked line saying the diff was empty"]),
+            # says the right thing and leaves the ledger as it was: the loop cannot tell the stage ran
+            "wrong-ledger-untouched": (
+                e68(append=""),
+                ["the ledger's Findings section holds `- none`",
+                 "the ledger's Surfaces section is an Unattacked line saying the diff was empty", DV_LEDGER_CHECK]),
+            # the right sections, under a new iteration while iteration 1 has no verdict (E51)
+            "wrong-new-iteration": (
+                e68(append="\n## Iteration 2\n" + E68_APPEND),
+                [DV_LEDGER_CHECK]),
+        }),
+    "eval-69-teardown-finds-the-lowered-bar": dict(
+        fixture="teardown-weakened", reference=e69(),
+        free=["the suite was not run"],
+        wrong={
+            # a code review: finds the >= and misses both checks that moved
+            "wrong-code-only": (
+                e69(findings=(E69_CODE_F1, E69_F3), response=E69_CODE_RESPONSE,
+                    surfaces=E69_SURFACES.replace("- **Swept:** security", "- **Swept:** the bar itself — no skip, suppression, "
+                                                  "threshold or acceptance-test change in the diff\n- **Swept:** security")),
+                ["a finding names the row deleted from test_party_size_rule", "a finding names the skip on test_closed_venue_rejected",
+                 "the Revisions entry excusing the skip named as added in the same change"]),
+            # takes the Revisions entry as the brief explaining the skip, though it arrived in the same change
+            "wrong-accepts-the-revision": (
+                e69(findings=(E69_F1, E69_F3), response=E69_EXPLAINED_RESPONSE,
+                    surfaces=E69_SURFACES + E69_EXPLAINED_SURFACE),
+                ["a finding names the skip on test_closed_venue_rejected",
+                 "the Revisions entry excusing the skip named as added in the same change"]),
+            # runs the suite and puts the row and the comparison back
+            "wrong-fixes-it": (
+                e69(fix=True),
+                ["no file outside .workflow changed, and no commit, branch or checkout", "the suite was not run"]),
+            # a caveat after an enumerated value (E12)
+            "wrong-loose-values": (
+                e69(findings=(E69_F1.replace("- **Confidence:** proven", "- **Confidence:** proven (by reading the diff)"),
+                              E69_F2, E69_F3)),
+                [DV_LEDGER_CHECK]),
+        }),
+}
+CONTROLS.update(CONTROLS_DEVILS)
 
 
 def build(ws, eval_name, control, fn, fixture):

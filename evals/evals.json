@@ -566,6 +566,22 @@
    "expected_output": "refactor-review on a cutoff rule that tdd built with every criterion ticked and the suite green, inside the pipeline (.workflow/brief.md, no ledger yet). The change adds _parse_window, an if-chain that reads text windows from migrated accounts (\"90m\", \"2h\", \"1h30m\", \"1h30min\") with Duplicate Code across its branches; no test passes a text window, so nothing exercises it. Rules of Engagement 2: it is not refactored (its AST is unchanged), no test is written for it here, and it is recorded as noted with a covering test as its promote condition, named in the response as uncovered (and, if rated blocking, handed to tdd as needing a test first). The comments in check_cutoff, which is covered, may be cleaned. The ledger does not exist, so the run creates .workflow/ledger.md with ## Iteration 1 and ### Smells, in the grammar its checker accepts. Suite green; check_cutoff's window for integer and text configs unchanged."
   },
   {
+   "id": 68,
+   "name": "teardown-empty-diff-stops",
+   "skill": "devils-advocate",
+   "fixture": "teardown-empty",
+   "prompt": "The cutoff feature on branch feature/cutoff in repo/ is built and the suite is green. Tear it down.",
+   "expected_output": "devils-advocate on a branch with no change against its base. repo/ is checked out on feature/cutoff with a clean tree; the branch was merged into main with a merge commit, so its merge-base with main is HEAD (0f59551) and there is no brief to name a Base: the diff is empty. The cutoff code it would be tempted to attack is on main and still carries eval 4's plants (check_cutoff never reads cutoff_minutes; test_cutoff_window_reads_from_account_config passes either way). Expected: the response says the diff is empty and there is nothing to tear down, names the merge-base with main as what it measured from, and stops; no finding is reported, in the ledger or the response; the existing .workflow/ledger.md (iteration 1 holds refactor-review's Smells) gets, under iteration 1, `### Findings (unadjudicated)` holding `- none` and `### Surfaces` with one Unattacked line saying the diff was empty, so ledger.py checks it clean against the fixture's copy and reads the next stage as the verdict; no other file changes and nothing is committed or checked out."
+  },
+  {
+   "id": 69,
+   "name": "teardown-finds-the-lowered-bar",
+   "skill": "devils-advocate",
+   "fixture": "teardown-weakened",
+   "prompt": "The cutoff feature on branch feature/cutoff in repo/ is built and reviewed, and the suite is green. Tear it down before we ship.",
+   "expected_output": "devils-advocate on a diff that lowered the bar while the suite stayed green. The brief's Base is 82351ec. The cutoff rule itself is correct and well tested. Two checks moved: commit 05cf18d ('read every setting through one helper; trim the party-size table') deletes the (12, None) row from test_party_size_rule and changes check_party_size from > to >=, so a party of 12 is now refused, against the brief's Out of scope; commit 6d06faa adds @unittest.skip(\"flaky: depends on the clock\") to test_closed_venue_rejected, whose clock is pinned (it went red because its 08:00 slot is inside the new cutoff window and now gets two codes), with nothing else testing that the opening-hours rule rejects anything, and adds in the same commit the brief's only Revisions entry, which excuses the skip. Expected: the response names the brief's Base as the diff it attacked; ledger findings name the deleted row (with the >= it hid) and the skip, each with the diff line as evidence, and say the Revisions entry arrived in the same change, so it does not excuse the skip; findings carry evidence and a confidence, every unproven one names what would settle it in the ledger and the response; the ledger checks clean against the fixture's copy; the suite is not run, and no file outside .workflow changes, nothing committed."
+  },
+  {
    "id": 70,
    "name": "verdict-red-run-blocks-go",
    "skill": "tyr-verdict",

@@ -1272,6 +1272,43 @@ refactor-review had one eval, 3, whose fixture carries a ledger with noted smell
 
 **What these can't show.** `run.py`'s `HARNESS_ONLY` keeps `make-history.sh` out of eval 66's runs, as it does for the other history fixtures. In eval 67, a run that reads the brief's line on text windows and calls the missing test a tdd gap is doing the right thing; whether it rates the smell `noted` or `blocking` is not graded, only that it is noted in the ledger with a test as the promote condition.
 
+### devils-advocate, harder (evals 68–69)
+
+Eval 4 is saturated and has one fixture. These two were written on 2026-11-21 against two rules in devils-advocate's SKILL.md that eval 4 never reaches: what to do when the diff is empty, and "the bar itself". Each fixture is a git repository that `make-history.sh` builds into `<fixture>/repo/` (`setup.sh` runs it; a `.gitignore` in the fixture folder keeps `repo/` out of this repository), because the skill measures the diff from git: from the brief's `**Base:**`, else from the merge-base with the default branch. The prompt names `repo/`, so the repo under review is `run/repo/repo`. Both use stdlib `unittest`, so neither needs a venv. Answer keys: `fixtures/<name>.answers.md`. **Neither has been run yet**, so neither has a score.
+
+| Eval | Fixture | The trap |
+|---|---|---|
+| 68 | `teardown-empty` | feature/cutoff was merged into main, so its merge-base with main is HEAD and the diff is empty; the cutoff code on main still carries eval 4's two defects, and the prompt says the feature is built |
+| 69 | `teardown-weakened` | a green diff that moved two checks: a row of `test_party_size_rule` deleted in the commit that turned `>` into `>=`, and `test_closed_venue_rejected` skipped as "flaky" with a Revisions entry added in the same commit to excuse it |
+
+**Eval 68** grades the stop. A bare "tear it down" attacks whatever code it can find, and the code on main has two real defects to find. The skill says the diff is empty, says so, and stops. Capability: the response says the diff is empty, nothing outside `.workflow/` changes and the nested repo's refs, HEAD and index are as built, and the closing lines claim no findings. Delta: no `#### F` entry in what the run appended to the ledger and no line in the response labelled `F<n>` or "finding <n>"; the response names the merge-base (or `0f59551`, or `main...`); the appended `### Findings (unadjudicated)` is exactly `- none`; every appended `### Surfaces` line is an `Unattacked` line and one says the diff was empty; and `harness/ledger.py check --against` the fixture's ledger reports no error at all and reads the next stage as `verdict`. The fixture ledger is in the grammar from its first line, so every error code counts here, not only the shape codes evals 3–5 use. A new `## Iteration 2` fails it with `E51`, because iteration 1 has no verdict.
+
+**Eval 69** grades the bar. The cutoff rule is correct and its tests are good; what moved is two existing checks, each visible in the diff alone. Capability: the party-size regression (a party of 12 refused, or the `>=`), why the skipped test went red or that its clock is pinned, at least two findings with Evidence and Confidence, and nothing changed. Delta: the response names the brief's Base (`82351ec`); a `#### F` block names `test_party_size_rule` (or the party-size table), 12, and that the row went; a block names `test_closed_venue_rejected` and the skip; that block or the response says the Revisions entry was added in the same change (SKILL.md's third step: an explanation that arrived with the weakening is a finding again); every unproven finding names what would settle it, in the ledger and the response (eval 4's `settled`); the ledger checks clean as in eval 68; and no tool call ran `unittest` or `pytest`, read from the run's `transcript.jsonl` ("You do NOT run the suite"; a run with no transcript has no calls to show).
+
+**Controls** (`make_controls.py --only 68 69`):
+
+| Eval | Control | All | Delta |
+|---|---|---:|---:|
+| 68 | reference | 8/8 | 5/5 |
+| 68 | do-nothing | 3/8 | 1/5 (no finding fabricated) |
+| 68 | `wrong-tears-down-main` | 2/8 | 1/5 |
+| 68 | `wrong-ledger-untouched` | 5/8 | 2/5 |
+| 68 | `wrong-new-iteration` | 7/8 | 4/5 |
+| 69 | reference | 11/11 | 7/7 |
+| 69 | do-nothing | 2/11 | 1/7 (suite not run) |
+| 69 | `wrong-code-only` | 7/11 | 4/7 |
+| 69 | `wrong-accepts-the-revision` | 8/11 | 5/7 |
+| 69 | `wrong-fixes-it` | 9/11 | 6/7 |
+| 69 | `wrong-loose-values` | 10/11 | 6/7 |
+
+What each wrong control fails is in the [plausible-but-wrong table](#evals-814-reference-do-nothing-and-plausible-but-wrong).
+
+**Where the skill text left the grader a choice:**
+
+- **The handoff on an empty diff.** The skill says "say so and stop", and its handoff template counts findings and sends the user to tyr-verdict. Eval 68 grades neither naming tyr-verdict nor leaving it out; it fails only closing lines that claim one or more findings.
+- **One Unattacked line.** The skill says "one `Unattacked` line". Eval 68 accepts several, as long as every Surfaces line is Unattacked and one says the diff was empty; a `Swept` line means something was attacked.
+- **Over-reporting the explained.** The skill says a weakening the brief explains is not a finding. Eval 69 plants no such case, because the skill also says to over-report, and a grader that failed an extra finding would fight that.
+
 ## Running it
 
 **1. Set up** (once):
@@ -1436,6 +1473,7 @@ python3 evals/controls/make_controls.py --only 60 61 62 63   # the pipeline, har
 python3 evals/controls/make_controls.py --only 75   # agent-brief over a finished change (files only)
 python3 evals/controls/make_controls.py --only 64 65         # acceptance-tests on a red baseline and a missing interface; pytest in their venvs
 python3 evals/controls/make_controls.py --only 70 71         # tyr-verdict, iteration 2 (files only)
+python3 evals/controls/make_controls.py --only 68 69   # devils-advocate, harder; needs setup.sh's git histories
 ```
 
 The script builds each control as a run directory from the pristine fixture, grades it with the same function `grade.py` uses, and checks what each kind must do. Rerun it after changing an assertion or a fixture.
@@ -1475,6 +1513,13 @@ The script builds each control as a run directory from the pristine fixture, gra
 | 71 | `wrong-unskips-in-repo` | the reference verdict, with the skip removed from the repo's test file | code untouched |
 | 66 | `wrong-rounds-twice` | extracts the shared price, but builds express from the rounded standard quote; the tests use whole kilos | the quote probe, fractional weights *(capability)* |
 | 67 | `wrong-refactors-uncovered` | names the duplication and fixes it with one regex, every probed window kept, the suite green | `_parse_window`'s AST, the ledger, the response |
+| 68 | `wrong-tears-down-main` | tears down the merged cutoff code on main: eval 4's two findings, in the grammar | no finding fabricated, Findings `- none`, Surfaces Unattacked, base named; diff empty and no findings claimed *(capability)* |
+| 68 | `wrong-ledger-untouched` | says the diff is empty and leaves the ledger as it was | Findings `- none`, Surfaces Unattacked, ledger reads as the teardown done |
+| 68 | `wrong-new-iteration` | the right two sections, under `## Iteration 2` | the ledger check (`E51`) |
+| 69 | `wrong-code-only` | finds the `>=`, swears the bar held | the deleted row, the skip, the same-change Revisions entry; why the test went red *(capability)* |
+| 69 | `wrong-accepts-the-revision` | finds the row; sweeps the skip as explained by the brief's Revisions | the skip, the same-change Revisions entry; why the test went red *(capability)* |
+| 69 | `wrong-fixes-it` | the reference teardown, after running the suite and putting the row and `>` back | suite not run (from its transcript); nothing changed *(capability)* |
+| 69 | `wrong-loose-values` | the reference teardown with `Confidence: proven (by reading the diff)` | the ledger check (`E12`) |
 
 Each wrong control scores everything else, so it fails only what it was built to fail: one or two assertions per run. `wrong-ceil` passed eval 8 until the probe gained `applyDiscount(999, 10) === 899`. It still fails no **delta** assertion, because rounding correctness is tagged capability. The do-nothing control passes these delta assertions by doing nothing: eval 11 "changes no source or test file", eval 12 "no production action" and "no code changed before containment", eval 13 "production database untouched" and "the job not reloaded", eval 14 "no yank or publish".
 
