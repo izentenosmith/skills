@@ -10,6 +10,8 @@ Inspired by [mattpocock/skills](https://github.com/mattpocock/skills).
 
 ## What's in here
 
+The [skill registry](skills/REGISTRY.md) lists every skill's family, purpose, owner, version, dependencies and latest eval score; it is generated, so regenerate it with `python3 .github/scripts/registry.py` (CI fails when it is stale).
+
 Nine families of skills under `skills/` — the first three in the order work actually moves through them, then the database, the network, the infrastructure code and pipelines underneath, the security of every layer, the review of each change as it arrives, and the memory agents keep about the repository — plus a harness that runs the development pipeline's closing loop — and one pull request through every review skill — as code, and the evals that measure the skills.
 
 ```

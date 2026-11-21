@@ -14,6 +14,7 @@ Skills
   - no symlinks under skills/ (`npx skills add` drops a link that leaves the
     skill folder); every copy in skills/shared.json matches its source
   - the root README links every skill
+  - skills/REGISTRY.md and skills/registry.json match what registry.py generates
 Links
   - every relative link in a tracked markdown file resolves, outside code
     spans and fences; eval fixtures are skipped (their content is planted)
@@ -145,6 +146,11 @@ sys.path.insert(0, str(ROOT / ".github/scripts"))
 import sync_shared  # noqa: E402
 
 for msg in sync_shared.stale():
+    problem(msg)
+
+import registry  # noqa: E402
+
+for msg in registry.stale():
     problem(msg)
 
 readme = (ROOT / "README.md").read_text()
