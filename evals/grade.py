@@ -6962,6 +6962,78 @@ def eval74(run):
     ]
 
 
+# ------------------------------------------------- eval 75: agent-brief over a finished change
+
+BA = "brief-archive"
+BA_DESIGN = "20261113-1420-cancellation-cutoff"
+# Why it was archived: the skill's two signs that the change is finished. GO case-sensitive: "go" is a word.
+BA_WHY = r"tick|verdict|finish|complet|shipped|(?-i:\bGO\b)"
+
+
+def ba_fold(s):
+    return " ".join(s.split())
+
+
+def ba_archived(repo):
+    """(folders holding the fixture's brief, those of them also holding its ledger) under .workflow/archive/.
+    Contained, not equal: a run that adds an archive note to a file it moved still moved it."""
+    arch = repo / ".workflow/archive"
+    if not arch.is_dir():
+        return [], []
+    old_b, old_l = (ba_fold(read(FIXTURES / BA / ".workflow" / n)) for n in ("brief.md", "ledger.md"))
+    held = sorted({p.parent for p in arch.rglob("*.md") if old_b in ba_fold(read(p))})
+    both = [d for d in held if any(old_l in ba_fold(read(p)) for p in d.glob("*.md"))]
+    return held, both
+
+
+def eval75(run):
+    """agent-brief with the last change's brief and ledger still in .workflow/: both finished (ticked, GO), so
+    they move together to .workflow/archive/<slug>/ before the new brief is written, from the one free
+    resolved design (not the newer `in progress` one)."""
+    repo, r = run / "repo", resp(run)
+    brief = read(repo / ".workflow/brief.md")
+    held, both = ba_archived(repo)
+    left = read(repo / ".workflow/ledger.md")
+    stale = bool(left) and bool(re.search(r"party-size limit|F1 — REFUTED", left))
+    n_crit = len(re.findall(r"^\s*-\s*\[ \]", brief.split("## Revisions")[0], re.M))
+    status = re.search(r"\*\*Status:?\*\*:?\s*([^\n]*)", brief)
+    design = re.search(r"\*\*Design:?\*\*:?\s*([^\n]*)", brief)
+    fx_designs = FIXTURES / BA / ".workflow/designs"
+    run_designs = repo / ".workflow/designs"
+    designs_ok = (sorted(p.name for p in run_designs.glob("*")) == sorted(p.name for p in fx_designs.glob("*"))
+                  and all(read(run_designs / p.name) == read(p) for p in fx_designs.glob("*")))
+    code = [f for fs in changes(run, BA) for f in fs if ".pytest_cache" not in f]
+    return [
+        # capability
+        ("a new brief with ordered criteria, the tracer bullet first",
+         n_crit >= 4 and any_of(brief, r"\[ \]\s*\*{0,2}Tracer"), f"{n_crit} open criteria", C),
+        ("the cutoff design's decisions carried: CUTOFF_WINDOW, cutoff_minutes",
+         has(brief, r"CUTOFF_WINDOW", r"cutoff_minutes"), "", C),
+        ("the designs and the code untouched", designs_ok and not code,
+         f"code changed: {code[:4]}" if code else ("" if designs_ok else "a design file changed or was added"), C),
+        # delta
+        # Upstream "take the one resolved design in that folder that no brief has been written from"; "Record it"
+        ("the brief's Design line names the one free resolved design",
+         bool(design) and BA_DESIGN in design.group(1), design.group(0)[:90] if design else "no Design line", D),
+        # Before you write "A finished brief for other work … Move brief.md and ledger.md together to .workflow/archive/<slug>/"
+        ("the finished brief moved to a folder under .workflow/archive/",
+         bool(held), f"in {[d.relative_to(repo).as_posix() for d in held]}" if held else "not found under .workflow/archive/", D),
+        ("its ledger moved with it, into the same folder", bool(both), "", D),
+        # "a ledger left behind would hand the new change another change's findings"
+        ("no ledger of the finished change left at .workflow/ledger.md", not stale,
+         "the party-size ledger is still there" if stale else "", D),
+        # "Say what you are archiving and why: its title, and that every criterion is ticked and the ledger ends in GO"
+        ("the response says what it archived and why",
+         near3(r, r"archiv", r"party[- ]size", BA_WHY, 300), "", D),
+        # The approval gate "When nobody can answer … leave it draft — awaiting approval, and say so in your last line"
+        ("the new brief left `draft — awaiting approval`",
+         bool(status) and bool(re.match(r"\W*draft", status.group(1), re.I)),
+         f"Status: {status.group(1).strip()[:60]!r}" if status else "no Status line", D),
+        ("the last lines say the brief is a draft awaiting approval",
+         any_of(pl_tail(r), PL_UNAPPROVED), pl_tail(r, 2)[-160:], D),
+    ]
+
+
 CHECKS = {
     "eval-0-architect-charter-and-options": eval0,
     "eval-1-brief-ordered-criteria": eval1,
@@ -7028,6 +7100,7 @@ CHECKS = {
     "eval-62-tdd-headless-contradiction-unconfirmed": eval62,
     "eval-63-architect-second-round": eval63,
     "eval-74-architect-adr-binds-the-round": eval74,
+    "eval-75-brief-archives-finished-change": eval75,
 }
 
 

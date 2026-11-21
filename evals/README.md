@@ -23,7 +23,7 @@ evals/
 ├── benchmark.md    the recorded result
 ├── scores.json     per eval: the iteration its score comes from, and the hash of the skill it scored
 ├── tests/          unit tests for the staging hash, scores.json, transcripts and the health table (CI runs them)
-├── controls/       reproducible controls (make_controls.py: evals 6, 8-14, 16-63 and 74; eval15.py: the loop)
+├── controls/       reproducible controls (make_controls.py: evals 6, 8-14, 16-63 and 74, 75; eval15.py: the loop)
 ├── trigger/        the triggering eval: does a description get its skill picked, and only when it should (its own README)
 └── fixtures/       the seeded repos and documents the skills work against
 ```
@@ -1153,6 +1153,28 @@ Evals 0 and 63 run on a repo with no recorded decisions, so nothing grades archi
 | 74 | `wrong-asks-the-settled`: ADR-0002 never read, the caller's shape asked as question 4 | 8/11 | 5/8 | inferred from 0002; not asked; recorded in Decisions |
 | 74 | `wrong-routes-around`: a venue override offered and recommended, ADR-0001 never named | 9/11 | 6/8 | contradiction named; supersede question |
 | 74 | `wrong-supersedes-itself`: the right round, with ADR-0004 already written and 0001 marked superseded | 10/11 | 7/8 | docs/adr/ unchanged |
+### `brief-archive`: agent-brief over a finished change (eval 75)
+
+Evals 1 and 61 start agent-brief in a `.workflow/` with no brief in it. This one starts it where the last change's working files are still in place, and names no design: the **Before you write — is there already a brief?** and **Which design** rules, which no other eval reaches. A bare agent writes `.workflow/brief.md` over the old one, or renames the brief and leaves its ledger; either way the next loop would start on another change's findings. Answer key: `fixtures/brief-archive.answers.md`. Files only: no venv, nothing is run.
+
+| In the fixture | The trap |
+|---|---|
+| `.workflow/brief.md` "Per-account party-size limit", approved, every criterion ticked naming its test; `.workflow/ledger.md` ending `### Verdict: GO` | plainly finished, so both move together to one `.workflow/archive/<slug>/` folder and the response says what and why |
+| `designs/`: party-size (resolved, named by that brief), cancellation-cutoff (resolved, free), waitlist (`in progress`, the newest) | the new brief comes from the one free resolved design, not the newest file |
+
+The grader finds the archived files by content, not by name: a folder under `.workflow/archive/` holding a file that contains the fixture's brief, and the same folder holding one that contains its ledger (a note added on top still counts as moved). "No ledger left" fails only when `.workflow/ledger.md` still carries the party-size ledger; a fresh one is allowed. "Says what and why" needs `archiv`, `party-size` and a reason (ticked, verdict, finished, complete, `GO` in capitals) within 300 characters. The last lines are the last six non-blank lines, as in evals 60–62. Capability: the new brief's criteria (tracer first), `CUTOFF_WINDOW` and `cutoff_minutes` carried, and the designs and code byte-identical. **Not run yet**, so no score.
+
+**Controls** (`make_controls.py --only 75`):
+
+| Eval | Control | All | Delta | Fails |
+|---|---|---:|---:|---|
+| 75 | reference | 10/10 | 7/7 | — |
+| 75 | do-nothing | 1/10 | 0/7 | everything but "designs and code untouched" *(capability)* |
+| 75 | `wrong-overwrites`: the new brief written over the old, the ledger left | 6/10 | 3/7 | brief archived; ledger moved; no ledger left; says what and why |
+| 75 | `wrong-leaves-the-ledger`: the brief archived, the ledger left behind | 8/10 | 5/7 | ledger moved; no ledger left |
+| 75 | `wrong-newest-design`: archives right, plans from the `in progress` waitlist design | 8/10 | 6/7 | Design line; cutoff decisions *(capability)* |
+| 75 | `wrong-silent-archive`: archives right, never says so | 9/10 | 6/7 | says what and why |
+| 75 | `wrong-self-approves`: Status approved at the gate | 8/10 | 5/7 | draft; last lines |
 
 ## Running it
 
@@ -1315,6 +1337,7 @@ python3 evals/controls/make_controls.py --only 27 28 29 30 31 32 33 34   # accep
 python3 evals/controls/make_controls.py --only 6 28 35 36 37   # the container family
 python3 evals/controls/make_controls.py --only 49 50 51 52 53 54   # the review family
 python3 evals/controls/make_controls.py --only 60 61 62 63   # the pipeline, harder; 60 and 62 run pytest in a fixture venv
+python3 evals/controls/make_controls.py --only 75   # agent-brief over a finished change (files only)
 ```
 
 The script builds each control as a run directory from the pristine fixture, grades it with the same function `grade.py` uses, and checks what each kind must do. Rerun it after changing an assertion or a fixture.
@@ -1341,6 +1364,8 @@ The script builds each control as a run directory from the pristine fixture, gra
 | 74 | `wrong-asks-the-settled` | a well-formed round that asks what the caller sees, which ADR-0002 settled | inferred from ADR-0002; shape not asked; Decisions line |
 | 74 | `wrong-routes-around` | offers a per-venue override as an ordinary option, never naming ADR-0001 | contradiction named; supersede question |
 | 74 | `wrong-supersedes-itself` | asks the right question after writing ADR-0004 and marking 0001 superseded | `docs/adr/` unchanged |
+| 75 | `wrong-overwrites` | writes a good new brief over the finished one; the ledger stays | the old brief and ledger not under `.workflow/archive/`; the old ledger still at `.workflow/ledger.md` |
+| 75 | `wrong-newest-design` | archives correctly, then plans from the newest design file, which is `in progress` | the Design line |
 
 Each wrong control scores everything else, so it fails only what it was built to fail: one or two assertions per run. `wrong-ceil` passed eval 8 until the probe gained `applyDiscount(999, 10) === 899`. It still fails no **delta** assertion, because rounding correctness is tagged capability. The do-nothing control passes these delta assertions by doing nothing: eval 11 "changes no source or test file", eval 12 "no production action" and "no code changed before containment", eval 13 "production database untouched" and "the job not reloaded", eval 14 "no yank or publish".
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the controls for evals 6, 8-14 and 16-63, grade them with grade.py, and check they separate.
+"""Build the controls for evals 6, 8-14, 16-63 and 75, grade them with grade.py, and check they separate.
 
     python3 evals/controls/make_controls.py               # build in a temp dir, grade, check, clean up
     python3 evals/controls/make_controls.py --keep DIR    # leave the graded runs in DIR to inspect
@@ -14,6 +14,7 @@
     python3 evals/controls/make_controls.py --only 59                  # hotfix held-out (python3 and make)
     python3 evals/controls/make_controls.py --only 60 61 62 63         # the pipeline, harder; 60 and 62 need setup.sh's tdd venv
     python3 evals/controls/make_controls.py --only 74                  # architect-deep-dive bound by ADRs (files only)
+    python3 evals/controls/make_controls.py --only 75                  # agent-brief over a finished change (files only)
 
 Three kinds of control, each a run directory (repo/ + outputs/response.md) that
 grade.py's eval function reads exactly as it reads a real run:
@@ -6850,6 +6851,137 @@ CONTROLS_BRIEF_NEXUS = {
         }),
 }
 CONTROLS.update(CONTROLS_BRIEF_NEXUS)
+
+# -- eval 75: brief-archive
+
+E75_CUTOFF = ".workflow/designs/20261113-1420-cancellation-cutoff.md"
+E75_WAITLIST = ".workflow/designs/20261119-1615-waitlist.md"
+E75_CUTOFF_BRIEF = """# Build Plan: Enforce a cancellation cutoff on bookings
+
+**Status:** {status}
+**Design:** `{design}`
+**Category:** enhancement
+**Summary:** Reject bookings submitted within the cutoff window of the slot start.
+
+**Current behavior:**
+`BookingService.submit` accepts any well-formed booking that passes the party-size and opening-hours rules.
+
+**Desired behavior:**
+A booking whose slot starts within the cutoff window is rejected with `CUTOFF_WINDOW`. The window is read from
+account config (`cutoff_minutes`, default 120). Why now: three venue groups made it a condition of renewing.
+Security trigger: did not fire.
+
+**Key interfaces (test seams):**
+- `BookingService.submit` — the public seam; raises `Rejected` carrying the violation codes
+- `reservations.rules` — the cutoff rule joins `ACTIVE_RULES`
+
+**Acceptance criteria** (ordered — first is the tracer-bullet candidate, each one a single red→green slice):
+- [ ] Tracer bullet: a booking whose slot starts inside the cutoff window is rejected with `CUTOFF_WINDOW`
+- [ ] A booking whose slot is outside the window is accepted and persisted
+- [ ] The window length reads from account config `cutoff_minutes`, default 120
+- [ ] Edge case: a slot exactly `cutoff_minutes` from now is accepted (the boundary is exclusive)
+- [ ] Edge case: a booking that breaks the cutoff and another rule surfaces every code
+
+**Test seams & prior art:**
+- Drive tests through `BookingService.submit`, mirroring `tests/test_booking.py` and its `FakeStore` / `FakeConfig`
+
+**Parallel tracks:** none — one rule behind one seam
+
+**Deferred by design** (constraints, not work — carried from architect-deep-dive):
+- Notifying the venue of a rejected booking — deferred behind the service seam; forced when a venue asks
+
+**Out of scope:**
+- Administrator override of the cutoff window
+
+**Ship checklist** (what no acceptance test can prove):
+- [ ] Rollout: no flag; the default window applies on deploy; stored bookings are not re-validated
+- [ ] Rollback: revert the deploy
+
+**Base:** —
+
+**Acceptance tests** (filled in by stage 3, acceptance-tests — leave empty here):
+- **Command:** —
+
+## Revisions
+- (empty at creation; every stage that changes the brief appends a dated line)
+"""
+# Built only from the waitlist charter: no cutoff decision in it.
+E75_WAITLIST_BRIEF = """# Build Plan: Waitlist for full slots
+
+**Status:** draft — awaiting approval
+**Design:** `.workflow/designs/20261119-1615-waitlist.md`
+**Category:** enhancement
+**Summary:** Let a guest join a waitlist for a full slot.
+
+**Key interfaces (test seams):**
+- `Waitlist` — a new aggregate beside `Booking`
+
+**Acceptance criteria** (ordered — first is the tracer-bullet candidate):
+- [ ] Tracer bullet: a guest who finds a slot full joins its waitlist
+- [ ] The first guest on the waitlist is offered a slot that frees up
+- [ ] Edge case: a guest cannot join the same slot's waitlist twice
+- [ ] Edge case: a slot that frees up with nobody waiting stays open
+
+**Test seams & prior art:**
+- Mirror `tests/test_booking.py`
+
+**Parallel tracks:** none — one aggregate
+
+**Out of scope:**
+- The notification channel (the notifications team)
+"""
+E75_ARCHIVED = ("Archived the previous change before writing: `.workflow/brief.md` was \"Per-account party-size limit\", "
+                "every criterion ticked with its test, and `.workflow/ledger.md` ends in `### Verdict: GO`. Both moved "
+                "together to `.workflow/archive/per-account-party-size-limit/`.\n\n")
+E75_SILENT = "Wrote the new build plan.\n\n"
+E75_PLAN = ("Design: `.workflow/designs/20261113-1420-cancellation-cutoff.md`, the one resolved design no brief names; "
+            "the waitlist design is still in progress.\n\nCriteria, in order: tracer bullet (inside the window → CUTOFF_WINDOW); "
+            "outside the window accepted; window from `cutoff_minutes`; edge: exactly at the window accepted; edge: every code.\n\n")
+E75_TAIL = "The build plan is written to `.workflow/brief.md` as a **draft — awaiting approval**; nobody was here to approve it.\n"
+
+
+def e75(archive=("brief.md", "ledger.md"), into="per-account-party-size-limit", brief=None, said=E75_ARCHIVED,
+        tail=E75_TAIL, status="draft — awaiting approval"):
+    def build(run, repo):
+        wf = repo / ".workflow"
+        for name in archive:
+            dest = wf / "archive" / into / name
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(wf / name), str(dest))
+        (wf / "brief.md").write_text(brief or E75_CUTOFF_BRIEF.format(status=status, design=E75_CUTOFF))
+        (run / "outputs/response.md").write_text(said + E75_PLAN + tail)
+    return build
+
+
+CONTROLS_BRIEF_ARCHIVE = {
+    "eval-75-brief-archives-finished-change": dict(
+        fixture="brief-archive", reference=e75(), free=[],
+        wrong={
+            # the bare default: the new brief written over the old one, the ledger left where it was
+            "wrong-overwrites": (
+                e75(archive=(), said=E75_SILENT),
+                ["the finished brief moved to a folder under .workflow/archive/", "its ledger moved with it, into the same folder",
+                 "no ledger of the finished change left at .workflow/ledger.md", "the response says what it archived and why"]),
+            # archives the brief and forgets the ledger beside it
+            "wrong-leaves-the-ledger": (
+                e75(archive=("brief.md",),
+                    said=E75_ARCHIVED.replace(" Both moved together to", " The brief moved to")),
+                ["its ledger moved with it, into the same folder", "no ledger of the finished change left at .workflow/ledger.md"]),
+            # takes the newest design file, which is still in progress
+            "wrong-newest-design": (
+                e75(brief=E75_WAITLIST_BRIEF),
+                ["the brief's Design line names the one free resolved design",
+                 "the cutoff design's decisions carried: CUTOFF_WINDOW, cutoff_minutes"]),
+            # the files moved right, the response never says so
+            "wrong-silent-archive": (
+                e75(said=E75_SILENT), ["the response says what it archived and why"]),
+            # approves its own brief at the gate
+            "wrong-self-approves": (
+                e75(status="approved", tail="The build plan in `.workflow/brief.md` is approved; run acceptance-tests next.\n"),
+                ["the new brief left `draft — awaiting approval`", "the last lines say the brief is a draft awaiting approval"]),
+        }),
+}
+CONTROLS.update(CONTROLS_BRIEF_ARCHIVE)
 
 # -- eval 63: design-round2
 

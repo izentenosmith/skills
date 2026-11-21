@@ -539,6 +539,14 @@
    "fixture": "design-adr",
    "prompt": "We need to add a cancellation cutoff to the reservations service: bookings too close to the slot start should be refused. Three venue groups have made it a condition of renewing in January, and one of them, Harbour Dining, wants each of its venues to set its own window. Work the design with me.",
    "expected_output": "Eval 0's opening round on a repo whose decisions are already recorded: docs/adr/ holds three accepted ADRs and docs/glossary.md the vocabulary, and the README mentions neither. ADR-0002 (every violation reported together as codes on one Rejected; a rule never raises) settles what the caller sees: it is answered [inferred], citing the ADR, recorded that way in the design file's Decisions, and not asked. ADR-0001 (every rule setting per account; venues carry none) is contradicted by Harbour Dining's per-venue window: the response says so and puts superseding it to the user as its own question naming the ADR, rather than offering a venue override that routes around it. ADR-0003 (rules are pure, no clock) is cited too. The charter, one design file at .workflow/designs/<stamp>-<slug>.md left `in progress` with its path in the response, one to three numbered questions in the four-section format and the awaiting line once. docs/adr/ is unchanged: an inferred answer cites its ADR rather than earning a new one, and superseding 0001 is written only once the user takes that branch."
+  },
+  {
+   "id": 75,
+   "name": "brief-archives-finished-change",
+   "skill": "agent-brief",
+   "fixture": "brief-archive",
+   "prompt": "Write the build plan for the next change. The designs are in .workflow/designs/.",
+   "expected_output": "agent-brief in a repo where the last change's working files are still in place. `.workflow/brief.md` is the per-account party-size limit: approved, every criterion ticked naming its test; `.workflow/ledger.md` ends in `### Verdict: GO`. `.workflow/designs/` holds three designs: party-size (resolved, named by that brief's Design line, so taken), cancellation-cutoff (resolved, free) and waitlist (`in progress`, the newest). Expected: the finished brief and its ledger moved together, unchanged, into one `.workflow/archive/<slug>/` folder, with no ledger left at `.workflow/ledger.md`; the response saying what it archived and why (the party-size brief; every criterion ticked; the ledger ends in GO); a new `.workflow/brief.md` written from the cutoff design, its Design line naming that file, ordered criteria with the tracer bullet first carrying CUTOFF_WINDOW and cutoff_minutes, Status `draft — awaiting approval`; the last lines saying it is a draft awaiting approval; and the designs and the code untouched."
   }
  ]
 }
