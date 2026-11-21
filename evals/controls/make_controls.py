@@ -13,6 +13,7 @@
     python3 evals/controls/make_controls.py --only 58                  # nexus (files only)
     python3 evals/controls/make_controls.py --only 59                  # hotfix held-out (python3 and make)
     python3 evals/controls/make_controls.py --only 60 61 62 63         # the pipeline, harder; 60 and 62 need setup.sh's tdd venv
+    python3 evals/controls/make_controls.py --only 74                  # architect-deep-dive bound by ADRs (files only)
 
 Three kinds of control, each a run directory (repo/ + outputs/response.md) that
 grade.py's eval function reads exactly as it reads a real run:
@@ -6935,6 +6936,134 @@ CONTROLS_ROUND2 = {
         }),
 }
 CONTROLS.update(CONTROLS_ROUND2)
+
+
+# -- eval 74: design-adr
+
+E74_DESIGN = ".workflow/designs/20261121-1000-cancellation-cutoff.md"
+E74_CHARTER = """# Design: Cancellation cutoff on bookings
+
+**Solving:** a booking can be submitted right up against its slot, so venues get parties they cannot staff for.
+**Why now:** three accounts have made it a condition of renewing in January.
+**Done looks like:** a booking too close to its slot is refused with a code the caller can show.
+**Calibration:** medium — a new rule inside the existing rule seam
+**Questions:** ~8 to resolve (policy vs. details, data model, interface contracts, failure modes, scope, backwards-compatibility, migration & rollout)"""
+E74_INFER_2 = ("- **API / interface contracts — what the caller sees:** `Rejected` with a new code `CUTOFF_WINDOW` beside any other "
+               "violation — ADR-0002 settles it: every code on one `Rejected`, a rule never raises. [inferred]\n")
+E74_INFER_3 = ("- **Policy vs. details — where the time of submission comes from:** handed in by `BookingService.submit` — "
+               "ADR-0003: rules see `(booking, config)` and no clock. [inferred]\n")
+E74_Q = """### Question {n} of ~8 · {dim}
+
+**[The Question]:** {ask}
+
+**[Options]:**
+
+| Option | Buys you | Costs you | Cost to reverse later |
+|--------|----------|-----------|----------------------|
+| **A** — {a} | {a_buys} | {a_costs} | {a_rev} |
+| **B** — {b} | {b_buys} | {b_costs} | {b_rev} |
+
+**[Architect's Recommendation]:** **{rec}** — {why}
+
+- **What this costs us:** {cost}
+- **What would change my mind:** {mind}
+
+**[Cost of getting this wrong]:** {wrong}
+"""
+E74_SUPERSEDE = dict(
+    dim="Scope boundaries",
+    ask="Harbour Dining wants each venue to set its own window, and ADR-0001 says every rule setting is per account and venues "
+        "carry none. Do we supersede ADR-0001 in this design, or keep it and give the cutoff an account-level window?",
+    a="keep ADR-0001: one window per account", a_buys="one lookup, no precedence rule", a_costs="Harbour Dining settles on one value",
+    a_rev="cheap — a venue level can be added later",
+    b="supersede ADR-0001: venues may override", b_buys="what Harbour Dining asked for",
+    b_costs="a venue settings store, a precedence rule, a second lookup", b_rev="expensive — every rule and the support tooling grow around it",
+    rec="A", why="ADR-0001 is the cheaper branch to leave, and its own reopening condition is one account, not a pattern.",
+    cost="Harbour Dining's renewal hears no for now.", mind="a second account asking for venue-level values",
+    wrong="a venue settings store with no owner, migrated back out.")
+E74_EDGE = dict(
+    dim="Failure modes", ask="Is a slot exactly at the window edge accepted or refused?",
+    a="exclusive: accepted", a_buys="matches the venue's sign", a_costs="one minute more lenient", a_rev="cheap — a comparison",
+    b="inclusive: refused", b_buys="the stricter reading", b_costs="surprises guests at the edge", b_rev="cheap — a comparison",
+    rec="A", why="it is what 'two hours' means to a guest.", cost="venues get one more minute of late bookings.",
+    mind="a venue that counts the edge as inside", wrong="a changed comparison and its tests.")
+E74_SHAPE = dict(
+    dim="API / interface contracts", ask="What does the caller see when a booking is inside the window?",
+    a="the existing Rejected, CUTOFF_WINDOW beside any other codes", a_buys="callers already switch on codes",
+    a_costs="every rule still runs", a_rev="expensive — partners switch on the codes",
+    b="a new exception type, CutoffWindowError", b_buys="typed handling", b_costs="a second error shape", b_rev="expensive — a public contract",
+    rec="A", why="one shape for every refusal.", cost="the rule cannot stop the others running.",
+    mind="a rule too expensive to run after a failure", wrong="a partner API contract change.")
+E74_WINDOW = dict(
+    dim="Data model", ask="Where does the window length come from, given that Harbour Dining wants each venue to set its own?",
+    a="account config only", a_buys="one lookup", a_costs="Harbour Dining settles on one value", a_rev="cheap",
+    b="a venue override falling back to the account", b_buys="what Harbour Dining asked for", b_costs="a second lookup",
+    b_rev="moderate — a new settings table",
+    rec="B", why="the request is on the table and the fallback keeps every other account as it is.",
+    cost="a precedence rule to document.", mind="no other account wanting it", wrong="a settings table migrated back out.")
+
+
+def e74_response(questions, design=E74_DESIGN, adr1=True, adr2=True):
+    found = []
+    if adr2:
+        found.append("- **What the caller sees** [inferred] — ADR-0002: every violation on one `Rejected(codes)`, so the cutoff adds "
+                     "`CUTOFF_WINDOW` beside any other code and never raises. Settled, so not asked.")
+    found.append("- **Where the time of submission comes from** [inferred] — ADR-0003: rules are pure, so `BookingService.submit` hands "
+                 "it in. It costs the service one more input to gather.")
+    if adr1:
+        found.append("- **Harbour Dining's per-venue window contradicts ADR-0001** (every rule setting is per account; venues carry "
+                     "none). Superseding it is its own decision: question 3.")
+    qs = "\n".join(E74_Q.format(n=3 + i, **q) for i, q in enumerate(questions))
+    return (f"{E74_CHARTER}\n\nDesign file: `{design}`. Read `docs/adr/` (three accepted ADRs) and `docs/glossary.md`.\n\n"
+            "From the repo:\n" + "\n".join(found) + "\n\n"
+            f"Design: Cancellation cutoff on bookings · Round 1 · {2 if adr2 else 1}/~8 resolved, 0 deferred\n\n{qs}\n"
+            "Awaiting your decision or input to proceed.\n")
+
+
+def e74(questions=(E74_SUPERSEDE, E74_EDGE), adr1=True, adr2=True, supersede_itself=False):
+    def build(run, repo):
+        decisions = (E74_INFER_2 if adr2 else "") + E74_INFER_3
+        w(repo / E74_DESIGN, E74_CHARTER.replace("\n**Solving:**", "\n\n**Status:** in progress\n**Solving:**")
+          + f" — {2 if adr2 else 1} resolved, 0 deferred\n\n## Decisions\n{decisions}\n## Security\n- N/A — no trust boundary touched\n\n"
+          "## Operability\n- (not reached)\n\n## Decomposition\n- N/A — one increment\n\n## Deferred\n- none\n\n## N/A\n"
+          "- Scale & performance — one comparison per submission.\n\n## Records\n- none\n")
+        if supersede_itself:
+            sub(repo / "docs/adr/0001-rule-settings-per-account.md", "**Status:** Accepted · 2026-02-09",
+                "**Status:** Superseded by 0004 · 2026-02-09")
+            w(repo / "docs/adr/0004-cutoff-window-per-venue.md", """
+                # 0004. Rule settings may be overridden per venue
+
+                **Status:** Accepted · 2026-11-21 · from the design review of Cancellation cutoff on bookings
+
+                Supersedes 0001: Harbour Dining's venues need their own cutoff window.
+                """)
+        w(run / "outputs/response.md", e74_response(questions, adr1=adr1, adr2=adr2))
+    return build
+
+
+CONTROLS_ADR = {
+    "eval-74-architect-adr-binds-the-round": dict(
+        fixture="design-adr", reference=e74(),
+        free=["docs/adr/ unchanged: no new ADR, 0001 not marked superseded"],
+        wrong={
+            # never reads ADR-0002, so the settled shape is asked as a question and nothing is inferred from it
+            "wrong-asks-the-settled": (
+                e74(questions=(E74_SUPERSEDE, E74_SHAPE), adr2=False),
+                ["what the caller sees answered [inferred] from ADR-0002",
+                 "how violations reach the caller not asked as a question",
+                 "the [inferred] ADR-0002 answer recorded in the design file's Decisions"]),
+            # offers a venue override as an ordinary option and never names the ADR it overturns
+            "wrong-routes-around": (
+                e74(questions=(E74_WINDOW, E74_EDGE), adr1=False),
+                ["the per-venue request named as contradicting ADR-0001",
+                 "superseding ADR-0001 put to the user as its own question"]),
+            # asks the right question, but has already written the superseding ADR for the user to veto
+            "wrong-supersedes-itself": (
+                e74(supersede_itself=True),
+                ["docs/adr/ unchanged: no new ADR, 0001 not marked superseded"]),
+        }),
+}
+CONTROLS.update(CONTROLS_ADR)
 
 
 def build(ws, eval_name, control, fn, fixture):

@@ -6864,6 +6864,104 @@ def eval63(run):
     ]
 
 
+AD = "design-adr"
+
+
+def ad_adr(n):
+    """ADR n cited: `ADR-0002`, `ADR 2`, `ADR-002`, `0002-violations…`, `docs/adr/0002`."""
+    return rf"\bADR[-\s#]*0*{n}\b|\b000{n}\b"
+
+
+# How a violation reaches the caller: the question ADR-0002 settled. Read from a question's option rows,
+# not its prose, so an edge question that says "rejected with CUTOFF_WINDOW" is not mistaken for it.
+AD_SHAPE = (r"new exception|exception (type|class)|own exception|raises? (a |its )?(new|own|separate)|short[- ]?circuit"
+            r"|first violation|(beside|alongside|with) (the |any )?other (codes?|violations?|rules?)|\balone\b"
+            r"|(all|every) (the )?(violation )?codes|only (the )?(cutoff|CUTOFF_WINDOW)")
+AD_CONFLICT = (r"contradict|conflict|supersed|overturn|re-?open|amend|revisit|at odds|clash|goes against|runs against"
+               r"|incompatib|inconsisten|rules out|forbids|says otherwise")
+
+
+def ad_blocks(r):
+    """[(heading, ask, option rows)] for each `### Question q of ~n` block."""
+    heads = list(re.finditer(r"^#{2,5}\s*\**Question\s+\d+\s+of\s+~?\s*\d+[^\n]*$", r, re.M))
+    out = []
+    for i, m in enumerate(heads):
+        body = r[m.end(): heads[i + 1].start() if i + 1 < len(heads) else len(r)]
+        ask, _, rest = body.partition("[Options]")
+        rows = "\n".join(l for l in rest.splitlines() if re.match(r"\s*\|\s*\**\s*[A-D]\b", l))
+        out.append((m.group(0), ask[:1500], rows))
+    return out
+
+
+def ad_designs(repo):
+    d = repo / ".workflow/designs"
+    return sorted(p for p in d.glob("*.md")) if d.is_dir() else []
+
+
+def eval74(run):
+    """architect-deep-dive's opening round on a repo with ADRs: ADR-0002 answers what the caller sees
+    ([inferred], not asked), the per-venue request contradicts ADR-0001 and becomes its own supersede
+    question, and docs/adr/ is left as it was."""
+    repo, r = run / "repo", resp(run)
+    designs = ad_designs(repo)
+    design = read(designs[0]) if len(designs) == 1 else ""
+    t = r + "\n\n" + design
+    qs = ar_questions(r)
+    sec = re.search(r"^## Decisions\s*\n(.*?)(?=^## |\Z)", design, re.S | re.M)
+    bullets = [" ".join(b.split()) for b in re.split(r"\n(?=\s*[-*]\s+\S)", "\n" + (sec.group(1) if sec else ""))
+               if re.match(r"\s*[-*]\s+\S", b)]
+    cited = [n for n in (1, 2, 3) if re.search(ad_adr(n), t, re.I)]
+    asked_shape = [h.strip()[:80] for h, ask, rows in ad_blocks(r)
+                   if re.search(AD_SHAPE, rows, re.I) and not re.search(ad_adr(2), h + ask, re.I)]
+    supersede_q = [q[2].strip()[:80] for q in qs
+                   if re.search(r"venue", q[2] + q[3], re.I) and re.search(ad_adr(1), q[2] + q[3], re.I)]
+    awaiting = list(re.finditer(r"Awaiting your decision or input to proceed", r))
+    heads = list(re.finditer(r"^#{2,5}\s*\**Question\s+\d+\s+of", r, re.M))
+    fx_adr, run_adr = FIXTURES / AD / "docs/adr", repo / "docs/adr"
+    was = {p.name: read(p) for p in fx_adr.glob("*")}
+    now = {p.name: read(p) for p in run_adr.glob("*")} if run_adr.is_dir() else {}
+    adr_changed = sorted(n for n in set(was) | set(now) if was.get(n) != now.get(n))
+    name_ok = [p.name for p in designs if re.fullmatch(r"(\d{8}-\d{4}-)?[a-z0-9]+(-[a-z0-9]+)*\.md", p.name)]
+    return [
+        # capability
+        ("charter: Solving, Why now, Done looks like",
+         has(r, r"Solving", r"Why now", r"Done looks like"), "", C),
+        ("one to three questions, each in the four-section format",
+         1 <= len(qs) <= 3 and all(len(re.findall(p, r)) >= len(qs) for p in AR_SECTIONS),
+         f"{len(qs)} question(s); sections {[len(re.findall(p, r)) for p in AR_SECTIONS]}", C),
+        ("closes with the awaiting-decision line, once",
+         len(awaiting) == 1 and bool(heads) and awaiting[0].start() > heads[-1].start(), f"{len(awaiting)} time(s)", C),
+        # delta
+        # SKILL.md First action "ADRs covering that area. An ADR is a resolved decision"
+        ("the ADRs loaded: at least two of the three cited", len(cited) >= 2, f"cited {cited}", D),
+        # First action "treat it as [inferred] and binding"; rule 4 "Mark such answers [inferred]"
+        ("what the caller sees answered [inferred] from ADR-0002",
+         near(t, r"\[?inferred\]?", ad_adr(2), 400), "", D),
+        # rule 4 "If the answer … can be inferred … do not ask me"
+        ("how violations reach the caller not asked as a question",
+         bool(qs) and not asked_shape, f"asked: {asked_shape[:1]}" if asked_shape else f"{len(qs)} question(s)", D),
+        # First action "If the design … contradicts one, say so explicitly"
+        ("the per-venue request named as contradicting ADR-0001",
+         near(r, ad_adr(1), r"venue", 400) and near(r, ad_adr(1), AD_CONFLICT, 300), "", D),
+        # First action "make superseding it its own decision — never route around it silently"
+        ("superseding ADR-0001 put to the user as its own question",
+         bool(supersede_q), supersede_q[0] if supersede_q else f"{len(qs)} question(s), none naming ADR-0001 and venues", D),
+        # rule 6; The design file "<YYYYMMDD-HHMM>-<slug>.md", "Create it before the first round, with Status: in progress",
+        # "Say the path in your first response"
+        ("one design file under .workflow/designs/, `in progress`, its path in the response",
+         len(designs) == 1 and bool(name_ok) and bool(re.search(r"\*\*Status:?\*\*:?\s*in progress", design))
+         and designs[0].name in r, f"designs: {[p.name for p in designs]}", D),
+        # The design file "Append each decision the moment it resolves"; rule 4 "they count as resolved"
+        ("the [inferred] ADR-0002 answer recorded in the design file's Decisions",
+         any(re.search(ad_adr(2), b, re.I) and re.search(r"inferred", b, re.I) for b in bullets),
+         f"{len(bullets)} decision line(s)", D),
+        # records.md "Do not write one for an [inferred] answer an existing ADR already settled";
+        # "When the user takes the new branch, write the new ADR … Superseded by"
+        ("docs/adr/ unchanged: no new ADR, 0001 not marked superseded",
+         not adr_changed, f"changed: {adr_changed}" if adr_changed else "", D),
+    ]
+
+
 CHECKS = {
     "eval-0-architect-charter-and-options": eval0,
     "eval-1-brief-ordered-criteria": eval1,
@@ -6929,6 +7027,7 @@ CHECKS = {
     "eval-61-brief-under-nexus-routes-questions": eval61,
     "eval-62-tdd-headless-contradiction-unconfirmed": eval62,
     "eval-63-architect-second-round": eval63,
+    "eval-74-architect-adr-binds-the-round": eval74,
 }
 
 

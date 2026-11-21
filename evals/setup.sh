@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Prepare the eval fixtures. Run once after cloning.
-#   - the five pipeline fixtures, and the four variants evals 60-63 use, get a virtualenv with pytest (build output, gitignored)
+#   - the five pipeline fixtures, and the variants evals 60-63 and 74 use, get a virtualenv with pytest (build output, gitignored)
 #   - the incident, release-notes, review and repo-memory fixtures get their git history built (nested repos, gitignored)
 #   - the compose fixture needs nothing: it is graded from files, never executed
 set -euo pipefail
 cd "$(dirname "$0")/fixtures"
 
 echo "== pipeline fixtures =="
-for f in base tdd refactor teardown verdict tdd-planted tdd-contradiction brief-nexus design-round2; do
+for f in base tdd refactor teardown verdict tdd-planted tdd-contradiction brief-nexus design-round2 design-adr; do
   [ -d "$f/.venv" ] || python3 -m venv "$f/.venv"
   "$f/.venv/bin/pip" -q install pytest
   printf '%-10s ' "$f"

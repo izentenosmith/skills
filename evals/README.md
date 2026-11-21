@@ -23,7 +23,7 @@ evals/
 ├── benchmark.md    the recorded result
 ├── scores.json     per eval: the iteration its score comes from, and the hash of the skill it scored
 ├── tests/          unit tests for the staging hash, scores.json, transcripts and the health table (CI runs them)
-├── controls/       reproducible controls (make_controls.py: evals 6, 8-14 and 16-63; eval15.py: the loop)
+├── controls/       reproducible controls (make_controls.py: evals 6, 8-14, 16-63 and 74; eval15.py: the loop)
 ├── trigger/        the triggering eval: does a description get its skill picked, and only when it should (its own README)
 └── fixtures/       the seeded repos and documents the skills work against
 ```
@@ -1130,6 +1130,30 @@ Re-graded against every stored run of evals 4 and 58 (iterations 49–54, 32 gra
 - **agent-brief, a `resolved` design with decisions open.** "If a dimension was left implicit … go back to architect-deep-dive" has no sub-session form. The eval accepts a brief written around the open decision.
 - **architect-deep-dive with the user unavailable.** `run.py` tells every run the user is unavailable, and rule 8 then says to stop on a question that cannot be deferred. Eval 0 has always graded a round asked anyway, and eval 63 does the same.
 
+### `design-adr`: architect-deep-dive bound by the repo's ADRs (eval 74)
+
+Evals 0 and 63 run on a repo with no recorded decisions, so nothing grades architect-deep-dive's **First action**: load the ADRs, treat each as **[inferred]** and binding, and when the design would contradict one, say so and make superseding it its own decision. `design-adr` is the `base` service plus `docs/adr/0001`–`0003` and `docs/glossary.md`; the README mentions neither folder, so a run has to look. `setup.sh` builds its venv. Answer key: `fixtures/design-adr.answers.md`. Written on 2026-11-21; **not run yet**, so it has no score.
+
+| ADR | Settles | The trap |
+|---|---|---|
+| 0001 | every rule setting comes from the account; venues carry none | the prompt's Harbour Dining wants a window per venue: the bare move is a "where does the window live: account or venue override" question that never names the record it overturns |
+| 0002 | every violation code on one `Rejected`; a rule never raises | "what the caller sees" is round 1 of eval 0's tree, and here it is already answered |
+| 0003 | rules are pure: no store, no clock | cited, not graded on its own |
+
+**Eval 74** reads the response and the one design file. Capability: the charter's Solving, Why now and Done looks like; one to three `### Question <q> of ~<n>` blocks in the four sections; the awaiting line once, after the last. Delta: at least two of the three ADRs cited (`ADR-0002`, `ADR 2`, `0002`); "inferred" within 400 characters of ADR-0002; no question whose **option rows** offer a new exception, a short-circuit, a code alone or beside the others, unless that question cites ADR-0002 (option rows, so an edge question that says "rejected with CUTOFF_WINDOW" is not read as the shape question); ADR-0001 near "venue" and near a word of contradiction (contradict, conflict, supersede, overturn, reopen, amend …); a question that names venues and ADR-0001; exactly one file in `.workflow/designs/` named `<YYYYMMDD-HHMM>-<slug>.md` (or the slug alone), `in progress`, its file name in the response; a Decisions line naming ADR-0002 and "inferred"; and `docs/adr/` byte-identical to the fixture (records.md: an inferred answer cites its ADR, and a superseding ADR is written only once the user takes that branch). Which other questions share the round is not graded.
+
+**Where the skill text left the grader a choice.** The skill says to make superseding a contradicted ADR "its own decision", not that it must be in round 1. Eval 74 wants it in round 1 because the window's source is the first dependency of the rule, and a round that defers it to round 2 while asking the edge question fails "put to the user as its own question". A run that marks 0002 inferred in the response but records nothing in the design file fails only the Decisions check.
+
+**Controls** (`make_controls.py --only 74`):
+
+| Eval | Control | All | Delta | Fails |
+|---|---|---:|---:|---|
+| 74 | reference | 11/11 | 8/8 | — |
+| 74 | do-nothing | 1/11 | 1/8 | everything but "docs/adr/ unchanged" |
+| 74 | `wrong-asks-the-settled`: ADR-0002 never read, the caller's shape asked as question 4 | 8/11 | 5/8 | inferred from 0002; not asked; recorded in Decisions |
+| 74 | `wrong-routes-around`: a venue override offered and recommended, ADR-0001 never named | 9/11 | 6/8 | contradiction named; supersede question |
+| 74 | `wrong-supersedes-itself`: the right round, with ADR-0004 already written and 0001 marked superseded | 10/11 | 7/8 | docs/adr/ unchanged |
+
 ## Running it
 
 **1. Set up** (once):
@@ -1314,6 +1338,9 @@ The script builds each control as a run directory from the pristine fixture, gra
 | 59 | `wrong-issuer-only` | stores new tokens without the space; every stored token stays refused | `has_scope` probe, shared parser unmodified |
 | 59 | `wrong-endpoint-only` | strips the spaces in `api/exports.py` | `has_scope` probe, shared parser unmodified |
 | 59 | `wrong-vacuous-test` | the right fix, with a test that never uses a space | the test is run against the original |
+| 74 | `wrong-asks-the-settled` | a well-formed round that asks what the caller sees, which ADR-0002 settled | inferred from ADR-0002; shape not asked; Decisions line |
+| 74 | `wrong-routes-around` | offers a per-venue override as an ordinary option, never naming ADR-0001 | contradiction named; supersede question |
+| 74 | `wrong-supersedes-itself` | asks the right question after writing ADR-0004 and marking 0001 superseded | `docs/adr/` unchanged |
 
 Each wrong control scores everything else, so it fails only what it was built to fail: one or two assertions per run. `wrong-ceil` passed eval 8 until the probe gained `applyDiscount(999, 10) === 899`. It still fails no **delta** assertion, because rounding correctness is tagged capability. The do-nothing control passes these delta assertions by doing nothing: eval 11 "changes no source or test file", eval 12 "no production action" and "no code changed before containment", eval 13 "production database untouched" and "the job not reloaded", eval 14 "no yank or publish".
 
