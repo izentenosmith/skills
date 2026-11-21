@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the controls for evals 6, 8-14, 16-63 and 75, grade them with grade.py, and check they separate.
+"""Build the controls for evals 6, 8-14 and 16-75, grade them with grade.py, and check they separate.
 
     python3 evals/controls/make_controls.py               # build in a temp dir, grade, check, clean up
     python3 evals/controls/make_controls.py --keep DIR    # leave the graded runs in DIR to inspect
@@ -15,6 +15,7 @@
     python3 evals/controls/make_controls.py --only 60 61 62 63         # the pipeline, harder; 60 and 62 need setup.sh's tdd venv
     python3 evals/controls/make_controls.py --only 74                  # architect-deep-dive bound by ADRs (files only)
     python3 evals/controls/make_controls.py --only 75                  # agent-brief over a finished change (files only)
+    python3 evals/controls/make_controls.py --only 64 65               # acceptance-tests, more; need setup.sh's at-* venvs
 
 Three kinds of control, each a run directory (repo/ + outputs/response.md) that
 grade.py's eval function reads exactly as it reads a real run:
@@ -7068,6 +7069,216 @@ CONTROLS_ROUND2 = {
         }),
 }
 CONTROLS.update(CONTROLS_ROUND2)
+
+# -- eval 64: acceptance-tests on a red baseline
+
+E64_RED = "tests/test_receipt.py::test_confirmation_names_a_single_guest"
+E64_BASELINE = f"""
+**Tier: Standard** — one acceptance test per criterion would be the shape of this stage.
+
+**Baseline, before any test.** `.venv/bin/python -m pytest tests -q` → 5 passed, 1 failed. The failure is
+`{E64_RED}`: `confirmation_text` says "Table for 1 guests". It has nothing to do with the cutoff brief, and
+it is not this stage's to fix.
+
+A green suite after the acceptance tests cannot be shown against a suite that was red before them, so no
+acceptance tests are written, nothing in the brief is mapped, and the receipt test and `reservations/` are as
+I found them. Once the suite is green, run this stage again.
+"""
+E64_LAST = f"\nbaseline red: `{E64_RED}` — no acceptance tests written\n"
+E64_ANYWAY = (E27_RESPONSE.replace("The existing suite is still green (4 passed).",
+                                   "Baseline: `.venv/bin/python -m pytest tests -q` → 5 passed, 1 failed: "
+                                   f"`{E64_RED}`, a pre-existing failure unrelated to the cutoff, left alone."))
+E64_PLURAL = 'return f"Table for {booking.party_size} guests on {when}."'
+E64_PLURAL_FIX = ('guests = "guest" if booking.party_size == 1 else "guests"\n'
+                  '    return f"Table for {booking.party_size} {guests} on {when}."')
+
+
+def e64(response=E64_BASELINE + E64_LAST, skip=False):
+    def build(run, repo):
+        if skip:
+            sub(repo / "tests/test_receipt.py", "def test_confirmation_names_a_single_guest():",
+                '@pytest.mark.skip(reason="pre-existing, unrelated to the brief")\ndef test_confirmation_names_a_single_guest():')
+            sub(repo / "tests/test_receipt.py", "from datetime import datetime\n", "from datetime import datetime\n\nimport pytest\n")
+        w(run / "outputs/response.md", response)
+    return build
+
+
+def e64_fixes_it(run, repo):
+    """Fixes the unrelated receipt bug so the baseline is green, then writes eval 27's tests."""
+    sub(repo / "reservations/receipt.py", E64_PLURAL, E64_PLURAL_FIX)
+    e27_build(response=E27_RESPONSE.replace("The existing suite is still green (4 passed).",
+                                            "The baseline had one failure, `test_confirmation_names_a_single_guest`; "
+                                            "I fixed the pluralisation in `receipt.py`, and the suite is green (6 passed)."))(run, repo)
+
+
+E64 = "eval-64-acceptance-tests-red-baseline-writes-nothing"
+E64_NONE = "no acceptance tests written: no test function added, none mapped in the brief"
+E64_TAIL = "the last lines say the baseline is red, name the failing test, and that no tests were written"
+
+CONTROLS_RED_BASELINE = {
+    E64: dict(
+        fixture="at-red-baseline", reference=e64(),
+        free=[E64_NONE, "the red test left as found: not fixed, skipped, edited or deleted",
+              "no production code changed: the receipt not fixed, no cutoff written"],
+        wrong={
+            # notes the unrelated failure, then writes and maps eval 27's five tests anyway
+            "wrong-writes-anyway": (e27_build(response=E64_ANYWAY), [E64_NONE, E64_TAIL]),
+            # makes the baseline green by fixing the receipt, then writes the tests
+            "wrong-fixes-the-baseline": (e64_fixes_it, [E64_NONE, E64_TAIL,
+                                                        "the red test left as found: not fixed, skipped, edited or deleted",
+                                                        "no production code changed: the receipt not fixed, no cutoff written",
+                                                        # it reports the suite after its fix (6 passed), not the baseline
+                                                        "the baseline recorded: the command and how many tests passed"]),
+            # stops as it should, but skips the red test on the way
+            "wrong-skips-the-red": (e64(skip=True), ["the red test left as found: not fixed, skipped, edited or deleted"]),
+            # stops, but records neither the command nor the count, and ends on something else
+            "wrong-stops-vaguely": (e64(response="The existing suite has a failing test, test_confirmation_names_a_single_guest, "
+                                                 "so I stopped.\n\nFix the suite first, then ask me again.\n"),
+                                    ["the baseline recorded: the command and how many tests passed", E64_TAIL]),
+        }),
+}
+CONTROLS.update(CONTROLS_RED_BASELINE)
+
+# -- eval 65: acceptance-tests declares the missing interface
+
+E65_TESTS = '''
+"""Acceptance tests for BookingService.check (stage 3): through the service only, red until tdd builds it."""
+from reservations.api import BookingService
+from tests.test_booking import FakeConfig, FakeStore, slot
+
+
+def service(**cfg):
+    store = FakeStore()
+    return BookingService(store, FakeConfig(cfg)), store
+
+
+def test_checking_an_acceptable_booking_returns_no_codes():
+    svc, _ = service()
+    assert svc.check("acct-1", "venue-1", slot(), 4) == []
+
+
+def test_checking_a_booking_that_breaks_a_rule_returns_its_code():
+    svc, _ = service()
+    assert svc.check("acct-1", "venue-1", slot(), 13) == ["PARTY_TOO_LARGE"]
+
+
+def test_check_reads_the_account_config():
+    default, _ = service()
+    assert default.check("acct-1", "venue-1", slot(), 13) == ["PARTY_TOO_LARGE"]
+    larger, _ = service(max_party_size=20)
+    assert larger.check("acct-1", "venue-1", slot(), 13) == []
+
+
+def test_check_reports_both_codes_when_two_rules_break():
+    svc, _ = service()
+    assert sorted(svc.check("acct-1", "venue-1", slot(hour=3), 13)) == ["PARTY_TOO_LARGE", "VENUE_CLOSED"]
+
+
+def test_check_never_saves_an_acceptable_booking():
+    svc, store = service()
+    assert svc.check("acct-1", "venue-1", slot(), 4) == []
+    assert store.saved == []
+'''
+E65_STUB = '''
+    def check(self, account_id, venue_id, slot, party_size):
+        """Return the violation codes for this booking without saving it; [] when it would be accepted."""
+        raise NotImplementedError("BookingService.check")
+'''
+E65_ID = "tests/acceptance/test_check.py::"
+E65_MAP = [
+    f"- [ ] Criterion 1 (tracer bullet): an acceptable booking returns an empty list → `{E65_ID}test_checking_an_acceptable_booking_returns_no_codes`",
+    f"- [ ] Criterion 2: a booking that breaks a rule returns its code → `{E65_ID}test_checking_a_booking_that_breaks_a_rule_returns_its_code`",
+    f"- [ ] Criterion 3: the check reads the account's config → `{E65_ID}test_check_reads_the_account_config`",
+    f"- [ ] Edge case: two broken rules return both codes → `{E65_ID}test_check_reports_both_codes_when_two_rules_break`",
+    f"- [ ] Edge case: a check never persists anything → `{E65_ID}test_check_never_saves_an_acceptable_booking`",
+]
+E65_REVISION = ("- 2026-11-21 — acceptance-tests: added **Acceptance tests** — five criteria mapped to five tests in "
+                "`tests/acceptance/`; `BookingService.check` declared as a stub raising NotImplementedError, all five red on it.")
+E65_RESPONSE = """
+**Tier: Standard** — one acceptance test per criterion: a new public method behind the existing service seam.
+
+**Baseline.** `.venv/bin/python -m pytest tests -q` → 4 passed.
+
+**Boundary.** `BookingService`, the seam `tests/test_booking.py` drives. No acceptance suite existed, so the tests
+live in `tests/acceptance/test_check.py`, reusing `FakeStore`, `FakeConfig` and `slot()`.
+
+**The interface did not exist.** `BookingService.check` is new in the brief's Key interfaces, so a test calling
+it would fail with `AttributeError`, which proves nothing about the behavior. I declared it in
+`reservations/api.py` with the brief's signature, raising `NotImplementedError`. That stub is the only
+production code written, and it is tdd's first target.
+
+**Red, for the right reason.** `.venv/bin/python -m pytest tests/acceptance -q` → 5 failed, every one on
+`NotImplementedError: BookingService.check`. None fails to load, none passes. The existing suite is still green
+(4 passed).
+
+The mapping is in `.workflow/brief.md` under **Acceptance tests**, logged under Revisions.
+
+5 acceptance tests written and red for the right reason, 0 criteria marked not acceptance-testable. Run them
+with `.venv/bin/python -m pytest tests/acceptance -q`. Run **tdd** next — it builds until every one of them passes.
+"""
+E65_IMPLEMENTED = '''
+    def check(self, account_id, venue_id, slot, party_size):
+        booking = Booking(account_id, venue_id, slot, party_size)
+        return booking.validate(self._config_source.for_account(account_id))
+'''
+
+
+def e65(tests=E65_TESTS, method=E65_STUB, mapping=E65_MAP, response=E65_RESPONSE):
+    def build(run, repo):
+        w(repo / "tests/acceptance/test_check.py", tests)
+        if method:
+            (repo / "reservations/api.py").write_text(grade.ax_api(method))
+        brief = repo / ".workflow/brief.md"
+        sub(brief, "**Test seams & prior art:**", E27_SECTION.format(map="\n".join(mapping)) + "**Test seams & prior art:**")
+        sub(brief, "- (none yet)", E65_REVISION)
+        w(run / "outputs/response.md", response)
+    return build
+
+
+E65_VACUOUS_SAVE = E65_TESTS.replace('''    svc, store = service()
+    assert svc.check("acct-1", "venue-1", slot(), 4) == []
+    assert store.saved == []''', '''    svc, store = service()
+    assert svc.check("acct-1", "venue-1", slot(), 13) == ["PARTY_TOO_LARGE"]
+    assert store.saved == []''')
+E65_INTERNALS = (E65_TESTS
+                 .replace("from reservations.api import BookingService\n",
+                          "from reservations.api import BookingService\nfrom reservations.booking import Booking\n")
+                 .replace('''    svc, _ = service()
+    assert sorted(svc.check("acct-1", "venue-1", slot(hour=3), 13)) == ["PARTY_TOO_LARGE", "VENUE_CLOSED"]''',
+                          '''    booking = Booking("acct-1", "venue-1", slot(hour=3), 13)
+    assert sorted(booking.validate({})) == ["PARTY_TOO_LARGE", "VENUE_CLOSED"]'''))
+assert E65_VACUOUS_SAVE != E65_TESTS and E65_INTERNALS.count("Booking(") == 1
+
+E65 = "eval-65-acceptance-tests-declares-the-missing-interface"
+E65_DECLARED = "the missing interface declared: BookingService.check, the brief's signature, raising NotImplementedError"
+E65_RED_NOW = "every new test is red now (none passes)"
+
+CONTROLS_STUB = {
+    E65: dict(
+        fixture="at-stub", reference=e65(),
+        free=["no implementation: nothing in reservations/ changed but the declared stub"],
+        wrong={
+            # the same tests with nothing declared: every one fails on AttributeError
+            "wrong-no-stub": (e65(method=None, response=E65_RESPONSE.replace("every one on\n`NotImplementedError: BookingService.check`",
+                                                                             "every one because `check` does not exist yet")),
+                              [E65_DECLARED, "red for the right reason: NotImplementedError or an assertion, never an AttributeError or import error"]),
+            # writes the tests, then makes them pass
+            "wrong-implements-it": (e65(method=E65_IMPLEMENTED),
+                                    [E65_DECLARED, E65_RED_NOW, "no implementation: nothing in reservations/ changed but the declared stub"]),
+            # a stub that returns [] instead of raising: the tracer and never-saves tests pass now
+            "wrong-stub-returns-empty": (e65(method=E65_STUB.replace('raise NotImplementedError("BookingService.check")', "return []")),
+                                         [E65_DECLARED, E65_RED_NOW]),
+            # the never-persists test checks a rejected booking, so a check that saves acceptable ones survives it
+            "wrong-vacuous-persist": (e65(tests=E65_VACUOUS_SAVE),
+                                      ["the never-persists test kills a check that saves an acceptable booking"]),
+            # the both-codes test calls Booking.validate: an internal, and green today
+            "wrong-reaches-internals": (e65(tests=E65_INTERNALS),
+                                        ["no internals: tests drive BookingService only", E65_RED_NOW,
+                                         # validate is not the seam the first-code-only mutant changes
+                                         "the both-codes test kills a first-code-only check"]),
+        }),
+}
+CONTROLS.update(CONTROLS_STUB)
 
 
 # -- eval 74: design-adr

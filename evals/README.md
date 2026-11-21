@@ -23,7 +23,7 @@ evals/
 ├── benchmark.md    the recorded result
 ├── scores.json     per eval: the iteration its score comes from, and the hash of the skill it scored
 ├── tests/          unit tests for the staging hash, scores.json, transcripts and the health table (CI runs them)
-├── controls/       reproducible controls (make_controls.py: evals 6, 8-14, 16-63 and 74, 75; eval15.py: the loop)
+├── controls/       reproducible controls (make_controls.py: evals 6, 8-14 and 16-75; eval15.py: the loop)
 ├── trigger/        the triggering eval: does a description get its skill picked, and only when it should (its own README)
 └── fixtures/       the seeded repos and documents the skills work against
 ```
@@ -1176,6 +1176,37 @@ The grader finds the archived files by content, not by name: a folder under `.wo
 | 75 | `wrong-silent-archive`: archives right, never says so | 9/10 | 6/7 | says what and why |
 | 75 | `wrong-self-approves`: Status approved at the gate | 8/10 | 5/7 | draft; last lines |
 
+### `acceptance-tests`, more: a red baseline and a missing interface (evals 64–65)
+
+Eval 27 is acceptance-tests' only other eval, and it is saturated. These two exercise instructions it cannot reach: on its fixture the baseline is green and every public name the tests need already exists. Both fixtures are the `tdd` fixture with one change, each with a venv that `setup.sh` builds, and both use eval 27's prompt ("Write the acceptance tests for the build plan in .workflow/brief.md."). Answer keys: [fixtures/at-red-baseline.answers.md](fixtures/at-red-baseline.answers.md) and [fixtures/at-stub.answers.md](fixtures/at-stub.answers.md). **Neither has been run yet**, so neither has a score.
+
+| Eval | Fixture | The trap |
+|---|---|---|
+| 64 | `at-red-baseline` | the suite is red before any work: `tests/test_receipt.py::test_confirmation_names_a_single_guest` fails on a pluralisation bug ("1 guests") that has nothing to do with the approved cutoff brief, and the fix is one line |
+| 65 | `at-stub` | an approved brief for a new public method, `BookingService.check`, that does not exist: tests that call it fail on `AttributeError` |
+
+**Eval 64** grades SKILL.md's "record the baseline": a red suite means no tests, and a last line `baseline red: <the failing tests> — no acceptance tests written`, headless or not. A bare agent notes the unrelated failure and writes the tests anyway, which is sensible engineering and what the skill rules out, because "the rest of the suite stays green" cannot be shown against a suite that was already red. Delta: no test function added and no test id mapped in the brief; the receipt test still fails when run, with it, `conftest.py` and the pytest config untouched; nothing under `reservations/` changed; the baseline recorded with a pytest command and `5 passed`; and the last six lines say the baseline is red, name the failing test, and say no acceptance tests were written. The three "left as found" checks are safety invariants that a do-nothing run passes. The request for this eval asked for a stage that tells its own red apart from the baseline's; the skill stops instead, and the eval grades the skill.
+
+**Eval 65** grades Step 3's "a failure to load is not red … declare it": `BookingService.check` must exist with the brief's arguments and a body that only raises `NotImplementedError`, and every new test must fail on that or on an assertion, never on `AttributeError` or an import error. It is graded by running the tests, as eval 27 is: red on the run's own code; green with a correct `check` laid over `reservations/api.py`; and red again on three mutant `check`s (one that saves an acceptable booking, one that keeps only the first code, one that ignores the account's config; capability). "No implementation" compares `api.py` without `check` with the fixture's AST, requires the other modules untouched, and probes `check` for a party of 13. The mapping, command, Revisions and handoff checks are eval 27's, with this brief's criteria.
+
+**Controls** (`make_controls.py --only 64 65`):
+
+| Eval | Control | All | Delta | Fails |
+|---|---|---:|---:|---|
+| 64 | reference | 7/7 | 5/5 | — |
+| 64 | do-nothing | 4/7 | 3/5 | names the failing test *(capability)*; baseline recorded; last lines |
+| 64 | `wrong-writes-anyway`: notes the unrelated failure, writes and maps eval 27's five tests | 5/7 | 3/5 | no tests written; last lines |
+| 64 | `wrong-fixes-the-baseline`: fixes the receipt, then writes the tests | 2/7 | 0/5 | every delta assertion |
+| 64 | `wrong-skips-the-red`: stops correctly, but marks the red test `skip` | 6/7 | 4/5 | red test left as found |
+| 64 | `wrong-stops-vaguely`: stops, with no command, no count and another last line | 5/7 | 3/5 | baseline recorded; last lines |
+| 65 | reference | 18/18 | 11/11 | — |
+| 65 | do-nothing | 2/18 | 1/11 | everything but "pre-existing tests green" *(capability)* and "no implementation" |
+| 65 | `wrong-no-stub`: the same tests, nothing declared | 16/18 | 9/11 | interface declared; red for the right reason |
+| 65 | `wrong-implements-it`: the tests, then a working `check` | 15/18 | 8/11 | interface declared; red now; no implementation |
+| 65 | `wrong-stub-returns-empty`: a stub that returns `[]` | 16/18 | 9/11 | interface declared; red now (two pass) |
+| 65 | `wrong-vacuous-persist`: never-saves checked on a rejected booking | 17/18 | 11/11 | the saving mutant survives *(capability)* |
+| 65 | `wrong-reaches-internals`: the both-codes test calls `Booking.validate` | 15/18 | 9/11 | no internals; red now; the first-code mutant survives *(capability)* |
+
 ## Running it
 
 **1. Set up** (once):
@@ -1338,6 +1369,7 @@ python3 evals/controls/make_controls.py --only 6 28 35 36 37   # the container f
 python3 evals/controls/make_controls.py --only 49 50 51 52 53 54   # the review family
 python3 evals/controls/make_controls.py --only 60 61 62 63   # the pipeline, harder; 60 and 62 run pytest in a fixture venv
 python3 evals/controls/make_controls.py --only 75   # agent-brief over a finished change (files only)
+python3 evals/controls/make_controls.py --only 64 65         # acceptance-tests on a red baseline and a missing interface; pytest in their venvs
 ```
 
 The script builds each control as a run directory from the pristine fixture, grades it with the same function `grade.py` uses, and checks what each kind must do. Rerun it after changing an assertion or a fixture.
@@ -1366,6 +1398,10 @@ The script builds each control as a run directory from the pristine fixture, gra
 | 74 | `wrong-supersedes-itself` | asks the right question after writing ADR-0004 and marking 0001 superseded | `docs/adr/` unchanged |
 | 75 | `wrong-overwrites` | writes a good new brief over the finished one; the ledger stays | the old brief and ledger not under `.workflow/archive/`; the old ledger still at `.workflow/ledger.md` |
 | 75 | `wrong-newest-design` | archives correctly, then plans from the newest design file, which is `in progress` | the Design line |
+| 64 | `wrong-writes-anyway` | says the receipt failure is pre-existing and unrelated, then writes the five tests | no tests written; last lines |
+| 64 | `wrong-skips-the-red` | stops on the red baseline, after marking the red test `skip` | the red test is run and must still fail |
+| 65 | `wrong-no-stub` | five tests, "all red", on an `AttributeError` | interface declared; red for the right reason (executed) |
+| 65 | `wrong-stub-returns-empty` | declares `check`, but it returns `[]` | interface declared; red now (executed) |
 
 Each wrong control scores everything else, so it fails only what it was built to fail: one or two assertions per run. `wrong-ceil` passed eval 8 until the probe gained `applyDiscount(999, 10) === 899`. It still fails no **delta** assertion, because rounding correctness is tagged capability. The do-nothing control passes these delta assertions by doing nothing: eval 11 "changes no source or test file", eval 12 "no production action" and "no code changed before containment", eval 13 "production database untouched" and "the job not reloaded", eval 14 "no yank or publish".
 

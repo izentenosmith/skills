@@ -7034,6 +7034,337 @@ def eval75(run):
     ]
 
 
+
+# ------------------------------------------------------- acceptance-tests, more (64-65)
+# Two variants of the tdd fixture. 64: the suite is red before any work (an unrelated receipt test), so the
+# stage writes no tests and says so in its last line. 65: the brief's public interface does not exist yet,
+# so the stage declares it as a stub that raises NotImplementedError, and its tests are red on that, not on
+# an AttributeError. Every pytest runs at local noon, as eval 27's do.
+
+AX_CONFIG = r"(^|/)(conftest\.py|pytest\.ini|tox\.ini|setup\.cfg|pyproject\.toml)$"
+
+
+def ax_changed(run, fixture):
+    """(added, modified, deleted) like changes(), without pytest's cache."""
+    return tuple([f for f in fs if ".pytest_cache" not in f] for fs in changes(run, fixture))
+
+
+def ax_base(py, fixture):
+    """(classname, test) of a fixture's own tests, collected the way at_pytest collects a run's."""
+    key = f"{py}|{fixture}"
+    if key not in _AT_BASE:
+        tmp = pathlib.Path(tempfile.mkdtemp(prefix="ax-base-"))
+        try:
+            _AT_BASE[key] = {at_key(k) for k in at_pytest(py, at_copy(FIXTURES / fixture, tmp / "repo"), ALL_TESTS)}
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+    return _AT_BASE[key]
+
+
+def ax_added_tests(run, fixture):
+    """The test code the run added (new files whole, changed files' new lines) and its new test names."""
+    added, modified, _ = ax_changed(run, fixture)
+    code, names = [], set()
+    for f in added + modified:
+        if not re.search(AT_TEST_FILE, f):
+            continue
+        text, before = read(run / "repo" / f), read(FIXTURES / fixture / f)
+        old = set(before.splitlines())
+        code += [line for line in text.splitlines() if line not in old]
+        names |= at_test_names(text) - at_test_names(before)
+    return "\n".join(code), names
+
+
+def ax_internals(run, fixture):
+    """at_internals for another fixture: imports of the rule or aggregate modules, private names."""
+    added, modified, _ = ax_changed(run, fixture)
+    hits = set()
+    for f in added + modified:
+        if not re.search(AT_TEST_FILE, f):
+            continue
+        try:
+            tree = ast.parse(read(run / "repo" / f))
+        except SyntaxError:
+            continue
+        for n in ast.walk(tree):
+            if isinstance(n, ast.Import):
+                hits |= {a.name for a in n.names if re.match(r"reservations\.(rules|booking)\b", a.name)}
+            elif isinstance(n, ast.ImportFrom):
+                mod = n.module or ""
+                if re.match(r"reservations\.(rules|booking)\b", mod):
+                    hits.add(mod)
+                elif mod == "reservations":
+                    hits |= {f"reservations.{a.name}" for a in n.names if a.name in ("rules", "booking")}
+            elif isinstance(n, ast.Attribute) and n.attr in AT_PRIVATE | {"validate"}:
+                hits.add(n.attr)
+            elif isinstance(n, ast.Name) and n.id in AT_PRIVATE:
+                hits.add(n.id)
+    return sorted(hits)
+
+
+def ax_mapping(sec, crits):
+    """[(criterion, line)] for each mapping line, by `Criterion n` or by the first pattern in `crits` it matches."""
+    out = []
+    for line in sec.splitlines():
+        if not re.match(r"\s*[-*]\s", line) or re.search(r"\*\*Command", line):
+            continue
+        n = re.search(r"Criterion\s*#?\s*(\d)", line, re.I)
+        if n:
+            out.append((int(n.group(1)), line))
+            continue
+        crit = re.split(r"→|->", line)[0]
+        for c, pat in crits:
+            if re.search(pat, crit, re.I):
+                out.append((c, line))
+                break
+    return out
+
+
+def ax_unmapped(mapping, names):
+    """Mapping lines whose test ids the run did not add, or with neither a test id nor a reason."""
+    bad = []
+    for c, line in mapping:
+        ids = [t[-1] for t in (re.findall(r"\btest\w*", span) for span in re.findall(r"`([^`]+)`", line)) if t]
+        if ids:
+            bad += [i for i in ids if i not in names]
+        elif not re.search(r"not acceptance.?testable\b.*?(?:—|–|-|:|because)\s*\w+(?:\W+\w+){2,}", line, re.I):
+            bad.append(f"criterion {c}: no test id and no reason")
+    return bad
+
+
+def ax_revised(brief):
+    """New Revisions lines that mention the acceptance tests."""
+    revs = brief.split("## Revisions", 1)[1] if "## Revisions" in brief else ""
+    revs = revs[:m.start()] if (m := re.search(r"^(?:\*\*|#)", revs, re.M)) else revs
+    return [line for line in re.findall(r"^\s*-\s+(.+)$", revs, re.M)
+            if "(none yet)" not in line and re.search(r"acceptance", line, re.I)]
+
+
+RB = "at-red-baseline"
+RB_RED = "test_confirmation_names_a_single_guest"
+RB_RED_FILE = "tests/test_receipt.py"
+# SKILL.md "Before any test: record the baseline": "the command, and how many tests passed". The fixture: 5 passed, 1 failed.
+RB_COUNT = r"\b5\s+(?:tests?\s+)?pass|\bpass(?:ed|ing)?\W{0,3}5\b|\b5\s*(?:/|of)\s*6\b"
+
+
+def eval64(run):
+    """acceptance-tests on a suite that is red before any work: one receipt test, unrelated to the brief,
+    fails. The skill writes no tests, leaves the failure as found, records the baseline, and says so last."""
+    repo, r = run / "repo", resp(run)
+    brief = read(repo / ".workflow/brief.md")
+    res, _, gev = pl_suite(run, RB)
+    added, modified, deleted = ax_changed(run, RB)
+    old = pl_tests(FIXTURES / RB)
+    new = sorted(n for n in pl_tests(repo) if n not in old) if (repo / "tests").is_dir() else []
+    new_files = [f for f in added if re.search(AT_TEST_FILE, f)]
+    mapped = [l.strip()[:90] for l in at_section(brief).splitlines()
+              if re.match(r"\s*[-*]\s", l) and re.search(r"`[^`]*\btest\w*", l) and not re.search(r"\*\*Command", l)]
+    red = pl_outcomes(res, RB_RED)
+    others = {k: v for k, v in res.items() if k[1].split("[")[0] in old and k[1] != RB_RED}
+    test_touched = [f for f in added + modified + deleted if f == RB_RED_FILE or re.search(AX_CONFIG, f)]
+    code = [f for f in added + modified + deleted if f.startswith("reservations/")]
+    tail = pl_tail(r)
+    return [
+        # capability
+        ("the response names the failing test", RB_RED in r or "test_receipt" in r, "", C),
+        ("the suite's other tests still present and green",
+         len(others) >= 5 and all(o == "passed" for o, _ in others.values()), gev, C),
+        # delta
+        # SKILL.md "If it is already red, write no tests"
+        ("no acceptance tests written: no test function added, none mapped in the brief",
+         not new and not new_files and not mapped,
+         f"added: {(new or new_files)[:3]}; mapped: {mapped[:1]}" if new or new_files or mapped else "none", D),
+        # "This stage adds failing acceptance tests … and nothing else"; the red test is not this stage's to settle
+        ("the red test left as found: not fixed, skipped, edited or deleted",
+         red == ["failure"] and not test_touched,
+         f"outcome {red}; touched: {test_touched[:3]}", D),
+        ("no production code changed: the receipt not fixed, no cutoff written",
+         not code, f"changed: {code[:3]}" if code else "reservations/ as found", D),
+        # "Run the full suite as it stands and record the result — the command, and how many tests passed"
+        ("the baseline recorded: the command and how many tests passed",
+         any_of(r + "\n" + brief, r"pytest") and any_of(r + "\n" + brief, RB_COUNT), "", D),
+        # "your last line is 'baseline red: `<the failing tests>` — no acceptance tests written'"
+        ("the last lines say the baseline is red, name the failing test, and that no tests were written",
+         any_of(tail, r"baseline\W{0,3}(?:(?:is|was|suite|run)\s+)?(?:already\s+)?red") and RB_RED in tail
+         and any_of(tail, r"no (?:new )?acceptance tests?\b|(?:wrote|written|writing) no (?:acceptance )?tests"),
+         tail[-200:], D),
+    ]
+
+
+AX = "at-stub"
+AX_SIGNATURE = ["self", "account_id", "venue_id", "slot", "party_size"]
+AX_REFERENCE = '''
+    def check(self, account_id, venue_id, slot, party_size):
+        booking = Booking(account_id, venue_id, slot, party_size)
+        codes = booking.validate({config})
+{save}        return codes{first}
+'''
+AX_MUTANTS = {
+    # saves the booking when it would be accepted: a check that books
+    "saves": dict(save="        if not codes:\n            self._store.save(booking)\n"),
+    # only the first violation
+    "first-only": dict(first="[:1]"),
+    # the default rules, not the account's config
+    "default-config": dict(config="{}"),
+}
+AX_CRITERIA = [  # checked in this order: criterion 3 also names a party of 13, criterion 5 also says "accepted"
+    (4, r"\bboth\b|two (rules|codes)|opening|VENUE_CLOSED|\bfirst\b"),
+    (5, r"persist|\bsav(e|es|ed|ing)\b|\bstore\b"),
+    (3, r"config|max_party_size|\b20\b"),
+    (2, r"break|PARTY_TOO_LARGE|rule'?s code|violat"),
+    (1, r"tracer|accept|empty|\[\]"),
+]
+AX_PROBE = """
+from datetime import datetime, timedelta
+from reservations.api import BookingService
+class Store:
+    def save(self, b): pass
+class Config:
+    def for_account(self, a): return {}
+slot = (datetime.now() + timedelta(days=30)).replace(hour=19, minute=0, second=0, microsecond=0)
+try:
+    print(f"check(party of 13): {BookingService(Store(), Config()).check('acct-1', 'venue-1', slot, 13)!r}")
+except Exception as e:
+    print(f"check(party of 13): {type(e).__name__}")
+"""
+
+
+def ax_api(method):
+    """The fixture's api.py with `method` appended to BookingService (the module's last class)."""
+    return read(FIXTURES / AX / "reservations/api.py").rstrip("\n") + "\n" + method
+
+
+def ax_overlay(repo, method):
+    for f in ("__init__.py", "booking.py", "rules.py"):
+        (repo / "reservations" / f).write_text(read(FIXTURES / AX / "reservations" / f))
+    (repo / "reservations/api.py").write_text(ax_api(method))
+
+
+def ax_stub(run):
+    """(declared, rest_untouched, evidence): BookingService.check declared with the brief's signature and a body
+    that only raises NotImplementedError; everything else in reservations/ as the fixture has it."""
+    src, fx = read(run / "repo/reservations/api.py"), read(FIXTURES / AX / "reservations/api.py")
+    try:
+        tree = ast.parse(src)
+    except SyntaxError:
+        return False, False, "api.py does not parse"
+    cls = [n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == "BookingService"]
+    meth = [n for n in (cls[0].body if cls else []) if isinstance(n, ast.FunctionDef) and n.name == "check"]
+    declared, ev = False, "no BookingService.check"
+    if meth:
+        m = meth[0]
+        body = [s for s in m.body if not (isinstance(s, ast.Expr) and isinstance(s.value, ast.Constant))]
+        exc = body[0].exc if len(body) == 1 and isinstance(body[0], ast.Raise) else None
+        exc = exc.func if isinstance(exc, ast.Call) else exc
+        args = [a.arg for a in m.args.posonlyargs + m.args.args]
+        declared = args == AX_SIGNATURE and isinstance(exc, ast.Name) and exc.id == "NotImplementedError"
+        ev = f"check({', '.join(args)}): " + ("raises NotImplementedError" if exc is not None and getattr(exc, "id", "") == "NotImplementedError"
+                                             else f"a {len(body)}-statement body")
+        cls[0].body = [n for n in cls[0].body if n is not m]
+    tree.body = [n for n in tree.body if not (isinstance(n, ast.ImportFrom) and n.module in ("typing", "__future__"))]
+    rest = ast.dump(tree) == ast.dump(ast.parse(fx))
+    added, modified, deleted = ax_changed(run, AX)
+    others = [f for f in added + modified + deleted if f.startswith("reservations/") and f != "reservations/api.py"]
+    return declared, rest and not others, ev + (f"; also changed: {others[:3]}" if others else "" if rest else "; api.py changed beyond check")
+
+
+def eval65(run):
+    """acceptance-tests on a brief whose public interface does not exist yet: BookingService.check is declared
+    as a stub that raises NotImplementedError, the tests are red on it, and nothing is implemented."""
+    repo = run / "repo"
+    py = pl_python(run, AX)
+    code, names = ax_added_tests(run, AX)
+    brief = read(repo / ".workflow/brief.md")
+    sec = at_section(brief)
+    r = resp(run)
+    base = ax_base(py, AX)
+    declared, rest_ok, stub_ev = ax_stub(run)
+    tmp = pathlib.Path(tempfile.mkdtemp(prefix="ax-grade-"))
+    try:
+        own = at_copy(repo, tmp / "own")
+        now = at_pytest(py, own, ALL_TESTS)
+        new = {k: v for k, v in now.items() if at_key(k) not in base}
+        old = {k: v for k, v in now.items() if at_key(k) in base}
+        try:
+            pr = subprocess.run([str(py), "-c", AX_PROBE], cwd=own, capture_output=True, text=True,
+                                env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}, timeout=60)
+            probe = ((pr.stdout + pr.stderr).strip().splitlines() or [""])[-1][:200]
+        except Exception as e:
+            probe = f"probe failed to run: {e}"[:200]
+        cmd = re.search(r"\*\*Command:?\*\*:?\s*`([^`]+)`", sec)
+        args = at_command(cmd.group(1)) if cmd else None
+        ran = at_pytest(py, own, args) if args is not None else {}
+
+        over = at_copy(repo, tmp / "over")
+        plain = dict(config="self._config_source.for_account(account_id)", save="", first="")
+        ax_overlay(over, AX_REFERENCE.format(**plain))
+        ref = {k: v for k, v in at_pytest(py, over, ALL_TESTS).items() if at_key(k) not in base}
+        green_ref = {k for k, v in ref.items() if v[0] == "passed"}
+        killed = {}
+        for name, mut in AX_MUTANTS.items():
+            ax_overlay(over, AX_REFERENCE.format(**{**plain, **mut}))
+            res = at_pytest(py, over, ALL_TESTS)
+            hit = sorted(k[1] for k in green_ref if res.get(k, ("missing",))[0] != "passed")
+            killed[name] = (bool(hit), f"failed on the mutant: {hit[:3]}" if hit else
+                            f"no test green on the reference fails it ({len(green_ref)} green on the reference)")
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+    passing = sorted(k[1] for k, v in new.items() if v[0] == "passed")
+    wrong = sorted(f"{k[1]}: {v[1][:70]}" for k, v in new.items()
+                   if v[0] != "passed" and (v[0] != "failure" or not re.match(AT_BEHAVIOR, v[1])))
+    old_bad = sorted(k[1] for k, v in old.items() if v[0] != "passed")
+    old_missing = base - {at_key(k) for k in old}
+    ref_bad = sorted(f"{k[1]}: {v[1][:60]}" for k, v in ref.items() if v[0] != "passed")
+    internals = ax_internals(run, AX)
+    doubles = re.findall(r"^\s*class\s+((?!FakeStore\b|FakeConfig\b)\w*(?:Store|Config|Clock|Fake|Stub|Mock|Spy)\w*)", code, re.M)
+    doubles += re.findall(r"unittest\.mock|MagicMock|\bmocker\b", code)
+    mapping = ax_mapping(sec, AX_CRITERIA)
+    counts = {c: sum(1 for n, _ in mapping if n == c) for c in range(1, 6)}
+    unmapped = ax_unmapped(mapping, names)
+    revised = ax_revised(brief)
+    implemented = "PARTY_TOO_LARGE" in probe
+    return [
+        # capability
+        ("acceptance tests added that drive BookingService.check",
+         len(names) >= 3 and has(code, r"\.check\("), f"{len(names)} new test functions", C),
+        ("the pre-existing tests still present and green", bool(old) and not old_bad and not old_missing,
+         f"failing: {old_bad}; missing: {sorted(old_missing)}" if old_bad or old_missing else f"{len(old)} green", C),
+        ("tests reuse FakeStore and FakeConfig, no new doubles",
+         bool(code) and has(code, r"\bFakeStore\b", r"\bFakeConfig\b") and not doubles, f"{doubles or 'none new'}", C),
+        ("every new test passes once a correct check is laid over the repo",
+         bool(ref) and not ref_bad, f"{ref_bad[:3]}" if ref_bad else f"{len(ref)} green on the reference", C),
+        ("the never-persists test kills a check that saves an acceptable booking", *killed["saves"], C),
+        ("the both-codes test kills a first-code-only check", *killed["first-only"], C),
+        ("the config test kills a check that ignores the account's config", *killed["default-config"], C),
+        # delta
+        # SKILL.md Step 3 "Where the public interface itself doesn't exist yet … declare it — the signature the
+        # brief's Key interfaces name, failing with a not-implemented error"
+        ("the missing interface declared: BookingService.check, the brief's signature, raising NotImplementedError",
+         declared, stub_ev, D),
+        ("every new test is red now (none passes)", bool(new) and not passing,
+         f"passing now: {passing[:4]}" if passing else f"{len(new)} new, all red", D),
+        # "A failure to load is not red": an AttributeError on a method that does not exist proves nothing
+        ("red for the right reason: NotImplementedError or an assertion, never an AttributeError or import error",
+         bool(new) and not wrong, f"{wrong[:3]}" if wrong else f"{len(new) - len(passing)} of {len(new)} fail on behavior"
+         if new else "no new tests ran", D),
+        # "That stub is the only production code this stage writes"
+        ("no implementation: nothing in reservations/ changed but the declared stub",
+         rest_ok and not implemented, f"{probe}; {stub_ev}", D),
+        ("no internals: tests drive BookingService only", bool(code) and not internals,
+         f"{internals}" if internals else "public seam only" if code else "no test code", D),
+        ("brief gains an Acceptance tests section with a Command line", bool(sec) and bool(cmd),
+         cmd.group(1)[:120] if cmd else ("section, no **Command:**" if sec else "no Acceptance tests section"), D),
+        ("the recorded command runs exactly the new acceptance tests", bool(new) and set(ran) == set(new),
+         f"command collects {len(ran)}, new tests {len(new)}" + ("" if args is not None else " (no pytest command)"), D),
+        ("every one of the 5 criteria mapped exactly once", all(v == 1 for v in counts.values()), f"{counts}", D),
+        ("every mapped test id names a test the run added", bool(mapping) and not unmapped,
+         f"{unmapped[:4]}" if unmapped else f"{len(mapping)} mapping lines", D),
+        ("the mapping logged under Revisions", bool(revised), revised[0][:120] if revised else "no new Revisions entry", D),
+        ("hands off to tdd next", near(r, r"\btdd\b", r"\bnext\b", 120), "", D),
+    ]
+
+
 CHECKS = {
     "eval-0-architect-charter-and-options": eval0,
     "eval-1-brief-ordered-criteria": eval1,
@@ -7101,6 +7432,8 @@ CHECKS = {
     "eval-63-architect-second-round": eval63,
     "eval-74-architect-adr-binds-the-round": eval74,
     "eval-75-brief-archives-finished-change": eval75,
+    "eval-64-acceptance-tests-red-baseline-writes-nothing": eval64,
+    "eval-65-acceptance-tests-declares-the-missing-interface": eval65,
 }
 
 

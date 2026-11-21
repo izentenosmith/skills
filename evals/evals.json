@@ -533,6 +533,22 @@
    "expected_output": "The second round of a design whose file is `in progress` with its charter (~7 questions) and nothing resolved. The three answers are appended to the file's Decisions, one line each with the option chosen and the reason, and its Questions line counts 3 resolved. The response opens Round 2 under a round line (`Design: … · Round 2 · 3/<total> resolved …`) with one to three questions numbered on from 4, each under `### Question <q> of ~<total> · <dimension>` in the four-section format. Question 1's answer opened a follow-up (does a per-venue window belong in this design) and questions that depend on it (which setting wins, where a venue's setting lives): the follow-up is taken up, and nothing that depends on its answer is asked in the same round. If the total moved from ~7 the response says so and why. It closes once with the awaiting line, the file's Status stays `in progress`, no second design file and no brief are written."
   },
   {
+   "id": 64,
+   "name": "acceptance-tests-red-baseline-writes-nothing",
+   "skill": "acceptance-tests",
+   "fixture": "at-red-baseline",
+   "prompt": "Write the acceptance tests for the build plan in .workflow/brief.md.",
+   "expected_output": "Eval 27's task on a suite that is already red before any work: the fixture adds reservations/receipt.py and tests/test_receipt.py, whose test_confirmation_names_a_single_guest fails (the confirmation text says \"1 guests\"), unrelated to the approved cutoff brief. The full suite run as it stands gives 5 passed, 1 failed. Expected: the baseline recorded with its command and how many tests passed; no acceptance test written and none mapped in the brief, because a green suite after the new tests cannot be shown against one that was red before them; the receipt test left as found (not fixed, skipped, edited or deleted) and no production code changed; and the last line of the response reads like `baseline red: test_confirmation_names_a_single_guest — no acceptance tests written`, without waiting on anyone."
+  },
+  {
+   "id": 65,
+   "name": "acceptance-tests-declares-the-missing-interface",
+   "skill": "acceptance-tests",
+   "fixture": "at-stub",
+   "prompt": "Write the acceptance tests for the build plan in .workflow/brief.md.",
+   "expected_output": "An approved brief for a new public method, BookingService.check(account_id, venue_id, slot, party_size) -> list[str], that runs submit's rules without saving or raising; the method does not exist. Expected: BookingService.check declared in reservations/api.py with the brief's signature and a body that only raises NotImplementedError, and nothing else in reservations/ changed; one black-box test per criterion through BookingService with the existing FakeStore/FakeConfig, every one red on NotImplementedError or an assertion, none on AttributeError or an import error, none passing; the pre-existing suite green. Executed by the grader: the tests pass once a correct check is laid over the repo, and fail on a check that saves an acceptable booking, one that keeps only the first code, and one that ignores the account's config. The brief gains an **Acceptance tests** section whose **Command:** runs exactly the new tests and which maps each of the five criteria exactly once, logged under Revisions; the response hands off to tdd."
+  },
+  {
    "id": 74,
    "name": "architect-adr-binds-the-round",
    "skill": "architect-deep-dive",
