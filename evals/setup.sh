@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Prepare the eval fixtures. Run once after cloning.
 #   - the five pipeline fixtures, and the variants the later pipeline evals (60-75) use, get a virtualenv with pytest (build output, gitignored)
-#   - the incident, release-notes, review, repo-memory, refactor-standalone, teardown-empty and teardown-weakened fixtures get their git history built (nested repos, gitignored)
+#   - the incident, release-notes, review, repo-memory, refactor-standalone, teardown-empty, teardown-weakened and nexus (72-73) fixtures get their git history built (nested repos, gitignored)
 #   - the compose fixture needs nothing: it is graded from files, never executed
 set -euo pipefail
 cd "$(dirname "$0")/fixtures"
@@ -61,6 +61,12 @@ for f in teardown-empty teardown-weakened; do
   printf '%-18s ' "$f"
   ./$f/make-history.sh
   echo "$(git -C $f/repo rev-list --all --count) commits, HEAD $(git -C $f/repo rev-parse --short HEAD)"
+done
+
+echo
+echo "== nexus fixtures (evals 72-73): git histories, and nexus-merge's worktrees (git 2.48+) =="
+for f in nexus-setup nexus-merge; do
+  EVALS_FIXTURE_BUILD=1 ./$f/make-history.sh
 done
 
 echo

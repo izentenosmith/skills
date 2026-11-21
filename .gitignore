@@ -117,6 +117,9 @@ evals/fixtures/test-review/repo/
 evals/fixtures/concurrency/repo/
 evals/fixtures/repo-memory/repo/
 evals/fixtures/refactor-standalone/repo/
+evals/fixtures/nexus-setup/repo/
+evals/fixtures/nexus-merge/repo/
+evals/fixtures/nexus-merge/wt/
 
 # --- harness: run artifacts in a repo under review ---
 .workflow/runs/

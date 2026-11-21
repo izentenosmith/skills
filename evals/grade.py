@@ -12,6 +12,7 @@ Only `delta` assertions can fairly be read as evidence that the edits helped.
 import ast
 import datetime
 import difflib
+import hashlib
 import html
 import ipaddress
 import json
@@ -7930,6 +7931,292 @@ def eval69(run):
     ]
 
 
+# ------------------------------------------------- evals 72-73: nexus, the first turn and the merge turn
+
+def nx_git(root, *args):
+    r = subprocess.run(["git", "-C", str(root), *args], capture_output=True, text=True)
+    return r.stdout.strip() if r.returncode == 0 else ""
+
+
+def nx_worktrees(repo):
+    """The worktree paths git has registered for `repo`, missing ones included, relative to the folder above it."""
+    out = nx_git(repo, "worktree", "list", "--porcelain")
+    base = repo.resolve().parent
+    paths = []
+    for line in out.splitlines():
+        if line.startswith("worktree "):
+            p = pathlib.Path(line[len("worktree "):]).resolve()
+            paths.append(p.relative_to(base).as_posix() if p.is_relative_to(base) else str(p))
+    return paths
+
+
+def nx_notes_dir(run):
+    """The notes folder: in the main checkout (repo/), as the skill says, or beside it at the run's root."""
+    for d in (run / "repo/repo/.workflow/nexus", run / "repo/.workflow/nexus"):
+        if d.is_dir():
+            return d
+    return run / "repo/repo/.workflow/nexus"
+
+
+def nx_seal(text):
+    """(n, hex) from a `Register: DEC-<n> · <12 hex>` line, or None."""
+    m = re.search(r"Register:?\**:?\s*`?DEC-(\d+)`?\s*[·•|,—–-]?\s*`?([0-9a-f]{12})\b", text)
+    return (int(m.group(1)), m.group(2)) if m else None
+
+
+def ns_increment(notes):
+    try:
+        data = json.loads(read(notes / "increment.json"))
+    except Exception:
+        return None
+    entries = data.get("entries") if isinstance(data, dict) else data
+    return entries if isinstance(entries, list) and all(isinstance(e, dict) for e in entries) else None
+
+
+NS_FIX = "nexus-setup"
+NS_RED = "test_weekend_day_rate"
+NS_SLICES = ("late-fee", "receipt", "waiver")
+NS_NOTES = ("status.md", "env.md", "increment.json", "decisions.md", "findings.md", "labels.md", "resources.md", "owner-checks.md")
+NS_HOLE = r"\bR4\b|REQ-4\b|\bowes?\b|owing|unpaid|outstanding|settled|new rental"
+NS_LIMIT = r"at most two sessions at a time"
+
+
+def eval72(run):
+    """nexus, the first turn of an increment: the notes folder, env.md with CI's commands and the base's baseline,
+    increment.json all failing with the hole named, the user's limit as DEC-1 under a matching seal; the base is red,
+    so it goes to the user and no session starts; no product code."""
+    r, notes = resp(run), nx_notes_dir(run)
+    env, status, decisions = read(notes / "env.md"), read(notes / "status.md"), read(notes / "decisions.md")
+    base = nx_git(FIXTURES / NS_FIX / "repo", "rev-parse", "main")[:7] or "unbuilt"
+    entries = ns_increment(notes) or []
+    # by its description: a run may number the design's R1-R5 differently
+    hole = [e for e in entries if e.get("kind") != "journey"
+            and re.search(r"\bowes?\b|owing|unpaid|outstanding|new rental", str(e.get("description", "")), re.I)]
+    hole_unassigned = bool(hole) and all(not [s for s in (e.get("slices") or []) if s in NS_SLICES] for e in hole)
+    journeys = [e for e in entries if e.get("kind") == "journey"
+                or re.search(r"two hours late|reprint", str(e.get("description", "")), re.I)]
+    seal = nx_seal(r)
+    sha = hashlib.sha256((notes / "decisions.md").read_bytes()).hexdigest()[:12] if (notes / "decisions.md").is_file() else ""
+    top = max([int(n) for n in re.findall(r"^#+\s*DEC-(\d+)", decisions, re.M)] or [0])
+    sessions = sorted(p.name for p in (notes / "sessions").rglob("*.md")) if (notes / "sessions").is_dir() else []
+    added, modified, deleted = changes(run, NS_FIX)
+    code = modified + deleted + [f for f in added if pathlib.Path(f).name != "RULINGS.md"]
+    git_ok, git_ev = git_untouched(run, NS_FIX)
+    trees = nx_worktrees(run / "repo/repo")
+    # 10/1/1, or the same in words, or unittest's own summary of the 12 it ran
+    counts = bool(re.search(r"\b10\s*/\s*1\s*/\s*1\b", env)) or has(
+        env, r"\b10 passed|passed:?\s*10\b|\b12 (tests )?(ran|run)\b|\bran 12\b", r"\b1 failed|failures=1|failed:?\s*1\b",
+        r"\b1 skipped|skipped=1|skipped:?\s*1\b")
+    return [
+        # capability
+        ("a turn written that names the three slices",
+         len(r) >= 600 and all(s in r for s in NS_SLICES), f"{len(r)} chars; {[s for s in NS_SLICES if s in r]}", C),
+        ("the red test on the base found", NS_RED in r or near(r, r"weekend", r"fail|\bred\b|broken", 200), "", C),
+        # delta
+        # setup.md step 2 "Create the notes folder and every file in it, even the ones that begin empty"
+        ("the notes folder created with every file in it",
+         all((notes / f).is_file() for f in NS_NOTES) and (notes / "sessions").is_dir(),
+         f"missing: {[f for f in NS_NOTES + ('sessions',) if not (notes / f).exists()]}", D),
+        # notes.md env.md "CI configuration (the command a pipeline runs is the one that counts …)"
+        ("env.md takes CI's commands: the suite by `discover -s tests`, lint by compileall",
+         bool(re.search(r"unittest discover\s+(-s\s+)?tests", env)) and "compileall" in env
+         and not re.search(r"Test[^\n]{0,30}`python3 -m unittest`", env), "", D),
+        # setup.md step 4 "Run the full suite … on the base branch's head, and write the counts into env.md"
+        ("env.md's baseline: 10/1/1 at the base's head, the red test named",
+         counts and base in env and NS_RED in env, f"counts: {counts}; base {base} named: {base in env}", D),
+        # setup.md step 3 "Settle here, once, whether the sessions' .workflow/ working files are git-ignored"
+        ("env.md records the sessions' `.workflow/` as git-ignored",
+         any(re.search(r"\.workflow", l) and re.search(r"ignored", l, re.I) and not re.search(r"not (git-)?ignored", l, re.I)
+             for l in env.splitlines()), "", D),
+        # setup.md step 5 "one entry per requirement and per user journey … all failing"; notes.md increment.json
+        ("increment.json: every requirement and the journey, each failing, with steps and slices",
+         len(entries) >= 6 and all(e.get("passes") is False and not e.get("evidence") and e.get("steps")
+                                   and isinstance(e.get("slices"), list) and e.get("kind") in ("requirement", "journey")
+                                   for e in entries), f"{len(entries)} entries", D),
+        # setup.md step 5 "a journey that crosses slices goes to the slice that merges last"
+        ("the journey belongs to waiver, the slice that merges last",
+         bool(journeys) and all(e.get("slices") == ["waiver"] for e in journeys), f"{[e.get('slices') for e in journeys]}", D),
+        # setup.md step 5 "An entry with no slice is a hole … Bring the list to the user … with the holes named"
+        ("R4 is a hole: its entry has no slice, and the user is told",
+         hole_unassigned and near(r, NS_HOLE, r"hole|no slice|unassigned|not (in|covered by|assigned to) any|nobody|no session|isn'?t (assigned|covered|in)|uncovered|orphan|no owner|not delivered", 300),
+         f"{[e.get('slices') for e in hole]}", D),
+        # setup.md Starting sessions 1 "the user set a limit, which you record in the register and in status.md"
+        ("the user's limit recorded as DEC-1 in the user's words, and in status.md",
+         bool(re.search(r"DEC-1\b", decisions)) and bool(re.search(NS_LIMIT, decisions, re.I))
+         and near(status, r"DEC-1\b", r"limit|two|\b2\b", 120), "", D),
+        # SKILL.md Every turn "The seal is the highest id and the first 12 hex characters of shasum -a 256 decisions.md"
+        ("the register sealed: the response's Register line matches decisions.md, and status.md carries it",
+         bool(seal) and seal == (top, sha) and sha in status, f"response {seal}; file DEC-{top} · {sha}", D),
+        # setup.md step 4 "A base that is red goes to the user before any session starts"
+        ("the red base brought to the user, and no session started",
+         not sessions and git_ok and len(trees) == 1
+         and near(r, NS_RED + r"|\bred\b|failing|fails", r"\?|decide|your call|before (any|a|the) session|until (you|it|the)|want me|how (do|would|should)|hotfix|separate fix|fixed first", 400),
+         f"session logs: {sessions[:3]}; worktrees: {trees}; {git_ev}", D),
+        # SKILL.md "You write no product code"
+        ("no product code: nothing outside the notes changed, no commit or branch",
+         not code and git_ok, f"touched: {code[:4]}" if code else git_ev, D),
+        # setup.md step 5 "Bring the list to the user once, in the first digest … their confirmation is a DEC-n"
+        ("the increment's list brought to the user to confirm",
+         near(r, r"confirm", r"increment|entries|the list|definition of done|REQ-", 250), "", D),
+        # setup.md step 2 "offer to keep a copy in version control (a RULINGS.md, say)"
+        ("a tracked copy of the register offered",
+         any_of(r, r"RULINGS", r"version control", r"tracked copy", r"commit(ted)? (a|the) copy", r"copy[^\n]{0,40}(git|tracked|the repo)"), "", D),
+    ]
+
+
+NM_FIX = "nexus-merge"
+NM_OPEN = ("receipt", "waiver")
+NM_BROKE = r"AttributeError|due_at|\.due\b|\bdue\b|fail|error|break|broke|\bred\b|no longer pass"
+
+
+def nm_sha(ref, root=None):
+    return nx_git(root or FIXTURES / NM_FIX / "repo", "rev-parse", "--verify", "-q", ref)
+
+
+def nm_merge31(repo, m1, l2):
+    """The commit that merged #31's gated head into the gated base, or ''."""
+    for line in nx_git(repo, "rev-list", "--merges", "--parents", f"{m1}..main").splitlines():
+        parts = line.split()
+        if parts[1:3] == [m1, l2]:
+            return parts[0]
+    return ""
+
+
+def nm_added(run, name):
+    """What the run added to a notes file, as nx_added does for eval 58."""
+    new, old = read(run / "repo/repo/.workflow/nexus" / name), read(FIXTURES / NM_FIX / "repo/.workflow/nexus" / name)
+    if new == old:
+        return ""
+    if new.startswith(old):
+        return new[len(old):]
+    return "\n".join(l for l in new.splitlines() if l not in set(old.splitlines()))
+
+
+def nm_section(text, heading):
+    m = re.search(r"^#{1,6}[^\n]*(" + heading + r")[^\n]*$", text, re.I | re.M)
+    if not m:
+        return ""
+    rest = text[m.end():]
+    n = re.search(r"^#{1,6}\s", rest, re.M)
+    return rest[: n.start()] if n else rest
+
+
+def nm_code_changed(run):
+    """Tracked files the run changed: repo/ must be as main was, or as #31's head (what a merge commit of it leaves
+    when main had not moved); each remaining session worktree as it was; the forge stub and README untouched.
+    Notes, caches and .git don't count (files() skips them)."""
+    fx, got = FIXTURES / NM_FIX, run / "repo"
+    bad = []
+    main_now = files(got / "repo")
+    if main_now != files(fx / "repo") and main_now != files(fx / "wt/late-fee"):
+        bad.append("repo/")
+    for slug in ("quote-cli", "late-fee", *NM_OPEN):
+        if (got / "wt" / slug).is_dir() and files(got / "wt" / slug) != files(fx / "wt" / slug):
+            bad.append(f"wt/{slug}")
+    return bad + [p for p in ("scripts/gh", "README.md") if read(got / p) != read(fx / p)]
+
+
+def eval73(run):
+    """nexus, the merge turn: the user's go for #31 carried out through the forge, pinned to the gated head, and
+    nothing else merged; then after-merge.md: the entries marked on the new base, every open session told, #32
+    re-integrated with the new base (it breaks, and goes back), and the done session cleaned up without losing its
+    brief and ledger."""
+    r = resp(run)
+    repo, notes, fxr = run / "repo/repo", run / "repo/repo/.workflow/nexus", FIXTURES / NM_FIX / "repo"
+    m1, l2, r1, w1 = (nm_sha(b) for b in ("main", "late-fee", "receipt", "waiver"))
+    merge = nm_merge31(repo, m1, l2) if m1 else ""
+    short = merge[:7] if merge else "∅"
+    # the new head: the merge commit, which is main's head unless something else went in after it
+    heads_now = {short, nm_sha("main", repo)[:7]} if merge else {short}
+    calls = read(run / "repo/scripts/.calls.log")
+    merge_calls = [l for l in calls.splitlines() if re.search(r"\bpr merge\b", l)]
+    heads = [m.group(1).lower() for l in merge_calls if re.search(r"\bmerge\s+#?31\b", l)
+             for m in [re.search(r"--match-head-commit[= ]+([0-9a-fA-F]{7,40})", l)] if m]
+    ancestor = lambda c: bool(c) and subprocess.run(["git", "-C", str(repo), "merge-base", "--is-ancestor", c, "main"],
+                                                    capture_output=True).returncode == 0
+    others = [n for n, c in (("#32", r1), ("waiver", w1)) if ancestor(c)] + [l[21:] for l in merge_calls if re.search(r"\bmerge\s+#?32\b", l)]
+    code = nm_code_changed(run)
+    moved = [b for b, c in (("receipt", r1), ("waiver", w1)) if nm_sha(b, repo) != c]
+    entries = {e.get("id"): e for e in (ns_increment(notes) or [])}
+    fx_entries = {e.get("id"): e for e in (ns_increment(fxr / ".workflow/nexus") or [])}
+
+    def marked(e):
+        ev = e.get("evidence") or {}
+        return (e.get("passes") is True and bool(merge) and bool(re.search(r"\b31\b", str(ev.get("pr", ""))))
+                and any(h in str(ev.get("base", "")) for h in heads_now) and bool(ev.get("test")))
+    wrongly = [i for i in ("REQ-4", "REQ-5", "J-1") if (entries.get(i) or {}).get("passes") is not False]
+    logs = {s: nm_added(run, f"sessions/{s}.md") for s in ("late-fee", *NM_OPEN)}
+    told = [s for s in NM_OPEN if any(h in logs[s] for h in heads_now) or re.search(r"rebase|base (has )?moved|main (has )?moved|main is (now )?at", logs[s], re.I)]
+    ready = nm_section(r, r"ready to merge|ready for (your )?(go|merge)")
+    offered_32 = [l.strip()[:90] for l in ready.splitlines() if "#32" in l
+                  and not re.search(NX_NEG + r"|fail|error|break|broke|lapsed|back to|sent back|held", l, re.I)]
+    trees = nx_worktrees(repo)
+    status = read(notes / "status.md")
+    archived, waiting = nm_section(status, r"archived"), nm_section(status, r"waiting on the user")
+    res = read(notes / "resources.md")
+    notes_text = "\n".join(read(p) for p in notes.rglob("*") if p.is_file()) if notes.is_dir() else ""
+    gone = [s for s in ("quote-cli", "late-fee") if not (run / "repo/wt" / s).exists()]
+    lost = [s for s in gone if any(read(FIXTURES / NM_FIX / "wt" / s / ".workflow" / f).strip() not in notes_text
+                                   for f in ("brief.md", "ledger.md"))]
+    return [
+        # capability
+        ("#31 merged: main gained a merge of the gated head into the gated base",
+         bool(merge), f"merge commit {short}" if merge else f"main at {nm_sha('main', repo)[:7]}", C),
+        ("nothing merged but #31", bool(merge) and not others, f"also merged: {others}" if others else "", C),
+        ("the response names the merge commit", bool(merge) and any(h in r for h in heads_now), "", C),
+        # delta
+        # after-merge.md The merge 2 "merge with its expected-head option (gh pr merge --match-head-commit <sha>)";
+        # "Never … a push to the base that goes around the PR"
+        ("merged through the forge, pinned to the gated head with --match-head-commit",
+         bool(merge) and any(l2.startswith(h) for h in heads)
+         and nx_git(repo, "log", "-1", "--format=%s", merge).startswith("Merge pull request #31"),
+         f"merge calls: {[l[21:] for l in merge_calls][:3]}", D),
+        # SKILL.md "You write no product code: not a fix … not a conflict resolution"
+        ("no code written by the nexus: tracked files and session branches as they were",
+         not code and not moved, f"changed: {code + moved}" if code or moved else "", D),
+        # after-merge.md After a merge 5 "Re-run the gate's Integrated with today's base line … for every PR still
+        # listed under Ready to merge"; SKILL.md the gate "any other conflict goes back to the session"
+        ("#32 re-integrated with the new base, its break sent back, and not offered at the old base",
+         bool(re.search(NM_BROKE, logs["receipt"], re.I)) and near(r, r"#32|receipt", NM_BROKE, 300) and not offered_32,
+         f"offered: {offered_32[:1]}" if offered_32 else f"receipt log reply: {bool(logs['receipt'].strip())}", D),
+        # after-merge.md After a merge 2 "for each entry the PR delivered, see its test pass there. Only then set
+        # passes: true … with the test, the PR, the head and the date as its evidence"
+        ("increment.json: REQ-2 and REQ-3 passing with evidence on the new head; the rest as they were",
+         all(marked(entries.get(i) or {}) for i in ("REQ-2", "REQ-3")) and not wrongly
+         and (entries.get("REQ-1") or {}).get("passes") is True
+         and [e.get("description") for e in entries.values()] == [e.get("description") for e in fx_entries.values()],
+         f"REQ-2 evidence {(entries.get('REQ-2') or {}).get('evidence')}; wrongly passing: {wrongly}", D),
+        # after-merge.md After a merge 4 "Tell every open session that the base moved — the new head, and whether
+        # they must rebase"; SKILL.md "Every message you send a session is also appended to its log"
+        ("receipt and waiver told, in their logs, that main moved", told == list(NM_OPEN), f"told: {told}", D),
+        # after-merge.md Cleanup "It is finished … A session that hasn't said done is asked to"
+        ("late-fee told its PR merged and asked to confirm it is done",
+         bool(re.search(r"merged|" + short, logs["late-fee"], re.I)) and bool(re.search(r"\bdone\b|clean|confirm", logs["late-fee"], re.I)), "", D),
+        # after-merge.md Cleanup "Archive the session … then remove the worktree and delete the merged branch —
+        # git worktree remove and git branch -d"; "Record it under ## Archived"
+        ("quote-cli archived: its worktree removed, its branch deleted, recorded under Archived",
+         "wt/quote-cli" not in trees and not (run / "repo/wt/quote-cli").exists() and not nm_sha("quote-cli", repo)
+         and "quote-cli" in archived, f"worktrees: {trees}", D),
+        # after-merge.md Cleanup "The session's own .workflow/ brief and ledger are the one exception … put them in
+        # the notes folder beside its log first"
+        ("every removed session's brief and ledger kept in the notes folder",
+         bool(gone) and not lost, f"removed {gone}; lost: {lost}", D),
+        # after-merge.md Cleanup "What it held is released. Its leases, scratch names and ports in resources.md"
+        ("quote-cli's scratch name and port released in resources.md",
+         res != read(fxr / ".workflow/nexus/resources.md")
+         and not any("quote-cli" in l and "8061" in l and not re.search(r"releas|freed|\bfree\b|archiv", l, re.I)
+                     for l in res.splitlines()), "", D),
+        # after-merge.md The merge 3 "the session's row reads #n merged at <merge commit>, and the PR leaves Waiting on the user"
+        ("status.md: #31 merged at its merge commit, and off Waiting on the user",
+         bool(merge) and any(re.search(r"late-fee|#31", l) and any(h in l for h in heads_now) and "merged" in l.lower()
+                             for l in status.splitlines())
+         and "#31" not in waiting, "", D),
+        # after-merge.md The merge 4 "Remove the gate's scratch integration worktree, unforced"
+        ("no scratch worktree left registered",
+         set(trees) <= {"repo", "wt/quote-cli", "wt/late-fee", *(f"wt/{s}" for s in NM_OPEN)}, f"worktrees: {trees}", D),
+    ]
+
+
 CHECKS = {
     "eval-0-architect-charter-and-options": eval0,
     "eval-1-brief-ordered-criteria": eval1,
@@ -8005,6 +8292,8 @@ CHECKS = {
     "eval-67-refactor-uncovered-smell-left": eval67,
     "eval-68-teardown-empty-diff-stops": eval68,
     "eval-69-teardown-finds-the-lowered-bar": eval69,
+    "eval-72-nexus-sets-up-the-increment": eval72,
+    "eval-73-nexus-merges-on-the-go-and-cleans-up": eval73,
 }
 
 

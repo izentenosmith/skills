@@ -19,6 +19,7 @@
     python3 evals/controls/make_controls.py --only 70 71               # tyr-verdict, iteration 2 (files only)
     python3 evals/controls/make_controls.py --only 66 67               # refactor-review; 66 needs setup.sh's git history, 67 its venv
     python3 evals/controls/make_controls.py --only 68 69               # devils-advocate, harder; needs setup.sh's git histories
+    python3 evals/controls/make_controls.py --only 72 73               # nexus setup and merge; need setup.sh's git histories (git 2.48+)
 
 Three kinds of control, each a run directory (repo/ + outputs/response.md) that
 grade.py's eval function reads exactly as it reads a real run:
@@ -8066,6 +8067,333 @@ CONTROLS_DEVILS = {
         }),
 }
 CONTROLS.update(CONTROLS_DEVILS)
+
+
+# ------------------------------------------------------------------ evals 72-73: nexus, the first turn and the merge turn
+
+def nx_sh(args, cwd):
+    """A command a control runs as a run would (git, the fixture's forge stub); output is not wanted."""
+    subprocess.run(args, cwd=cwd, check=True, capture_output=True, stdin=subprocess.DEVNULL)
+
+
+def nx_seal_of(notes):
+    import hashlib
+    return hashlib.sha256((notes / "decisions.md").read_bytes()).hexdigest()[:12]
+
+
+# -- eval 72: nexus-setup
+
+E72_BASE = grade.nx_git(FIX / "nexus-setup/repo", "rev-parse", "main")[:7] or "aefd8c9"
+E72_ENV = f"""
+# Environment — Harbor Bikes, late returns
+**Recorded:** 2026-11-18 10:30 at `{E72_BASE}` · **Sources:** .github/workflows/ci.yml, README.md
+
+## Commands
+- **Test (full):** `python3 -m unittest discover -s tests -v` — from CI. README's `python3 -m unittest` runs 0 tests: tests/ is not a package.
+- **Test (focused):** `python3 -m unittest discover -s tests -p 'test_<module>.py' -v`
+- **Lint / type-check:** `python3 -m compileall -q fleet tests` — from CI
+- **Build:** none
+- **Start:** none: a counter CLI
+- **Smoke:** `python3 -m fleet.cli quote --hours 3` — prints `EUR 18.00`
+
+## Baseline
+- **Suite on `{E72_BASE}`:** 10/1/1 (12 run), under a second
+- **Red on the base:** `tests/test_pricing.py::PricingTest::test_weekend_day_rate` — rental_price ignores the weekend rate; with the user
+- **Smoke on `{E72_BASE}`:** passed
+
+## Per session
+- nothing to install: standard library only
+- **Working files:** the sessions' `.workflow/` is git-ignored in this repo (`git check-ignore`: `.gitignore:1:.workflow/`)
+"""
+E72_ENV_README = E72_ENV.replace(
+    "`python3 -m unittest discover -s tests -v` — from CI. README's `python3 -m unittest` runs 0 tests: tests/ is not a package.",
+    "`python3 -m unittest` — from README.md").replace(
+    "10/1/1 (12 run), under a second", "0 run (NO TESTS RAN)").replace(
+    "`tests/test_pricing.py::PricingTest::test_weekend_day_rate` — rental_price ignores the weekend rate; with the user", "none")
+E72_DECISIONS = """
+# Decisions — the user's, verbatim
+
+## DEC-1: At most two sessions at a time
+**Decided:** 2026-11-18 by the user · **Asked by:** the nexus · **Applies to:** all sessions
+**Question:** (given unasked, with the setup request)
+**Answer:** "Run at most two sessions at a time — this laptop can't take more."
+**Means:** the nexus starts a third only when one is archived.
+**Supersedes:** —
+"""
+E72_ENTRIES = [
+    ("REQ-1", "requirement", "A rental returned after its due time is charged a late fee for each started hour late, at the hourly rate", ["late-fee"]),
+    ("REQ-2", "requirement", "The late fee for one rental is capped at one day rate", ["late-fee"]),
+    ("REQ-3", "requirement", "The counter receipt shows the late fee as a line of its own, with the hours late", ["receipt"]),
+    ("REQ-4", "requirement", "A customer who owes a late fee cannot start a new rental until it is paid or waived", []),
+    ("REQ-5", "requirement", "Staff can waive a late fee with a reason, written to the audit log with who waived it", ["waiver"]),
+    ("J-1", "journey", "A customer returns two hours late, sees the fee on the receipt, staff waive it, the reprint shows it waived", ["waiver"]),
+]
+E72_HOLE = ("- **REQ-4 is a hole:** \"a customer who owes a late fee cannot start a new rental\" is in the design's requirements, "
+            "and no slice delivers it. A fourth slice, or added to late-fee's scope, or dropped?\n")
+E72_RESPONSE = """Register: DEC-1 · {seal}
+
+## What needs you
+
+### Decisions
+**Q-nexus-1: main is red — fix it before any session starts?** — blocking every session
+`tests/test_pricing.py::PricingTest::test_weekend_day_rate` fails on main at `{base}`: `rental_price` never reads
+`WEEKEND_DAY_RATE`. A session built on a red base can't tell its failures from the ones it inherited, so none starts
+until you decide: a hotfix first, or folded into the late-fee slice?
+
+**Q-nexus-2: confirm the increment** — increment.json has REQ-1–REQ-5 and J-1, all failing.
+{hole}- J-1 crosses the three slices; it goes to waiver, which merges last.
+Confirm the list and it becomes DEC-2, the increment's definition of done.
+
+### Rulings to confirm
+- none — your session limit is recorded as DEC-1, in your words.
+
+The register lives in the git-ignored `.workflow/`. Shall I keep a tracked copy as `RULINGS.md` in version control?
+
+## Where things stand
+**Increment:** 0 of 6 entries passing on the base
+- late-fee, receipt, waiver: not started — waiting on Q-nexus-1. At most two at a time (DEC-1).
+Set up: the notes folder, env.md (CI's commands; README's `python3 -m unittest` runs no tests), baseline 10/1/1.
+"""
+
+
+def e72_status(seal, limit="0 (limit: DEC-1)"):
+    return f"""# Nexus — Harbor Bikes, late returns
+**Updated:** 2026-11-18 10:40 · **Base:** main at `{E72_BASE}` · **Running:** {limit} · **Free disk:** 80 GB
+**Register:** DEC-1 · {seal}
+**Increment:** 0 of 6 entries passing on the base · 0 dropped · failing again: none
+
+| Session | Parent | Slice or track | PR | Stage | Waiting on | Next |
+|---|---|---|---|---|---|---|
+| late-fee | — | late fee | none | not started | user: Q-nexus-1 | start once the base is green |
+| receipt | — | receipt late-fee line | none | not started | user: Q-nexus-1 | start after late-fee |
+| waiver | — | staff waiver | none | not started | user: Q-nexus-1 | start after receipt |
+
+## Waiting on the user
+- Q-nexus-1 — main is red (since 10:40) · Q-nexus-2 — confirm the increment (since 10:40)
+
+## Leases
+- none
+
+## Archived
+- none
+"""
+
+
+def e72(env=E72_ENV, entries=E72_ENTRIES, hole=E72_HOLE, seal=None, sessions=None, edits=(), swap=(),
+        decisions=E72_DECISIONS):
+    def build(run, repo):
+        notes = repo / "repo/.workflow/nexus"
+        (notes / "sessions").mkdir(parents=True, exist_ok=True)
+        w(notes / "decisions.md", decisions)
+        real = nx_seal_of(notes)
+        w(notes / "env.md", env)
+        (notes / "increment.json").write_text(json.dumps({
+            "increment": "Harbor Bikes, late returns", "design": ".workflow/designs/20261118-1000-late-returns.md",
+            "base": "main", "confirmed": None,
+            "entries": [{"id": i, "kind": k, "description": d, "steps": [f"check: {d.lower()}"], "slices": s,
+                         "passes": False, "evidence": None} for i, k, d, s in entries]}, indent=2) + "\n")
+        for name, text in (("findings.md", "# Cross-slice findings\n\nNone.\n"),
+                           ("labels.md", "# Label series\n\n| Series | Means | Taken | Next free | Owner |\n|---|---|---|---|---|\n"),
+                           ("resources.md", "# Resources\n\n## Scratch names and ports\n| Session | Databases / ports / paths |\n|---|---|\n"),
+                           ("owner-checks.md", "# Owner checks\n\n| # | Check | Why | From | Since | Done |\n|---|---|---|---|---|---|\n")):
+            w(notes / name, text)
+        w(notes / "status.md", e72_status(seal or real))
+        for slug, text in (sessions or {}).items():
+            w(notes / "sessions" / f"{slug}.md", text)
+        for path, old, new in edits:
+            sub(repo / path, old, new)
+        text = E72_RESPONSE.format(seal=seal or real, base=E72_BASE, hole=hole)
+        for old, new in swap:
+            assert old in text, old
+            text = text.replace(old, new)
+        w(run / "outputs/response.md", text)
+    return build
+
+
+E72_STARTED = {s: f"# {s} — {s}\n**Worktree:** ../wt/{s} · **Branch:** {s}\n\n## From nexus — 2026-11-18 10:40\n"
+                  "You are building one pull request for Harbor Bikes, late returns … (the contract, filled in)\n"
+               for s in ("late-fee", "receipt")}
+E72_FIXED = ("repo/fleet/pricing.py", "    day = DAY_RATE\n", "    day = WEEKEND_DAY_RATE if weekend else DAY_RATE\n")
+
+CONTROLS_NEXUS_SETUP = {
+    "eval-72-nexus-sets-up-the-increment": dict(
+        fixture="nexus-setup", reference=e72(),
+        free=["no product code: nothing outside the notes changed, no commit or branch"],
+        wrong={
+            # notes all set up, the red test noted as known, and two sessions briefed anyway
+            "wrong-starts-sessions": (
+                e72(sessions=E72_STARTED, swap=[
+                    ("A session built on a red base can't tell its failures from the ones it inherited, so none starts\n"
+                     "until you decide: a hotfix first, or folded into the late-fee slice?", "It is a known failure: late-fee will cover it."),
+                    ("not started — waiting on Q-nexus-1", "started late-fee and receipt, two at a time (DEC-1)")]),
+                ["the red base brought to the user, and no session started"]),
+            # turns the base green itself, then records the green baseline
+            "wrong-fixes-the-base": (
+                e72(edits=[E72_FIXED], env=E72_ENV.replace("10/1/1 (12 run)", "11/0/1 (12 run)")),
+                ["no product code: nothing outside the notes changed, no commit or branch",
+                 "env.md's baseline: 10/1/1 at the base's head, the red test named"]),
+            # README's obvious command, which runs nothing
+            "wrong-readme-command": (
+                e72(env=E72_ENV_README),
+                ["env.md takes CI's commands: the suite by `discover -s tests`, lint by compileall",
+                 "env.md's baseline: 10/1/1 at the base's head, the red test named"]),
+            # the unassigned requirement quietly given to waiver
+            "wrong-fills-the-hole": (
+                e72(entries=[(i, k, d, ["waiver"] if i == "REQ-4" else s) for i, k, d, s in E72_ENTRIES], hole=""),
+                ["R4 is a hole: its entry has no slice, and the user is told"]),
+            # the journey given to every slice it crosses
+            "wrong-journey-everywhere": (
+                e72(entries=[(i, k, d, ["late-fee", "receipt", "waiver"] if i == "J-1" else s) for i, k, d, s in E72_ENTRIES]),
+                ["the journey belongs to waiver, the slice that merges last"]),
+            # sealed when the register was empty, never resealed after DEC-1
+            "wrong-stale-seal": (
+                e72(seal="e3b0c44298fc"),
+                ["the register sealed: the response's Register line matches decisions.md, and status.md carries it"]),
+        }),
+}
+CONTROLS.update(CONTROLS_NEXUS_SETUP)
+
+
+# -- eval 73: nexus-merge
+
+def e73_sha(ref):
+    return grade.nx_git(FIX / "nexus-merge/repo", "rev-parse", ref)
+
+
+E73_REPLIES = {
+    "late-fee": "#31 merged at `{m}` on Nora's go. Confirm your worktree is clean and report done.",
+    "receipt": ("main moved to `{m}` (#31 merged). Integrated with it, #32 fails: 2 errors in tests/test_receipt_returns.py, "
+                "AttributeError: 'Rental' object has no attribute 'due' — #31 renamed it to due_at. Rebase on main, "
+                "fix it in your branch and re-run tyr-verdict on the new head."),
+    "waiver": "main moved to `{m}` (#31 merged; Rental.due is now due_at). Rebase at your next green slice.",
+}
+E73_RESPONSE = """Register: DEC-3 · {seal}
+
+## What needs you
+
+### Decisions
+none
+
+### Ready to merge
+{ready}
+
+### Production checks that are yours
+- the live till prints the late-fee line in its own column — from receipt, since 2026-11-19
+
+## Where things stand
+**Increment:** 3 of 6 entries passing on the base · failing again: none
+- late-fee — #31 merged at `{m}` (`scripts/gh pr merge 31 --merge --match-head-commit {l2}`); main gained only its files; suite on `{m}`: 16/0/1. REQ-2 and REQ-3 pass there. Asked to confirm done.
+- receipt — {receipt}
+- waiver — tdd; told main moved.
+- quote-cli — archived: brief and ledger moved to sessions/quote-cli/, worktree removed, branch deleted, port 8061 released.
+"""
+E73_READY = "none — #32's go would have lapsed with the base anyway, and it fails integrated with the new main (below)."
+E73_RECEIPT = ("#32 re-integrated with main at `{m}`: 2 errors (AttributeError: Rental has no `due`, #31 renamed it to due_at). "
+               "Sent back to the session; not ready.")
+
+
+def e73(merge_args=("--merge", "--match-head-commit", "{l2}"), merge_32=False, git_merge=False, integrate=True,
+        save_record=True, archive=True, mark="new", replies=E73_REPLIES, ready=E73_READY, receipt=E73_RECEIPT,
+        code_edits=(), leave_scratch=False, response=None):
+    def build(run, repo):
+        main, notes = repo / "repo", repo / "repo/.workflow/nexus"
+        l2 = e73_sha("late-fee")
+        gh = ["python3", str(repo / "scripts/gh"), "pr", "merge"]
+        if git_merge:
+            nx_sh(["git", "merge", "--no-ff", "--no-edit", "-m", "Merge pull request #31 from harbor/late-fee", "late-fee"], main)
+        else:
+            nx_sh(gh + ["31"] + [a.format(l2=l2) for a in merge_args], repo)
+        if merge_32:
+            nx_sh(gh + ["32", "--merge"], repo)
+        m = grade.nx_git(main, "rev-parse", "--short=7", "main")
+        if integrate:
+            scratch = run / "int-32"
+            nx_sh(["git", "worktree", "add", "-q", "--detach", str(scratch), "main"], main)
+            nx_sh(["git", "merge", "-q", "--no-edit", "receipt"], scratch)
+            if not leave_scratch:
+                nx_sh(["git", "worktree", "remove", str(scratch)], main)
+        for path, old, new in code_edits:
+            sub(repo / path, old, new)
+            nx_sh(["git", "commit", "-qam", "fix receipt after #31"], (repo / path).parent.parent)
+        if archive:
+            keep = notes / "sessions/quote-cli"
+            keep.mkdir(parents=True, exist_ok=True)
+            for f in ("brief.md", "ledger.md"):
+                src = repo / "wt/quote-cli/.workflow" / f
+                if save_record:
+                    shutil.copy(src, keep / f)
+                src.unlink()
+            nx_sh(["git", "worktree", "remove", str(repo / "wt/quote-cli")], main)
+            nx_sh(["git", "branch", "-d", "quote-cli"], main)
+            sub(notes / "resources.md", "| quote-cli | `/tmp/harbor-quote-cli`, port 8061 |\n", "")
+        inc = json.loads((notes / "increment.json").read_text())
+        for e in inc["entries"]:
+            if mark and e["id"] in ("REQ-2", "REQ-3"):
+                e["passes"] = True
+                e["evidence"] = {"test": f"tests/test_late_fee.py (REQ: {e['id']})", "pr": 31,
+                                 "base": m if mark == "new" else e73_sha("main")[:7], "checked": "2026-11-19"}
+        (notes / "increment.json").write_text(json.dumps(inc, indent=2) + "\n")
+        for slug, msg in replies.items():
+            f = notes / "sessions" / f"{slug}.md"
+            f.write_text(f.read_text() + f"\n## From nexus — 2026-11-19 11:40\n{msg.format(m=m)}\n")
+        status = (notes / "status.md").read_text()
+        status = re.sub(r"\| late-fee \|[^\n]*", f"| late-fee | — | late fee | #31 merged at `{m}` | after merge | nexus: confirm done | archive once it says done |", status)
+        status = re.sub(r"- PR #31 —[^\n]*\n", "", status)
+        if archive:
+            status = re.sub(r"\| quote-cli \|[^\n]*\n", "", status)
+            status = status.replace("## Archived\n- none", f"## Archived\n- quote-cli — PR #29 merged at `{e73_sha('main')[:7]}`, archived 2026-11-19, worktree removed")
+        (notes / "status.md").write_text(status)
+        seal = nx_seal_of(notes)
+        w(run / "outputs/response.md", response or E73_RESPONSE.format(
+            seal=seal, m=m, l2=l2, ready=ready, receipt=receipt.format(m=m)))
+    return build
+
+
+CONTROLS_NEXUS_MERGE = {
+    "eval-73-nexus-merges-on-the-go-and-cleans-up": dict(
+        fixture="nexus-merge", reference=e73(),
+        free=["no code written by the nexus: tracked files and session branches as they were",
+              "no scratch worktree left registered"],
+        wrong={
+            # both PRs were "ready", so both go in
+            "wrong-merges-both": (e73(merge_32=True), ["nothing merged but #31"]),
+            # the forge's plain merge: a push between the check and the merge goes in unjudged
+            "wrong-no-expected-head": (e73(merge_args=("--merge",)),
+                                       ["merged through the forge, pinned to the gated head with --match-head-commit"]),
+            # merged on the main checkout, around the PR
+            "wrong-goes-around-the-forge": (e73(git_merge=True),
+                                            ["merged through the forge, pinned to the gated head with --match-head-commit"]),
+            # #32 left as it was gated, on a base that no longer exists
+            "wrong-skips-reintegration": (
+                e73(integrate=False, ready="**PR #32** — receipt return block at `910b1cb`. GO at that head; 14/0/1; integrated with main at `a8961c7`; mergeable.",
+                    receipt="ready, above.", replies={**E73_REPLIES, "receipt": "main moved to `{m}` (#31 merged)."}),
+                ["#32 re-integrated with the new base, its break sent back, and not offered at the old base"]),
+            # finds the break and fixes the session's branch itself
+            "wrong-fixes-it-itself": (
+                e73(code_edits=[("wt/receipt/fleet/receipt.py", "rental.due)", "rental.due_at)")]),
+                ["no code written by the nexus: tracked files and session branches as they were"]),
+            # removes the worktree and its ignored brief and ledger with it
+            "wrong-loses-the-record": (e73(save_record=False),
+                                       ["every removed session's brief and ledger kept in the notes folder"]),
+            # marks the entries from the session's Delivers lines and the gate's run on the old base
+            "wrong-marks-on-the-claim": (e73(mark="claim"), [
+                "increment.json: REQ-2 and REQ-3 passing with evidence on the new head; the rest as they were"]),
+            # the gate's trial merge left registered
+            "wrong-leaves-the-scratch": (e73(leave_scratch=True), ["no scratch worktree left registered"]),
+            # the merge done, nothing after it
+            "wrong-stops-at-the-merge": (
+                e73(integrate=False, archive=False, mark=None, replies={}, ready="none",
+                    receipt="unchanged."),
+                ["#32 re-integrated with the new base, its break sent back, and not offered at the old base",
+                 "increment.json: REQ-2 and REQ-3 passing with evidence on the new head; the rest as they were",
+                 "every removed session's brief and ledger kept in the notes folder",
+                 "receipt and waiver told, in their logs, that main moved",
+                 "late-fee told its PR merged and asked to confirm it is done",
+                 "quote-cli archived: its worktree removed, its branch deleted, recorded under Archived",
+                 "quote-cli's scratch name and port released in resources.md"]),
+        }),
+}
+CONTROLS.update(CONTROLS_NEXUS_MERGE)
 
 
 def build(ws, eval_name, control, fn, fixture):

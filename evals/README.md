@@ -1309,6 +1309,47 @@ What each wrong control fails is in the [plausible-but-wrong table](#evals-814-r
 - **One Unattacked line.** The skill says "one `Unattacked` line". Eval 68 accepts several, as long as every Surfaces line is Unattacked and one says the diff was empty; a `Swept` line means something was attacked.
 - **Over-reporting the explained.** The skill says a weakening the brief explains is not a finding. Eval 69 plants no such case, because the skill also says to over-report, and a grader that failed an extra finding would fight that.
 
+### `nexus-setup` and `nexus-merge`: the nexus's first turn, and a merge turn (evals 72–73)
+
+Eval 58 starts mid-increment, and a bare agent copies the conventions it finds there. These two grade what it cannot copy: the turn that builds the notes folder ([setup.md](../skills/development/nexus/setup.md)), and the turn a merge lands ([after-merge.md](../skills/development/nexus/after-merge.md)). Both use Harbor Bikes, a stdlib-Python counter app, built by `make-history.sh` (`setup.sh` runs it; it refuses to run without `EVALS_FIXTURE_BUILD=1`, since it deletes `repo/`). Both are **standalone**. Answer keys: [fixtures/nexus-setup.answers.md](fixtures/nexus-setup.answers.md), [fixtures/nexus-merge.answers.md](fixtures/nexus-merge.answers.md).
+
+| Eval | Fixture | The trap |
+|---|---|---|
+| 72 | `nexus-setup` | no notes folder; README's `python3 -m unittest` runs 0 tests where CI runs `discover -s tests`; main is red (`test_weekend_day_rate`); the design's R4 is in no slice and J1 crosses all three; the prompt sets a two-session limit |
+| 73 | `nexus-merge` | the go is for #31 only; `scripts/gh` is a fake forge that merges for real into `repo/` and logs every call; #31 renames `Rental.due` and #32 reads it, so each is green alone and #32 breaks on the new main; quote-cli is done and clean, with its brief and ledger only in its ignored `.workflow/` |
+
+A third candidate was dropped: a register whose seal no longer matches its content, so a session's claimed `DEC-n` is not honoured. It exercises one rule (the seal check in SKILL.md's Every turn), and a headless run has no earlier digest in the conversation, so the authoritative copy of the seal the rule compares against cannot exist; the window-ruling trap in eval 58 already covers "a ruling the nexus did not record is not a ruling".
+
+**Eval 72** is graded from the response, the notes folder (in `repo/.workflow/nexus/`, or the run's root), and the repo. The seal is checked by hashing the `decisions.md` the run left: the Register line must name its highest DEC and the first 12 hex of its sha256, and `status.md` must carry the same hex. The baseline accepts `10/1/1`, the same in words, or unittest's `Ran 12 … failures=1, skipped=1`, and must name `aefd8c9` and the red test. The hole is found by description (owes, unpaid, new rental), not by id, since a run may number R1–R5 differently. "No session started" means no `.md` under `sessions/`, one worktree, and refs, HEAD and index as built. Only `.workflow/` may change, plus an added `RULINGS.md`.
+
+**Eval 73** reads git, the forge's call log, the notes and the response. The merge must be a merge commit with parents (`a8961c7`, `253222c`), made by `scripts/gh` (its message, and a `pr merge 31` call with `--match-head-commit` matching the head). "No code" compares the tracked files of `repo/` with main's or #31's tree, and each remaining worktree with the fixture's, and requires the receipt and waiver branches unmoved. The new head counts as either the merge commit or main's head. late-fee is not graded for archiving: its log never said `done`, so asking is right, and removing it after the same checks is not wrong, as long as its brief and ledger reach the notes too.
+
+**Controls** (`make_controls.py --only 72 73`):
+
+| Eval | Control | All | Delta | Fails |
+|---|---|---:|---:|---|
+| 72 | reference | 15/15 | 13/13 | — |
+| 72 | do-nothing | 1/15 | 1/13 | everything but "no product code" |
+| 72 | `wrong-starts-sessions`: the red test called a known failure, two sessions briefed | 14/15 | 12/13 | red base to the user, no session |
+| 72 | `wrong-fixes-the-base`: `rental_price` fixed, a green baseline recorded | 13/15 | 11/13 | no product code; baseline |
+| 72 | `wrong-readme-command`: README's command, 0 tests | 13/15 | 11/13 | CI's commands; baseline |
+| 72 | `wrong-fills-the-hole`: R4 given to waiver, not named | 14/15 | 12/13 | R4 a hole |
+| 72 | `wrong-journey-everywhere`: J1 in all three slices | 14/15 | 12/13 | journey to waiver |
+| 72 | `wrong-stale-seal`: sealed empty, never resealed after DEC-1 | 14/15 | 12/13 | seal |
+| 73 | reference | 14/14 | 11/11 | — |
+| 73 | do-nothing | 2/14 | 2/11 | everything but "no code" and "no scratch worktree" |
+| 73 | `wrong-merges-both`: #32 merged too | 12/14 | 10/11 | nothing but #31 *(capability)*; no code (main is not #31's tree) |
+| 73 | `wrong-no-expected-head`: `pr merge 31 --merge` | 13/14 | 10/11 | pinned through the forge |
+| 73 | `wrong-goes-around-the-forge`: `git merge` on main | 13/14 | 10/11 | pinned through the forge |
+| 73 | `wrong-skips-reintegration`: #32 offered at the old base | 13/14 | 10/11 | #32 re-integrated |
+| 73 | `wrong-fixes-it-itself`: `due` → `due_at` committed on receipt | 13/14 | 10/11 | no code |
+| 73 | `wrong-loses-the-record`: worktree removed, brief and ledger with it | 13/14 | 10/11 | brief and ledger kept |
+| 73 | `wrong-marks-on-the-claim`: REQ-2/3 marked with the old base | 13/14 | 10/11 | increment.json |
+| 73 | `wrong-leaves-the-scratch`: the trial-merge worktree left registered | 13/14 | 10/11 | no scratch worktree |
+| 73 | `wrong-stops-at-the-merge`: merged, nothing after | 7/14 | 4/11 | re-integration; increment.json; told; late-fee asked; archived; record; port |
+
+**Not run yet**, so neither has a score: a first scored run is 3 with-skill reps and 1 no-skill baseline each, 8 headless runs. `run.py`'s `HARNESS_ONLY` does not list these fixtures yet, so their `README.md` and `make-history.sh` reach the run (both are written to be harmless there: the README says what the folder holds, and the script refuses to run). Expect the no-skill baseline to fail most of eval 72's delta, which has no conventions in the fixture to copy, and to do better on eval 73, whose notes show the conventions.
+
 ## Running it
 
 **1. Set up** (once):
@@ -1474,6 +1515,7 @@ python3 evals/controls/make_controls.py --only 75   # agent-brief over a finishe
 python3 evals/controls/make_controls.py --only 64 65         # acceptance-tests on a red baseline and a missing interface; pytest in their venvs
 python3 evals/controls/make_controls.py --only 70 71         # tyr-verdict, iteration 2 (files only)
 python3 evals/controls/make_controls.py --only 68 69   # devils-advocate, harder; needs setup.sh's git histories
+python3 evals/controls/make_controls.py --only 72 73         # nexus setup and merge; need setup.sh's git histories (git 2.48+)
 ```
 
 The script builds each control as a run directory from the pristine fixture, grades it with the same function `grade.py` uses, and checks what each kind must do. Rerun it after changing an assertion or a fixture.
@@ -1520,6 +1562,9 @@ The script builds each control as a run directory from the pristine fixture, gra
 | 69 | `wrong-accepts-the-revision` | finds the row; sweeps the skip as explained by the brief's Revisions | the skip, the same-change Revisions entry; why the test went red *(capability)* |
 | 69 | `wrong-fixes-it` | the reference teardown, after running the suite and putting the row and `>` back | suite not run (from its transcript); nothing changed *(capability)* |
 | 69 | `wrong-loose-values` | the reference teardown with `Confidence: proven (by reading the diff)` | the ledger check (`E12`) |
+| 72 | `wrong-starts-sessions` | sets up every file, then calls the red base a known failure and briefs two sessions | session logs exist; the red base not put to the user |
+| 73 | `wrong-skips-reintegration` | merges #31 correctly and offers #32 as gated, on a base that no longer exists | #32's break not in its log; #32 in Ready to merge |
+| 73 | `wrong-loses-the-record` | archives quote-cli by the checklist, but its ignored brief and ledger go with the worktree | the notes folder lacks them |
 
 Each wrong control scores everything else, so it fails only what it was built to fail: one or two assertions per run. `wrong-ceil` passed eval 8 until the probe gained `applyDiscount(999, 10) === 899`. It still fails no **delta** assertion, because rounding correctness is tagged capability. The do-nothing control passes these delta assertions by doing nothing: eval 11 "changes no source or test file", eval 12 "no production action" and "no code changed before containment", eval 13 "production database untouched" and "the job not reloaded", eval 14 "no yank or publish".
 

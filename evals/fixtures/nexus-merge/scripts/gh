@@ -1,0 +1,175 @@
+#!/usr/bin/env python3
+"""The forge for this checkout, offline: gh's pr subcommands, answered from the local repository.
+
+    scripts/gh pr list
+    scripts/gh pr view <n> [--json field,field,...]
+    scripts/gh pr checks <n>
+    scripts/gh pr diff <n> [--name-only | --stat]
+    scripts/gh pr merge <n> --merge [--match-head-commit <sha>] [--delete-branch]
+    scripts/gh pr comment <n> --body <text>
+
+The pull requests' branches are the branches of repo/ (main is the base). Merging needs main checked
+out and clean in repo/, merges with a merge commit (the only method this repository allows), and moves
+repo/'s main. Every call is recorded in scripts/.calls.log.
+"""
+import datetime
+import json
+import os
+import pathlib
+import subprocess
+import sys
+
+HERE = pathlib.Path(__file__).resolve().parent
+REPO = HERE.parent / "repo"
+OWNER = "harbor"
+PRS = {
+    29: {"title": "feat: counter quote command", "branch": "quote-cli", "checks": "unit: 12 passed, 0 failed, 1 skipped"},
+    31: {"title": "feat: late fee per started hour, capped at the day rate", "branch": "late-fee",
+         "checks": "unit: 16 passed, 0 failed, 1 skipped"},
+    32: {"title": "feat: receipt shows the late fee as its own line", "branch": "receipt",
+         "checks": "unit: 14 passed, 0 failed, 1 skipped"},
+}
+
+
+def log(argv):
+    stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    with open(HERE / ".calls.log", "a") as f:
+        f.write(f"{stamp} gh {' '.join(argv)}\n")
+
+
+def git(*args, check=False, env=None):
+    r = subprocess.run(["git", "-C", str(REPO), *args], capture_output=True, text=True,
+                       env=dict(os.environ, **(env or {})))
+    if check and r.returncode:
+        die(f"git {' '.join(args)}: {r.stderr.strip()}")
+    return r
+
+
+def die(msg, code=1):
+    print(msg, file=sys.stderr)
+    sys.exit(code)
+
+
+def merge_commit(n):
+    out = git("log", "main", "--merges", "--format=%H %P", f"--grep=^Merge pull request #{n} ").stdout.split()
+    return (out[0], out[2]) if len(out) >= 3 else (None, None)
+
+
+def pr(n):
+    if n not in PRS:
+        die(f"GraphQL: Could not resolve to a PullRequest with the number of {n}.")
+    p = PRS[n]
+    mc, merged_head = merge_commit(n)
+    ref = git("rev-parse", "--verify", "-q", f"refs/heads/{p['branch']}").stdout.strip()
+    head = merged_head if mc else ref
+    if not head:
+        die(f"pull request #{n}: its branch {p['branch']} no longer exists")
+    files = git("diff", "--name-only", f"main...{head}").stdout.split() if not mc else \
+        git("diff", "--name-only", f"{mc}^1", mc).stdout.split()
+    clean = git("merge-tree", "--write-tree", "main", head).returncode == 0
+    return {
+        "number": n, "title": p["title"], "state": "MERGED" if mc else "OPEN",
+        "headRefName": p["branch"], "headRefOid": head, "baseRefName": "main",
+        "baseRefOid": git("rev-parse", "main").stdout.strip(),
+        "mergeable": "UNKNOWN" if mc else ("MERGEABLE" if clean else "CONFLICTING"),
+        "mergeStateStatus": "UNKNOWN" if mc else ("CLEAN" if clean else "DIRTY"),
+        "mergeCommit": {"oid": mc} if mc else None,
+        "statusCheckRollup": [{"name": "ci / test", "status": "COMPLETED", "conclusion": "SUCCESS",
+                               "summary": f"lint ok; {p['checks']}; smoke ok"}],
+        "files": [{"path": f} for f in files],
+        "url": f"https://github.com/{OWNER}/harbor-bikes/pull/{n}",
+    }
+
+
+def number(args):
+    nums = [a for a in args if a.isdigit()]
+    if not nums:
+        die("a pull request number is required (this offline forge has no current-branch lookup)")
+    return int(nums[0])
+
+
+def opt(args, *names):
+    for i, a in enumerate(args):
+        for n in names:
+            if a == n and i + 1 < len(args):
+                return args[i + 1]
+            if a.startswith(n + "="):
+                return a.split("=", 1)[1]
+    return None
+
+
+def view(args):
+    d = pr(number(args))
+    fields = opt(args, "--json")
+    if fields:
+        print(json.dumps({k: d.get(k) for k in fields.split(",")}, indent=2))
+        return
+    print(f"{d['title']} #{d['number']}\n{d['state']} · {OWNER}:{d['headRefName']} into main · head {d['headRefOid'][:7]}")
+    print(f"mergeable: {d['mergeable']} · checks: {d['statusCheckRollup'][0]['summary']}\n{d['url']}")
+
+
+def merge(args):
+    n = number(args)
+    d = pr(n)
+    if d["state"] == "MERGED":
+        die(f"X Pull request #{n} was already merged")
+    if "--admin" in args:
+        die("X --admin is not available: nobody bypasses the checks on this repository")
+    if any(a in args for a in ("--squash", "-s", "--rebase", "-r")):
+        die("X Merge method not allowed: this repository allows merge commits only (--merge)")
+    if not any(a in args for a in ("--merge", "-m")):
+        die("--merge, --rebase, or --squash required when not running interactively")
+    want = opt(args, "--match-head-commit")
+    if want and not d["headRefOid"].startswith(want.lower()):
+        die(f"X Pull request #{n} was not merged: the head branch was modified. Review and try the merge again.")
+    if d["mergeable"] != "MERGEABLE":
+        die(f"X Pull request #{n} is not mergeable: the merge commit cannot be cleanly created.")
+    if git("symbolic-ref", "-q", "HEAD").stdout.strip() != "refs/heads/main":
+        die("X this offline forge merges into repo/'s main: check main out in repo/ first")
+    if git("status", "--porcelain", "--untracked-files=no").stdout.strip():
+        die("X repo/ has uncommitted changes to tracked files: the forge will not merge over them")
+    who = {"GIT_COMMITTER_NAME": "GitHub", "GIT_COMMITTER_EMAIL": "noreply@github.invalid"}
+    r = git("merge", "--no-ff", "--no-edit", "-m", f"Merge pull request #{n} from {OWNER}/{d['headRefName']}",
+            "-m", d["title"], d["headRefOid"], env=who)
+    if r.returncode:
+        git("merge", "--abort")
+        die(f"X Pull request #{n} was not merged: {r.stderr.strip() or r.stdout.strip()}")
+    sha = git("rev-parse", "main").stdout.strip()
+    print(f"✓ Merged pull request #{n} ({d['title']}) as {sha[:7]}")
+    if "--delete-branch" in args or "-d" in args:
+        print(f"! the branch {d['headRefName']} is checked out in a worktree: not deleted")
+
+
+def main(argv):
+    log(argv)
+    if len(argv) < 2 or argv[0] != "pr":
+        die("scripts/gh: offline, only `gh pr list|view|checks|diff|merge|comment` are available")
+    cmd, args = argv[1], argv[2:]
+    if cmd == "list":
+        rows = [pr(n) for n in PRS]
+        if opt(args, "--json"):
+            print(json.dumps([r for r in rows if r["state"] == "OPEN"], indent=2))
+        else:
+            for r in rows:
+                if r["state"] == "OPEN":
+                    print(f"#{r['number']}\t{r['title']}\t{r['headRefName']}\tOPEN")
+    elif cmd == "view":
+        view(args)
+    elif cmd == "merge":
+        merge(args)
+    elif cmd == "checks":
+        d = pr(number(args))
+        print(f"ci / test\tpass\t{d['statusCheckRollup'][0]['summary']}")
+    elif cmd == "diff":
+        d = pr(number(args))
+        flag = ["--name-only"] if "--name-only" in args else ["--stat"] if "--stat" in args else []
+        print(git("diff", *flag, f"main...{d['headRefOid']}").stdout, end="")
+    elif cmd == "comment":
+        d = pr(number(args))
+        print(f"{d['url']}#issuecomment-1")
+    else:
+        die(f"scripts/gh: `pr {cmd}` is not available offline")
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
