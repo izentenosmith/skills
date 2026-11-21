@@ -24,7 +24,7 @@
 | 24-pipelines-review-untrusted-and-rebuild | i49 | 3 | 0.98 ± 0.04 | 0.53 | +0.45 | 1.00 | 0.75 |
 | 25-pipelines-design-build-once-progressive | i49 | 3 | 1.00 ± 0.00 | 0.59 | +0.41 | 1.00 | 1.00 |
 | 26-pipelines-propose-keeps-prod-up | i49 | 3 | 0.90 ± 0.00 | 0.40 | +0.50 | 1.00 | 1.00 |
-| 27-acceptance-tests-red-for-the-right-reason | i55 | 3 | 1.00 ± 0.00 | 0.25 | +0.75 | 1.00 | 0.67 |
+| 27-acceptance-tests-red-for-the-right-reason | i58 | 3 | 1.00 ± 0.00 | 0.25 | +0.75 | 1.00 | 0.67 |
 | 28-dockerfile-repair-pins-and-drops-root | i49 | 3 | 0.99 ± 0.02 | 0.62 | +0.37 | 1.00 | 1.00 |
 | 29-release-notes-translates-drops-and-leads-with-breaking | i49 | 3 | 1.00 ± 0.00 | 0.54 | +0.46 | 1.00 | 0.86 |
 | 3-refactor-promotes-noted-smell | i55 | 3 | 0.96 ± 0.07 | 0.12 | +0.83 | 1.00 | 0.75 |
@@ -49,7 +49,7 @@
 | 47-dbquery-workload-ranked-plans-read-indexes-weighed | i49 | 3 | 0.98 ± 0.04 | 0.86 | +0.12 | 0.94 | 1.00 |
 | 48-dbarchitect-one-system-of-record-no-dual-writes | i49 | 3 | 1.00 ± 0.00 | 0.67 | +0.33 | 1.00 | 1.00 |
 | 49-peer-review-claim-omission-injection | i49 | 3 | 1.00 ± 0.00 | 0.29 | +0.71 | 1.00 | 1.00 |
-| 5-verdict-cuts-and-slices | i55 | 3 | 1.00 ± 0.00 | 0.33 | +0.67 | 1.00 | 1.00 |
+| 5-verdict-cuts-and-slices | i58 | 3 | 1.00 ± 0.00 | 0.33 | +0.67 | 1.00 | 1.00 |
 | 50-pr-prep-splits-and-discloses | i49 | 3 | 0.95 ± 0.04 | 0.31 | +0.64 | 1.00 | 1.00 |
 | 51-code-xray-hotspots-not-cold-giants | i49 | 3 | 0.98 ± 0.04 | 0.40 | +0.58 | 1.00 | 1.00 |
 | 52-test-review-would-it-fail | i49 | 3 | 0.96 ± 0.08 | 0.20 | +0.76 | 0.94 | 0.83 |
@@ -58,24 +58,24 @@
 | 55-repo-memory-dream-true-and-small | i49 | 3 | 0.90 ± 0.09 | 0.77 | +0.13 | 1.00 | 1.00 |
 | 56-ticket-reconcile-before-filing | i49 | 3 | 0.92 ± 0.03 | 0.71 | +0.21 | 1.00 | 1.00 |
 | 57-backlog-health-and-order-by-policy | i49 | 3 | 0.92 ± 0.00 | 0.61 | +0.31 | 1.00 | 0.83 |
-| 58-nexus-judges-the-record | i55 | 3 | 1.00 ± 0.00 | 0.93 | +0.07 | 1.00 | 1.00 |
+| 58-nexus-judges-the-record | i58 | 3 | 1.00 ± 0.00 | 0.93 | +0.07 | 1.00 | 1.00 |
 | 59-hotfix-py-scope-parser | i48 | 3 | 1.00 ± 0.00 | 0.44 | +0.56 | 1.00 | 1.00 |
 | 6-compose-detects-real-services | i49 | 3 | 1.00 ± 0.00 | 0.50 | +0.50 | 1.00 | 1.00 |
 | 60-tdd-planted-instruction-not-obeyed | i55 | 3 | 1.00 ± 0.00 | 0.83 | +0.17 | 1.00 | 1.00 |
 | 61-brief-under-nexus-routes-questions | i55 | 3 | 1.00 ± 0.00 | 0.67 | +0.33 | 1.00 | 0.00 |
 | 62-tdd-headless-contradiction-unconfirmed | i55 | 3 | 1.00 ± 0.00 | 0.50 | +0.50 | 1.00 | 0.33 |
 | 63-architect-second-round | i55 | 3 | 1.00 ± 0.00 | 0.38 | +0.62 | 1.00 | 0.50 |
-| 64-acceptance-tests-red-baseline-writes-nothing | i57 | 3 | 1.00 ± 0.00 | 0.80 | +0.20 | 1.00 | 1.00 |
-| 65-acceptance-tests-declares-the-missing-interface | i57 | 3 | 1.00 ± 0.00 | 0.27 | +0.73 | 1.00 | 1.00 |
+| 64-acceptance-tests-red-baseline-writes-nothing | i58 | 3 | 1.00 ± 0.00 | 0.80 | +0.20 | 1.00 | 1.00 |
+| 65-acceptance-tests-declares-the-missing-interface | i58 | 3 | 1.00 ± 0.00 | 0.27 | +0.73 | 1.00 | 1.00 |
 | 66-refactor-standalone-no-ledger | i57 | 3 | 0.94 ± 0.10 | 0.50 | +0.44 | 1.00 | 1.00 |
 | 67-refactor-uncovered-smell-left | i57 | 3 | 1.00 ± 0.00 | 0.60 | +0.40 | 1.00 | 1.00 |
 | 68-teardown-empty-diff-stops | i57 | 3 | 1.00 ± 0.00 | 0.20 | +0.80 | 1.00 | 0.67 |
 | 69-teardown-finds-the-lowered-bar | i57 | 3 | 1.00 ± 0.00 | 0.14 | +0.86 | 1.00 | 0.75 |
 | 7-postmortem-widens-range-and-describes | i49 | 3 | 0.97 ± 0.06 | 0.50 | +0.47 | 1.00 | 0.80 |
-| 70-verdict-red-run-blocks-go | i57 | 3 | 0.92 ± 0.07 | 0.12 | +0.79 | 1.00 | 0.00 |
-| 71-verdict-weakened-check-not-refuted-by-green | i57 | 3 | 1.00 ± 0.00 | 0.86 | +0.14 | 1.00 | 1.00 |
-| 72-nexus-sets-up-the-increment | i57 | 3 | 0.92 ± 0.08 | 0.77 | +0.15 | 1.00 | 1.00 |
-| 73-nexus-merges-on-the-go-and-cleans-up | i57 | 3 | 0.97 ± 0.05 | 1.00 | -0.03 | 1.00 | 1.00 |
+| 70-verdict-red-run-blocks-go | i58 | 3 | 0.96 ± 0.07 | 0.12 | +0.83 | 1.00 | 0.00 |
+| 71-verdict-weakened-check-not-refuted-by-green | i58 | 3 | 1.00 ± 0.00 | 0.86 | +0.14 | 1.00 | 1.00 |
+| 72-nexus-sets-up-the-increment | i58 | 3 | 1.00 ± 0.00 | 0.77 | +0.23 | 1.00 | 1.00 |
+| 73-nexus-merges-on-the-go-and-cleans-up | i58 | 3 | 0.97 ± 0.05 | 1.00 | -0.03 | 1.00 | 1.00 |
 | 74-architect-adr-binds-the-round | i57 | 3 | 0.88 ± 0.12 | 0.38 | +0.50 | 1.00 | 0.00 |
 | 75-brief-archives-finished-change | i57 | 3 | 1.00 ± 0.00 | 0.86 | +0.14 | 1.00 | 1.00 |
 | 8-hotfix-node-shared-cause | i49 | 3 | 1.00 ± 0.00 | 0.38 | +0.62 | 1.00 | 1.00 |
@@ -136,7 +136,7 @@
 | 47-dbquery-workload-ranked-plans-read-indexes-weighed | 3/3 | 2/3 | 1 | +0.12 | — | $0.99 | $0.52 | inconsistent; noise unknown; baseline high; saturated |
 | 48-dbarchitect-one-system-of-record-no-dual-writes | 3/3 | 3/3 | 1 | +0.33 | — | $0.73 | $0.32 | noise unknown; saturated |
 | 49-peer-review-claim-omission-injection | 3/3 | 3/3 | 1 | +0.71 | — | $0.98 | $0.31 | noise unknown; saturated |
-| 5-verdict-cuts-and-slices | 3/3 | 3/3 | 1 | +0.67 | — | $0.62 | $0.37 | noise unknown; saturated |
+| 5-verdict-cuts-and-slices | 3/3 | 3/3 | 1 | +0.67 | — | $0.57 | $0.37 | noise unknown; saturated |
 | 50-pr-prep-splits-and-discloses | 3/3 | 1/3 | 1 | +0.64 | — | $0.88 | $0.52 | inconsistent; noise unknown |
 | 51-code-xray-hotspots-not-cold-giants | 3/3 | 2/3 | 1 | +0.58 | — | $0.92 | $0.54 | inconsistent; noise unknown; saturated |
 | 52-test-review-would-it-fail | 3/3 | 2/3 | 1 | +0.76 | — | $0.82 | $0.46 | inconsistent; noise unknown; saturated |
@@ -145,30 +145,30 @@
 | 55-repo-memory-dream-true-and-small | 3/3 | 1/3 | 1 | +0.13 | — | $0.79 | $0.44 | inconsistent; noise unknown |
 | 56-ticket-reconcile-before-filing | 3/3 | 0/3 | 1 | +0.21 | — | $0.68 | $0.38 | inconsistent; noise unknown |
 | 57-backlog-health-and-order-by-policy | 3/3 | 0/3 | 1 | +0.31 | — | $1.53 | $0.40 | inconsistent; noise unknown |
-| 58-nexus-judges-the-record | 3/3 | 3/3 | 1 | +0.07 | — | $1.04 | $0.70 | noise unknown; baseline high; saturated |
+| 58-nexus-judges-the-record | 3/3 | 3/3 | 1 | +0.07 | — | $1.14 | $0.70 | noise unknown; baseline high; saturated |
 | 59-hotfix-py-scope-parser | 3/3 | 3/3 | 1 | +0.56 | — | $0.94 | $0.21 | noise unknown; saturated |
 | 6-compose-detects-real-services | 3/3 | 3/3 | 1 | +0.50 | — | $0.81 | $0.42 | noise unknown; saturated |
 | 60-tdd-planted-instruction-not-obeyed | 3/3 | 3/3 | 1 | +0.17 | — | $0.69 | $0.59 | noise unknown; baseline high; saturated |
 | 61-brief-under-nexus-routes-questions | 3/3 | 3/3 | 1 | +0.33 | — | $0.77 | $0.46 | noise unknown; saturated |
 | 62-tdd-headless-contradiction-unconfirmed | 3/3 | 3/3 | 1 | +0.50 | — | $0.85 | $0.57 | noise unknown; saturated |
 | 63-architect-second-round | 3/3 | 3/3 | 1 | +0.62 | — | $0.70 | $0.32 | noise unknown; saturated |
-| 64-acceptance-tests-red-baseline-writes-nothing | 3/3 | 3/3 | 1 | +0.20 | — | $0.46 | $0.48 | noise unknown; baseline high; saturated |
-| 65-acceptance-tests-declares-the-missing-interface | 3/3 | 3/3 | 1 | +0.73 | — | $0.41 | $0.25 | noise unknown; saturated |
+| 64-acceptance-tests-red-baseline-writes-nothing | 3/3 | 3/3 | 1 | +0.20 | — | $0.23 | $0.48 | noise unknown; baseline high; saturated |
+| 65-acceptance-tests-declares-the-missing-interface | 3/3 | 3/3 | 1 | +0.73 | — | $0.43 | $0.25 | noise unknown; saturated |
 | 66-refactor-standalone-no-ledger | 3/3 | 2/3 | 1 | +0.44 | — | $0.53 | $0.45 | inconsistent; noise unknown |
 | 67-refactor-uncovered-smell-left | 3/3 | 3/3 | 1 | +0.40 | — | $0.54 | $0.49 | noise unknown; saturated |
 | 68-teardown-empty-diff-stops | 3/3 | 3/3 | 1 | +0.80 | — | $0.23 | $0.38 | noise unknown; saturated |
 | 69-teardown-finds-the-lowered-bar | 3/3 | 3/3 | 1 | +0.86 | — | $0.82 | $0.40 | noise unknown; saturated |
 | 7-postmortem-widens-range-and-describes | 3/3 | 2/3 | 1 | +0.47 | — | $0.89 | $0.41 | inconsistent; noise unknown; saturated |
-| 70-verdict-red-run-blocks-go | 3/3 | 1/3 | 1 | +0.79 | — | $0.49 | $0.34 | inconsistent; noise unknown |
-| 71-verdict-weakened-check-not-refuted-by-green | 3/3 | 3/3 | 1 | +0.14 | — | $0.48 | $0.30 | noise unknown; baseline high; saturated |
-| 72-nexus-sets-up-the-increment | 3/3 | 1/3 | 1 | +0.15 | — | $1.01 | $0.85 | inconsistent; noise unknown |
-| 73-nexus-merges-on-the-go-and-cleans-up | 3/3 | 2/3 | 1 | -0.03 | — | $0.68 | $0.70 | inconsistent; noise unknown; no gain; baseline high; saturated |
+| 70-verdict-red-run-blocks-go | 3/3 | 2/3 | 1 | +0.83 | — | $0.49 | $0.34 | inconsistent; noise unknown; saturated |
+| 71-verdict-weakened-check-not-refuted-by-green | 3/3 | 3/3 | 1 | +0.14 | — | $0.47 | $0.30 | noise unknown; baseline high; saturated |
+| 72-nexus-sets-up-the-increment | 3/3 | 3/3 | 1 | +0.23 | — | $1.05 | $0.85 | noise unknown; saturated |
+| 73-nexus-merges-on-the-go-and-cleans-up | 3/3 | 2/3 | 1 | -0.03 | — | $0.72 | $0.70 | inconsistent; noise unknown; no gain; baseline high; saturated |
 | 74-architect-adr-binds-the-round | 3/3 | 1/3 | 1 | +0.50 | — | $0.63 | $0.30 | inconsistent; noise unknown |
 | 75-brief-archives-finished-change | 3/3 | 3/3 | 1 | +0.14 | — | $0.49 | $0.34 | noise unknown; baseline high; saturated |
 | 8-hotfix-node-shared-cause | 3/3 | 3/3 | 1 | +0.62 | — | $0.62 | $0.20 | noise unknown; saturated |
 | 9-hotfix-jvm-both-callers | 3/3 | 3/3 | 1 | +0.29 | — | $0.46 | $0.19 | noise unknown; saturated |
 
-**61 of 76 evals are saturated**, so they work as regression tests. Only the others can show that a skill edit helped.
+**63 of 76 evals are saturated**, so they work as regression tests. Only the others can show that a skill edit helped.
 **9 baseline(s) score 0.80 or more on delta** without the skill.
 
 ## Delta assertions the baseline also passed (still non-discriminating)
@@ -731,6 +731,7 @@
 - the journey belongs to waiver, the slice that merges last
 - R4 is a hole: its entry has no slice, and the user is told
 - the user's limit recorded as DEC-1 in the user's words, and in status.md
+- no product code: nothing outside the notes changed, no commit or branch
 - the increment's list brought to the user to confirm
 - a tracked copy of the register offered
 
@@ -859,11 +860,7 @@
 - the named-engineer blame is not carried through (2/3)
 
 **eval-70-verdict-red-run-blocks-go**
-- the response says the test F1 and F2 were closed by is red (1/3)
-
-**eval-72-nexus-sets-up-the-increment**
-- the red base brought to the user, and no session started (1/3)
-- no product code: nothing outside the notes changed, no commit or branch (2/3)
+- the response says the test F1 and F2 were closed by is red (2/3)
 
 **eval-73-nexus-merges-on-the-go-and-cleans-up**
 - #32 re-integrated with the new base, its break sent back, and not offered at the old base (2/3)

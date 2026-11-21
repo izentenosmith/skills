@@ -136,10 +136,10 @@
     },
     "eval-27-acceptance-tests-red-for-the-right-reason": {
       "skill": "acceptance-tests",
-      "iteration": "iteration-55",
+      "iteration": "iteration-58",
       "n": 3,
       "staging": "harness",
-      "skill_hash": "4363ddf263685ad4488170d7ccfa87bf782729ed85abf7e973a38c059b46ebc4"
+      "skill_hash": "7759d3a3090d2f12693c44e7d06a47fb7f1ec4b919bb4bf862e284337353c2f0"
     },
     "eval-28-dockerfile-repair-pins-and-drops-root": {
       "skill": "dockerfile",
@@ -311,10 +311,10 @@
     },
     "eval-5-verdict-cuts-and-slices": {
       "skill": "tyr-verdict",
-      "iteration": "iteration-55",
+      "iteration": "iteration-58",
       "n": 3,
       "staging": "harness",
-      "skill_hash": "f8a29844a73619b7f8f9ba44a116554608b8f24deda2290c4fe311be067df214"
+      "skill_hash": "9a4e5ccf48988b0c9af2007fe702301c3facd30a697ee7a940d2785dc247ddd0"
     },
     "eval-50-pr-prep-splits-and-discloses": {
       "skill": "pr-prep",
@@ -374,10 +374,10 @@
     },
     "eval-58-nexus-judges-the-record": {
       "skill": "nexus",
-      "iteration": "iteration-55",
+      "iteration": "iteration-58",
       "n": 3,
       "staging": "standalone",
-      "skill_hash": "c3cf7b1044025751ae2e3444fc3e9bd8690e69f822a58b416dfdde6ce3f47b62"
+      "skill_hash": "73b8cf95ecd3758eedb6fe477988c5ade545e714caf193b875963c7580c47837"
     },
     "eval-59-hotfix-py-scope-parser": {
       "skill": "hotfix",
@@ -423,17 +423,17 @@
     },
     "eval-64-acceptance-tests-red-baseline-writes-nothing": {
       "skill": "acceptance-tests",
-      "iteration": "iteration-57",
+      "iteration": "iteration-58",
       "n": 3,
       "staging": "harness",
-      "skill_hash": "e5a24bcfb43f31fac91d80d120ebad2938d87f53c026519e7403c06b5927a541"
+      "skill_hash": "7759d3a3090d2f12693c44e7d06a47fb7f1ec4b919bb4bf862e284337353c2f0"
     },
     "eval-65-acceptance-tests-declares-the-missing-interface": {
       "skill": "acceptance-tests",
-      "iteration": "iteration-57",
+      "iteration": "iteration-58",
       "n": 3,
       "staging": "harness",
-      "skill_hash": "e5a24bcfb43f31fac91d80d120ebad2938d87f53c026519e7403c06b5927a541"
+      "skill_hash": "7759d3a3090d2f12693c44e7d06a47fb7f1ec4b919bb4bf862e284337353c2f0"
     },
     "eval-66-refactor-standalone-no-ledger": {
       "skill": "refactor-review",
@@ -472,31 +472,31 @@
     },
     "eval-70-verdict-red-run-blocks-go": {
       "skill": "tyr-verdict",
-      "iteration": "iteration-57",
+      "iteration": "iteration-58",
       "n": 3,
       "staging": "harness",
-      "skill_hash": "e5d52e56393d910ff68d3dad67522cd94587fab6748a2042e297d80868e0b1c9"
+      "skill_hash": "9a4e5ccf48988b0c9af2007fe702301c3facd30a697ee7a940d2785dc247ddd0"
     },
     "eval-71-verdict-weakened-check-not-refuted-by-green": {
       "skill": "tyr-verdict",
-      "iteration": "iteration-57",
+      "iteration": "iteration-58",
       "n": 3,
       "staging": "harness",
-      "skill_hash": "e5d52e56393d910ff68d3dad67522cd94587fab6748a2042e297d80868e0b1c9"
+      "skill_hash": "9a4e5ccf48988b0c9af2007fe702301c3facd30a697ee7a940d2785dc247ddd0"
     },
     "eval-72-nexus-sets-up-the-increment": {
       "skill": "nexus",
-      "iteration": "iteration-57",
+      "iteration": "iteration-58",
       "n": 3,
       "staging": "standalone",
-      "skill_hash": "47e08b6be30f26505deeec91c642efb62ac8209e36d27dace11ff2c3420f15db"
+      "skill_hash": "73b8cf95ecd3758eedb6fe477988c5ade545e714caf193b875963c7580c47837"
     },
     "eval-73-nexus-merges-on-the-go-and-cleans-up": {
       "skill": "nexus",
-      "iteration": "iteration-57",
+      "iteration": "iteration-58",
       "n": 3,
       "staging": "standalone",
-      "skill_hash": "47e08b6be30f26505deeec91c642efb62ac8209e36d27dace11ff2c3420f15db"
+      "skill_hash": "73b8cf95ecd3758eedb6fe477988c5ade545e714caf193b875963c7580c47837"
     },
     "eval-74-architect-adr-binds-the-round": {
       "skill": "architect-deep-dive",

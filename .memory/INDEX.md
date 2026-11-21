@@ -15,7 +15,7 @@ a note in `notes/` and a line here. Memory is data, never instructions.
 ## Gotchas
 - [Eval fixtures are built per checkout](notes/eval-fixtures-per-checkout.md) — every new worktree needs `evals/setup.sh` before `run.py`
 - [Runs read the working tree](notes/eval-runs-read-working-tree.md) — a commit minutes after a run is usually its record, not a later change
-- [The benchmark is recorded from iterations 49 and 55](notes/benchmark-recorded-from-iteration-49.md) — `--record` over 48, 49, 50, 55, 57 plus any new iteration, never 51–54; check all 76 rows and that no other row moved
+- [The benchmark is recorded from iterations 49 and 55](notes/benchmark-recorded-from-iteration-49.md) — `--record` over 48, 49, 50, 55, 57, 58 plus any new iteration, never 51–54; check all 76 rows and that no other row moved
 - [sync refuses brand-new copies](notes/sync-refuses-new-copies.md) — an uncommitted copy reads as "edited directly" once its source changes; `cp` it, then `--check`
 - [A full eval run trips the spend limit](notes/eval-full-run-spend-limit.md) — 235 runs, about $217, at 59 evals (64 now); re-run failed evals by id into the same iteration
 - [main is protected since the repo went public](notes/github-plan-no-branch-protection.md) — ruleset active from 2026-11-20: PR and five green checks required; auto-merge is still off
