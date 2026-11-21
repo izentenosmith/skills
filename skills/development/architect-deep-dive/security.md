@@ -7,6 +7,13 @@
 > Dowd, McDonald & Schuh, *The Art of Software Security Assessment* (TAOSSA; cited by printed page);
 > Anderson, *Security Engineering* 3e (SE; cited by section).
 
+## Contents
+
+- [The premise: security is a property of the design, not a feature](#the-premise-security-is-a-property-of-the-design-not-a-feature)
+- [The trigger](#the-trigger)
+- [The questions](#the-questions)
+- [What the brief needs from you](#what-the-brief-needs-from-you)
+
 ## The premise: security is a property of the design, not a feature
 
 Most vulnerabilities are ordinary bugs in places where the bug has security consequences, and the
@@ -118,5 +125,5 @@ acceptance criteria in the brief.
 The handoff carries a **security block**: the abuse cases (each one sentence), the authorisation rule
 per operation with its enforcing layer, the domain primitives and their validity rules, the values
 that must never be logged or echoed, and the fail-open/fail-closed decision per control.
-[agent-brief](../agent-brief/SKILL.md) turns each into an acceptance criterion; a security decision
+`agent-brief` turns each into an acceptance criterion; a security decision
 that never becomes a criterion never becomes a test.

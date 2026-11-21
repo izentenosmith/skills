@@ -14,11 +14,18 @@ Skills
   - no symlinks under skills/ (`npx skills add` drops a link that leaves the
     skill folder); every copy in skills/shared.json matches its source
   - the root README links every skill
+  - skills/REGISTRY.md and skills/registry.json match what registry.py generates
 Links
   - every relative link in a tracked markdown file resolves, outside code
     spans and fences; eval fixtures are skipped (their content is planted)
   - a link inside a skill folder stays within its family: installs are flat,
     so `../../<family>/...` only resolves in this repo
+Authoring guide (families in authoring.GUIDED_FAMILIES; details in authoring.py)
+  - the description is third person, opening with a verb ("Turns…")
+  - a reference file over 100 lines opens with a `## Contents` list
+  - SKILL.md lists every reference file under `## Reference files` with when to
+    open it, and reference files don't link each other (one level deep)
+  - no link leaves the skill's own folder (sibling skills are named, not linked)
 Evals
   - evals.json parses, ids are unique, and each eval names a skill that exists
     (or the loop runner) and a fixture folder that exists
@@ -33,6 +40,13 @@ Eval health
     staged it (the repo folder, alone or with harness/ beside it)
   - warning: a score with no skill_hash (scored before run.py recorded one),
     or one staged by the zip-packaging step this repo no longer has
+Bundles
+  - skills/bundles.json parses; every skill it names exists; every skill is
+    in at least one bundle; no install line (with the with_every_bundle
+    extras) passes 20 skills; no duplicate in a bundle; a `placed` reason
+    only for a skill its bundle lists
+  - README.md's `### Bundles` has a `# <name>` comment and install line per
+    bundle, each installing exactly that bundle's skills plus the extras
 Branch protection
   - every status check .github/rulesets/main.json requires is a job name the
     workflows report — a renamed job would otherwise block every merge
@@ -134,6 +148,11 @@ import sync_shared  # noqa: E402
 for msg in sync_shared.stale():
     problem(msg)
 
+import registry  # noqa: E402
+
+for msg in registry.stale():
+    problem(msg)
+
 readme = (ROOT / "README.md").read_text()
 for name, rel in sorted(skills.items()):
     if f"({rel})" not in readme:
@@ -162,6 +181,15 @@ for md in tracked("*.md"):
             if not (md.parent / path).resolve().is_relative_to(family):
                 problem(f"{rel}: link {target} leaves the {rel.parts[1]} family, so it breaks "
                         f"once installed; name the skill in backticks instead")
+
+# -------------------------------------------------------- authoring guide
+
+import authoring  # noqa: E402
+
+for name, rel in sorted(skills.items()):
+    if rel.parts[1] in authoring.GUIDED_FAMILIES:
+        for fname, msg in authoring.check_skill(ROOT / rel.parent):
+            problem(f"{rel.parent / fname}: {msg}")
 
 # ----------------------------------------------------------------- evals
 
@@ -289,6 +317,13 @@ if ruleset_path.exists():
             if check["context"] not in reported:
                 problem(f".github/rulesets/main.json: required check {check['context']!r} matches no workflow job "
                         f"— merges into main would wait for it forever (jobs: {sorted(reported)})")
+
+# --------------------------------------------------------------- bundles
+
+import bundles  # noqa: E402
+
+for msg in bundles.check((ROOT / "skills/bundles.json").read_text(), skills, readme):
+    problem(msg)
 
 # ---------------------------------------------------------------- report
 

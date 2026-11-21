@@ -21,7 +21,7 @@ evals/
 ├── aggregate.py    grading.json → benchmark.md/json (scores, then a health table) and scores.json
 ├── transcript.py   read one run turn by turn, or list an iteration's failed assertions
 ├── benchmark.md    the recorded result
-├── scores.json     per eval: the iteration its score comes from, and the hash of the skill it scored
+├── scores.json     per eval: the iteration its score comes from, the day it ran, its delta and cap means, and the hash of the skill it scored
 ├── tests/          unit tests for the staging hash, scores.json, transcripts and the health table (CI runs them)
 ├── controls/       reproducible controls (make_controls.py: evals 6, 8-14 and 16-63; eval15.py: the loop)
 ├── trigger/        the triggering eval: does a description get its skill picked, and only when it should (its own README)

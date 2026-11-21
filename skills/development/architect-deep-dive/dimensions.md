@@ -1,10 +1,10 @@
 # The design dimensions — read a dimension's entry when you open its question
 
-> Companion to [architect-deep-dive](SKILL.md). The skill's termination gate names each dimension and its test; this file says what to resolve under each. The structural ones are worked out in [clean-architecture.md](clean-architecture.md), the security one in [security.md](security.md).
+> Companion to [architect-deep-dive](SKILL.md). The skill's termination gate names each dimension and its test; this file says what to resolve under each. The structural ones are worked out in `clean-architecture.md`, the security one in `security.md`.
 
 ## Policy vs. details
 
-Which parts are business policy (the rules that would hold even in a manual version of this process) and which are details serving it — database, delivery mechanism, framework, wire format, external services. Policy gets resolved now; details get **deferred** behind a boundary. Note that the *data model* is policy while the *database* is a detail. See [clean-architecture.md](clean-architecture.md).
+Which parts are business policy (the rules that would hold even in a manual version of this process) and which are details serving it — database, delivery mechanism, framework, wire format, external services. Policy gets resolved now; details get **deferred** behind a boundary. Note that the *data model* is policy while the *database* is a detail. See `clean-architecture.md`.
 
 ## Dependency direction & boundaries
 
@@ -14,7 +14,7 @@ Where the lines fall and which way the arrows cross them. Source-code dependenci
 - What **form** does it take (none / facade / one-dimensional / full)?
 - What **decoupling mode** (source, deployment, service)? Default to source-level and design so a service *could* be extracted later.
 
-See [clean-architecture.md](clean-architecture.md).
+See `clean-architecture.md`.
 
 ## Scope boundaries
 
@@ -34,14 +34,14 @@ Walk the unhappy paths one at a time: empty/missing inputs, boundary values, con
 
 ## Security & permissions
 
-The trigger is in the skill. When it fires, resolve each of these as its own question — the questions behind each are in [security.md](security.md):
+The trigger is in the skill. When it fires, resolve each of these as its own question — the questions behind each are in `security.md`:
 
 - **Assets and abuse.** What the change exposes or protects, and the abuse we refuse to allow, stated as a sentence a test can check. Ask of every new rule *which other feature defeats it*, and of every new role or delegation *can someone grant it to themselves*.
 - **Trust boundaries and entry points.** Where untrusted data enters, and which module ends up serving more than one trust domain — that module is where validation goes missing.
 - **Authorisation decision.** Who may perform each new operation, where the check is enforced (server-side, at the handler or below — never only in the UI), and how ownership/tenancy is checked on every object an ID names.
 - **Domain primitives and sensitive values.** Which security-relevant values become validated, immutable types instead of raw strings and ints, and which sensitive fields must never reach a log, an exception message or a serialised response.
 - **Failure and degraded modes.** What happens when a dependency is down — a fallback that skips a control is a vulnerability — and whether any input can make the work grow without bound.
-- **Hand off when it's big.** A new trust boundary, a new data class, a new kind of user, or anything that moves money, grants identity, holds keys or can't be undone: run `threatmodel` on it and carry its security requirements back in as resolved decisions, rather than modelling threats round by round here. Where that skill is not installed, work the [security.md](security.md) questions here and say in the design file's Security section that the full threat model was not run.
+- **Hand off when it's big.** A new trust boundary, a new data class, a new kind of user, or anything that moves money, grants identity, holds keys or can't be undone: run `threatmodel` on it and carry its security requirements back in as resolved decisions, rather than modelling threats round by round here. Where that skill is not installed, work the `security.md` questions here and say in the design file's Security section that the full threat model was not run.
 
 ## Scale & performance
 
@@ -65,4 +65,4 @@ Data backfill, feature-flagging, sequencing, and how the change ships safely.
 
 ## Decomposition (large efforts only)
 
-How the effort splits into independently shippable increments, each of which can become its own brief → acceptance-tests → TDD → refactor-review → devils-advocate → tyr-verdict pass. Group into one increment what changes for the same reasons at the same times; split what changes for different reasons. Dependencies between increments must be acyclic and point toward the more stable side — never let a rigid, widely-depended-on piece depend on a volatile one. The component principles behind this are in [clean-architecture.md](clean-architecture.md#for-decomposition).
+How the effort splits into independently shippable increments, each of which can become its own brief → acceptance-tests → TDD → refactor-review → devils-advocate → tyr-verdict pass. Group into one increment what changes for the same reasons at the same times; split what changes for different reasons. Dependencies between increments must be acyclic and point toward the more stable side — never let a rigid, widely-depended-on piece depend on a volatile one. The component principles behind this are in `clean-architecture.md` (section "For decomposition").

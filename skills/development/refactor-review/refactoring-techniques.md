@@ -1,8 +1,18 @@
 # 🔧 Refactoring Techniques Catalog
 
-**Refactoring** = changing the internal structure of code without changing its observable behavior. Each technique below is a *named, mechanical* transformation: a recipe with a known before/after. This catalog follows the six groups from Refactoring Guru (Martin Fowler's *Refactoring*, 2nd ed.). Use it to pick a *treatment* once [code-smells.md](code-smells.md) has named the symptom, then drive it through the [refactor review](SKILL.md) checklist.
+**Refactoring** = changing the internal structure of code without changing its observable behavior. Each technique below is a *named, mechanical* transformation: a recipe with a known before/after. This catalog follows the six groups from Refactoring Guru (Martin Fowler's *Refactoring*, 2nd ed.). Use it to pick a *treatment* once `code-smells.md` has named the symptom, then drive it through the [refactor review](SKILL.md) checklist.
 
 > **The one rule:** behavior is frozen. Have tests green before you start, take small steps, and re-run tests after each step. If behavior changed, it wasn't a refactor.
+
+## Contents
+
+- [1. Composing Methods](#1-composing-methods)
+- [2. Moving Features Between Objects](#2-moving-features-between-objects)
+- [3. Organizing Data](#3-organizing-data)
+- [4. Simplifying Conditional Expressions](#4-simplifying-conditional-expressions)
+- [5. Simplifying Method Calls](#5-simplifying-method-calls)
+- [6. Dealing with Generalization](#6-dealing-with-generalization)
+- [How to Apply a Refactoring Safely](#how-to-apply-a-refactoring-safely)
 
 ---
 

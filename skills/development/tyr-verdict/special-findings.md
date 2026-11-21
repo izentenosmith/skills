@@ -8,7 +8,7 @@ A security finding is one about an authorisation gate, an isolation or tenancy b
 
 - **Refute only on a code path.** "No test failed" and "a scanner found nothing" are not refutations: a black-box suite misses paths that only a specific input reaches (TAOSSA pp. 11–12). REFUTED needs the guard that blocks the breaking case, named.
 - **Exploitability is not severity.** A confirmed breach is a blocker even when the breaking case looks hard to reach; "an attacker would have to know the ID" is how IDs leak through a list endpoint later. Downgrade only for a stated reason that is about impact, not effort.
-- **Design-layer defects go upstream.** When the defect is the design doing the wrong thing correctly — a rule another feature circumvents, a role someone can grant themselves, a fallback that skips a control — the slice fixes the symptom and the reason names [architect-deep-dive](../architect-deep-dive/SKILL.md) (and, where one exists, the threat model) as the place the decision has to be revisited.
+- **Design-layer defects go upstream.** When the defect is the design doing the wrong thing correctly — a rule another feature circumvents, a role someone can grant themselves, a fallback that skips a control — the slice fixes the symptom and the reason names `architect-deep-dive` (and, where one exists, the threat model) as the place the decision has to be revisited.
 - **The slice states the refusal and its contrast** — *"a user of another account requesting this invoice gets 404 and the invoice is unchanged; its owner still gets 200"* — so tdd's red test fails if the gate disappears or over-reaches, and the slice can't be closed by a fix with no abuse test.
 
 ## Findings about the bar itself

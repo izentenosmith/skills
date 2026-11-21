@@ -6,6 +6,14 @@ That resolves a contradiction the prose skills used to carry: the ledger was "ap
 
 `ledger.py`, which ships with this file, is the reference parser: it is in `scripts/` when this file sits beside a skill, and next to this file otherwise. Anything it accepts is a valid ledger; `python3 -I <path to>/ledger.py check .workflow/ledger.md` says so or says why not. `check` and `status` exit with status 2 when the path names no file — a wrong path is not an empty ledger; only `next-id` accepts a ledger nobody has written yet, and answers `F1`, `N1` or `R1`.
 
+## Contents
+
+- [Shape](#shape)
+- [Sections](#sections)
+- [Rules the checker enforces](#rules-the-checker-enforces)
+- [The verdict is computed, not chosen](#the-verdict-is-computed-not-chosen)
+- [Error codes](#error-codes)
+
 ## Shape
 
 ```markdown
