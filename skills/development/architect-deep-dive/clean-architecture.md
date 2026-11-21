@@ -4,6 +4,17 @@ Companion reference for the [architect-deep-dive](SKILL.md) skill: how to resolv
 
 From Robert C. Martin's *Clean Architecture*, with the component principles from the same book.
 
+## Contents
+
+- [The one rule](#the-one-rule)
+- [Policy vs. detail](#policy-vs-detail)
+- [Where the lines go](#where-the-lines-go)
+- [Frameworks](#frameworks)
+- [Screaming architecture](#screaming-architecture)
+- [Testability as a structural signal](#testability-as-a-structural-signal)
+- [For decomposition](#for-decomposition)
+- [The counterweight](#the-counterweight)
+
 ## The one rule
 
 > **Source code dependencies must point only inward, toward higher-level policy.**

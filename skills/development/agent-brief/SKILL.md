@@ -1,6 +1,6 @@
 ---
 name: agent-brief
-description: Turn resolved design decisions into the pure-text build plan TDD executes — ordered acceptance criteria, test seams, prior art, and scope — written to `.workflow/brief.md`, a draft until the user approves it. Use after architect-deep-dive and before acceptance-tests and tdd, when a feature or fix needs a detailed spec to build against, for "build plan", "write the brief", "spec for this feature".
+description: Turns resolved design decisions into the pure-text build plan TDD executes — ordered acceptance criteria, test seams, prior art, and scope — written to `.workflow/brief.md`, a draft until the user approves it. Use after architect-deep-dive and before acceptance-tests and tdd, when a feature or fix needs a detailed spec to build against, for "build plan", "write the brief", "spec for this feature".
 ---
 
 # Agent Brief — the plan TDD builds from
@@ -9,13 +9,16 @@ An agent brief is the authoritative **build plan** for a feature or fix: **pure 
 
 **Write it to `.workflow/brief.md`** in the repo being worked on, not just into the conversation. Every later stage reads it, the harness parses it, and a subagent can only be pointed at a path; a plan that exists only in scrollback stops being authoritative around a loop's second iteration. (Writing a plan file is not a code change — the rule against emitting code stands.)
 
-This is **stage 2 of a seven-stage workflow**: [architect-deep-dive](../architect-deep-dive/SKILL.md) → **agent-brief** → [acceptance-tests](../acceptance-tests/SKILL.md) → [tdd](../tdd/SKILL.md) → [refactor-review](../refactor-review/SKILL.md) → [devils-advocate](../devils-advocate/SKILL.md) → [tyr-verdict](../tyr-verdict/SKILL.md). What each stage reads and leaves, and the rules they share, are in [pipeline.md](pipeline.md) — read it once per session.
+This is **stage 2 of a seven-stage workflow**: `architect-deep-dive` → **agent-brief** → `acceptance-tests` → `tdd` → `refactor-review` → `devils-advocate` → `tyr-verdict`. What each stage reads and leaves, and the rules they share, are in [pipeline.md](pipeline.md) — read it once per session.
 
-Three reference files sit beside this one:
+**Requires:** `python3` (runs the bundled brief checker, `scripts/brief.py`, before the approval gate). `git` is not needed: this stage writes and moves files under `.workflow/` and commits nothing. If `python3` is missing, skip the check and say so in your closing lines.
 
-- [examples.md](examples.md) — read when you are unsure what a good criterion or a good brief looks like.
-- [parallel-tracks.md](parallel-tracks.md) — read only when the design's decomposition or the brief's size suggests the work could split.
-- [delegation.md](delegation.md) — read before you dispatch any subagent.
+## Reference files
+
+- [pipeline.md](pipeline.md) — open it once per session, when you need what each stage reads and leaves or the rules all stages share.
+- [examples.md](examples.md) — open it when you are unsure what a good criterion or a good brief looks like.
+- [parallel-tracks.md](parallel-tracks.md) — open it only when the design's decomposition or the brief's size suggests the work could split.
+- [delegation.md](delegation.md) — open it when you are about to dispatch any subagent.
 
 ## The working files
 
@@ -194,4 +197,4 @@ This gate is the only place Status is set to `approved`; later stages read it an
 
 The handoff, once the plan is written and checked:
 
-> The build plan is written to `.workflow/brief.md` as a **draft**. Approve it, or tell me what to change. Once approved, run **[acceptance-tests](../acceptance-tests/SKILL.md)** to turn its acceptance criteria into failing black-box tests, then **[tdd](../tdd/SKILL.md)** — its criteria are ordered as a red→green build order, with the first as the tracer bullet. (On acceptance-tests' Trivial tier — a design whose Calibration is small — that stage is skipped and tdd is next; see its **Calibrate** section.) The working files under `.workflow/` are neither committed nor gitignored; which is your choice.
+> The build plan is written to `.workflow/brief.md` as a **draft**. Approve it, or tell me what to change. Once approved, run **`acceptance-tests`** to turn its acceptance criteria into failing black-box tests, then **`tdd`** — its criteria are ordered as a red→green build order, with the first as the tracer bullet. (On acceptance-tests' Trivial tier — a design whose Calibration is small — that stage is skipped and tdd is next; see its **Calibrate** section.) The working files under `.workflow/` are neither committed nor gitignored; which is your choice.

@@ -33,7 +33,7 @@ The unit of value is **how much complexity the interface hides**, not how much c
 A deep module is the easiest thing in the world to test well:
 
 - **Small interface → few, behavioral tests.** You test the handful of public methods against observable outcomes. There is little surface to over-test.
-- **Hidden complexity → refactor-proof tests.** Because the hard logic lives behind the interface, you can rewrite it freely and the tests stay green. That is exactly the property [good-tests.md](good-tests.md) demands.
+- **Hidden complexity → refactor-proof tests.** Because the hard logic lives behind the interface, you can rewrite it freely and the tests stay green. That is exactly the property `good-tests.md` demands.
 - **The smell works in reverse, too.** If you find yourself wanting to test internals, reach through to private methods, or assert on collaborators, the module is probably too shallow — its complexity is leaking through the interface. Deepen it instead of testing around it.
 
 ## Red flags (shallow modules)
@@ -65,4 +65,4 @@ config = loadConfig(path)   # everything above is hidden inside
 - Does each method do something genuinely useful, or is it just plumbing?
 - Could a caller misuse this? A deep interface makes the common case easy and the wrong case hard.
 
-For the mechanics of *making* an interface testable once you've decided it should be deep, see [interface-design.md](interface-design.md).
+For the mechanics of *making* an interface testable once you've decided it should be deep, see `interface-design.md`.

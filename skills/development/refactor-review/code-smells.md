@@ -1,8 +1,18 @@
 # 🧩 Code Smells Catalog
 
-A **code smell** is a surface symptom that usually points to a deeper problem. Smells aren't bugs — the code works — but they make it harder to change. This catalog has six families: the five from Refactoring Guru (Martin Fowler's *Refactoring*, 2nd ed.) and a sixth, Security Smells, from the sources its section names. Each entry: **what it looks like → why it hurts → treatment** (techniques live in [refactoring-techniques.md](refactoring-techniques.md)).
+A **code smell** is a surface symptom that usually points to a deeper problem. Smells aren't bugs — the code works — but they make it harder to change. This catalog has six families: the five from Refactoring Guru (Martin Fowler's *Refactoring*, 2nd ed.) and a sixth, Security Smells, from the sources its section names. Each entry: **what it looks like → why it hurts → treatment** (techniques live in `refactoring-techniques.md`).
 
 > Use this to *name* the symptom in Step 1 of the [refactor review](SKILL.md). Naming precisely is half the fix — it tells you which treatment to reach for.
+
+## Contents
+
+- [1. Bloaters](#1-bloaters)
+- [2. Object-Orientation Abusers](#2-object-orientation-abusers)
+- [3. Change Preventers](#3-change-preventers)
+- [4. Dispensables](#4-dispensables)
+- [5. Couplers](#5-couplers)
+- [6. Security Smells](#6-security-smells)
+- [Quick Reference: Smell → Primary Treatment](#quick-reference-smell--primary-treatment)
 
 ---
 
@@ -92,7 +102,7 @@ Something whose absence would make the code cleaner. Pointless and removable.
 Comments that explain *what* convoluted code does (as opposed to *why* a non-obvious decision was made).
 - **Why it hurts:** A comment is often deodorant for bad code; it rots out of sync with the code.
 - **Treatment:** Extract Method (and name it well); Rename Method; Introduce Assertion. Keep comments that capture intent/rationale, not narration.
-- **Judging which is which:** [comments.md](comments.md) — the ladder (name → structure → type → comment) and the whitelist of comments worth keeping.
+- **Judging which is which:** `comments.md` — the ladder (name → structure → type → comment) and the whitelist of comments worth keeping.
 
 ### Duplicate Code
 The same (or nearly the same) code in more than one place.

@@ -1,6 +1,6 @@
 # In a sub-session — read before your first question when a coordinating session runs you
 
-> Companion to [architect-deep-dive](SKILL.md). It applies when your brief says another session coordinates this work — a [nexus](../nexus/SKILL.md) running several sessions at once.
+> Companion to [architect-deep-dive](SKILL.md). It applies when your brief says another session coordinates this work — a `nexus` running several sessions at once.
 
 In that case the user is not in this conversation, and your questions reach them only through the coordinating session. Three things change; everything else in the skill holds.
 
