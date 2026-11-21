@@ -7612,7 +7612,8 @@ def eval66(run):
         ("the duplication in express_quote found", near(r, r"express_quote|standard_quote", r"duplicat", 300), "", C),
         ("the change reviewed is the branch against main",
          any_of(r, r"merge-?base", r"main\s*\.\.\.?\s*(HEAD|feature|`)", r"\.\.\.\s*feature/express",
-                r"(against|vs\.?|versus|relative to|compared (to|with)|off|from) `?(origin/)?main\b"), "", C),
+                r"(against|vs\.?|versus|relative to|compared (to|with)|off|from) `?(origin/)?main\b",
+                r"compared `?[\w./-]+`? (to|with|against) `?(origin/)?main\b"), "", C),
         # delta
         ("severity vocabulary applied to findings",
          any_of(r, r"\bblocking\b", r"\bworthwhile\b") and any_of(r, r"\bnoted\b"), "blocking or worthwhile, and noted", D),
@@ -7815,12 +7816,18 @@ def dv_ledger_ok(appended, report):
     return ok, ("; ".join(errs)[:240] if errs else f"next stage: {stage}" if appended.strip() else "nothing appended")
 
 
+# A heredoc body is text being written (a ledger entry quoting `@unittest.skip` or the command
+# that would settle a finding), not a command; what is left must invoke a test runner.
+DV_HEREDOC = re.compile(r"<<-?\s*['\"]?(\w+)['\"]?[^\n]*\n.*?^\s*\1\s*$", re.S | re.M)
+DV_RUNS_SUITE = re.compile(r"-m\s+(unittest|pytest)\b|(^|[;&|(]|&&|\|\|)\s*(\S*/)?py\.?test\b|redgreen\.py", re.M)
+
+
 def dv_suite_not_run(run):
     """SKILL.md "You do NOT run the suite": no tool call ran unittest or pytest. Read from the
     transcript run.py keeps; a run without one (a control) has no calls to show."""
     import transcript
     ran = [str(i.get("command", ""))[:80] for n, i in transcript.tool_calls(run)
-           if re.search(r"\bunittest\b|\bpytest\b", str(i.get("command", "")))]
+           if DV_RUNS_SUITE.search(DV_HEREDOC.sub("", str(i.get("command", ""))))]
     return not ran, f"ran: {ran[:2]}" if ran else "no test run in the transcript"
 
 
