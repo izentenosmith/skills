@@ -64,7 +64,7 @@ The glossary defines the domain, nothing else: no file paths, no implementation,
 
 ## Telling the user
 
-Writing a record is part of resolving the question, so say it in one line at the head of the next question, under the progress line:
+Writing a record is part of resolving the question, so say it in one line at the head of the next round, under the progress line:
 
 ```
 Recorded: docs/adr/0003-cutoff-window-per-account.md · GLOSSARY.md: Cutoff window

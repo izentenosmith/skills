@@ -122,10 +122,43 @@ class PipelineTest(unittest.TestCase):
         self.assertEqual(loop.dirty(self.repo), [])
         self.assertIn(f"**Base:** `{self.base}`", self.brief())
 
-    def test_the_brief_is_marked_approved_by_the_design_not_as_reviewed(self):
+    # ---------------------------------------------------------------- only the user approves a brief
+
+    def report(self):
+        return (self.done / "pipeline-report.md").read_text()
+
+    def test_the_pipeline_never_approves_the_brief_and_says_it_built_on_a_draft(self):
+        self.assertEqual(self.run_pipeline(), pipeline.EXIT_GO, self.output)
+        self.assertIn("**Status:** draft — awaiting approval\n", self.brief())
+        self.assertNotIn("approved —", self.brief())
+        self.assertIn("built on an UNAPPROVED brief", self.report())
+        self.assertIn("note: this run was built on an UNAPPROVED brief", self.output)
+        self.assertIn("Judged against an unapproved brief", (self.done / "ledger.md").read_text())
+        self.assertFalse(json.loads((self.done / "pipeline.json").read_text())["brief_approved"])
+
+    def test_approve_brief_records_that_the_user_approved_it_at_launch(self):
+        self.assertEqual(self.run_pipeline("--approve-brief"), pipeline.EXIT_GO, self.output)
+        self.assertRegex(self.brief(), r"\*\*Status:\*\* approved — by the user at launch "
+                                       r"\(`pipeline.py --approve-brief`, \d{4}-\d\d-\d\d\)\n")
+        self.assertRegex(self.brief(), r"## Revisions\n(.*\n)*- \d{4}-\d\d-\d\d: approved by the user at launch")
+        self.assertNotIn("UNAPPROVED", self.report() + self.output)
+        self.assertNotIn("unapproved brief", (self.done / "ledger.md").read_text())
+
+    def test_an_approval_the_brief_stage_wrote_itself_does_not_count(self):
+        self.assertEqual(self.run_pipeline(pl="self-approved"), pipeline.EXIT_GO, self.output)
+        self.assertIn("nobody there to approve it", self.output)
+        self.assertIn("**Status:** draft — awaiting approval\n", self.brief())
+        self.assertIn("built on an UNAPPROVED brief", self.report())
+
+    def test_no_prompt_tells_a_stage_to_set_or_assume_approval(self):
         self.run_pipeline()
-        self.assertIn("**Status:** approved — from the resolved design, by harness/pipeline.py (no separate review)",
-                      self.brief())
+        prompts = sorted(self.wf.glob("runs/*/calls/pl-*.prompt.md"))
+        self.assertGreaterEqual(len(prompts), 3)
+        for p in prompts:
+            text = p.read_text()
+            self.assertIn("never set the brief's `**Status:**`", text, p.name)
+            self.assertNotIn("the harness sets the status", text, p.name)
+            self.assertNotIn("wait for approval, make", text, p.name)
 
     def test_resumes_at_the_first_stage_not_done(self):
         self.assertEqual(self.run_pipeline(pl="build-never"), pipeline.EXIT_GATE, self.output)
@@ -195,6 +228,28 @@ class PipelineTest(unittest.TestCase):
 
     # ---------------------------------------------------------------- one file per design, nothing shared
 
+    def test_the_archive_is_never_written_over(self):
+        for taken in (self.NAME, f"{self.NAME}-2"):
+            (self.wf / "archive" / taken).mkdir(parents=True)
+            (self.wf / "archive" / taken / "brief.md").write_text(f"# Build Plan: an earlier change in {taken}\n")
+        self.assertEqual(self.run_pipeline(), pipeline.EXIT_GO, self.output)
+        for taken in (self.NAME, f"{self.NAME}-2"):
+            self.assertEqual(sorted(f.name for f in (self.wf / "archive" / taken).iterdir()), ["brief.md"])
+            self.assertIn(f"an earlier change in {taken}", (self.wf / "archive" / taken / "brief.md").read_text())
+        third = self.wf / "archive" / f"{self.NAME}-3"
+        for f in ("brief.md", "ledger.md", "pipeline.json", "pipeline-report.md"):
+            self.assertTrue((third / f).exists(), f)
+        self.assertIn(f"record in `.workflow/archive/{self.NAME}-3/`",
+                      (self.wf / "designs" / f"{self.NAME}.md").read_text())
+
+    def test_free_dir_counts_up_from_two(self):
+        base = self.wf / "archive" / "x"
+        self.assertEqual(pipeline.free_dir(base), base)
+        base.mkdir(parents=True)
+        self.assertEqual(pipeline.free_dir(base).name, "x-2")
+        (self.wf / "archive" / "x-2").mkdir()
+        self.assertEqual(pipeline.free_dir(base).name, "x-3")
+
     def test_go_archives_the_change_under_the_designs_name_and_marks_it_built(self):
         self.assertEqual(self.run_pipeline(), pipeline.EXIT_GO, self.output)
         for f in ("brief.md", "ledger.md", "pipeline.json", "pipeline-report.md"):
@@ -239,7 +294,14 @@ class PipelineTest(unittest.TestCase):
         self.log.unlink()
         self.assertEqual(self.run_pipeline(), pipeline.EXIT_GO, self.output)
         self.assertEqual(self.stages()[0], "pl-brief")            # written once more is fine; what matters:
-        self.assertIn("**Status:** approved — reviewed at the pause, then re-run", self.brief())
+        self.assertIn("**Status:** draft — awaiting approval", self.brief())   # a re-run is not a yes
+        self.assertIn("built on an UNAPPROVED brief", (self.done / "pipeline-report.md").read_text())
+
+    def test_pause_then_approve_brief_is_the_users_yes(self):
+        self.assertEqual(self.run_pipeline("--pause-at-brief"), pipeline.EXIT_INPUT)
+        self.assertIn("--approve-brief if you approve it", self.output)
+        self.assertEqual(self.run_pipeline("--approve-brief"), pipeline.EXIT_GO, self.output)
+        self.assertIn("**Status:** approved — by the user at launch", self.brief())
 
     def test_from_brief_skips_the_design_and_stage_two(self):
         (self.wf / "designs" / f"{self.NAME}.md").unlink()
@@ -252,6 +314,27 @@ class PipelineTest(unittest.TestCase):
         archived = list(self.wf.glob("archive/*-cutoff-window/brief.md"))   # no design: named by when and what
         self.assertEqual(len(archived), 1)
         self.assertIn("**Status:** approved\n", archived[0].read_text())   # the user's own approval is left as written
+        self.assertNotIn("UNAPPROVED", archived[0].with_name("pipeline-report.md").read_text() + self.output)
+
+    FROM_BRIEF_DRAFT = ("# Build Plan: Cutoff window\n\n**Status:** draft — awaiting approval\n\n"
+                        "**Acceptance criteria** (ordered):\n- [ ] Tracer bullet: the cutoff defaults to 120 minutes\n"
+                        "- [ ] Edge case: an empty config\n\n**Acceptance tests** (filled in by stage 3):\n"
+                        "- **Command:** —\n\n## Revisions\n- (none yet)\n")
+
+    def test_from_brief_on_a_draft_builds_it_as_a_draft_and_says_so(self):
+        (self.wf / "designs" / f"{self.NAME}.md").unlink()
+        (self.wf / "brief.md").write_text(self.FROM_BRIEF_DRAFT)
+        self.assertEqual(self.run_pipeline("--from-brief"), pipeline.EXIT_GO, self.output)
+        archived = list(self.wf.glob("archive/*-cutoff-window/brief.md"))[0]
+        self.assertIn("**Status:** draft — awaiting approval\n", archived.read_text())
+        self.assertIn("built on an UNAPPROVED brief", archived.with_name("pipeline-report.md").read_text())
+
+    def test_from_brief_with_approve_brief_approves_the_users_draft(self):
+        (self.wf / "designs" / f"{self.NAME}.md").unlink()
+        (self.wf / "brief.md").write_text(self.FROM_BRIEF_DRAFT)
+        self.assertEqual(self.run_pipeline("--from-brief", "--approve-brief"), pipeline.EXIT_GO, self.output)
+        archived = list(self.wf.glob("archive/*-cutoff-window/brief.md"))[0]
+        self.assertIn("**Status:** approved — by the user at launch", archived.read_text())
 
     def test_dry_run_writes_the_next_prompt_and_calls_nothing(self):
         self.assertEqual(self.run_pipeline("--dry-run"), pipeline.EXIT_GO, self.output)

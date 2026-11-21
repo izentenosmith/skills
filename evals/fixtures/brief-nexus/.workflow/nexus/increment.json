@@ -1,0 +1,78 @@
+{
+  "increment": "booking rules, increment 3",
+  "design": ".workflow/designs/20261111-1000-booking-rules-increment-3.md",
+  "base": "main",
+  "confirmed": "DEC-1",
+  "entries": [
+    {
+      "id": "REQ-1",
+      "kind": "requirement",
+      "description": "A booking submitted too close to its slot start is refused with CUTOFF_WINDOW",
+      "steps": [
+        "submit a booking 30 minutes before its slot",
+        "see Rejected carrying CUTOFF_WINDOW"
+      ],
+      "slices": [
+        "cutoff"
+      ],
+      "passes": false,
+      "evidence": null
+    },
+    {
+      "id": "REQ-2",
+      "kind": "requirement",
+      "description": "An account sets its own cutoff window; the default is 120 minutes",
+      "steps": [
+        "set cutoff_minutes for an account",
+        "submit just inside and just outside it"
+      ],
+      "slices": [
+        "cutoff"
+      ],
+      "passes": false,
+      "evidence": null
+    },
+    {
+      "id": "REQ-3",
+      "kind": "requirement",
+      "description": "A venue caps party size below the account's limit",
+      "steps": [
+        "set a venue cap",
+        "submit a party above it"
+      ],
+      "slices": [
+        "party-limits"
+      ],
+      "passes": false,
+      "evidence": null
+    },
+    {
+      "id": "REQ-4",
+      "kind": "requirement",
+      "description": "A venue closes on a listed holiday",
+      "steps": [
+        "list a holiday",
+        "submit a booking on it"
+      ],
+      "slices": [
+        "hours-holidays"
+      ],
+      "passes": false,
+      "evidence": null
+    },
+    {
+      "id": "REQ-5",
+      "kind": "journey",
+      "description": "A booking that breaks several rules is told every one of them in a single refusal",
+      "steps": [
+        "submit a late booking for an oversized party",
+        "see every code at once"
+      ],
+      "slices": [
+        "cutoff"
+      ],
+      "passes": false,
+      "evidence": null
+    }
+  ]
+}

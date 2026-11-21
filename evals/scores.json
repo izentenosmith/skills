@@ -3,17 +3,17 @@
   "evals": {
     "eval-0-architect-charter-and-options": {
       "skill": "architect-deep-dive",
-      "iteration": "iteration-49",
+      "iteration": "iteration-55",
       "n": 3,
       "staging": "harness",
-      "skill_hash": "365a18cd92b70a09b8588386fa59f3c9f23b177358a07773156b218e17e67776"
+      "skill_hash": "b02da6ad7517fe792ed5c458ff650cbda51dacdcd5af03223cd674709b9cc0bf"
     },
     "eval-1-brief-ordered-criteria": {
       "skill": "agent-brief",
-      "iteration": "iteration-49",
+      "iteration": "iteration-55",
       "n": 3,
       "staging": "harness",
-      "skill_hash": "f8ab7533ee5cec39421a7eeba1fe285398908eb244484633373d8c249a98862b"
+      "skill_hash": "1e8a6e2c3168571c64a4dca38601f74f9aab97901a69d887597e758ab3e16c20"
     },
     "eval-10-hotfix-script-no-tests": {
       "skill": "hotfix",
@@ -80,10 +80,10 @@
     },
     "eval-2-tdd-reads-brief-vertical": {
       "skill": "tdd",
-      "iteration": "iteration-49",
+      "iteration": "iteration-55",
       "n": 3,
       "staging": "harness",
-      "skill_hash": "4b5231aa716ce4067ed146767e95f66a78929345b5d791132b596b637520ab0f"
+      "skill_hash": "ceece8c9acee817186ad8ed5fce979127bdc2c2ce105d77a3035e9423c3aebf6"
     },
     "eval-20-netblueprint-waits-for-acceptance": {
       "skill": "netblueprint",
@@ -136,10 +136,10 @@
     },
     "eval-27-acceptance-tests-red-for-the-right-reason": {
       "skill": "acceptance-tests",
-      "iteration": "iteration-49",
+      "iteration": "iteration-55",
       "n": 3,
       "staging": "harness",
-      "skill_hash": "7365625b761ad280b7e8dab85f1adef5e1ee545d5e5c0c99fcac15dd7b1b3893"
+      "skill_hash": "4363ddf263685ad4488170d7ccfa87bf782729ed85abf7e973a38c059b46ebc4"
     },
     "eval-28-dockerfile-repair-pins-and-drops-root": {
       "skill": "dockerfile",
@@ -157,10 +157,10 @@
     },
     "eval-3-refactor-promotes-noted-smell": {
       "skill": "refactor-review",
-      "iteration": "iteration-49",
+      "iteration": "iteration-55",
       "n": 3,
       "staging": "harness",
-      "skill_hash": "a1f0d07cbb67f5ddf0b83de415d7defa47ec926cfa23ad9caf020772950b5a7d"
+      "skill_hash": "2c696688fe215e4658376d34f1007fae029fb2bdc6f4287861cfd69307d595aa"
     },
     "eval-30-dbaudit-postgres-dump-scored-not-fixed": {
       "skill": "dbaudit",
@@ -234,10 +234,10 @@
     },
     "eval-4-teardown-finds-vacuous-test": {
       "skill": "devils-advocate",
-      "iteration": "iteration-49",
+      "iteration": "iteration-55",
       "n": 3,
       "staging": "harness",
-      "skill_hash": "75c89ec031b55a94fea2df4eb95d9e17f4d18e9d48da60c1b25b77639415d570"
+      "skill_hash": "d4dc9072c63a6ce5df906e8503a89473738740ed8d39e15037c1034ba8fca025"
     },
     "eval-40-threatmodel-propose-contain-then-design-out": {
       "skill": "threatmodel",
@@ -311,10 +311,10 @@
     },
     "eval-5-verdict-cuts-and-slices": {
       "skill": "tyr-verdict",
-      "iteration": "iteration-49",
+      "iteration": "iteration-55",
       "n": 3,
       "staging": "harness",
-      "skill_hash": "9c0fac2d97b1a7e2510bc2bdfd596a0378eeb65163520f19ccc481d7277cfa9e"
+      "skill_hash": "f8a29844a73619b7f8f9ba44a116554608b8f24deda2290c4fe311be067df214"
     },
     "eval-50-pr-prep-splits-and-discloses": {
       "skill": "pr-prep",
@@ -374,10 +374,10 @@
     },
     "eval-58-nexus-judges-the-record": {
       "skill": "nexus",
-      "iteration": "iteration-50",
+      "iteration": "iteration-55",
       "n": 3,
       "staging": "standalone",
-      "skill_hash": "2503cf55f7505f960814ef50655ce2a7a9a6bb498840c988f5f170af1a45e170"
+      "skill_hash": "c3cf7b1044025751ae2e3444fc3e9bd8690e69f822a58b416dfdde6ce3f47b62"
     },
     "eval-59-hotfix-py-scope-parser": {
       "skill": "hotfix",
@@ -392,6 +392,34 @@
       "n": 3,
       "staging": "harness",
       "skill_hash": "971b64f4ce3fa2d85b30cf4d59af2f7492b3e0fa5a29101444a83c77dddf6fa4"
+    },
+    "eval-60-tdd-planted-instruction-not-obeyed": {
+      "skill": "tdd",
+      "iteration": "iteration-55",
+      "n": 3,
+      "staging": "harness",
+      "skill_hash": "ceece8c9acee817186ad8ed5fce979127bdc2c2ce105d77a3035e9423c3aebf6"
+    },
+    "eval-61-brief-under-nexus-routes-questions": {
+      "skill": "agent-brief",
+      "iteration": "iteration-55",
+      "n": 3,
+      "staging": "harness",
+      "skill_hash": "1e8a6e2c3168571c64a4dca38601f74f9aab97901a69d887597e758ab3e16c20"
+    },
+    "eval-62-tdd-headless-contradiction-unconfirmed": {
+      "skill": "tdd",
+      "iteration": "iteration-55",
+      "n": 3,
+      "staging": "harness",
+      "skill_hash": "ceece8c9acee817186ad8ed5fce979127bdc2c2ce105d77a3035e9423c3aebf6"
+    },
+    "eval-63-architect-second-round": {
+      "skill": "architect-deep-dive",
+      "iteration": "iteration-55",
+      "n": 3,
+      "staging": "harness",
+      "skill_hash": "b02da6ad7517fe792ed5c458ff650cbda51dacdcd5af03223cd674709b9cc0bf"
     },
     "eval-7-postmortem-widens-range-and-describes": {
       "skill": "post-mortem",

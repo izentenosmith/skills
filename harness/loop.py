@@ -35,6 +35,7 @@ import threading
 
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+import brief as B  # noqa: E402
 import ledger as L  # noqa: E402
 import redgreen  # noqa: E402
 
@@ -175,7 +176,11 @@ The build plan is `.workflow/brief.md`; the feedback edge still applies — if a
 contradicts the brief, revise the brief in place and log it under Revisions. The test \
 command is `{test_cmd}`, and the full suite must be green when you finish{acceptance}.
 
-Return, for every slice you got to green, the finding id and the exact name of the test \
+A slice whose id starts with `R` is a red run: the suite or the acceptance tests were failing when \
+the verdict was due. It has no finding behind it — make the tests it names pass by fixing the code, \
+never by weakening a test.
+
+Return, for every slice you got to green, its id (as the finding id) and the exact name of the test \
 that verifies it. For any slice you could not close, return why.
 """
 
@@ -447,7 +452,8 @@ def gate(ctx, when):
             raise GateFailed(f"acceptance tests are red {when}: {tail} — tdd isn't done until they pass")
 
 
-ACCEPTANCE_RE = re.compile(r"\*\*Acceptance tests\*\*.*?^- \*\*Command:\*\*\s*`([^`]+)`", re.S | re.M)
+# The brief's shape is defined once, in brief.py (which also lints it).
+ACCEPTANCE_RE, BASE_RE, STATUS_RE, SHIP_RE = B.ACCEPTANCE_RE, B.BASE_RE, B.STATUS_RE, B.SHIP_RE
 
 
 def acceptance_from_brief(brief):
@@ -458,9 +464,6 @@ def acceptance_from_brief(brief):
     return m.group(1).strip() if m else None
 
 
-BASE_RE = re.compile(r"^\*\*Base:\*\*\s*`?([0-9a-f]{7,40})\b", re.M)
-STATUS_RE = re.compile(r"^\*\*Status:\*\*\s*(.+)$", re.M)
-SHIP_RE = re.compile(r"\*\*Ship checklist\*\*[^\n]*\n(.*?)(?=\n\s*\n\*\*|\n##|\Z)", re.S)
 
 
 def base_from_brief(brief):
@@ -650,7 +653,8 @@ def stage_fix(ctx, n, st):
     if out is None:
         return
     gate(ctx, "after tdd")
-    proof = redgreen.check(ctx.repo, ctx.test_cmd, base=before, timeout=ctx.timeout)
+    # shell=True: this is the user's own --test-cmd, which run_tests() already runs through a shell.
+    proof = redgreen.check(ctx.repo, ctx.test_cmd, base=before, timeout=ctx.timeout, shell=True)
     (ctx.run_dir / f"redgreen-i{n}.json").write_text(json.dumps(
         {k: v for k, v in proof.items() if k not in ("before", "after")}, indent=2))
     log(f"  red→green: {proof['verdict']} — {proof['reason']}")
@@ -665,14 +669,17 @@ def stage_fix(ctx, n, st):
             merged[c["finding"]] = dict(c)
     out["closed"] = list(merged.values())
     closed = []
+    # A red-run slice (R<id>) is a test that already existed and was failing: there may be no new test to
+    # prove red on the old code, and the gate above — suite and acceptance tests green — is what closes it.
+    red_run = lambda c: c["finding"].startswith("R")
     if proof["verdict"] != "red-green":
         # A remediation test that passes on the pre-fix code doesn't capture the defect it claims to.
         # Closing nothing turns that into a stall the ledger rules will escalate, not a silent GO.
-        log("  no slice closes: the new tests were not shown to fail without the fix")
-    else:
-        for c in out["closed"]:
+        log("  no finding's slice closes: the new tests were not shown to fail without the fix")
+    for c in out["closed"]:
+        if proof["verdict"] == "red-green" or red_run(c):
             if test_exists(ctx, c["test"]):
-                closed.append({**c, "note": "red→green checked"})
+                closed.append({**c, "note": "green at the gate" if red_run(c) else "red→green checked"})
             else:
                 log(f"  {c['finding']}: tdd named `{c['test']}`, which isn't in the repo — the slice stays open")
     for nc in out["not_closed"]:
@@ -926,6 +933,9 @@ def record_outcome(ctx, n, out):
     if ship:
         # Not a rule of the verdict: named, like a carried smell, so a GO doesn't ship them by silence.
         reason += f". Open ship-checklist items ({len(ship)}): " + "; ".join(s[:80] for s in ship)
+    if outcome == "GO" and ctx.brief.exists() and not (brief_status(ctx.brief) or "").lower().startswith("approved"):
+        # Later stages go ahead on a draft and say so; a GO is where that has to be said.
+        reason += ". Judged against an unapproved brief (Status is not `approved`)"
     append(ctx, n, L.render_outcome(outcome, reason, note))
     log(f"  verdict: {outcome} — {reason}" + (f" ({note})" if note else ""))
     for s in ship:
@@ -1065,8 +1075,9 @@ def main(argv=None):
     if not ctx.brief.exists():
         log("no .workflow/brief.md — the teardown will derive its claims from the diff")
     elif (brief_status(ctx.brief) or "").lower().startswith("draft"):
-        log("warning: the brief is still `draft — awaiting approval`; the loop judges the change against "
-            "a plan nobody has agreed to")
+        log("warning: the brief is still `draft — awaiting approval`; the loop goes ahead and judges the change "
+            "against a plan nobody has approved — only agent-brief's approval gate, on the user's yes, "
+            "changes that")
     head = re.match(r"# Ledger — (.+)$", ctx.ledger.read_text().splitlines()[0]) if (
         ctx.ledger.exists() and ctx.ledger.read_text().strip()) else None
     if head and ctx.brief.exists() and head.group(1).strip() != brief_title(ctx):

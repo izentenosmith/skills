@@ -1,7 +1,7 @@
 # Security in the design dialogue
 
 > The questions behind the **Security & permissions** dimension, for when the security trigger
-> fires. They are asked one at a time in the same four-section format as every other question,
+> fires. They are asked in the same rounds and the same four-section format as every other question,
 > interleaved with the rest of the tree — not bolted on at the end. Sources: Bergh Johnsson &
 > Deogun, *Secure by Design — Ideas and Techniques* (SecAppDev slide deck; cited by slide);
 > Dowd, McDonald & Schuh, *The Art of Software Security Assessment* (TAOSSA; cited by printed page);
@@ -21,14 +21,10 @@ someone do something the security policy forbids (TAOSSA pp. 4–5). So the ques
 
 ## The trigger
 
-Ask the security questions when the change does any of these:
+Ask the security questions when the trigger fires. Its four conditions are listed once, in the
+**Security & permissions** dimension of [SKILL.md](SKILL.md#termination-gate--design-dimension-checklist), so the two files cannot drift apart.
 
-- adds or changes an **entry point** — an endpoint, handler, CLI command, message consumer, file import, webhook;
-- **crosses a trust boundary** — data or control moves between parties that trust each other differently (user ↔ server, tenant ↔ tenant, service ↔ service, internal ↔ third party);
-- changes **who may do what** — a new role, permission, delegation, sharing feature or admin path;
-- handles a **security-relevant value** — identity, money, secrets, personal data, file paths, query or command fragments, URLs the server will fetch or redirect to.
-
-None of these? Mark the dimension **N/A — no trust boundary touched**, with that reason, and move on.
+None of them? Mark the dimension **N/A — no trust boundary touched**, with that reason, and move on.
 That is a legitimate end state, and the cost of these questions on a change that doesn't need them
 is real.
 

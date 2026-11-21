@@ -350,7 +350,8 @@ def stage_implement(r):
         test_cmd=r.ctx.test_cmd, lint=lint), IMPLEMENT_SCHEMA, WRITE_TOOLS, write=True)
     r.gate("after the fix")
     proof = redgreen.check(r.repo, r.state["red"]["cmd"], base=r.state["snapshot"],
-                           tests=r.state["red"]["tests"] or None, timeout=r.ctx.timeout)
+                           tests=r.state["red"]["tests"] or None, timeout=r.ctx.timeout,
+                           shell=True)     # the command stage_red already ran through loop.run_tests()
     r.state["redgreen"] = {k: v for k, v in proof.items() if k not in ("before", "after")}
     if proof["verdict"] != "red-green":
         raise loop.GateFailed(f"red→green not proven: {proof['verdict']} — {proof['reason']}")

@@ -8,21 +8,39 @@ that mechanically, for any language: it checks out the pre-fix code in a tempora
 worktree, applies only the test files from your working tree, runs the test command
 there (it must fail), then runs it in your working tree (it must pass).
 
-    python3 redgreen.py check --repo . --cmd "<test command>" [--base REF] [--tests PATH ...]
-                              [--expect REGEX] [--timeout 600] [--json]
-    python3 redgreen.py snapshot --repo .      # the current working tree as a commit, for --base later
+    python3 -I redgreen.py check --repo . --cmd "<test command>" [--base REF] [--tests PATH ...]
+                                 [--expect REGEX] [--timeout 600] [--shell] [--json]
+    python3 -I redgreen.py snapshot --repo .   # the current working tree as a commit, for --base later
+
+(This file runs from wherever it is copied: it is `scripts/redgreen.py` beside a skill.)
 
 --base     the pre-fix code (default HEAD — right when test and fix are uncommitted).
            Take a `snapshot` before writing a fix to pin "before" exactly.
 --tests    the test files to carry over; default: every changed file that looks like a test.
---cmd      run from the repo root; `{tests}` is replaced with the test paths, shell-quoted.
+--cmd      run from the repo root; `{tests}` is replaced with the test paths. It is split into
+           words (shlex) and run directly, WITHOUT a shell: leading `NAME=value` words become
+           environment variables (`FOO=1 pytest -q` works), quotes group words, and nothing is
+           expanded (no globs, no `~`). A command that needs a shell — it contains `;`, `|`,
+           `&`, `>`, `<`, a backtick, `$(`, `${` or `$NAME` — is refused with exit status 2.
+--shell    run --cmd through the shell instead. This is a person's decision, never a default:
+           the command usually comes from a file anyone who can push can edit
+           (`.workflow/brief.md`), and a shell runs whatever that file says. Pass it only for a
+           command you have read, or put the pipeline in a script and name the script in --cmd.
 --expect   a regex the *before* output must contain, so a failure for the wrong reason
            (an import error, a typo) doesn't count as red. Without it, a before-run that only
            failed to load — a collection or import error, a compile error, a missing module or
            symbol — is `wrong-reason`: a test that imports what the fix adds fails before the
            fix whether or not the behavior was ever broken. When --expect matches, it decides.
 
-Exit status: 0 red→green · 1 anything else (not red, not green, no tests) · 2 usage error.
+The "before" run is not sealed off from your tree. The temporary worktree gets symlinks to
+the real dependency directories that exist in the repo (`.venv`, `venv`, `node_modules`,
+`vendor`, `.gradle`, `target`, `.tox`), so the pre-fix code can run without a reinstall — and so
+a test command that writes there (installs a package, fills a cache, builds into `target`)
+writes into the real ones.
+
+Exit status: 0 red→green · 1 anything else (not red, not green, no tests) · 2 usage error:
+no such --repo, a --tests path that exists neither in the working tree nor at the base, a
+--cmd that needs a shell without --shell.
 """
 from __future__ import annotations
 
@@ -67,6 +85,10 @@ LOAD_ERROR_RE = re.compile("|".join([
     r"\b(compilation|compile|build) (failed|error)", r"\bfailed to compile\b",
 ]), re.IGNORECASE | re.MULTILINE)
 PYTEST_RE = re.compile(r"=+ test session starts =+|^Interrupted: ", re.MULTILINE)
+# What only a shell can do with a command line: chain, pipe, background, redirect, substitute,
+# expand a variable. Matched anywhere, quoted or not — refusing too much costs a flag, not a run.
+SHELL_RE = re.compile(r"[;|&<>`\n]|\$[({A-Za-z_]")
+ENV_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)=(.*)$", re.DOTALL)
 
 
 class Usage(Exception):
@@ -74,6 +96,8 @@ class Usage(Exception):
 
 
 def git(repo, *args, env=None, check=True):
+    if not pathlib.Path(repo).is_dir():
+        raise Usage(f"no such directory: {repo}")
     r = subprocess.run(["git", *args], cwd=repo, capture_output=True, text=True, env=env)
     if check and r.returncode:
         raise Usage(f"git {' '.join(args)}: {r.stderr.strip()[:300]}")
@@ -103,6 +127,10 @@ def changed_tests(repo, base, explicit=None):
     """(present, deleted): test paths that differ between base and the working tree."""
     if explicit:
         paths = [str(pathlib.Path(p)) for p in explicit]
+        nowhere = [p for p in paths if not (pathlib.Path(repo) / p).exists() and subprocess.run(
+            ["git", "cat-file", "-e", f"{base}:{p}"], cwd=repo, capture_output=True).returncode]
+        if nowhere:
+            raise Usage(f"no such test file, in the working tree or at {base[:12]}: {', '.join(nowhere)}")
     else:
         after = snapshot(repo)
         paths = [p for p in git(repo, "diff", "--name-only", base, after).splitlines() if TEST_RE.search(p)]
@@ -111,15 +139,43 @@ def changed_tests(repo, base, explicit=None):
     return present, deleted
 
 
-def run(cmd, cwd, tests, timeout):
-    cmd = cmd.replace("{tests}", " ".join(shlex.quote(t) for t in tests))
+def argv_for(cmd, tests=()):
+    """(argv, env) to run `cmd` without a shell: the words of the command, and the leading
+    `NAME=value` words as environment variables. Raises Usage for a command only a shell can run."""
+    found = SHELL_RE.search(cmd)
+    if found:
+        raise Usage(f"--cmd needs a shell (it contains {found.group().strip() or 'a newline'!r}): {cmd!r}. "
+                    "It is run without one by default. Read the command, then pass --shell to allow it, "
+                    "or put it in a script and name the script")
     try:
-        r = subprocess.run(cmd, shell=True, cwd=cwd, capture_output=True, text=True,
+        words = shlex.split(cmd.replace("{tests}", " ".join(shlex.quote(t) for t in tests)))
+    except ValueError as e:
+        raise Usage(f"--cmd does not parse ({e}): {cmd!r}")
+    env = {}
+    while words and ENV_RE.match(words[0]):
+        name, value = ENV_RE.match(words.pop(0)).groups()
+        env[name] = value
+    if not words:
+        raise Usage(f"--cmd names no command: {cmd!r}")
+    return words, env
+
+
+def run(cmd, cwd, tests, timeout, shell=False):
+    if shell:
+        args, env = cmd.replace("{tests}", " ".join(shlex.quote(t) for t in tests)), None
+    else:
+        args, extra = argv_for(cmd, tests)
+        env = {**os.environ, **extra}
+    try:
+        r = subprocess.run(args, shell=shell, cwd=cwd, env=env, capture_output=True, text=True,
                            stdin=subprocess.DEVNULL, timeout=timeout)
         out = (r.stdout + r.stderr).strip()
         return {"code": r.returncode, "tail": out.splitlines()[-12:], "output": out}
     except subprocess.TimeoutExpired:
         return {"code": None, "tail": [f"timed out after {timeout}s"], "output": ""}
+    except OSError as e:        # no such program, or not executable: what a shell reports as 127 / 126
+        out = f"{args[0]}: {e.strerror or e}"
+        return {"code": 126 if isinstance(e, PermissionError) else 127, "tail": [out], "output": out}
 
 
 def load_errors(before, after, wt, repo):
@@ -134,8 +190,12 @@ def load_errors(before, after, wt, repo):
     return hits[:5]
 
 
-def check(repo, cmd, base="HEAD", tests=None, expect=None, timeout=600):
+def check(repo, cmd, base="HEAD", tests=None, expect=None, timeout=600, shell=False):
+    """`shell=True` runs `cmd` through the shell. A caller passes it only for a command a person
+    chose to run that way (the CLI's --shell) — never because the command happened to need it."""
     repo = pathlib.Path(repo).resolve()
+    if not shell:
+        argv_for(cmd)                   # refuse before any worktree exists
     base = git(repo, "rev-parse", "--verify", f"{base}^{{commit}}")
     present, deleted = changed_tests(repo, base, tests)
     result = {"base": base, "tests": present, "deleted_tests": deleted, "before": None, "after": None}
@@ -156,13 +216,13 @@ def check(repo, cmd, base="HEAD", tests=None, expect=None, timeout=600):
             (wt / rel).unlink(missing_ok=True)
         for heavy in HEAVY_DIRS:
             if (repo / heavy).exists() and not (wt / heavy).exists():
-                (wt / heavy).symlink_to(repo / heavy)
-        result["before"] = run(cmd, wt, present, timeout)
+                (wt / heavy).symlink_to(repo / heavy)     # the real one: the before-run can write into it
+        result["before"] = run(cmd, wt, present, timeout, shell)
     finally:
         git(repo, "worktree", "remove", "--force", str(wt), check=False)
         shutil.rmtree(root, ignore_errors=True)
         git(repo, "worktree", "prune", check=False)
-    result["after"] = run(cmd, repo, present, timeout)
+    result["after"] = run(cmd, repo, present, timeout, shell)
 
     before, after = result["before"], result["after"]
     red = before["code"] not in (0, None)
@@ -201,6 +261,8 @@ def main(argv=None):
     c.add_argument("--tests", nargs="+")
     c.add_argument("--expect")
     c.add_argument("--timeout", type=int, default=600)
+    c.add_argument("--shell", action="store_true",
+                   help="run --cmd through the shell (a person's decision: read the command first)")
     c.add_argument("--json", action="store_true")
     s = sub.add_parser("snapshot")
     s.add_argument("--repo", default=".")
@@ -209,7 +271,7 @@ def main(argv=None):
         if a.cmd_name == "snapshot":
             print(snapshot(a.repo))
             return 0
-        res = check(a.repo, a.cmd, a.base, a.tests, a.expect, a.timeout)
+        res = check(a.repo, a.cmd, a.base, a.tests, a.expect, a.timeout, a.shell)
     except Usage as e:
         print(f"redgreen: {e}", file=sys.stderr)
         return 2

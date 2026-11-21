@@ -1,8 +1,8 @@
 # 🧩 Code Smells Catalog
 
-A **code smell** is a surface symptom that usually points to a deeper problem. Smells aren't bugs — the code works — but they make it harder to change. This catalog follows the five families from Refactoring Guru (Martin Fowler's *Refactoring*, 2nd ed.). Each entry: **what it looks like → why it hurts → treatment** (techniques live in [refactoring-techniques.md](refactoring-techniques.md)).
+A **code smell** is a surface symptom that usually points to a deeper problem. Smells aren't bugs — the code works — but they make it harder to change. This catalog has six families: the five from Refactoring Guru (Martin Fowler's *Refactoring*, 2nd ed.) and a sixth, Security Smells, from the sources its section names. Each entry: **what it looks like → why it hurts → treatment** (techniques live in [refactoring-techniques.md](refactoring-techniques.md)).
 
-> Use this to *name* the symptom in Step 1 of the [code review](SKILL.md). Naming precisely is half the fix — it tells you which treatment to reach for.
+> Use this to *name* the symptom in Step 1 of the [refactor review](SKILL.md). Naming precisely is half the fix — it tells you which treatment to reach for.
 
 ---
 
@@ -161,7 +161,7 @@ Structures that work today but make the next security defect likely — usually 
 ### Primitive Obsession on a Security Value
 An ID, amount, e-mail, path, URL or query fragment passed across layers as a raw `string`/`int`/`float`, validated (or not) at each call site.
 - **Why it hurts:** Every new caller is a new chance to skip the check; the attack surface is every place the raw value is accepted (*Secure by Design*, slides 15–18, 23).
-- **Treatment:** Replace Data Value with Object — a domain primitive that validates in its constructor and is immutable; see tdd's `domain-primitives.md`.
+- **Treatment:** Replace Data Value with Object — a domain primitive that validates in its constructor and is immutable; see `domain-primitives.md` in the tdd skill.
 
 ### Ambiguous Parameter List
 Adjacent parameters of the same primitive type (`transfer(from: str, to: str, amount: float)`), or an amount travelling without its currency/unit.
@@ -212,10 +212,13 @@ Authorisation or validation performed in one layer (UI, middleware, an early gua
 | Switch Statements | Replace Conditional with Polymorphism |
 | Temporary Field | Extract Class / Introduce Null Object |
 | Refused Bequest | Replace Inheritance with Delegation |
+| Alternative Classes with Different Interfaces | Rename Method / Extract Superclass |
 | Divergent Change | Extract Class |
 | Shotgun Surgery | Move Method / Move Field |
+| Parallel Inheritance Hierarchies | Move Method / Move Field |
 | Comments | Extract Method + Rename |
 | Duplicate Code | Extract Method / Pull Up Method |
+| Lazy Class | Inline Class / Collapse Hierarchy |
 | Data Class | Move Method (pull behavior in) |
 | Dead Code | Delete |
 | Speculative Generality | Collapse Hierarchy / Inline Class |
@@ -223,3 +226,12 @@ Authorisation or validation performed in one layer (UI, middleware, an early gua
 | Inappropriate Intimacy | Move Method / Hide Delegate |
 | Message Chains | Hide Delegate |
 | Middle Man | Remove Middle Man |
+| Incomplete Library Class | Introduce Foreign Method / Introduce Local Extension |
+| Primitive Obsession on a Security Value | Replace Data Value with Object (a domain primitive) |
+| Ambiguous Parameter List | Introduce Parameter Object / Replace Data Value with Object |
+| Validity Outside the Type | Move Method into the type / Remove Setting Method |
+| Partially Constructed Entity | Replace Constructor with Factory Method |
+| Logging the Whole Object | Log identifiers, not objects |
+| Echoing Input in Errors | Name the rule that failed, not the value |
+| Mixed Trust in One Module | Extract Class along the trust line |
+| Check Far from Use | Move the check into the operation |

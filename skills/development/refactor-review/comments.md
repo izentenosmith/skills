@@ -1,8 +1,8 @@
 # 💬 Commenting Code
 
-Companion reference for the [code review](SKILL.md) skill: when a comment earns its place, and what to do instead when it doesn't. Language-agnostic — examples are pseudocode; see [Mapping to your language](#mapping-to-your-language) for the construct each rule means in practice.
+Companion reference for the [refactor review](SKILL.md) skill: when a comment earns its place, and what to do instead when it doesn't. Language-agnostic — examples are pseudocode; see [Mapping to your language](#mapping-to-your-language) for the construct each rule means in practice.
 
-`Comments` is a **Dispensables** smell in [code-smells.md](code-smells.md), and `Extract Function` is its usual treatment in [refactoring-techniques.md](refactoring-techniques.md). This doc is the judgment call between them: which comments are the smell, and which are the ones worth keeping.
+`Comments` is a **Dispensables** smell in [code-smells.md](code-smells.md), and `Extract Method` is its usual treatment in [refactoring-techniques.md](refactoring-techniques.md). This doc is the judgment call between them: which comments are the smell, and which are the ones worth keeping.
 
 ---
 
@@ -197,7 +197,7 @@ The rules above are the same everywhere; only the construct changes.
 
 ## Review checklist
 
-Feed these into Step 1 of the [code review](SKILL.md) — findings here are `Dispensables / Comments`, and the treatment is usually `Extract Function`, `Rename`, or plain deletion.
+Feed these into Step 1 of the [refactor review](SKILL.md) — findings here are `Dispensables / Comments`, and the treatment is usually `Extract Method`, `Rename`, or plain deletion.
 
 ```
 [ ] No comment restates a name or the line below it

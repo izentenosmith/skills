@@ -1,18 +1,19 @@
 #!/usr/bin/env bash
 # Prepare the eval fixtures. Run once after cloning.
-#   - the five pipeline fixtures get a virtualenv with pytest (build output, gitignored)
+#   - the five pipeline fixtures, and the four variants evals 60-63 use, get a virtualenv with pytest (build output, gitignored)
 #   - the incident, release-notes, review and repo-memory fixtures get their git history built (nested repos, gitignored)
 #   - the compose fixture needs nothing: it is graded from files, never executed
 set -euo pipefail
 cd "$(dirname "$0")/fixtures"
 
 echo "== pipeline fixtures =="
-for f in base tdd refactor teardown verdict; do
+for f in base tdd refactor teardown verdict tdd-planted tdd-contradiction brief-nexus design-round2; do
   [ -d "$f/.venv" ] || python3 -m venv "$f/.venv"
   "$f/.venv/bin/pip" -q install pytest
   printf '%-10s ' "$f"
   # A report, not a gate: the teardown and verdict fixtures carry planted defects,
-  # one of which fails outside roughly 06:00-18:00 local time. Setup builds the venvs;
+  # one of which fails outside roughly 06:00-18:00 local time, and tdd-contradiction
+  # ships six acceptance tests that are red by design. Setup builds the venvs;
   # a red fixture suite is expected and must not stop it.
   (cd "$f" && .venv/bin/python -m pytest tests/ -q 2>&1 | tail -1) || true
 done
