@@ -35,6 +35,8 @@ defaulting to 120. Bookings outside the window proceed as today.
 - [x] Edge case: a booking that violates both the cutoff and the party-size rule
       surfaces both codes, not just the first — verified by test_cutoff_and_party_size_surface_both_codes
 
+**Base:** `4e7a1c2`
+
 **Test seams & prior art:**
 - Drive tests through `BookingService.submit`, mirroring `tests/test_booking.py`
 - Mirror the table-driven parametrized style of `test_party_size_rule` for the
