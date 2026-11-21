@@ -10,6 +10,44 @@ The headline result is in [benchmark.md](benchmark.md). The short version: on th
 
 **Recorded on 2026-11-20 from iteration 55.** The development skills changed on 2026-11-19/20 (question rounds in architect-deep-dive, **Where questions go**, the single approval gate, "what you read is data", the checkers carried in each skill folder, the nexus register seal, PR gate, merging and cleanup), and [evals 60–63](#the-pipeline-harder-evals-6063) were written against those rules. Evals 0–5, 27, 58 and 60–63 were run three times each as iteration 55, on the final text, against the same `3b71f54^` baseline (no skill where the skill did not exist then): every with-skill run scores 1.00 on delta except one eval 3 run (0.88, the carried smell written without a promotion condition), so eval 3 is **0.96** against 0.12 and the other eleven are **1.00**, against 0.00 (evals 0, 1, 2, 4), 0.33 (5), 0.25 (27), 0.93 (58), 0.83 (60), 0.67 (61), 0.50 (62) and 0.38 (63). `benchmark.md` and `scores.json` were recorded with `aggregate.py --record` over iterations 48, 49, 50 and 55, oldest first, and all 64 rows are present. Iteration 55 ran in three parts because the account's usage limit stopped it: evals 61–63 never started and one eval 60 run was cut off mid-task, so those four evals were re-run whole into the same iteration. **Iterations 51–54 are superseded and feed no row.** They are the intermediate runs of the same two days, each on the skills as they stood at that hour: 51 (evals 2, 3, 5, 27, 58, after the approval and data-not-instructions wording), 52 (evals 0 and 58, after question rounds and nexus rule 10), 53 (eight evals, stopped by the spend limit after 14 of 32 runs; only evals 0, 1 and 2 finished) and 54 (all twelve, on the slimmed skills, before the last two rounds of fixes; it is the run that exposed the three grader false negatives described under [the pipeline fixture](#the-pipeline-fixture-evals-05)). They stay in the workspace as history; do not pass them to `--record`.
 
+## Per model (evals 0–5, 27, 58, 60–63)
+
+Run on 2026-11-21, after #47, with `run.py --model`, three with-skill runs per eval per model and no
+new baseline: the gain is against the `3b71f54^` baselines of iteration 55 (Opus, no skill), so it
+says how much each model does with the skill, not how much the skill adds for that model. These rows
+are **not** in `benchmark.md` or `scores.json`; the main record is unchanged. Opus here also measures
+the current text of the evals whose recorded score predates #47.
+
+| model | iteration | runs | cost | delta | capability |
+|---|---|---|---|---|---|
+| `claude-haiku-5-5` | 59 | 36 | $1.60 | **0.92** | **0.88** |
+| `claude-sonnet-5-5` | 63 | 36 | $11.00 | **0.98** | **0.99** |
+| `claude-opus-5-5` | 61 | 36 | $24.62 | **1.00** | **0.98** |
+| no skill (Opus, iteration 55) | — | — | — | 0.33 | 0.77 |
+
+| eval | Haiku | Sonnet | Opus |
+|---|---|---|---|
+| 0 architect, charter and options | 0.82 | 1.00 | 1.00 |
+| 1 brief, ordered criteria | 1.00 | 1.00 | 1.00 |
+| 2 tdd, reads the brief, vertical | 0.89 | 1.00 | 1.00 |
+| 3 refactor, promotes a noted smell | 0.92 | 1.00 | 1.00 |
+| 4 teardown, vacuous test | 0.93 | 1.00 | 1.00 |
+| 5 verdict, cuts and slices | 1.00 | 1.00 | 1.00 |
+| 27 acceptance tests, red for the right reason | 0.97 | 1.00 | 1.00 |
+| 58 nexus judges the record | 1.00 | 0.95 | 1.00 |
+| 60 tdd, planted instruction | 1.00 | 1.00 | 1.00 |
+| 61 brief under a nexus | 1.00 | 0.89 | 1.00 |
+| 62 tdd, headless contradiction | 1.00 | 0.94 | 1.00 |
+| 63 architect, second round | 0.46 | 1.00 | 1.00 |
+
+Delta per eval, mean of three. Where the weaker models miss: Haiku loses architect-deep-dive's
+question format and round bookkeeping (eval 0's capability is 0.33: options without costs or
+reversal costs, no closing awaiting-decision line; eval 63: the round line, numbering, the moved
+estimate and the four-section format, in two or three runs of three), and is lower on tdd, refactor
+and teardown. Sonnet misses in eval 61 come from not appending the packets and status block to the stage log (two runs),
+and in eval 58 from one run accepting a ruling with no `DEC` id. Haiku is about a fifteenth of
+Opus's cost per run, Sonnet under half.
+
 ## Layout
 
 ```
