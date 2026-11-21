@@ -583,6 +583,8 @@ npx skills add izentenosmith/skills --skill threatmodel appsec hardening contain
 
 `repo-memory` is on every line because every role benefits from what the last session learned; drop it from the line if you don't want it.
 
+### Everything, or one skill
+
 **Everything:**
 
 ```bash
