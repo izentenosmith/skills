@@ -72,10 +72,10 @@ Every stage after agent-brief reads the brief's Status and never writes it: on a
 
 | Skill | What it does |
 |-------|--------------|
-| [architect-deep-dive](skills/development/architect-deep-dive/SKILL.md) | Staff-architect design review that resolves the plan in rounds of up to three independent questions — options with trade-offs, a recommendation and its reversal cost — against a stated charter and a live question count. Infers answers from the codebase where it can. Run this first. |
+| [architect-deep-dive](skills/development/architect-deep-dive/SKILL.md) | Runs a staff-architect design review that resolves the plan in rounds of up to three independent questions — options with trade-offs, a recommendation and its reversal cost — against a stated charter and a live question count. Infers answers from the codebase where it can. Run this first. |
 | [agent-brief](skills/development/agent-brief/SKILL.md) | Turns the resolved design decisions into the pure-text build plan TDD executes — ordered acceptance criteria, test seams, prior art, and scope — written to `.workflow/brief.md`, a draft until the user approves it. |
 | [acceptance-tests](skills/development/acceptance-tests/SKILL.md) | Turns the brief's acceptance criteria into executable black-box tests through the outermost boundary — written before any code, each red for the right reason — and maps every criterion to its test. tdd is done when they pass. |
-| [tdd](skills/development/tdd/SKILL.md) | Test-driven development via the red-green-refactor loop (vertical slices, not horizontal). Ends by handing off to refactor-review. |
+| [tdd](skills/development/tdd/SKILL.md) | Builds test-first through the red-green-refactor loop (vertical slices, not horizontal). Ends by handing off to refactor-review. |
 | [refactor-review](skills/development/refactor-review/SKILL.md) | Reviews the change tdd just built for code smells: names the smell, then prescribes a behavior-preserving refactoring, with the tests run between each. Not a bug review — that is peer-review. |
 | [devils-advocate](skills/development/devils-advocate/SKILL.md) | Assumes everything just built is wrong and hunts concrete evidence for each defect. Over-reports on purpose; does not fix or judge. For someone else's PR, use peer-review. |
 | [tyr-verdict](skills/development/tyr-verdict/SKILL.md) | Adjudicates the devils-advocate findings, cuts false claims, turns confirmed defects into red→green remediation slices, and issues a go/no-go verdict. |

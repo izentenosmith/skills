@@ -19,6 +19,12 @@ Links
     spans and fences; eval fixtures are skipped (their content is planted)
   - a link inside a skill folder stays within its family: installs are flat,
     so `../../<family>/...` only resolves in this repo
+Authoring guide (families in authoring.GUIDED_FAMILIES; details in authoring.py)
+  - the description is third person, opening with a verb ("Turns…")
+  - a reference file over 100 lines opens with a `## Contents` list
+  - SKILL.md lists every reference file under `## Reference files` with when to
+    open it, and reference files don't link each other (one level deep)
+  - no link leaves the skill's own folder (sibling skills are named, not linked)
 Evals
   - evals.json parses, ids are unique, and each eval names a skill that exists
     (or the loop runner) and a fixture folder that exists
@@ -162,6 +168,15 @@ for md in tracked("*.md"):
             if not (md.parent / path).resolve().is_relative_to(family):
                 problem(f"{rel}: link {target} leaves the {rel.parts[1]} family, so it breaks "
                         f"once installed; name the skill in backticks instead")
+
+# -------------------------------------------------------- authoring guide
+
+import authoring  # noqa: E402
+
+for name, rel in sorted(skills.items()):
+    if rel.parts[1] in authoring.GUIDED_FAMILIES:
+        for fname, msg in authoring.check_skill(ROOT / rel.parent):
+            problem(f"{rel.parent / fname}: {msg}")
 
 # ----------------------------------------------------------------- evals
 

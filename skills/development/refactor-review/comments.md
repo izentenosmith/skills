@@ -2,7 +2,19 @@
 
 Companion reference for the [refactor review](SKILL.md) skill: when a comment earns its place, and what to do instead when it doesn't. Language-agnostic — examples are pseudocode; see [Mapping to your language](#mapping-to-your-language) for the construct each rule means in practice.
 
-`Comments` is a **Dispensables** smell in [code-smells.md](code-smells.md), and `Extract Method` is its usual treatment in [refactoring-techniques.md](refactoring-techniques.md). This doc is the judgment call between them: which comments are the smell, and which are the ones worth keeping.
+`Comments` is a **Dispensables** smell in `code-smells.md`, and `Extract Method` is its usual treatment in `refactoring-techniques.md`. This doc is the judgment call between them: which comments are the smell, and which are the ones worth keeping.
+
+## Contents
+
+- [The ladder: a comment is the last rung](#the-ladder-a-comment-is-the-last-rung)
+- [Core rules](#core-rules)
+- [What only a comment can carry](#what-only-a-comment-can-carry)
+- [Doc comments on the public surface](#doc-comments-on-the-public-surface)
+- [Let the language carry the meaning](#let-the-language-carry-the-meaning)
+- [Inline comments](#inline-comments)
+- [Delete on sight](#delete-on-sight)
+- [Mapping to your language](#mapping-to-your-language)
+- [Review checklist](#review-checklist)
 
 ---
 
@@ -131,7 +143,7 @@ Rung 3. Every language has features that make a comment unnecessary by making th
 
 - **Absence** — express "may be missing" in the return type (option/maybe/nullable, or a documented sentinel), never as a plain value plus a comment warning about it.
 - **Immutability** — mark what isn't reassigned or mutated with whatever the language provides (`const`, `final`, `readonly`, frozen, immutable-by-default records/structs).
-- **Domain types over primitives** — a named type or enum instead of a bare string, int, or boolean when the value carries meaning. This is the `Primitive Obsession` smell in [code-smells.md](code-smells.md).
+- **Domain types over primitives** — a named type or enum instead of a bare string, int, or boolean when the value carries meaning. This is the `Primitive Obsession` smell in `code-smells.md`.
 - **Constrained types over documented ranges** — a type whose constructor rejects invalid values, instead of a comment listing the valid ones.
 - **Don't re-explain generated or declarative code** — what a macro, annotation, decorator, code generator, or builder already establishes needs no prose restatement.
 
