@@ -1,5 +1,7 @@
 # Plan Reading — Four Engines
 
+**Contents:** What to ask of every plan · PostgreSQL · SQL Server · Oracle · MySQL / MariaDB · Application-side evidence
+
 > Where each engine shows what [`query-rubric.md`](query-rubric.md) needs: access vs filter predicates
 > (theory §4.1), estimated vs actual rows, join methods, sorts and spills, pages visited, and the
 > workload statistics that rank statements. Read a plan from the most indented node outward; the node

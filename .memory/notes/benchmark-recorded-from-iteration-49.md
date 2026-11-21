@@ -3,7 +3,7 @@ name: benchmark-recorded-from-iteration-49
 description: The benchmark's rows come from iteration 49 (a full re-run), with eval 59 from 48 and the development evals 0–5, 27, 58, 60–63 from 55; --record over 48, 49, 50, 55 is complete
 type: fact
 source: evals/benchmark.md, evals/scores.json, evals/aggregate.py, session 2026-11-19
-verified: 2026-11-20
+verified: 2026-11-21
 volatility: high
 ---
 
@@ -19,3 +19,6 @@ are superseded intermediate runs: never pass them. After the next partial re-run
 55 and the new iteration, and check that all 64 rows are still there before keeping the result.
 If iteration 49 is ever deleted for disk space, the
 replace-rows rule applies again.
+
+Since 2026-11-21 iteration 56 (the database evals 30–34, 47 and 48, re-run after the skill audit)
+is part of the record: pass 48, 49, 50, 55 and 56.

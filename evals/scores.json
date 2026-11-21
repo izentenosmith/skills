@@ -164,38 +164,38 @@
     },
     "eval-30-dbaudit-postgres-dump-scored-not-fixed": {
       "skill": "dbaudit",
-      "iteration": "iteration-49",
+      "iteration": "iteration-56",
       "n": 3,
       "staging": "harness",
-      "skill_hash": "217c66cbc3d8382133913faf8c49822773835e6e91dd41e5212b9953053ab32c"
+      "skill_hash": "e8135d56d40504d037a0454fa16be50d2e394880d3d56e9a10cbedb88be7088a"
     },
     "eval-31-dbdesign-sqlite-from-requirements-traps": {
       "skill": "dbdesign",
-      "iteration": "iteration-49",
+      "iteration": "iteration-56",
       "n": 3,
       "staging": "harness",
-      "skill_hash": "8b581cd86db7a153e37524ff8d2c0ea8fadd06024522fd8ef51b2de3e6f90a5f"
+      "skill_hash": "6bce72ae1a978bf1eaff1b4a58da60f82cf6a1e69c6171ba153b32315f038b73"
     },
     "eval-32-dbdiagram-barker-and-relational-from-design": {
       "skill": "dbdiagram",
-      "iteration": "iteration-49",
+      "iteration": "iteration-56",
       "n": 3,
       "staging": "harness",
-      "skill_hash": "dc918072a9a8ba0e2899ad2e4fabc621c1976fc3f0875ddab1e55d64e1c60a4c"
+      "skill_hash": "cfabca54b404d0e18b1fd6c9a066d798a097b80fb2dfffa56d96af041eea6e99"
     },
     "eval-33-dbpropose-orphans-before-constraints": {
       "skill": "dbpropose",
-      "iteration": "iteration-49",
+      "iteration": "iteration-56",
       "n": 3,
       "staging": "harness",
-      "skill_hash": "c1d87b3d8aed8056388c1669834fd58fb6db198ecb4a0d25b884216f0b695a85"
+      "skill_hash": "5af1d47c095bf30d7b69a8151727cc0e969bfeb50618d7a0c0f6a5538dde54c3"
     },
     "eval-34-dbbuild-executable-ddl-from-accepted-proposal": {
       "skill": "dbbuild",
-      "iteration": "iteration-49",
+      "iteration": "iteration-56",
       "n": 3,
       "staging": "harness",
-      "skill_hash": "6344fb48780f883646e1a01097a29167599f9d23e916f211b7e15c414f739da4"
+      "skill_hash": "98d5aeabb719e3d49712ca40a34c760e0ea3b4e7ad3b984c03ea6a7f2129edc6"
     },
     "eval-35-container-hardening-review-socket-and-firewall": {
       "skill": "container-hardening",
@@ -290,17 +290,17 @@
     },
     "eval-47-dbquery-workload-ranked-plans-read-indexes-weighed": {
       "skill": "dbquery",
-      "iteration": "iteration-49",
+      "iteration": "iteration-56",
       "n": 3,
       "staging": "harness",
-      "skill_hash": "3389c1dca2d431a92d8f70f13affc234a764abfe738a8627d87120992822bf20"
+      "skill_hash": "21b1b9227b41e8a161b7cdaa6b551a830c3c5df1757d1b9814d4a8a8719fe610"
     },
     "eval-48-dbarchitect-one-system-of-record-no-dual-writes": {
       "skill": "dbarchitect",
-      "iteration": "iteration-49",
+      "iteration": "iteration-56",
       "n": 3,
       "staging": "harness",
-      "skill_hash": "d31ac57d019a00f935ae2c0218bf91a55154ec88185ad4f10eae7e8b14535bfb"
+      "skill_hash": "7fb83f5cf5690ebc0a2a23b23faca14bed189b29e71606bfefe11d55768800fe"
     },
     "eval-49-peer-review-claim-omission-injection": {
       "skill": "peer-review",

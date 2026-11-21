@@ -1,5 +1,7 @@
 # Theory Foundations
 
+**Contents:** 1. The relational model (Codd, 1970) · 2. Functional dependencies (FDs) · 3. Normalization · 4. Relational algebra vs. relational calculus · 5. Transactions, isolation and concurrency · 6. Single Source of Truth — system of record vs derived data · 7. Main criteria of a good database design · 8. Theory → legacy failure → literature fix · 9. Entity–relationship modelling (Barker / CASE\*METHOD) · 10. Data/metadata separation · 11. Security principles · Reference literature
+
 > The conceptual backbone of the audit rubric and of the proposals built on it. Every theoretical term
 > a finding, a verdict or a design decision cites is defined **here once** and only referenced
 > elsewhere. Read this first. §9 adds the entity–relationship vocabulary used by

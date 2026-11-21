@@ -1,5 +1,7 @@
 # Scoring — Severity, Confidence, the 0–10 Formula, Templates
 
+**Contents:** Severity taxonomy · Quality scale (per criterion) · Detection confidence — how trustworthy is a signal? · Scoring model · Triage for large files · Theory → object-type mapping · Ordering & efficiency notes · Templates
+
 > How an evaluation is graded and written down. **Rubric version: `v1.2`** — every output records the
 > version it was graded against and the source version (commit or dump date) it read. Each finding
 > must be backed by the relevant theory in [`theory.md`](theory.md): an evaluation that asserts a

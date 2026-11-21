@@ -4,6 +4,7 @@
  ],
  "skills/database/dbaudit/er-modeling.md": [
   "skills/database/dbarchitect/er-modeling.md",
+  "skills/database/dbbuild/er-modeling.md",
   "skills/database/dbdesign/er-modeling.md",
   "skills/database/dbdiagram/er-modeling.md",
   "skills/database/dbpropose/er-modeling.md",
@@ -20,6 +21,7 @@
   "skills/database/dbquery/theory.md"
  ],
  "skills/database/dbdesign/physical-design.md": [
+  "skills/database/dbbuild/physical-design.md",
   "skills/database/dbpropose/physical-design.md"
  ],
  "skills/networking/netaudit/graph-theory.md": [
@@ -87,5 +89,8 @@
   "skills/development/nexus/scripts/brief.py",
   "skills/development/tdd/scripts/brief.py",
   "skills/development/tyr-verdict/scripts/brief.py"
+ ],
+ "skills/database/dbpropose/proposal.md": [
+  "skills/database/dbbuild/proposal.md"
  ]
 }

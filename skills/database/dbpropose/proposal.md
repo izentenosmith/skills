@@ -1,5 +1,7 @@
 # Proposal — From Audit and Design to a Decision
 
+**Contents:** Inputs and limits · Recommendation decisions · Breaking changes and their consumers · Ordering rules · Build and migration plan · Deliverable
+
 This reference governs the recommendation stage. It consumes an audit and a separately reviewed design
 when those artifacts apply. **Do not perform the audit, redesign the model, or redraw diagrams here.**
 The companion stages are [dbaudit](../dbaudit/SKILL.md), [dbdesign](../dbdesign/SKILL.md), and
