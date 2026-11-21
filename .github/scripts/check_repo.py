@@ -39,6 +39,13 @@ Eval health
     staged it (the repo folder, alone or with harness/ beside it)
   - warning: a score with no skill_hash (scored before run.py recorded one),
     or one staged by the zip-packaging step this repo no longer has
+Bundles
+  - skills/bundles.json parses; every skill it names exists; every skill is
+    in at least one bundle; no install line (with the with_every_bundle
+    extras) passes 20 skills; no duplicate in a bundle; a `placed` reason
+    only for a skill its bundle lists
+  - README.md's `### Bundles` has a `# <name>` comment and install line per
+    bundle, each installing exactly that bundle's skills plus the extras
 Branch protection
   - every status check .github/rulesets/main.json requires is a job name the
     workflows report — a renamed job would otherwise block every merge
@@ -304,6 +311,13 @@ if ruleset_path.exists():
             if check["context"] not in reported:
                 problem(f".github/rulesets/main.json: required check {check['context']!r} matches no workflow job "
                         f"— merges into main would wait for it forever (jobs: {sorted(reported)})")
+
+# --------------------------------------------------------------- bundles
+
+import bundles  # noqa: E402
+
+for msg in bundles.check((ROOT / "skills/bundles.json").read_text(), skills, readme):
+    problem(msg)
 
 # ---------------------------------------------------------------- report
 

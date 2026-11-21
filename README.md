@@ -554,6 +554,35 @@ npx skills add izentenosmith/skills --skill pr-prep code-xray peer-review test-r
 npx skills add izentenosmith/skills --skill repo-memory
 ```
 
+### Bundles
+
+**By role** — the skills one kind of work reaches for, at most 20 per line, from [`skills/bundles.json`](skills/bundles.json). Every skill is in at least one bundle; a skill from another family is there because the role hands work to it (the manifest's `placed` says why for each).
+
+```bash
+# builder — the seven-stage pipeline and nexus, plus the tracker pair and release-notes
+npx skills add izentenosmith/skills --skill architect-deep-dive agent-brief acceptance-tests tdd refactor-review devils-advocate tyr-verdict nexus backlog ticket release-notes repo-memory
+
+# reviewer — the review family, plus appsec, where peer-review's security lens escalates
+npx skills add izentenosmith/skills --skill pr-prep code-xray peer-review test-review concurrency-review review-retro appsec repo-memory
+
+# on-call — the response chain and the tracker pair, plus container-debug
+npx skills add izentenosmith/skills --skill hotfix incident-fix post-mortem ticket backlog container-debug repo-memory
+
+# platform — containers and infrastructure, plus hardening for the hosts and cloud underneath
+npx skills add izentenosmith/skills --skill dockerfile docker-compose container-hardening container-debug docker-swarm terraform pipelines hardening repo-memory
+
+# data — the database family
+npx skills add izentenosmith/skills --skill dbarchitect dbaudit dbdesign dbdiagram dbpropose dbbuild dbquery repo-memory
+
+# network — the networking family
+npx skills add izentenosmith/skills --skill netaudit netdesign netdiagram netpropose netblueprint repo-memory
+
+# security — the security family, plus container-hardening for the container layer
+npx skills add izentenosmith/skills --skill threatmodel appsec hardening container-hardening repo-memory
+```
+
+`repo-memory` is on every line because every role benefits from what the last session learned; drop it from the line if you don't want it.
+
 **Everything:**
 
 ```bash
