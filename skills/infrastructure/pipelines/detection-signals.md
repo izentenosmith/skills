@@ -1,13 +1,24 @@
 # Detection Signals — Reproducible Grep Appendix
 
 > Copy-pasteable commands for the rubric's anti-patterns, each with its **confidence tag**
-> (✅ decidable / ⚠️ proxy / 🔬 needs-data — see [`scoring.md`](scoring.md)). Run from the repo root.
+> (✅ decidable / ⚠️ proxy / 🔬 needs-data — see `scoring.md`). Run from the repo root.
 > A match is a **candidate**: read the job in context. YAML nesting, `extends:`/anchors, reusable
 > workflows and templates mean a line's effect depends on where it's included.
 >
 > Prefer parsers when present: `actionlint`, `zizmor` (GitHub Actions security), `glab ci lint`,
 > `checkov -d . --framework github_actions,gitlab_ci,azure_pipelines`, `shellcheck` on extracted
 > scripts, `gitleaks detect`. Grep is the fallback and the triage scan.
+
+## Contents
+
+- [Platform translation](#platform-translation)
+- [Inventory](#inventory)
+- [flow](#flow)
+- [feedback](#feedback)
+- [release](#release)
+- [security](#security)
+- [environments](#environments)
+- [infrastructure](#infrastructure)
 
 ## Platform translation
 
@@ -89,9 +100,13 @@ when the repo has them.
 
 ## security
 
+The secret greps below print the matching line, value and all. Read it to classify the finding,
+then record only the kind and `file:line`; never paste the matched text into an output. Where only
+presence matters, `grep -l` (files) or `grep -c` (counts) never print the value.
+
 | Anti-pattern | Command | Conf. |
 |---|---|---|
-| Secret literals | `gitleaks detect --no-git -s .` or `grep -nE 'AKIA[0-9A-Z]{16}\|ghp_[A-Za-z0-9]{36}\|glpat-[A-Za-z0-9_-]{20}\|xox[bap]-\|-----BEGIN (RSA\|OPENSSH\|EC) PRIVATE KEY' -r .` | ✅ |
+| Secret literals | `gitleaks detect --no-git --redact -s .` or `grep -nE 'AKIA[0-9A-Z]{16}\|ghp_[A-Za-z0-9]{36}\|glpat-[A-Za-z0-9_-]{20}\|xox[bap]-\|-----BEGIN (RSA\|OPENSSH\|EC) PRIVATE KEY' -r .` | ✅ |
 | Secrets echoed | `grep -nE 'echo\s+.*\$\{\{\s*secrets\.\|echo\s+\$[A-Z_]*(TOKEN\|SECRET\|PASSWORD\|KEY)' $CI` | ✅ |
 | `pull_request_target` + PR checkout | `grep -lE 'pull_request_target\|workflow_run' .github/workflows/* \| xargs grep -nE 'ref:\s*\$\{\{\s*github\.event\.(pull_request\.head\|workflow_run\.head)'` | ✅ |
 | Script injection | `grep -nE 'run:.*\$\{\{\s*github\.(event\.(issue\|pull_request\|comment\|review\|head_commit\|commits)\|head_ref)' .github/workflows/*` (multi-line `run: \|` blocks need `zizmor`) | ✅ |

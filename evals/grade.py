@@ -1883,7 +1883,7 @@ def eval23(run):
          any_of(t, rf"(remov|delet|drop)\w*{SENTENCE}{{0,60}}\b(moved|imports?)\b{SENTENCE}{{0,120}}\b(every|both|all|each)\s+(env|environment|root|state)s?\b{SENTENCE}{{0,40}}appl",
                 rf"\b(every|both|all|each)\s+(env|environment|root|state)s?\b{SENTENCE}{{0,40}}appl{SENTENCE}{{0,80}}(remov|delet|drop)\w*{SENTENCE}{{0,40}}\b(moved|imports?)\b"),
          "two environments share the migration blocks", D),
-        ("the apply path handed to the pipelines skill", any_of(t, r"\**pipelines\**\s+skill|\[pipelines\]|/pipelines\b|pipelines\.md|pipelines \("), "", D),
+        ("the apply path handed to the pipelines skill", any_of(t, r"\**`?pipelines`?\**\s+skill|`pipelines`|\[pipelines\]|/pipelines\b|pipelines\.md|pipelines \("), "", D),
         ("needs-data flags carried as open questions", any_of(t, r"🔬|needs.data") and any_of(t, r"open question"), "", D),
         ("every step has validation and rollback", n_rb >= 3 and n_val >= 3, f"{n_val} validation · {n_rb} rollback", D),
         ("closes with: nothing applied until the proposal is accepted",

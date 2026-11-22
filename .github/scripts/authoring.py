@@ -11,7 +11,7 @@ them without the repo.
 """
 import re
 
-GUIDED_FAMILIES = ("development",)
+GUIDED_FAMILIES = ("development", "infrastructure")
 TOC_THRESHOLD = 100
 
 FENCE = re.compile(r"^(```|~~~).*?^\1", re.S | re.M)

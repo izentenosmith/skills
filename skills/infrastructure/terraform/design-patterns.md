@@ -1,10 +1,22 @@
 # Design Patterns — Layouts, State, Modules, Environments
 
 > The patterns Design mode chooses between, each with when it fits, what it costs, and **the
-> default**. Cite the principle (T-N, [`theory.md`](theory.md)) when you pick one. When you deviate
+> default**. Cite the principle (T-N, `theory.md`) when you pick one. When you deviate
 > from a default, say why in `design.md`.
 
 ---
+
+## Contents
+
+- [§1 Components and lifecycles — where the state lines go](#1-components-and-lifecycles--where-the-state-lines-go)
+- [§2 Repository layouts](#2-repository-layouts)
+- [§3 Environment models](#3-environment-models)
+- [§4 Module design](#4-module-design)
+- [§5 Cross-state interfaces](#5-cross-state-interfaces)
+- [§6 Guardrails](#6-guardrails)
+- [§7 The apply path (outline — the detail belongs to the `pipelines` skill)](#7-the-apply-path-outline--the-detail-belongs-to-the-pipelines-skill)
+- [§8 Testing ladder](#8-testing-ladder)
+- [§9 AWS provider specifics (AWS-PG)](#9-aws-provider-specifics-aws-pg)
 
 ## §1 Components and lifecycles — where the state lines go
 
@@ -143,7 +155,7 @@ The producer's published outputs are an API: change them with a deprecation wind
 | Drift | scheduled `plan -detailed-exitcode` per prod root; exit 2 opens an issue/alert (T18) |
 | Secrets | from a secret manager via data source or ephemeral resources; platform-managed passwords where offered; never in tfvars (T15) |
 
-## §7 The apply path (outline — the detail belongs to the pipelines skill)
+## §7 The apply path (outline — the detail belongs to the `pipelines` skill)
 
 ```
 PR opened ─► fmt · validate · tflint · scan · terraform test (plan-mode)
