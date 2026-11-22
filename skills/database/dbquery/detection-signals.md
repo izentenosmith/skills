@@ -1,5 +1,7 @@
 # Detection Signals — Reproducible Grep/Regex Appendix
 
+**Contents:** Engine notes · Tables (`tables.md`) · Indexes (`indexes.md`) · Procedures & functions (`procedures.md`) · Views (`views.md`) · Triggers (`triggers.md`) · Security & data sensitivity (`audit-lenses.md` §6)
+
 > Canonical, copy-pasteable detection commands for every anti-pattern in the rubric, each with its
 > **confidence tag** (✅ decidable / ⚠️ proxy / 🔬 needs-data — see
 > [`scoring.md`](scoring.md)). Run these from the root of the DDL dumps. They make

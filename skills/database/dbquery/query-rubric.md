@@ -1,8 +1,10 @@
 # Query Rubric — What the Statements, Plans and Workload Show
 
+**Contents:** Q1. Access paths · Q2. Joins · Q3. Sorting, limits and paging · Q4. Statement shape · Q5. Workload and application patterns · Q6. Writes · Q7. Safety · Checklist
+
 > The anti-patterns dbquery grades. Many share a name with an entry in dbaudit's
-> [`procedures.md`](../dbaudit/procedures.md), [`views.md`](../dbaudit/views.md) or
-> [`indexes.md`](../dbaudit/indexes.md): there they are static ⚠️ signals in stored code; here they are
+> `procedures.md`, `views.md` or
+> `indexes.md`: there they are static ⚠️ signals in stored code; here they are
 > confirmed or refuted with a plan, a statistic or the application code, and they apply to SQL wherever
 > it lives. Each entry gives the evidence that proves it (**Plan**, **Stats** or **Text**), the theory it
 > violates ([`theory.md`](theory.md)), the fix, and the severity per [`scoring.md`](scoring.md). Plan
@@ -98,8 +100,8 @@ tie-breaker (dbaudit procedures.md *Offset pagination*).
 
 ## Q4. Statement shape
 
-These have full entries in dbaudit [`procedures.md`](../dbaudit/procedures.md) and
-[`views.md`](../dbaudit/views.md); grade them here with the evidence a plan or the code adds:
+These have full entries in dbaudit `procedures.md` and
+`views.md`; grade them here with the evidence a plan or the code adds:
 
 | Anti-pattern | Theory | Severity here |
 |---|---|---|

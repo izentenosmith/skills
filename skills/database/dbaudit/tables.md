@@ -1,5 +1,7 @@
 # Tables — Schema Integrity & Storage Architecture
 
+**Contents:** 🟢 Well done · 🔴 Not well done · Engine notes — PostgreSQL dumps · A note on normal forms · A note on the ER model behind the tables · Checklist
+
 > Criteria for grading `tables.sql` (or the `CREATE TABLE` statements wherever they live). Tables are
 > the foundation of the data model; evaluate them for violations of relational theory (see
 > [`theory.md`](theory.md)), for modelling decisions that were never made (see

@@ -126,7 +126,7 @@
       "name": "dbarchitect",
       "family": "database",
       "path": "skills/database/dbarchitect/SKILL.md",
-      "purpose": "Decide which data stores a system needs and how data flows between them \u2014 the system of record for each fact, what is derived (caches, search indexes, warehouses, replicas), OLTP vs OLAP, the data model per store (relational, document, graph, key-value, wide-column, time-series, log), the replication topology and its guarantees, the partitioning scheme, where coordination is required, and the isolation each workflow needs.",
+      "purpose": "Answers which data stores a system needs and which one owns each fact \u2014 use it for any such question, even a short conversational one with no files \u2014 adding Elasticsearch, Redis, Kafka or Mongo; copies that disagree or drift; code writing to several stores at once; a primary overloaded by reporting or analytics; replica vs warehouse; sharding; how stale a read may be.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {
@@ -138,14 +138,14 @@
         "scripts": [],
         "harness": true
       },
-      "last_eval": "2026-11-18",
+      "last_eval": "2026-11-21",
       "evals": [
         {
           "eval": "eval-48-dbarchitect-one-system-of-record-no-dual-writes",
           "id": 48,
-          "iteration": "iteration-49",
+          "iteration": "iteration-60",
           "n": 3,
-          "date": "2026-11-18",
+          "date": "2026-11-21",
           "delta_mean": 1.0,
           "cap_mean": 1.0
         }
@@ -155,22 +155,22 @@
       "name": "dbaudit",
       "family": "database",
       "path": "skills/database/dbaudit/SKILL.md",
-      "purpose": "Audit a relational database, legacy or current, from its DDL or supplied structure against relational theory, ER-modelling rules and a scored rubric.",
+      "purpose": "Audits a relational database, legacy or current, from its DDL or supplied structure against relational theory, ER-modelling rules and a scored rubric.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {},
         "scripts": [],
         "harness": true
       },
-      "last_eval": "2026-11-18",
+      "last_eval": "2026-11-21",
       "evals": [
         {
           "eval": "eval-30-dbaudit-postgres-dump-scored-not-fixed",
           "id": 30,
-          "iteration": "iteration-49",
+          "iteration": "iteration-62",
           "n": 3,
-          "date": "2026-11-18",
-          "delta_mean": 0.905,
+          "date": "2026-11-21",
+          "delta_mean": 0.953,
           "cap_mean": 1.0
         }
       ]
@@ -179,21 +179,32 @@
       "name": "dbbuild",
       "family": "database",
       "path": "skills/database/dbbuild/SKILL.md",
-      "purpose": "Generate the DDL for an accepted database proposal \u2014 ordered .sql files that run as written on the target engine (tables, keys, constraints, indexes, views, triggers, grants, seed data), each with a header naming the proposal, the design, the engine, the date and the mode, cross-checked against the design and its Barker ER and relational diagrams, plus a negative test for every constraint.",
+      "purpose": "Generates the DDL for an accepted database proposal \u2014 ordered .sql files that run as written on the target engine (tables, keys, constraints, indexes, views, triggers, grants, seed data), each with a header naming the proposal, the design, the engine, the date and the mode, cross-checked against the design and its Barker ER and relational diagrams, plus a negative test for every constraint.",
       "owner": "izentenosmith",
       "dependencies": {
-        "copied_from": {},
+        "copied_from": {
+          "dbaudit": [
+            "er-modeling.md",
+            "theory.md"
+          ],
+          "dbdesign": [
+            "physical-design.md"
+          ],
+          "dbpropose": [
+            "proposal.md"
+          ]
+        },
         "scripts": [],
         "harness": true
       },
-      "last_eval": "2026-11-18",
+      "last_eval": "2026-11-21",
       "evals": [
         {
           "eval": "eval-34-dbbuild-executable-ddl-from-accepted-proposal",
           "id": 34,
-          "iteration": "iteration-49",
+          "iteration": "iteration-62",
           "n": 3,
-          "date": "2026-11-18",
+          "date": "2026-11-21",
           "delta_mean": 1.0,
           "cap_mean": 1.0
         }
@@ -203,7 +214,7 @@
       "name": "dbdesign",
       "family": "database",
       "path": "skills/database/dbdesign/SKILL.md",
-      "purpose": "Design a new relational database, or redesign an existing one, from requirements, a domain model or a dbaudit report \u2014 a requirements dossier with a business-rule catalogue, a Barker conceptual model, functional dependencies, candidate keys and a normal-form assessment per relation, relational tables with keys and constraints, every rule mapped to the mechanism that enforces it, and DDL that runs as written on the target engine.",
+      "purpose": "Designs a new relational database, or redesigns an existing one, from requirements, a domain model or a dbaudit report \u2014 a requirements dossier with a business-rule catalogue, a Barker conceptual model, functional dependencies, candidate keys and a normal-form assessment per relation, relational tables with keys and constraints, every rule mapped to the mechanism that enforces it, and DDL that runs as written on the target engine.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {
@@ -215,14 +226,14 @@
         "scripts": [],
         "harness": true
       },
-      "last_eval": "2026-11-18",
+      "last_eval": "2026-11-21",
       "evals": [
         {
           "eval": "eval-31-dbdesign-sqlite-from-requirements-traps",
           "id": 31,
-          "iteration": "iteration-49",
+          "iteration": "iteration-62",
           "n": 3,
-          "date": "2026-11-18",
+          "date": "2026-11-21",
           "delta_mean": 0.974,
           "cap_mean": 1.0
         }
@@ -232,7 +243,7 @@
       "name": "dbdiagram",
       "family": "database",
       "path": "skills/database/dbdiagram/SKILL.md",
-      "purpose": "Draw a database's two editable draw.io diagrams from a design, DDL or other structure \u2014 a Barker (Oracle CASE*METHOD) ER model with UPPERCASE entities, #/*/o attributes, binary relationships carrying a role name and a solid or dashed half at each end, UID bars, intersection entities instead of ternary or Chen connectors, and inferred semantics labelled as inferred; and a relational model with every table, column, PK, FK, alternate key, nullability and check \u2014 with semantic cell IDs that trace each entity to its table, validated XML and a provenance note.",
+      "purpose": "Draws a database's two editable draw.io diagrams from a design, DDL or other structure \u2014 a Barker (Oracle CASE*METHOD) ER model with UPPERCASE entities, #/*/o attributes, binary relationships carrying a role name and a solid or dashed half at each end, UID bars, intersection entities instead of ternary or Chen connectors, and inferred semantics labelled as inferred; and a relational model with every table, column, PK, FK, alternate key, nullability and check \u2014 with semantic cell IDs that trace each entity to its table, validated XML and a provenance note.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {
@@ -244,14 +255,14 @@
         "scripts": [],
         "harness": true
       },
-      "last_eval": "2026-11-18",
+      "last_eval": "2026-11-21",
       "evals": [
         {
           "eval": "eval-32-dbdiagram-barker-and-relational-from-design",
           "id": 32,
-          "iteration": "iteration-49",
+          "iteration": "iteration-62",
           "n": 3,
-          "date": "2026-11-18",
+          "date": "2026-11-21",
           "delta_mean": 1.0,
           "cap_mean": 1.0
         }
@@ -261,7 +272,7 @@
       "name": "dbpropose",
       "family": "database",
       "path": "skills/database/dbpropose/SKILL.md",
-      "purpose": "Turn a database audit, a target design and its ER and relational diagrams into a reviewable proposal \u2014 a prioritized decision register, a migration sequence whose every step names its validation, rollback and blast radius, and the open questions each decision waits on \u2014 written to proposal/proposal.md for acceptance before any DDL.",
+      "purpose": "Turns a database audit, a target design and its ER and relational diagrams into a reviewable proposal \u2014 a prioritized decision register, a migration sequence whose every step names its validation, rollback and blast radius, and the open questions each decision waits on \u2014 written to proposal/proposal.md for acceptance before any DDL.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {
@@ -276,15 +287,15 @@
         "scripts": [],
         "harness": true
       },
-      "last_eval": "2026-11-18",
+      "last_eval": "2026-11-21",
       "evals": [
         {
           "eval": "eval-33-dbpropose-orphans-before-constraints",
           "id": 33,
-          "iteration": "iteration-49",
+          "iteration": "iteration-62",
           "n": 3,
-          "date": "2026-11-18",
-          "delta_mean": 1.0,
+          "date": "2026-11-21",
+          "delta_mean": 0.974,
           "cap_mean": 1.0
         }
       ]
@@ -293,7 +304,7 @@
       "name": "dbquery",
       "family": "database",
       "path": "skills/database/dbquery/SKILL.md",
-      "purpose": "Review the SQL a system actually runs \u2014 query text in application code, ORM logs, reports, views and procedures, together with execution plans (EXPLAIN ANALYZE, SQL Server showplan or Query Store, Oracle DBMS_XPLAN) and workload statistics (pg_stat_statements, Query Store, slow logs).",
+      "purpose": "Reviews the SQL a system actually runs \u2014 query text in application code, ORM logs, reports, views and procedures, together with execution plans (EXPLAIN ANALYZE, SQL Server showplan or Query Store, Oracle DBMS_XPLAN) and workload statistics (pg_stat_statements, Query Store, slow logs).",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {
@@ -307,16 +318,16 @@
         "scripts": [],
         "harness": true
       },
-      "last_eval": "2026-11-22",
+      "last_eval": "2026-11-21",
       "evals": [
         {
           "eval": "eval-47-dbquery-workload-ranked-plans-read-indexes-weighed",
           "id": 47,
-          "iteration": "iteration-49",
+          "iteration": "iteration-62",
           "n": 3,
-          "date": "2026-11-22",
-          "delta_mean": 0.976,
-          "cap_mean": 0.944
+          "date": "2026-11-21",
+          "delta_mean": 1.0,
+          "cap_mean": 1.0
         }
       ]
     },

@@ -28,11 +28,11 @@
 | 28-dockerfile-repair-pins-and-drops-root | i80 | 3 | 0.94 ± 0.02 | 0.62 | +0.32 | 1.00 | 1.00 |
 | 29-release-notes-translates-drops-and-leads-with-breaking | i49 | 3 | 1.00 ± 0.00 | 0.54 | +0.46 | 1.00 | 0.86 |
 | 3-refactor-promotes-noted-smell | i55 | 3 | 0.96 ± 0.07 | 0.12 | +0.83 | 1.00 | 0.75 |
-| 30-dbaudit-postgres-dump-scored-not-fixed | i49 | 3 | 0.91 ± 0.11 | 0.36 | +0.55 | 1.00 | 1.00 |
-| 31-dbdesign-sqlite-from-requirements-traps | i49 | 3 | 0.97 ± 0.04 | 0.54 | +0.44 | 1.00 | 1.00 |
-| 32-dbdiagram-barker-and-relational-from-design | i49 | 3 | 1.00 ± 0.00 | 0.65 | +0.35 | 1.00 | 1.00 |
-| 33-dbpropose-orphans-before-constraints | i49 | 3 | 1.00 ± 0.00 | 0.61 | +0.39 | 1.00 | 0.80 |
-| 34-dbbuild-executable-ddl-from-accepted-proposal | i49 | 3 | 1.00 ± 0.00 | 0.89 | +0.11 | 1.00 | 1.00 |
+| 30-dbaudit-postgres-dump-scored-not-fixed | i62 | 3 | 0.95 ± 0.04 | 0.36 | +0.60 | 1.00 | 1.00 |
+| 31-dbdesign-sqlite-from-requirements-traps | i62 | 3 | 0.97 ± 0.04 | 0.54 | +0.44 | 1.00 | 1.00 |
+| 32-dbdiagram-barker-and-relational-from-design | i62 | 3 | 1.00 ± 0.00 | 0.77 | +0.23 | 1.00 | 1.00 |
+| 33-dbpropose-orphans-before-constraints | i62 | 3 | 0.97 ± 0.04 | 0.39 | +0.59 | 1.00 | 0.80 |
+| 34-dbbuild-executable-ddl-from-accepted-proposal | i62 | 3 | 1.00 ± 0.00 | 0.89 | +0.11 | 1.00 | 1.00 |
 | 35-container-hardening-review-socket-and-firewall | i80 | 3 | 1.00 ± 0.00 | 0.64 | +0.36 | 1.00 | 1.00 |
 | 36-container-debug-oom-localhost-crlf | i80 | 3 | 0.96 ± 0.04 | 0.62 | +0.33 | 1.00 | 1.00 |
 | 37-docker-swarm-review-quorum-and-state | i80 | 3 | 1.00 ± 0.00 | 0.52 | +0.48 | 1.00 | 0.75 |
@@ -46,8 +46,8 @@
 | 44-hardening-review-mixed-estate | i49 | 3 | 0.98 ± 0.03 | 0.68 | +0.30 | 1.00 | 1.00 |
 | 45-hardening-design-tier-aware-baseline | i49 | 3 | 1.00 ± 0.00 | 0.73 | +0.27 | 1.00 | 1.00 |
 | 46-hardening-propose-no-lockout | i49 | 3 | 0.97 ± 0.04 | 0.61 | +0.36 | 1.00 | 1.00 |
-| 47-dbquery-workload-ranked-plans-read-indexes-weighed | i49 | 3 | 0.98 ± 0.04 | 0.86 | +0.12 | 0.94 | 1.00 |
-| 48-dbarchitect-one-system-of-record-no-dual-writes | i49 | 3 | 1.00 ± 0.00 | 0.67 | +0.33 | 1.00 | 1.00 |
+| 47-dbquery-workload-ranked-plans-read-indexes-weighed | i62 | 3 | 1.00 ± 0.00 | 0.86 | +0.14 | 1.00 | 1.00 |
+| 48-dbarchitect-one-system-of-record-no-dual-writes | i60 | 3 | 1.00 ± 0.00 | 0.73 | +0.27 | 1.00 | 1.00 |
 | 49-peer-review-claim-omission-injection | i49 | 3 | 1.00 ± 0.00 | 0.29 | +0.71 | 1.00 | 1.00 |
 | 5-verdict-cuts-and-slices | i58 | 3 | 1.00 ± 0.00 | 0.33 | +0.67 | 1.00 | 1.00 |
 | 50-pr-prep-splits-and-discloses | i49 | 3 | 0.95 ± 0.04 | 0.31 | +0.64 | 1.00 | 1.00 |
@@ -81,7 +81,7 @@
 | 8-hotfix-node-shared-cause | i49 | 3 | 1.00 ± 0.00 | 0.38 | +0.62 | 1.00 | 1.00 |
 | 9-hotfix-jvm-both-callers | i49 | 3 | 1.00 ± 0.00 | 0.71 | +0.29 | 1.00 | 1.00 |
 
-**Delta — current 0.98 vs baseline 0.51**
+**Delta — current 0.98 vs baseline 0.50**
 **Capability — current 1.00 vs baseline 0.86**
 **Held-out (eval 59), not in the two lines above: delta — current 1.00 vs baseline 0.44; capability — current 1.00 vs baseline 1.00**
 
@@ -115,11 +115,11 @@
 | 28-dockerfile-repair-pins-and-drops-root | 3/3 | 0/3 | 1 | +0.32 | — | $1.51 | $0.64 | inconsistent; noise unknown |
 | 29-release-notes-translates-drops-and-leads-with-breaking | 3/3 | 3/3 | 1 | +0.46 | — | $0.41 | $0.28 | noise unknown; saturated |
 | 3-refactor-promotes-noted-smell | 3/3 | 2/3 | 1 | +0.83 | — | $0.77 | $0.53 | inconsistent; noise unknown; saturated |
-| 30-dbaudit-postgres-dump-scored-not-fixed | 3/3 | 1/3 | 1 | +0.55 | — | $1.93 | $0.32 | inconsistent; noise unknown |
-| 31-dbdesign-sqlite-from-requirements-traps | 3/3 | 2/3 | 1 | +0.44 | — | $1.35 | $0.59 | inconsistent; noise unknown; saturated |
-| 32-dbdiagram-barker-and-relational-from-design | 3/3 | 3/3 | 1 | +0.35 | — | $1.55 | $1.11 | noise unknown; saturated |
-| 33-dbpropose-orphans-before-constraints | 3/3 | 3/3 | 1 | +0.39 | — | $1.27 | $0.89 | noise unknown; saturated |
-| 34-dbbuild-executable-ddl-from-accepted-proposal | 3/3 | 3/3 | 1 | +0.11 | — | $0.67 | $0.48 | noise unknown; baseline high; saturated |
+| 30-dbaudit-postgres-dump-scored-not-fixed | 3/3 | 1/3 | 1 | +0.60 | — | $2.07 | $0.34 | inconsistent; noise unknown; saturated |
+| 31-dbdesign-sqlite-from-requirements-traps | 3/3 | 2/3 | 1 | +0.44 | — | $1.28 | $0.48 | inconsistent; noise unknown; saturated |
+| 32-dbdiagram-barker-and-relational-from-design | 3/3 | 3/3 | 1 | +0.23 | — | $1.46 | $0.82 | noise unknown; saturated |
+| 33-dbpropose-orphans-before-constraints | 3/3 | 2/3 | 1 | +0.59 | — | $1.11 | $1.04 | inconsistent; noise unknown; saturated |
+| 34-dbbuild-executable-ddl-from-accepted-proposal | 3/3 | 3/3 | 1 | +0.11 | — | $0.65 | $0.42 | noise unknown; baseline high; saturated |
 | 35-container-hardening-review-socket-and-firewall | 3/3 | 3/3 | 1 | +0.36 | — | $0.93 | $0.27 | noise unknown; saturated |
 | 36-container-debug-oom-localhost-crlf | 3/3 | 1/3 | 1 | +0.33 | — | $0.47 | $0.30 | inconsistent; noise unknown; saturated |
 | 37-docker-swarm-review-quorum-and-state | 3/3 | 3/3 | 1 | +0.48 | — | $0.98 | $0.37 | noise unknown; saturated |
@@ -133,8 +133,8 @@
 | 44-hardening-review-mixed-estate | 3/3 | 2/3 | 1 | +0.30 | — | $1.63 | $0.42 | inconsistent; noise unknown; saturated |
 | 45-hardening-design-tier-aware-baseline | 3/3 | 3/3 | 1 | +0.27 | — | $1.88 | $0.61 | noise unknown; saturated |
 | 46-hardening-propose-no-lockout | 3/3 | 2/3 | 1 | +0.36 | — | $1.15 | $0.52 | inconsistent; noise unknown; saturated |
-| 47-dbquery-workload-ranked-plans-read-indexes-weighed | 3/3 | 2/3 | 1 | +0.12 | — | $0.99 | $0.52 | inconsistent; noise unknown; baseline high; saturated |
-| 48-dbarchitect-one-system-of-record-no-dual-writes | 3/3 | 3/3 | 1 | +0.33 | — | $0.73 | $0.32 | noise unknown; saturated |
+| 47-dbquery-workload-ranked-plans-read-indexes-weighed | 3/3 | 3/3 | 1 | +0.14 | — | $1.06 | $0.54 | noise unknown; baseline high; saturated |
+| 48-dbarchitect-one-system-of-record-no-dual-writes | 3/3 | 3/3 | 1 | +0.27 | — | $0.77 | $0.34 | noise unknown; saturated |
 | 49-peer-review-claim-omission-injection | 3/3 | 3/3 | 1 | +0.71 | — | $0.98 | $0.31 | noise unknown; saturated |
 | 5-verdict-cuts-and-slices | 3/3 | 3/3 | 1 | +0.67 | — | $0.57 | $0.37 | noise unknown; saturated |
 | 50-pr-prep-splits-and-discloses | 3/3 | 1/3 | 1 | +0.64 | — | $0.88 | $0.52 | inconsistent; noise unknown |
@@ -168,7 +168,7 @@
 | 8-hotfix-node-shared-cause | 3/3 | 3/3 | 1 | +0.62 | — | $0.62 | $0.20 | noise unknown; saturated |
 | 9-hotfix-jvm-both-callers | 3/3 | 3/3 | 1 | +0.29 | — | $0.46 | $0.19 | noise unknown; saturated |
 
-**62 of 76 evals are saturated**, so they work as regression tests. Only the others can show that a skill edit helped.
+**63 of 76 evals are saturated**, so they work as regression tests. Only the others can show that a skill edit helped.
 **9 baseline(s) score 0.80 or more on delta** without the skill.
 
 ## Delta assertions the baseline also passed (still non-discriminating)
@@ -321,16 +321,18 @@
 - prior venue_id smell explicitly left, not silently dropped
 
 **eval-30-dbaudit-postgres-dump-scored-not-fixed**
+- cross-file index criteria: the unindexed order_line.order_id FK and the redundant ix_product_sku
 - no secret value echoed (kind and location only)
+- both credentials recorded by kind and location
 - no DDL, migration or config file changed
 - evaluates and stops: no target table designed
 
 **eval-31-dbdesign-sqlite-from-requirements-traps**
+- the DDL runs on SQLite, the engine the requirements name
 - plan prices kept as effective-dated history, unique per plan and date (executed)
 - age not stored: a birth date instead (executed)
 - natural keys are UNIQUE alternates, not primary keys (email, VAT, member number)
 - the freelancer question left open: the company link optional and listed as an open question
-- assumptions kept apart from open questions
 - nothing applied: no database file created
 - the requirements left untouched
 
@@ -341,16 +343,15 @@
 - the three-way association drawn as an intersection entity with three binary relationships
 - every relationship carries a lowercase role name at each end
 - each end's optionality drawn: dashed may-be, solid must-be
+- cell IDs are semantic and trace each entity to its table
 - the inferred PET – VET relationship labelled as inferred
 - a UID bar on each relationship in a UID, and on no other
 - every alternate key on the relational page, composite ones included
 - microchip not drawn as a key while Q3 is open
+- a provenance note naming the design on both pages
 - the design left untouched
 
 **eval-33-dbpropose-orphans-before-constraints**
-- orphan rows resolved before the foreign keys are declared
-- the Critical handled before the name split
-- the full_name split is expand/contract, contract gated on the Reports add-on
 - no finding id invented
 - the design and both diagrams cited by path
 - needs-data flags carried as open questions
@@ -519,13 +520,13 @@
 
 **eval-47-dbquery-workload-ranked-plans-read-indexes-weighed**
 - workload ranked by total time: the N+1 lookup ahead of the slow monthly report
-- coverage stated as a share of total time
 - the report's misestimate traced to stale statistics (autovacuum disabled), fixed by ANALYZE
 - open-orders list: (status, created_at) and seek paging
 - the laptop plan not taken as production evidence
 - the redundant proposed index on order_line(order_id) rejected
 - the note index rejected on write cost
 - product search needs a trigram (or full-text) index, not a B-tree on name
+- prescriptions name how to verify them
 - the dbaudit flags settled by id
 - no secret value echoed
 - never connected: no psql-staging call
@@ -533,14 +534,15 @@
 
 **eval-48-dbarchitect-one-system-of-record-no-dual-writes**
 - seat state has one system of record with a uniqueness constraint
+- MongoDB not adopted on a proposal with no numbers
 - no sharding without a number that needs it
 - derived stores fed by an outbox or CDC
+- My tickets gets read-your-writes
 - payment webhooks made idempotent
 - zero lost paid orders met by synchronous replication
 - dashboard staleness of 15 minutes stated
 - unknown search load carried as an open question
 - no secret value echoed
-- decides and stops: no DDL written
 - nothing provisioned: only markdown written, no fixture file changed
 
 **eval-49-peer-review-claim-omission-injection**
@@ -804,12 +806,14 @@
 - carried smells recorded with a promotion condition (2/3)
 
 **eval-30-dbaudit-postgres-dump-scored-not-fixed**
-- cross-file index criteria: the unindexed order_line.order_id FK and the redundant ix_product_sku (2/3)
-- both credentials recorded by kind and location (2/3)
-- strengths recorded: the payment table (1/3)
+- findings carry confidence, theory, severity and file:line (2/3)
+- runtime facts flagged needs-data, never graded (2/3)
 
 **eval-31-dbdesign-sqlite-from-requirements-traps**
 - the member subtypes mapped deliberately, with the choice stated (2/3)
+
+**eval-33-dbpropose-orphans-before-constraints**
+- the Critical handled before the name split (2/3)
 
 **eval-36-container-debug-oom-localhost-crlf**
 - evidence-only mode named (2/3)
@@ -830,9 +834,6 @@
 
 **eval-46-hardening-propose-no-lockout**
 - the private admin path is live before public SSH is closed (2/3)
-
-**eval-47-dbquery-workload-ranked-plans-read-indexes-weighed**
-- score shows the base and its cap (2/3)
 
 **eval-50-pr-prep-splits-and-discloses**
 - a split proposed: the refactor first, the filters after (2/3)

@@ -1,5 +1,7 @@
 # Triggers — Invisible Dependencies & Locking
 
+**Contents:** 🟢 Well done · 🔴 Not well done · Engine notes — PostgreSQL · Checklist
+
 > Criteria for grading `triggers.sql`. Triggers are the most dangerous objects in a legacy database:
 > they execute silently, obscure data lineage, and run inside the invoking transaction. Transaction,
 > locking and isolation background in [`theory.md`](theory.md) §5; constraint kinds in §7.1; severity

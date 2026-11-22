@@ -39,7 +39,7 @@ Or one at a time:
 | appsec | `npx skills add izentenosmith/skills --skill appsec` |
 | hardening | `npx skills add izentenosmith/skills --skill hardening` |
 
-The repo is private: you need read access and GitHub auth first. That setup, and the flags (`-a`, `-g`, `-y`), are in the [root README](../../README.md#install-with-npx). Or copy the
+The repo is public, so no GitHub account is needed; the flags (`-a`, `-g`, `-y`) are in the [root README](../../README.md#install-with-npx). Or copy the
 folder — each is self-contained (`SKILL.md` plus its reference docs, no symlinks).
 
 Invoke by name, or let the description trigger it:
