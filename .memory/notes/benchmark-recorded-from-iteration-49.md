@@ -29,5 +29,5 @@ Since 2026-11-21 the database rows come from iteration 56 (evals 30–34, 47 and
 audit), iteration 60 (34 and 48 again) and iteration 62 (30–34 and 47 after five fixes). Iterations
 60 and 61 also hold another branch's development runs (by `--iteration` collision), so never pass 60
 or 61 whole: the full record is `--record` over 48, 49, 50, 55, 56, 57, 58, then a scratch folder
-named `iteration-60` of symlinks to only `eval-34-*` and `eval-48-*`, then `iteration-62`. Since 2026-11-21 iteration 70 (the infrastructure evals 21–26, re-run after the skill audit) follows `iteration-62`. Check all
+named `iteration-60` of symlinks to only `eval-34-*` and `eval-48-*`, then `iteration-62`. Since 2026-11-21 iteration 70 (the infrastructure evals 21–26, re-run after the skill audit) follows `iteration-62`, then `iteration-80` (evals 6, 28, 35–37 after the container audit; it holds only those five). Check all
 76 rows remain and that no row outside the re-run moved.

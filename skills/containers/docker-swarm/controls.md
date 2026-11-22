@@ -1,5 +1,7 @@
 # Controls — Seven Domains
 
+**Contents:** 1. cluster · 2. rollout · 3. state · 4. network · 5. secrets · 6. scheduling · 7. stack file
+
 > The criteria Review grades against and Design satisfies. Each domain has 🟢 what good looks like,
 > 🔴 the anti-patterns (**What / Why / Detect / Fix / Severity**), and the **Checklist** whose criteria
 > are scored proportionally per [`scoring.md`](scoring.md). Every 🔴 names its principle in

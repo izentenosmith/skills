@@ -1,5 +1,7 @@
 # Service catalog
 
+**Contents:** PostgreSQL · MySQL / MariaDB · MongoDB · Redis / Valkey · RabbitMQ · Kafka · Elasticsearch / OpenSearch · Meilisearch · MinIO · Mailpit · One-shot migrations · Conventions across all of these
+
 Correct starting definitions for the backing services [SKILL.md](SKILL.md) Step 1 detects. Each entry gives the image, the **healthcheck that proves readiness** (not just an open port), the data path that needs a named volume, and the connection string as seen **from inside the network**.
 
 Pin to the major your production runs. The versions here are current-stable examples, not recommendations to upgrade.
@@ -265,7 +267,7 @@ minio:
 
 **Connection:** endpoint `http://minio:9000`, path-style addressing, region `us-east-1`.
 
-- **Pin a dated `RELEASE.` tag, never `latest`** — and check the image is still published before adopting it: MinIO moved its community edition to source-only distribution in late 2025, so new tags may not appear on Docker Hub. If it's gone, pin the last tag you've verified pulls, or use another S3-compatible emulator, and say which.
+- **Pin a dated `RELEASE.` tag, never `latest`** — and check the image is still published before adopting it: MinIO has moved its community edition to source-only distribution, so new tags may not appear on Docker Hub. If it's gone, pin the last tag you've verified pulls, or use another S3-compatible emulator, and say which.
 - **Set `forcePathStyle: true` / `AWS_S3_FORCE_PATH_STYLE`** in the client. Virtual-host addressing (`bucket.minio:9000`) doesn't resolve inside the compose network.
 - Bucket creation needs a one-shot `mc` container with `depends_on: {minio: {condition: service_healthy}}`.
 

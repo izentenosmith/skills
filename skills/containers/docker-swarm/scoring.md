@@ -1,5 +1,7 @@
 # Scoring — Severity, Confidence, the 0–10 Formula, the Gate, Templates
 
+**Contents:** Severity taxonomy · Quality scale · Detection confidence · Scoring model · Theory → domain mapping · Templates
+
 > How a Swarm review is graded and written down. **Rubric version: `v1.0`.** Every output records the
 > rubric version and the source version (commit) it read, plus the date of any captured cluster output.
 > Each finding names the principle it violates from [`theory.md`](theory.md) (S-n).

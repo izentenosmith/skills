@@ -1,5 +1,7 @@
 # Theory — The Principles Every Swarm Finding Cites (S1–S12)
 
+**Contents:** Part A: How Swarm works · Part B: Changing a running system · Part C: State, network and placement · Part D: Secrets and the cluster itself
+
 > Every finding in a review names one of these. Each principle states **what it says**, **why it
 > matters** for a Swarm cluster, and **what violating it looks like** in a stack file or a cluster.
 > Sources:

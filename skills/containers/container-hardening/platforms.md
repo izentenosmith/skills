@@ -1,5 +1,7 @@
 # Platforms — One Control, Four Spellings
 
+**Contents:** The translation table · Proving it: `docker inspect` templates · Finding candidates: grep signals · Scanners and what they see
+
 > Every control in [`controls.md`](controls.md) as a `docker run` flag, a Compose key, a Kubernetes
 > field and a Swarm service option; the `docker inspect` template that proves it took effect; and the
 > grep signal that finds a candidate in each file format. **A signal match is a candidate, not a
@@ -21,7 +23,7 @@
 | AppArmor / SELinux | `--security-opt apparmor=<p>` / `label=type:<t>` | `security_opt: [...]` | `appArmorProfile: {type: RuntimeDefault}` (1.30+), `seLinuxOptions` | daemon default only |
 | Read-only root | `--read-only --tmpfs /tmp:size=64m,noexec,nosuid` | `read_only: true`, `tmpfs: ["/tmp:size=64m,noexec,nosuid"]` | `readOnlyRootFilesystem: true` + an `emptyDir` (`medium: Memory`, `sizeLimit`) | `read_only` honoured; `tmpfs` mounts via `volumes` `type: tmpfs` |
 | Memory | `--memory 512m --memory-swap 512m` | `mem_limit: 512m`, `memswap_limit: 512m` (or `deploy.resources.limits.memory`) | `resources.limits.memory` (pod spec) | `deploy.resources.limits.memory` |
-| Pids | `--pids-limit 256` | `pids_limit: 256` | kubelet `podPidsLimit` (node setting) | `deploy.resources.limits.pids` on recent engines |
+| Pids | `--pids-limit 256` | `pids_limit: 256` | kubelet `podPidsLimit` (node setting) | `deploy.resources.limits.pids` (Engine 23.0 and later; `--limit-pids` on `docker service create`) |
 | CPU | `--cpus 1.5` | `cpus: 1.5` | `resources.limits.cpu` | `deploy.resources.limits.cpus` |
 | Host namespaces | (omit `--pid/--network/--ipc host`) | (omit `pid`, `network_mode`, `ipc`: `host`) | `hostPID/hostNetwork/hostIPC: false` (pod spec) | `network_mode` ignored; host networking via the `host` network |
 | User namespaces | daemon `userns-remap` or rootless | same (daemon) | `hostUsers: false` (pod spec; needs kernel and runtime support) | daemon |

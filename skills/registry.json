@@ -6,22 +6,22 @@
       "name": "container-debug",
       "family": "containers",
       "path": "skills/containers/container-debug/SKILL.md",
-      "purpose": "Diagnose a container that won't start, won't stay up, can't reach another service, gets killed, or behaves differently in a container than outside one \u2014 Docker, Compose, Swarm or Kubernetes.",
+      "purpose": "Diagnoses a container that won't start, won't stay up, can't reach another service, gets killed, or behaves differently in a container than outside one \u2014 Docker, Compose, Swarm or Kubernetes.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {},
         "scripts": [],
         "harness": true
       },
-      "last_eval": "2026-11-18",
+      "last_eval": "2026-11-22",
       "evals": [
         {
           "eval": "eval-36-container-debug-oom-localhost-crlf",
           "id": 36,
-          "iteration": "iteration-49",
+          "iteration": "iteration-80",
           "n": 3,
-          "date": "2026-11-18",
-          "delta_mean": 0.986,
+          "date": "2026-11-22",
+          "delta_mean": 0.958,
           "cap_mean": 1.0
         }
       ]
@@ -30,21 +30,21 @@
       "name": "container-hardening",
       "family": "containers",
       "path": "skills/containers/container-hardening/SKILL.md",
-      "purpose": "Review or harden how containers run \u2014 the runtime configuration in docker run scripts, Compose files, Kubernetes manifests and Swarm stacks, plus the image supply chain \u2014 graded against container-security theory (namespaces, capabilities, seccomp and LSMs, user namespaces, least privilege) and a scored rubric.",
+      "purpose": "Reviews or hardens how containers run \u2014 the runtime configuration in docker run scripts, Compose files, Kubernetes manifests and Swarm stacks, plus the image supply chain \u2014 graded against container-security theory (namespaces, capabilities, seccomp and LSMs, user namespaces, least privilege) and a scored rubric.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {},
         "scripts": [],
         "harness": true
       },
-      "last_eval": "2026-11-18",
+      "last_eval": "2026-11-22",
       "evals": [
         {
           "eval": "eval-35-container-hardening-review-socket-and-firewall",
           "id": 35,
-          "iteration": "iteration-49",
+          "iteration": "iteration-80",
           "n": 3,
-          "date": "2026-11-18",
+          "date": "2026-11-22",
           "delta_mean": 1.0,
           "cap_mean": 1.0
         }
@@ -54,21 +54,21 @@
       "name": "docker-compose",
       "family": "containers",
       "path": "skills/containers/docker-compose/SKILL.md",
-      "purpose": "Generate a Docker Compose stack for this repo \u2014 app services detected from the source, plus the databases, caches, queues and search engines it actually connects to \u2014 with named volumes, an isolated network, health gates, a .env.example and a dev override.",
+      "purpose": "Generates a Docker Compose stack for this repo \u2014 app services detected from the source, plus the databases, caches, queues and search engines it actually connects to \u2014 with named volumes, an isolated network, health gates, a .env.example and a dev override.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {},
         "scripts": [],
         "harness": true
       },
-      "last_eval": "2026-11-18",
+      "last_eval": "2026-11-22",
       "evals": [
         {
           "eval": "eval-6-compose-detects-real-services",
           "id": 6,
-          "iteration": "iteration-49",
+          "iteration": "iteration-80",
           "n": 3,
-          "date": "2026-11-18",
+          "date": "2026-11-22",
           "delta_mean": 1.0,
           "cap_mean": 1.0
         }
@@ -78,21 +78,21 @@
       "name": "docker-swarm",
       "family": "containers",
       "path": "skills/containers/docker-swarm/SKILL.md",
-      "purpose": "Review or design a Docker Swarm mode cluster and the stack files it runs with docker stack deploy \u2014 graded against orchestration theory (desired-state reconciliation, Raft quorum, rolling updates, node-scoped state) and a scored rubric.",
+      "purpose": "Reviews or designs a Docker Swarm mode cluster and the stack files it runs with docker stack deploy \u2014 graded against orchestration theory (desired-state reconciliation, Raft quorum, rolling updates, node-scoped state) and a scored rubric.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {},
         "scripts": [],
         "harness": true
       },
-      "last_eval": "2026-11-18",
+      "last_eval": "2026-11-22",
       "evals": [
         {
           "eval": "eval-37-docker-swarm-review-quorum-and-state",
           "id": 37,
-          "iteration": "iteration-49",
+          "iteration": "iteration-80",
           "n": 3,
-          "date": "2026-11-18",
+          "date": "2026-11-22",
           "delta_mean": 1.0,
           "cap_mean": 1.0
         }
@@ -102,22 +102,22 @@
       "name": "dockerfile",
       "family": "containers",
       "path": "skills/containers/dockerfile/SKILL.md",
-      "purpose": "Write or repair a production Dockerfile for this repo \u2014 stack detected from the source, multi-stage build, non-root runtime, pinned base \u2014 and generate or fix the .dockerignore that feeds it.",
+      "purpose": "Writes or repairs a production Dockerfile for this repo \u2014 stack detected from the source, multi-stage build, non-root runtime, pinned base \u2014 and generates or fixes the .dockerignore that feeds it.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {},
         "scripts": [],
         "harness": true
       },
-      "last_eval": "2026-11-18",
+      "last_eval": "2026-11-22",
       "evals": [
         {
           "eval": "eval-28-dockerfile-repair-pins-and-drops-root",
           "id": 28,
-          "iteration": "iteration-49",
+          "iteration": "iteration-80",
           "n": 3,
-          "date": "2026-11-18",
-          "delta_mean": 0.989,
+          "date": "2026-11-22",
+          "delta_mean": 0.943,
           "cap_mean": 1.0
         }
       ]

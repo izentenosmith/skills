@@ -1,5 +1,7 @@
 # Controls — Eight Domains and the Host
 
+**Contents:** 1. privilege · 2. isolation · 3. kernel · 4. filesystem · 5. resources · 6. network · 7. secrets · 8. supply chain · host
+
 > The criteria Review grades against and Harden fixes. Each domain has 🟢 what good looks like, 🔴 the
 > anti-patterns (**What / Why / Detect / Fix / Cost / Severity**), and the **Checklist** whose criteria
 > are scored proportionally per [`scoring.md`](scoring.md). Every 🔴 names its principle in

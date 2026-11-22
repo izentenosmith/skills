@@ -1,5 +1,7 @@
 # `.dockerignore`
 
+**Contents:** Why this file is not optional · The baseline · Per-stack additions · Testing what you wrote · Patterns and their traps · Deny-all, then allow · One file per Dockerfile · Repairing an existing file
+
 The reference catalog behind [SKILL.md](SKILL.md) Step 3.
 
 ---

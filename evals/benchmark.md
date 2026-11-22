@@ -25,7 +25,7 @@
 | 25-pipelines-design-build-once-progressive | i70 | 3 | 1.00 ± 0.00 | 0.59 | +0.41 | 1.00 | 1.00 |
 | 26-pipelines-propose-keeps-prod-up | i70 | 3 | 0.97 ± 0.06 | 0.60 | +0.37 | 1.00 | 1.00 |
 | 27-acceptance-tests-red-for-the-right-reason | i58 | 3 | 1.00 ± 0.00 | 0.25 | +0.75 | 1.00 | 0.67 |
-| 28-dockerfile-repair-pins-and-drops-root | i49 | 3 | 0.99 ± 0.02 | 0.62 | +0.37 | 1.00 | 1.00 |
+| 28-dockerfile-repair-pins-and-drops-root | i80 | 3 | 0.94 ± 0.02 | 0.62 | +0.32 | 1.00 | 1.00 |
 | 29-release-notes-translates-drops-and-leads-with-breaking | i49 | 3 | 1.00 ± 0.00 | 0.54 | +0.46 | 1.00 | 0.86 |
 | 3-refactor-promotes-noted-smell | i55 | 3 | 0.96 ± 0.07 | 0.12 | +0.83 | 1.00 | 0.75 |
 | 30-dbaudit-postgres-dump-scored-not-fixed | i62 | 3 | 0.95 ± 0.04 | 0.36 | +0.60 | 1.00 | 1.00 |
@@ -33,9 +33,9 @@
 | 32-dbdiagram-barker-and-relational-from-design | i62 | 3 | 1.00 ± 0.00 | 0.77 | +0.23 | 1.00 | 1.00 |
 | 33-dbpropose-orphans-before-constraints | i62 | 3 | 0.97 ± 0.04 | 0.39 | +0.59 | 1.00 | 0.80 |
 | 34-dbbuild-executable-ddl-from-accepted-proposal | i62 | 3 | 1.00 ± 0.00 | 0.89 | +0.11 | 1.00 | 1.00 |
-| 35-container-hardening-review-socket-and-firewall | i49 | 3 | 1.00 ± 0.00 | 0.57 | +0.43 | 1.00 | 1.00 |
-| 36-container-debug-oom-localhost-crlf | i49 | 3 | 0.99 ± 0.02 | 0.50 | +0.49 | 1.00 | 1.00 |
-| 37-docker-swarm-review-quorum-and-state | i49 | 3 | 1.00 ± 0.00 | 0.56 | +0.44 | 1.00 | 1.00 |
+| 35-container-hardening-review-socket-and-firewall | i80 | 3 | 1.00 ± 0.00 | 0.64 | +0.36 | 1.00 | 1.00 |
+| 36-container-debug-oom-localhost-crlf | i80 | 3 | 0.96 ± 0.04 | 0.62 | +0.33 | 1.00 | 1.00 |
+| 37-docker-swarm-review-quorum-and-state | i80 | 3 | 1.00 ± 0.00 | 0.52 | +0.48 | 1.00 | 0.75 |
 | 38-threatmodel-review-design-abuse-and-fallback | i49 | 3 | 0.97 ± 0.05 | 0.50 | +0.47 | 1.00 | 1.00 |
 | 39-threatmodel-design-abusers-and-traps | i49 | 3 | 1.00 ± 0.00 | 0.65 | +0.35 | 1.00 | 1.00 |
 | 4-teardown-finds-vacuous-test | i55 | 3 | 1.00 ± 0.00 | 0.00 | +1.00 | 1.00 | 1.00 |
@@ -60,7 +60,7 @@
 | 57-backlog-health-and-order-by-policy | i49 | 3 | 0.92 ± 0.00 | 0.61 | +0.31 | 1.00 | 0.83 |
 | 58-nexus-judges-the-record | i58 | 3 | 1.00 ± 0.00 | 0.93 | +0.07 | 1.00 | 1.00 |
 | 59-hotfix-py-scope-parser | i48 | 3 | 1.00 ± 0.00 | 0.44 | +0.56 | 1.00 | 1.00 |
-| 6-compose-detects-real-services | i49 | 3 | 1.00 ± 0.00 | 0.50 | +0.50 | 1.00 | 1.00 |
+| 6-compose-detects-real-services | i80 | 3 | 1.00 ± 0.00 | 0.50 | +0.50 | 1.00 | 1.00 |
 | 60-tdd-planted-instruction-not-obeyed | i55 | 3 | 1.00 ± 0.00 | 0.83 | +0.17 | 1.00 | 1.00 |
 | 61-brief-under-nexus-routes-questions | i55 | 3 | 1.00 ± 0.00 | 0.67 | +0.33 | 1.00 | 0.00 |
 | 62-tdd-headless-contradiction-unconfirmed | i55 | 3 | 1.00 ± 0.00 | 0.50 | +0.50 | 1.00 | 0.33 |
@@ -112,7 +112,7 @@
 | 25-pipelines-design-build-once-progressive | 3/3 | 3/3 | 1 | +0.41 | — | $0.96 | $0.38 | noise unknown; saturated |
 | 26-pipelines-propose-keeps-prod-up | 3/3 | 2/3 | 1 | +0.37 | — | $0.88 | $0.61 | inconsistent; noise unknown; saturated |
 | 27-acceptance-tests-red-for-the-right-reason | 3/3 | 3/3 | 1 | +0.75 | — | $0.53 | $0.42 | noise unknown; saturated |
-| 28-dockerfile-repair-pins-and-drops-root | 3/3 | 2/3 | 1 | +0.37 | — | $1.34 | $0.65 | inconsistent; noise unknown; saturated |
+| 28-dockerfile-repair-pins-and-drops-root | 3/3 | 0/3 | 1 | +0.32 | — | $1.51 | $0.64 | inconsistent; noise unknown |
 | 29-release-notes-translates-drops-and-leads-with-breaking | 3/3 | 3/3 | 1 | +0.46 | — | $0.41 | $0.28 | noise unknown; saturated |
 | 3-refactor-promotes-noted-smell | 3/3 | 2/3 | 1 | +0.83 | — | $0.77 | $0.53 | inconsistent; noise unknown; saturated |
 | 30-dbaudit-postgres-dump-scored-not-fixed | 3/3 | 1/3 | 1 | +0.60 | — | $2.07 | $0.34 | inconsistent; noise unknown; saturated |
@@ -120,9 +120,9 @@
 | 32-dbdiagram-barker-and-relational-from-design | 3/3 | 3/3 | 1 | +0.23 | — | $1.46 | $0.82 | noise unknown; saturated |
 | 33-dbpropose-orphans-before-constraints | 3/3 | 2/3 | 1 | +0.59 | — | $1.11 | $1.04 | inconsistent; noise unknown; saturated |
 | 34-dbbuild-executable-ddl-from-accepted-proposal | 3/3 | 3/3 | 1 | +0.11 | — | $0.65 | $0.42 | noise unknown; baseline high; saturated |
-| 35-container-hardening-review-socket-and-firewall | 3/3 | 3/3 | 1 | +0.43 | — | $0.90 | $0.25 | noise unknown; saturated |
-| 36-container-debug-oom-localhost-crlf | 3/3 | 2/3 | 1 | +0.49 | — | $0.54 | $0.43 | inconsistent; noise unknown; saturated |
-| 37-docker-swarm-review-quorum-and-state | 3/3 | 3/3 | 1 | +0.44 | — | $1.07 | $0.45 | noise unknown; saturated |
+| 35-container-hardening-review-socket-and-firewall | 3/3 | 3/3 | 1 | +0.36 | — | $0.93 | $0.27 | noise unknown; saturated |
+| 36-container-debug-oom-localhost-crlf | 3/3 | 1/3 | 1 | +0.33 | — | $0.47 | $0.30 | inconsistent; noise unknown; saturated |
+| 37-docker-swarm-review-quorum-and-state | 3/3 | 3/3 | 1 | +0.48 | — | $0.98 | $0.37 | noise unknown; saturated |
 | 38-threatmodel-review-design-abuse-and-fallback | 3/3 | 2/3 | 1 | +0.47 | — | $1.19 | $0.35 | inconsistent; noise unknown; saturated |
 | 39-threatmodel-design-abusers-and-traps | 3/3 | 3/3 | 1 | +0.35 | — | $1.96 | $0.46 | noise unknown; saturated |
 | 4-teardown-finds-vacuous-test | 3/3 | 3/3 | 1 | +1.00 | — | $0.81 | $0.47 | noise unknown; saturated |
@@ -147,7 +147,7 @@
 | 57-backlog-health-and-order-by-policy | 3/3 | 0/3 | 1 | +0.31 | — | $1.53 | $0.40 | inconsistent; noise unknown |
 | 58-nexus-judges-the-record | 3/3 | 3/3 | 1 | +0.07 | — | $1.14 | $0.70 | noise unknown; baseline high; saturated |
 | 59-hotfix-py-scope-parser | 3/3 | 3/3 | 1 | +0.56 | — | $0.94 | $0.21 | noise unknown; saturated |
-| 6-compose-detects-real-services | 3/3 | 3/3 | 1 | +0.50 | — | $0.81 | $0.42 | noise unknown; saturated |
+| 6-compose-detects-real-services | 3/3 | 3/3 | 1 | +0.50 | — | $1.02 | $0.55 | noise unknown; saturated |
 | 60-tdd-planted-instruction-not-obeyed | 3/3 | 3/3 | 1 | +0.17 | — | $0.69 | $0.59 | noise unknown; baseline high; saturated |
 | 61-brief-under-nexus-routes-questions | 3/3 | 3/3 | 1 | +0.33 | — | $0.77 | $0.46 | noise unknown; saturated |
 | 62-tdd-headless-contradiction-unconfirmed | 3/3 | 3/3 | 1 | +0.50 | — | $0.85 | $0.57 | noise unknown; saturated |
@@ -168,7 +168,7 @@
 | 8-hotfix-node-shared-cause | 3/3 | 3/3 | 1 | +0.62 | — | $0.62 | $0.20 | noise unknown; saturated |
 | 9-hotfix-jvm-both-callers | 3/3 | 3/3 | 1 | +0.29 | — | $0.46 | $0.19 | noise unknown; saturated |
 
-**65 of 76 evals are saturated**, so they work as regression tests. Only the others can show that a skill edit helped.
+**64 of 76 evals are saturated**, so they work as regression tests. Only the others can show that a skill edit helped.
 **9 baseline(s) score 0.80 or more on delta** without the skill.
 
 ## Delta assertions the baseline also passed (still non-discriminating)
@@ -301,7 +301,6 @@
 - the existing Dockerfile's defects named before the fix
 - pinned to what the repo declares: node 20.11 in every stage, pnpm 9.12.3, digest or its absence recorded
 - frozen install against pnpm-lock.yaml under a cache mount
-- runtime ships only dist, production deps, migrations/ and templates/: no source, no toolchain
 - better-sqlite3 installed on the target platform and libc, not the build host's
 - runs as a non-root user that owns its data directory, USER before CMD
 - USER is a numeric uid, which the pod's runAsNonRoot can verify
@@ -312,8 +311,7 @@
 - planted secret values never echoed
 - built for linux/amd64 from Apple Silicon: stated, and --platform pinned in what the team runs
 - .dockerignore extended, every curated entry kept
-- .dockerignore: .env and .env.* out, .env.example in, node_modules and dist out
-- .dockerignore excludes nested env files (**/.env): scripts/.env stays out of the context
+- SIGTERM reaches a handler: an init in front of node, or a handler in the server
 
 **eval-29-release-notes-translates-drops-and-leads-with-breaking**
 - header has the exact version and the tag's date
@@ -379,6 +377,7 @@
 - rotation for the committed key
 - the read-only socket mount rated Critical, :ro called no protection
 - Postgres on all interfaces bypasses ufw
+- the reports pod's missing seccomp profile found (Unconfined, RuntimeDefault)
 - the privileged worker's replacement named (/dev/dri)
 - mutable :latest references found
 - the hardened proxy recorded as what works
@@ -387,6 +386,7 @@
 
 **eval-36-container-debug-oom-localhost-crlf**
 - no secret value echoed (kind and location only)
+- the password in the captured inspect output flagged as exposed
 - OOMKilled read from the runtime, not inferred from 137
 - the limit raised from the measured working set, not removed
 - why localhost fails inside a container explained
@@ -394,10 +394,12 @@
 - the worker's identical Redis URL noticed
 - CRLF line endings named as the migrate cause
 - recurrence prevented with .gitattributes
-- nothing claimed verified on the VM
+- the second copy of the password, in compose-config.txt, flagged too
+- rotation of the exposed password prescribed
 - the scheduler's 137 read as a kill after the stop timeout, not OOM
 - the scheduler fixed where SIGTERM is lost: a handler or an init, PID 1 named
 - the scheduler's memory limit left alone
+- the scheduler's fix proven by timing a stop
 
 **eval-37-docker-swarm-review-quorum-and-state**
 - no secret value echoed (kind and location only)
@@ -411,7 +413,6 @@
 - registry auth missing from the deploy
 - the worker recorded as what works
 - no stack file, script, config or secret changed
-- drills before go-live: a rollback and a manager loss
 - overlay subnets collide with the 10.0.0.0/16 node network (default-addr-pool or explicit subnets)
 - scripts/flash-sale.sh scales by hand, and the next deploy reverts it
 
@@ -795,7 +796,11 @@
 - build-once lands before rollback-by-digest and progressive delivery (2/3)
 
 **eval-28-dockerfile-repair-pins-and-drops-root**
+- runtime ships only dist, production deps, migrations/ and templates/: no source, no toolchain (2/3)
 - port and health from the source: EXPOSE 8080, /healthz with a tool the runtime has (or left to the k8s probes) (2/3)
+- .dockerignore: .env and .env.* out, .env.example in, node_modules and dist out (2/3)
+- stops cleanly: time docker stop (2/3)
+- build context measured before and after (2/3)
 
 **eval-3-refactor-promotes-noted-smell**
 - carried smells recorded with a promotion condition (2/3)
@@ -812,6 +817,7 @@
 
 **eval-36-container-debug-oom-localhost-crlf**
 - evidence-only mode named (2/3)
+- why nothing caught it, for most symptoms (1/3)
 
 **eval-38-threatmodel-review-design-abuse-and-fallback**
 - score arithmetic shown, capped by the Critical (2/3)

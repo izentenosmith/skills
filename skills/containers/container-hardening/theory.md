@@ -1,5 +1,7 @@
 # Theory — The Principles Every Hardening Finding Cites (C1–C13)
 
+**Contents:** Part A: What a container is · Part B: Privilege · Part C: Surface and blast radius · Part D: Secrets and supply chain
+
 > Every finding in a review names one of these. Each principle states **what it says**, **why it
 > matters** for a running container, and **what violating it looks like** in a manifest. Sources:
 >
