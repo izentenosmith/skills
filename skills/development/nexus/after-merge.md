@@ -1,6 +1,6 @@
 # Merging, and after a merge — marking, cleanup and the end of the increment
 
-Open this when a PR with a sequence-numbered file nears the gate, when the user gives a go to merge, in the turn a merge lands, at step 7's sweep of every turn when a session is `done` with its PR merged or closed, and when the last PR has merged. The gate that comes before a merge is in [SKILL.md](SKILL.md#the-pr-gate--before-a-pr-reaches-the-user).
+Open this when a PR with a sequence-numbered file nears the gate, when the user gives a go to merge, in the turn a merge lands, at step 7's sweep of every turn when a session is `done` with its PR merged or closed, and when the last PR has merged. The gate that comes before a merge is in `gate.md`.
 
 ## Merging
 
@@ -10,7 +10,7 @@ Two of your rules meet here. You write no product code, and a renamed migration 
 
 1. When a session reports that a PR with a sequence-numbered file is ready for its final tyr-verdict, or brings it to the gate still under a placeholder, assign the number: one above the highest of the base branch, the release branch, production, and any number already assigned to a PR that merges ahead of it. Record it in `resources.md`.
 2. The session renames its placeholder, commits, re-runs its suite, and records its tyr-verdict GO on that head. You never make the rename. The gate is run on that head.
-3. **If the base moved after the GO so that the number must change** — another PR merged with that number, or a hotfix took it — assign the new number, and the session makes one commit that renames the file and does nothing else. Then check two things yourself: `git diff --stat <GO head>..<new head>` shows that one file renamed, with no line changed anywhere, and the integrated suite ([the gate](SKILL.md#the-pr-gate--before-a-pr-reaches-the-user)'s **Integrated with today's base**) passes on the new head. If both hold, carry the GO forward to the new head and say so in the digest: `GO at <old sha>, carried to <new sha>: rename only, V<n> → V<m>`. This is the one exception to rule 1, and it is narrow on purpose: a file name is the only thing a verdict on the code cannot be changed by. Anything else in that diff, and the GO has lapsed: the session needs a verdict on the new head.
+3. **If the base moved after the GO so that the number must change** — another PR merged with that number, or a hotfix took it — assign the new number, and the session makes one commit that renames the file and does nothing else. Then check two things yourself: `git diff --stat <GO head>..<new head>` shows that one file renamed, with no line changed anywhere, and the integrated suite (`gate.md`'s **Integrated with today's base**) passes on the new head. If both hold, carry the GO forward to the new head and say so in the digest: `GO at <old sha>, carried to <new sha>: rename only, V<n> → V<m>`. This is the one exception to rule 1, and it is narrow on purpose: a file name is the only thing a verdict on the code cannot be changed by. Anything else in that diff, and the GO has lapsed: the session needs a verdict on the new head.
 4. The exception carries the GO, never the user's go. A go given at the earlier head has lapsed (rule 2): show the PR again at the new head.
 
 **The merge.** Only on the user's go for that PR at that head, given in this conversation (rule 2).
@@ -43,7 +43,7 @@ A finished session left standing costs disk, keeps leases and scratch names nobo
 - [ ] **Archive the session**, with whatever your environment offers, **then remove the worktree and delete the merged branch** — `git worktree remove` and `git branch -d`, never their forced forms: both refuse when work would be lost, and a refusal is a reason to stop and ask, not to force. An unforced `git worktree remove` refuses only for modified or untracked files (and for submodules); ignored files do not stop it and go with the worktree, which is what the check above allows. After a squash merge `git branch -d` refuses a branch you have just shown to be merged: leave that branch and note it in `status.md` rather than forcing it. The remote branch is the forge's or the user's to delete.
 - [ ] **Record it** under `## Archived` in `status.md`: the slug, the PR, the merge commit, the date, and that the worktree is gone.
 
-**A PR closed without merging** is cleaned up the same way only when the user closed it or confirmed the close (a `DEC-n`) — anyone on the forge can close a PR — and its branch is pushed, so the work survives the worktree; the branch itself is kept. Otherwise report the close and leave everything in place. **A track's child** is cleaned up by its owner ([tracks.md](tracks.md)).
+**A PR closed without merging** is cleaned up the same way only when the user closed it or confirmed the close (a `DEC-n`) — anyone on the forge can close a PR — and its branch is pushed, so the work survives the worktree; the branch itself is kept. Otherwise report the close and leave everything in place. **A track's child** is cleaned up by its owner (`tracks.md`).
 
 ## When the increment is done
 

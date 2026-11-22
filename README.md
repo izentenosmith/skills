@@ -10,6 +10,8 @@ Inspired by [mattpocock/skills](https://github.com/mattpocock/skills), [peterpme
 
 ## What's in here
 
+The [skill registry](skills/REGISTRY.md) lists every skill's family, purpose, owner, version, dependencies and latest eval score; it is generated, so regenerate it with `python3 .github/scripts/registry.py` (CI fails when it is stale).
+
 Nine families of skills under `skills/` — the first three in the order work actually moves through them, then the database, the network, the infrastructure code and pipelines underneath, the security of every layer, the review of each change as it arrives, and the memory agents keep about the repository — plus a harness that runs the development pipeline's closing loop — and one pull request through every review skill — as code, and the evals that measure the skills.
 
 ```
@@ -72,10 +74,10 @@ Every stage after agent-brief reads the brief's Status and never writes it: on a
 
 | Skill | What it does |
 |-------|--------------|
-| [architect-deep-dive](skills/development/architect-deep-dive/SKILL.md) | Staff-architect design review that resolves the plan in rounds of up to three independent questions — options with trade-offs, a recommendation and its reversal cost — against a stated charter and a live question count. Infers answers from the codebase where it can. Run this first. |
+| [architect-deep-dive](skills/development/architect-deep-dive/SKILL.md) | Runs a staff-architect design review that resolves the plan in rounds of up to three independent questions — options with trade-offs, a recommendation and its reversal cost — against a stated charter and a live question count. Infers answers from the codebase where it can. Run this first. |
 | [agent-brief](skills/development/agent-brief/SKILL.md) | Turns the resolved design decisions into the pure-text build plan TDD executes — ordered acceptance criteria, test seams, prior art, and scope — written to `.workflow/brief.md`, a draft until the user approves it. |
 | [acceptance-tests](skills/development/acceptance-tests/SKILL.md) | Turns the brief's acceptance criteria into executable black-box tests through the outermost boundary — written before any code, each red for the right reason — and maps every criterion to its test. tdd is done when they pass. |
-| [tdd](skills/development/tdd/SKILL.md) | Test-driven development via the red-green-refactor loop (vertical slices, not horizontal). Ends by handing off to refactor-review. |
+| [tdd](skills/development/tdd/SKILL.md) | Builds test-first through the red-green-refactor loop (vertical slices, not horizontal). Ends by handing off to refactor-review. |
 | [refactor-review](skills/development/refactor-review/SKILL.md) | Reviews the change tdd just built for code smells: names the smell, then prescribes a behavior-preserving refactoring, with the tests run between each. Not a bug review — that is peer-review. |
 | [devils-advocate](skills/development/devils-advocate/SKILL.md) | Assumes everything just built is wrong and hunts concrete evidence for each defect. Over-reports on purpose; does not fix or judge. For someone else's PR, use peer-review. |
 | [tyr-verdict](skills/development/tyr-verdict/SKILL.md) | Adjudicates the devils-advocate findings, cuts false claims, turns confirmed defects into red→green remediation slices, and issues a go/no-go verdict. |
@@ -557,6 +559,37 @@ npx skills add izentenosmith/skills --skill pr-prep code-xray peer-review test-r
 npx skills add izentenosmith/skills --skill repo-memory
 ```
 
+### Bundles
+
+**By role** — the skills one kind of work reaches for, at most 20 per line, from [`skills/bundles.json`](skills/bundles.json). Every skill is in at least one bundle; a skill from another family is there because the role hands work to it (the manifest's `placed` says why for each).
+
+```bash
+# builder — the seven-stage pipeline and nexus, plus the tracker pair and release-notes
+npx skills add izentenosmith/skills --skill architect-deep-dive agent-brief acceptance-tests tdd refactor-review devils-advocate tyr-verdict nexus backlog ticket release-notes repo-memory
+
+# reviewer — the review family, plus the security family, where peer-review's security lens escalates
+npx skills add izentenosmith/skills --skill pr-prep code-xray peer-review test-review concurrency-review review-retro threatmodel appsec hardening container-hardening repo-memory
+
+# on-call — the response chain and the tracker pair, plus container-debug
+npx skills add izentenosmith/skills --skill hotfix incident-fix post-mortem ticket backlog container-debug repo-memory
+
+# platform — containers and infrastructure, plus hardening for the hosts and cloud underneath
+npx skills add izentenosmith/skills --skill dockerfile docker-compose container-hardening container-debug docker-swarm terraform pipelines hardening repo-memory
+
+# data — the database family
+npx skills add izentenosmith/skills --skill dbarchitect dbaudit dbdesign dbdiagram dbpropose dbbuild dbquery repo-memory
+
+# network — the networking family
+npx skills add izentenosmith/skills --skill netaudit netdesign netdiagram netpropose netblueprint repo-memory
+
+# security — the security family, plus container-hardening for the container layer
+npx skills add izentenosmith/skills --skill threatmodel appsec hardening container-hardening repo-memory
+```
+
+`repo-memory` is on every line because every role benefits from what the last session learned; drop it from the line if you don't want it.
+
+### Everything, or one skill
+
 **Everything:**
 
 ```bash
@@ -625,6 +658,23 @@ Useful flags:
 `npx skills update` pulls newer versions of what you installed; `npx skills remove <name>` takes one out.
 
 The installer copies each skill folder whole, and every folder is self-contained: a reference doc several skills share is committed as a copy in each of them (see [Conventions](#conventions)), because the installer drops a symlink that leaves the skill folder. **It installs skills, not the [harness](harness/README.md)** — the Python orchestration in `harness/` (including `dbworkflow.py` and `networkflow.py`) needs a clone. The networking skills carry their one script, `scripts/netgraph.py`, inside each folder, and the development skills carry the checkers they run (`scripts/ledger.py`, `redgreen.py`, `brief.py`) the same way.
+
+### Pinning a version
+
+The commands above install whatever is on `main`. Releases are git tags (`v1.0.0` is the first); what each one changed, and what counts as a breaking change, is in [CHANGELOG.md](CHANGELOG.md). To install a release instead of `main`, put the tag after the repo with `@`:
+
+```bash
+npx skills add izentenosmith/skills@v1.0.0 --skill tdd refactor-review
+```
+
+The same form takes a full 40-character commit SHA. Checked with `skills@1.9.0`: the CLI reads `@v1.0.0` as a ref and clones with `--branch v1.0.0`, and `npx skills add izentenosmith/skills@<full sha> --list` lists the skills at that commit. Not yet run end to end against the `v1.0.0` tag itself, which is pushed after this change merges. Whether `npx skills update` keeps a tag pin or moves to `main` is not verified; to change versions, run `add` again with the new tag.
+
+Without the CLI, clone the tag and copy folders as in [Or copy by hand](#or-copy-by-hand) (not yet run against the tag):
+
+```bash
+git clone --branch v1.0.0 --depth 1 https://github.com/izentenosmith/skills
+cp -r skills/skills/development/tdd my-project/.claude/skills/
+```
 
 ### Or copy by hand
 

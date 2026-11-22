@@ -2,6 +2,18 @@
 
 One folder, shared by the nexus and every session it runs, outside every worktree so that it outlives them: `.workflow/nexus/` in the main checkout unless the user names another place. Each brief carries its absolute path.
 
+## Contents
+
+- [`status.md` — the whole state](#statusmd--the-whole-state)
+- [`env.md` — how to run this repo](#envmd--how-to-run-this-repo)
+- [`increment.json` — what the increment must deliver](#incrementjson--what-the-increment-must-deliver)
+- [`decisions.md` — the user's decisions](#decisionsmd--the-users-decisions)
+- [`findings.md` — findings that cross slices](#findingsmd--findings-that-cross-slices)
+- [`labels.md` — label series](#labelsmd--label-series)
+- [`resources.md` — leases and numbered files](#resourcesmd--leases-and-numbered-files)
+- [`owner-checks.md` — production checks that are the user's](#owner-checksmd--production-checks-that-are-the-users)
+- [`sessions/<slug>.md` — a stage log](#sessionsslugmd--a-stage-log)
+
 Who writes what:
 
 | File | Written by | Read by |
@@ -20,7 +32,29 @@ A session writes only its own log. Everything else it asks the nexus for.
 
 ## `status.md` — the whole state
 
-Rewritten, not appended, at the end of every nexus turn. It is what the nexus reads first after a compaction, so it must stand on its own. The template is in [SKILL.md](SKILL.md#every-turn--read-route-record), the one copy, so the two cannot drift; this section explains its fields.
+Rewritten, not appended, at the end of every nexus turn. It is what the nexus reads first after a compaction, so it must stand on its own.
+
+```markdown
+# Nexus — <increment>
+**Updated:** <YYYY-MM-DD HH:MM> · **Base:** <branch> at `<sha>` · **Running:** <n> (limit: <DEC-n, or none>) · **Free disk:** <n> GB
+**Register:** DEC-<n> · <12 hex>
+**Increment:** <n> of <total> entries passing on the base · <n> dropped · failing again: <REQ-ids or none>
+
+| Session | Parent | Slice or track | PR | Stage | Waiting on | Next |
+|---|---|---|---|---|---|---|
+| <slug> (<id or link>) | — or <owner slug> | <slice or track> | #n at `<sha>` | <stage> | nothing / user: Q-… / nexus / resource: … / run: … / **stalled since <time>** | <one step> |
+
+## Waiting on the user
+- Q-<slug>-<n> — <question in a line> (since <time>) · PR #n — ready to merge at `<sha>` (since <time>)
+
+## Leases
+- <resource> — <holder> since <time>, limit <time>; queue: <slug>, <slug>
+
+## Archived
+- <slug> — PR #n merged at `<sha>`, archived <date>, worktree removed
+```
+
+Its fields:
 
 - **Updated, Base, Running, Free disk** — when this was written; the base branch and its head, which a later turn compares with `git log` to see a move nobody recorded; how many sessions are running, against the user's limit and its `DEC-n` if they set one; the disk left for worktrees and scratch databases.
 - **Register** — the register's seal: the highest `DEC-n` and the first 12 hex characters of `shasum -a 256 decisions.md`, rewritten whenever a decision is recorded or confirmed. The same line opens every digest, and that copy is the authoritative one; this one is a convenience ([`decisions.md`](#decisionsmd--the-users-decisions)).
@@ -143,7 +177,7 @@ When the nexus assigns an id it moves **Next free** in the same edit, so two ses
 
 **Sequence-numbered files** — database migrations above all — collide when several sessions each take "the highest plus one". Two sessions that planned the same next number are the expected case, not an accident.
 
-- Sessions build under a **placeholder** (`V__pending_<slug>__<name>.sql`, or whatever the migration tool will ignore), and the nexus assigns the number when the PR enters the gate, before its final verdict; the session makes the rename ([after-merge.md](after-merge.md#merging)).
+- Sessions build under a **placeholder** (`V__pending_<slug>__<name>.sql`, or whatever the migration tool will ignore), and the nexus assigns the number when the PR enters the gate, before its final verdict; the session makes the rename (`after-merge.md`, section "Merging").
 - The number is one above the highest of **every line it will reach**: the base branch, the release branch, and what production has already applied, hotfixes included. A number below production's highest is not a collision you will see in a diff; it is a deploy that refuses to start.
 - Production's number comes from the user (through `owner-checks.md`) or from a read-only check the register allows under SKILL.md's rule 8.
 - A session that already used a real number has it checked at the gate against all three, and the PR renumbers before merge.
@@ -184,7 +218,7 @@ Things no session may do and nobody but the user can confirm: a grant on a produ
 
 ## `sessions/<slug>.md` — a stage log
 
-The session's own record, appended every turn. The nexus judges the PR on this file. The format of each block is in [contract.md](contract.md).
+The session's own record, appended every turn. The nexus judges the PR on this file. The format of each block is in `contract.md`.
 
 ```markdown
 # <slug> — <slice>

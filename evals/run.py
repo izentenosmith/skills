@@ -60,7 +60,9 @@ IGNORE = [".pytest_cache", "__pycache__"]
 HARNESS_ONLY = {"incident": ["README.md", "make-history.sh"],
                 "release-notes": ["README.md", "make-history.sh"],
                 **{f: ["README.md", "make-history.sh"] for f in
-                   ("pr-review", "pr-prep", "code-xray", "test-review", "concurrency", "repo-memory")}}
+                   ("pr-review", "pr-prep", "code-xray", "test-review", "concurrency", "repo-memory")},
+                "refactor-standalone": ["make-history.sh"],
+                **{f: ["make-history.sh", ".gitignore"] for f in ("teardown-empty", "teardown-weakened")}}
 
 
 def fixture_dir(name):
@@ -435,6 +437,8 @@ def execute(r, timeout):
     except Exception as e:  # never let one run abort the batch
         rec.update(exit_code=None, timed_out=False, error=repr(e), response="missing")
     rec["seconds"] = round(time.time() - t0, 1)
+    # The scored run's date in scores.json (aggregate.py::run_date).
+    rec["finished"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     rec["ok"] = rec["response"] != "missing" and not rec.get("is_error") and (
         rec.get("exit_code") == 0 or (r.get("runner") == "loop" and rec.get("exit_code") == 3))
     (run / "run.json").write_text(json.dumps(rec, indent=2))

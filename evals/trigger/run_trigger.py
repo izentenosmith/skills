@@ -3,7 +3,7 @@
 it should, and leave it alone when it should not?
 
 Usage: python3 evals/trigger/run_trigger.py [--dry-run] [--model MODEL] [--reps 1]
-           [--split train|heldout|all] [--skills a,b] [--cases id,id]
+           [--split train|heldout|all] [--skills a,b] [--cases id,id] [--bundle NAME]
            [--max-turns 3] [--max-budget-usd 0.25] [--concurrency 4]
            [--timeout 180] [--out DIR]
 
@@ -45,6 +45,7 @@ HERE = pathlib.Path(__file__).resolve().parent
 REPO_ROOT = HERE.parents[1]
 SKILLS = REPO_ROOT / "skills"
 CASES = HERE / "cases.json"
+BUNDLES = SKILLS / "bundles.json"
 
 NONE = "(none)"
 READ_ONLY_TOOLS = "Skill,Read,Glob,Grep"
@@ -96,9 +97,34 @@ def description_hash(skill_md):
     return hashlib.sha256((m.group(1) if m else "").encode()).hexdigest()[:12]
 
 
-def stage(dest):
-    """Build dest/skills-home/.claude/skills/<name>/ for every skill and an
-    empty dest/work/. Returns (work, skills_home, names)."""
+def bundle_skills(name, path=BUNDLES):
+    """The skills a user who installs bundle `name` has: its skills and the ones
+    offered with every bundle."""
+    doc = json.loads(pathlib.Path(path).read_text())
+    bundles = {b["name"]: b for b in doc["bundles"]} if isinstance(doc["bundles"], list) else doc["bundles"]
+    if name not in bundles:
+        sys.exit(f"no bundle {name!r}; bundles: {', '.join(sorted(bundles))}")
+    return set(bundles[name]["skills"]) | set(doc.get("with_every_bundle", []))
+
+
+def for_bundle(cases, names):
+    """The cases whose skill under test is installed, with an expected neighbour
+    that is not installed replaced by None: the run cannot pick it, so leaving
+    the skill under test alone is the right answer. The original is kept in
+    `expected_outside_bundle`."""
+    out = []
+    for c in cases:
+        if c["skill"] not in names:
+            continue
+        if c["expected"] and c["expected"] not in names:
+            c = {**c, "expected": None, "expected_outside_bundle": c["expected"]}
+        out.append(c)
+    return out
+
+
+def stage(dest, only=None):
+    """Build dest/skills-home/.claude/skills/<name>/ for every skill (or only
+    those in `only`) and an empty dest/work/. Returns (work, skills_home, names)."""
     dest = pathlib.Path(dest)
     home, work = dest / "skills-home", dest / "work"
     root = home / ".claude" / "skills"
@@ -106,6 +132,8 @@ def stage(dest):
     work.mkdir()
     names = []
     for name, folder in repo_skills().items():
+        if only is not None and name not in only:
+            continue
         shutil.copytree(folder, root / name, ignore=shutil.ignore_patterns(*STAGE_IGNORE))
         names.append(name)
     return work, home, names
@@ -255,6 +283,9 @@ def render(summary, meta):
     L = ["# Trigger eval", "",
          f"model `{meta.get('model') or 'CLI default'}` · reps {meta.get('reps')} · "
          f"{meta.get('claude_version', '')} · {meta.get('started', '')}", ""]
+    if meta.get("bundle"):
+        L += [f"Coexistence run: only bundle `{meta['bundle']}` staged. A should-not case whose neighbour is "
+              "outside the bundle expects no skill (`expected_outside_bundle` in results.jsonl).", ""]
     if meta.get("cost_usd") is not None:
         L += [f"Cost reported by finished runs: ${meta['cost_usd']:.2f} "
               f"({meta.get('stopped_early', 0)} runs were stopped at the skill choice and report tokens only).", ""]
@@ -324,6 +355,7 @@ def run_case(case, rep, work, skills_home, transcripts, args):
     usage, cost = usage_of(events)
     rec = {"id": case["id"], "rep": rep, "skill": case["skill"], "split": case["split"],
            "should_trigger": case["should_trigger"], "expected": case["expected"],
+           **({"expected_outside_bundle": case["expected_outside_bundle"]} if "expected_outside_bundle" in case else {}),
            "picked": pick["skill"], "via": pick["via"], "turn": pick["turn"],
            "stopped_early": stopped_early, "usage": usage, "cost_usd": cost, "transcript": name}
     if listed_skills(events) is None or (timed_out and not pick["skill"]) or not pick["turn"]:
@@ -356,6 +388,8 @@ def main(argv=None):
     ap.add_argument("--split", choices=("train", "heldout", "all"), default="all")
     ap.add_argument("--skills", help="comma-separated skills under test")
     ap.add_argument("--cases", help="comma-separated case ids")
+    ap.add_argument("--bundle", help="stage only this bundle's skills (skills/bundles.json) and run "
+                                     "the cases for them: a coexistence run")
     ap.add_argument("--max-turns", type=int, default=3,
                     help="turns a run gets to pick a skill before it is cut off (default 3)")
     ap.add_argument("--max-budget-usd", type=float, default=0.25, help="hard cap per run (default 0.25)")
@@ -373,11 +407,21 @@ def main(argv=None):
     unknown = sorted(named - set(staged))
     if unknown:
         sys.exit(f"cases name skills this repo does not have: {', '.join(unknown)}")
+    only = None
+    if args.bundle:
+        only = bundle_skills(args.bundle)
+        missing = sorted(only - set(staged))
+        if missing:
+            sys.exit(f"bundle {args.bundle} names skills this repo does not have: {', '.join(missing)}")
+        staged = {n: f for n, f in staged.items() if n in only}
+        cases = for_bundle(cases, only)
+        if not cases:
+            sys.exit(f"no cases test a skill in bundle {args.bundle}")
     n_runs = len(cases) * args.reps
     per, est, cap = estimate(n_runs, args.model, args.max_budget_usd)
 
     print(f"{len(cases)} cases × {args.reps} rep(s) = {n_runs} runs · model {args.model or 'CLI default'} · "
-          f"{len(staged)} skills staged")
+          f"{len(staged)} skills staged" + (f" (bundle {args.bundle})" if args.bundle else ""))
     for sp in ("train", "heldout"):
         cs = [c for c in cases if c["split"] == sp]
         print(f"  {sp:8} {len(cs):3} cases: {sum(c['should_trigger'] for c in cs)} should trigger, "
@@ -398,13 +442,13 @@ def main(argv=None):
     transcripts = out / "transcripts"
     transcripts.mkdir(parents=True, exist_ok=True)
     version = subprocess.run(["claude", "--version"], capture_output=True, text=True).stdout.strip()
-    meta = {"model": args.model, "reps": args.reps, "max_turns": args.max_turns, "claude_version": version,
+    meta = {"model": args.model, "bundle": args.bundle, "reps": args.reps, "max_turns": args.max_turns, "claude_version": version,
             "started": datetime.datetime.now().astimezone().isoformat(timespec="seconds"),
             "description_hashes": {s: description_hash(staged[s] / "SKILL.md")
                                    for s in sorted({c["skill"] for c in cases})}}
     results, offered = [], None
     with tempfile.TemporaryDirectory(prefix="trigger-eval-") as tmp:
-        work, skills_home, _ = stage(tmp)
+        work, skills_home, _ = stage(tmp, only)
         jobs = [(c, r) for c in cases for r in range(1, args.reps + 1)]
         with cf.ThreadPoolExecutor(args.concurrency) as pool:
             futs = [pool.submit(run_case, c, r, work, skills_home, transcripts, args) for c, r in jobs]

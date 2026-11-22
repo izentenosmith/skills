@@ -151,6 +151,23 @@ class Cases(unittest.TestCase):
             words = set(c["prompt"].lower().replace("/", " ").split())
             self.assertFalse(words & {c["skill"], c["expected"] or c["skill"]}, c["id"])
 
+    def test_for_bundle_drops_neighbours_that_are_not_installed(self):
+        names = rt.bundle_skills("on-call")
+        cases = rt.for_bundle(self.cases, names)
+        self.assertTrue(cases)
+        self.assertTrue(all(c["skill"] in names for c in cases))
+        for c in cases:
+            self.assertTrue(c["expected"] is None or c["expected"] in names, c["id"])
+            if "expected_outside_bundle" in c:
+                self.assertNotIn(c["expected_outside_bundle"], names)
+                self.assertFalse(c["should_trigger"])
+        self.assertTrue(any("expected_outside_bundle" in c for c in cases))
+
+    def test_every_bundle_has_cases(self):
+        import json
+        for name in json.loads(rt.BUNDLES.read_text())["bundles"]:
+            self.assertTrue(rt.for_bundle(self.cases, rt.bundle_skills(name)), name)
+
     def test_select(self):
         self.assertEqual({c["split"] for c in rt.select(self.cases, "heldout")}, {"heldout"})
         self.assertEqual(len(rt.select(self.cases, "all", {"hotfix"})), 6)
@@ -170,9 +187,25 @@ class Staging(unittest.TestCase):
         with contextlib.redirect_stdout(buf):
             self.assertEqual(rt.main(["--dry-run", "--model", "haiku", "--split", "train"]), 0)
         out = buf.getvalue()
-        self.assertIn("76 cases × 1 rep(s) = 76 runs", out)
+        self.assertIn("100 cases × 1 rep(s) = 100 runs", out)
         self.assertIn("estimated cost", out)
         self.assertIn("nothing staged, nothing run", out)
+
+    def test_stage_only_a_bundle(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            only = rt.bundle_skills("network")
+            _, home, names = rt.stage(tmp, only)
+            self.assertEqual(set(names), only)
+            self.assertIn("repo-memory", names)
+            self.assertNotIn("hotfix", names)
+
+    def test_bundle_dry_run(self):
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            self.assertEqual(rt.main(["--dry-run", "--model", "haiku", "--bundle", "security"]), 0)
+        out = buf.getvalue()
+        self.assertIn("(bundle security)", out)
+        self.assertIn("12 cases", out)
 
     def test_description_hash_follows_the_description_only(self):
         with tempfile.TemporaryDirectory() as tmp:

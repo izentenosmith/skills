@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the controls for evals 6, 8-14 and 16-63, grade them with grade.py, and check they separate.
+"""Build the controls for evals 6, 8-14 and 16-75, grade them with grade.py, and check they separate.
 
     python3 evals/controls/make_controls.py               # build in a temp dir, grade, check, clean up
     python3 evals/controls/make_controls.py --keep DIR    # leave the graded runs in DIR to inspect
@@ -13,6 +13,13 @@
     python3 evals/controls/make_controls.py --only 58                  # nexus (files only)
     python3 evals/controls/make_controls.py --only 59                  # hotfix held-out (python3 and make)
     python3 evals/controls/make_controls.py --only 60 61 62 63         # the pipeline, harder; 60 and 62 need setup.sh's tdd venv
+    python3 evals/controls/make_controls.py --only 74                  # architect-deep-dive bound by ADRs (files only)
+    python3 evals/controls/make_controls.py --only 75                  # agent-brief over a finished change (files only)
+    python3 evals/controls/make_controls.py --only 64 65               # acceptance-tests, more; need setup.sh's at-* venvs
+    python3 evals/controls/make_controls.py --only 70 71               # tyr-verdict, iteration 2 (files only)
+    python3 evals/controls/make_controls.py --only 66 67               # refactor-review; 66 needs setup.sh's git history, 67 its venv
+    python3 evals/controls/make_controls.py --only 68 69               # devils-advocate, harder; needs setup.sh's git histories
+    python3 evals/controls/make_controls.py --only 72 73               # nexus setup and merge; need setup.sh's git histories (git 2.48+)
 
 Three kinds of control, each a run directory (repo/ + outputs/response.md) that
 grade.py's eval function reads exactly as it reads a real run:
@@ -6850,6 +6857,137 @@ CONTROLS_BRIEF_NEXUS = {
 }
 CONTROLS.update(CONTROLS_BRIEF_NEXUS)
 
+# -- eval 75: brief-archive
+
+E75_CUTOFF = ".workflow/designs/20261113-1420-cancellation-cutoff.md"
+E75_WAITLIST = ".workflow/designs/20261119-1615-waitlist.md"
+E75_CUTOFF_BRIEF = """# Build Plan: Enforce a cancellation cutoff on bookings
+
+**Status:** {status}
+**Design:** `{design}`
+**Category:** enhancement
+**Summary:** Reject bookings submitted within the cutoff window of the slot start.
+
+**Current behavior:**
+`BookingService.submit` accepts any well-formed booking that passes the party-size and opening-hours rules.
+
+**Desired behavior:**
+A booking whose slot starts within the cutoff window is rejected with `CUTOFF_WINDOW`. The window is read from
+account config (`cutoff_minutes`, default 120). Why now: three venue groups made it a condition of renewing.
+Security trigger: did not fire.
+
+**Key interfaces (test seams):**
+- `BookingService.submit` — the public seam; raises `Rejected` carrying the violation codes
+- `reservations.rules` — the cutoff rule joins `ACTIVE_RULES`
+
+**Acceptance criteria** (ordered — first is the tracer-bullet candidate, each one a single red→green slice):
+- [ ] Tracer bullet: a booking whose slot starts inside the cutoff window is rejected with `CUTOFF_WINDOW`
+- [ ] A booking whose slot is outside the window is accepted and persisted
+- [ ] The window length reads from account config `cutoff_minutes`, default 120
+- [ ] Edge case: a slot exactly `cutoff_minutes` from now is accepted (the boundary is exclusive)
+- [ ] Edge case: a booking that breaks the cutoff and another rule surfaces every code
+
+**Test seams & prior art:**
+- Drive tests through `BookingService.submit`, mirroring `tests/test_booking.py` and its `FakeStore` / `FakeConfig`
+
+**Parallel tracks:** none — one rule behind one seam
+
+**Deferred by design** (constraints, not work — carried from architect-deep-dive):
+- Notifying the venue of a rejected booking — deferred behind the service seam; forced when a venue asks
+
+**Out of scope:**
+- Administrator override of the cutoff window
+
+**Ship checklist** (what no acceptance test can prove):
+- [ ] Rollout: no flag; the default window applies on deploy; stored bookings are not re-validated
+- [ ] Rollback: revert the deploy
+
+**Base:** —
+
+**Acceptance tests** (filled in by stage 3, acceptance-tests — leave empty here):
+- **Command:** —
+
+## Revisions
+- (empty at creation; every stage that changes the brief appends a dated line)
+"""
+# Built only from the waitlist charter: no cutoff decision in it.
+E75_WAITLIST_BRIEF = """# Build Plan: Waitlist for full slots
+
+**Status:** draft — awaiting approval
+**Design:** `.workflow/designs/20261119-1615-waitlist.md`
+**Category:** enhancement
+**Summary:** Let a guest join a waitlist for a full slot.
+
+**Key interfaces (test seams):**
+- `Waitlist` — a new aggregate beside `Booking`
+
+**Acceptance criteria** (ordered — first is the tracer-bullet candidate):
+- [ ] Tracer bullet: a guest who finds a slot full joins its waitlist
+- [ ] The first guest on the waitlist is offered a slot that frees up
+- [ ] Edge case: a guest cannot join the same slot's waitlist twice
+- [ ] Edge case: a slot that frees up with nobody waiting stays open
+
+**Test seams & prior art:**
+- Mirror `tests/test_booking.py`
+
+**Parallel tracks:** none — one aggregate
+
+**Out of scope:**
+- The notification channel (the notifications team)
+"""
+E75_ARCHIVED = ("Archived the previous change before writing: `.workflow/brief.md` was \"Per-account party-size limit\", "
+                "every criterion ticked with its test, and `.workflow/ledger.md` ends in `### Verdict: GO`. Both moved "
+                "together to `.workflow/archive/per-account-party-size-limit/`.\n\n")
+E75_SILENT = "Wrote the new build plan.\n\n"
+E75_PLAN = ("Design: `.workflow/designs/20261113-1420-cancellation-cutoff.md`, the one resolved design no brief names; "
+            "the waitlist design is still in progress.\n\nCriteria, in order: tracer bullet (inside the window → CUTOFF_WINDOW); "
+            "outside the window accepted; window from `cutoff_minutes`; edge: exactly at the window accepted; edge: every code.\n\n")
+E75_TAIL = "The build plan is written to `.workflow/brief.md` as a **draft — awaiting approval**; nobody was here to approve it.\n"
+
+
+def e75(archive=("brief.md", "ledger.md"), into="per-account-party-size-limit", brief=None, said=E75_ARCHIVED,
+        tail=E75_TAIL, status="draft — awaiting approval"):
+    def build(run, repo):
+        wf = repo / ".workflow"
+        for name in archive:
+            dest = wf / "archive" / into / name
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(wf / name), str(dest))
+        (wf / "brief.md").write_text(brief or E75_CUTOFF_BRIEF.format(status=status, design=E75_CUTOFF))
+        (run / "outputs/response.md").write_text(said + E75_PLAN + tail)
+    return build
+
+
+CONTROLS_BRIEF_ARCHIVE = {
+    "eval-75-brief-archives-finished-change": dict(
+        fixture="brief-archive", reference=e75(), free=[],
+        wrong={
+            # the bare default: the new brief written over the old one, the ledger left where it was
+            "wrong-overwrites": (
+                e75(archive=(), said=E75_SILENT),
+                ["the finished brief moved to a folder under .workflow/archive/", "its ledger moved with it, into the same folder",
+                 "no ledger of the finished change left at .workflow/ledger.md", "the response says what it archived and why"]),
+            # archives the brief and forgets the ledger beside it
+            "wrong-leaves-the-ledger": (
+                e75(archive=("brief.md",),
+                    said=E75_ARCHIVED.replace(" Both moved together to", " The brief moved to")),
+                ["its ledger moved with it, into the same folder", "no ledger of the finished change left at .workflow/ledger.md"]),
+            # takes the newest design file, which is still in progress
+            "wrong-newest-design": (
+                e75(brief=E75_WAITLIST_BRIEF),
+                ["the brief's Design line names the one free resolved design",
+                 "the cutoff design's decisions carried: CUTOFF_WINDOW, cutoff_minutes"]),
+            # the files moved right, the response never says so
+            "wrong-silent-archive": (
+                e75(said=E75_SILENT), ["the response says what it archived and why"]),
+            # approves its own brief at the gate
+            "wrong-self-approves": (
+                e75(status="approved", tail="The build plan in `.workflow/brief.md` is approved; run acceptance-tests next.\n"),
+                ["the new brief left `draft — awaiting approval`", "the last lines say the brief is a draft awaiting approval"]),
+        }),
+}
+CONTROLS.update(CONTROLS_BRIEF_ARCHIVE)
+
 # -- eval 63: design-round2
 
 E63_DESIGN = ".workflow/designs/20261117-0940-cancellation-cutoff.md"
@@ -6935,6 +7073,1327 @@ CONTROLS_ROUND2 = {
         }),
 }
 CONTROLS.update(CONTROLS_ROUND2)
+
+# -- eval 64: acceptance-tests on a red baseline
+
+E64_RED = "tests/test_receipt.py::test_confirmation_names_a_single_guest"
+E64_BASELINE = f"""
+**Tier: Standard** — one acceptance test per criterion would be the shape of this stage.
+
+**Baseline, before any test.** `.venv/bin/python -m pytest tests -q` → 5 passed, 1 failed. The failure is
+`{E64_RED}`: `confirmation_text` says "Table for 1 guests". It has nothing to do with the cutoff brief, and
+it is not this stage's to fix.
+
+A green suite after the acceptance tests cannot be shown against a suite that was red before them, so no
+acceptance tests are written, nothing in the brief is mapped, and the receipt test and `reservations/` are as
+I found them. Once the suite is green, run this stage again.
+"""
+E64_LAST = f"\nbaseline red: `{E64_RED}` — no acceptance tests written\n"
+E64_ANYWAY = (E27_RESPONSE.replace("The existing suite is still green (4 passed).",
+                                   "Baseline: `.venv/bin/python -m pytest tests -q` → 5 passed, 1 failed: "
+                                   f"`{E64_RED}`, a pre-existing failure unrelated to the cutoff, left alone."))
+E64_PLURAL = 'return f"Table for {booking.party_size} guests on {when}."'
+E64_PLURAL_FIX = ('guests = "guest" if booking.party_size == 1 else "guests"\n'
+                  '    return f"Table for {booking.party_size} {guests} on {when}."')
+
+
+def e64(response=E64_BASELINE + E64_LAST, skip=False):
+    def build(run, repo):
+        if skip:
+            sub(repo / "tests/test_receipt.py", "def test_confirmation_names_a_single_guest():",
+                '@pytest.mark.skip(reason="pre-existing, unrelated to the brief")\ndef test_confirmation_names_a_single_guest():')
+            sub(repo / "tests/test_receipt.py", "from datetime import datetime\n", "from datetime import datetime\n\nimport pytest\n")
+        w(run / "outputs/response.md", response)
+    return build
+
+
+def e64_fixes_it(run, repo):
+    """Fixes the unrelated receipt bug so the baseline is green, then writes eval 27's tests."""
+    sub(repo / "reservations/receipt.py", E64_PLURAL, E64_PLURAL_FIX)
+    e27_build(response=E27_RESPONSE.replace("The existing suite is still green (4 passed).",
+                                            "The baseline had one failure, `test_confirmation_names_a_single_guest`; "
+                                            "I fixed the pluralisation in `receipt.py`, and the suite is green (6 passed)."))(run, repo)
+
+
+E64 = "eval-64-acceptance-tests-red-baseline-writes-nothing"
+E64_NONE = "no acceptance tests written: no test function added, none mapped in the brief"
+E64_TAIL = "the last lines say the baseline is red, name the failing test, and that no tests were written"
+
+CONTROLS_RED_BASELINE = {
+    E64: dict(
+        fixture="at-red-baseline", reference=e64(),
+        free=[E64_NONE, "the red test left as found: not fixed, skipped, edited or deleted",
+              "no production code changed: the receipt not fixed, no cutoff written"],
+        wrong={
+            # notes the unrelated failure, then writes and maps eval 27's five tests anyway
+            "wrong-writes-anyway": (e27_build(response=E64_ANYWAY), [E64_NONE, E64_TAIL]),
+            # makes the baseline green by fixing the receipt, then writes the tests
+            "wrong-fixes-the-baseline": (e64_fixes_it, [E64_NONE, E64_TAIL,
+                                                        "the red test left as found: not fixed, skipped, edited or deleted",
+                                                        "no production code changed: the receipt not fixed, no cutoff written",
+                                                        # it reports the suite after its fix (6 passed), not the baseline
+                                                        "the baseline recorded: the command and how many tests passed"]),
+            # stops as it should, but skips the red test on the way
+            "wrong-skips-the-red": (e64(skip=True), ["the red test left as found: not fixed, skipped, edited or deleted"]),
+            # stops, but records neither the command nor the count, and ends on something else
+            "wrong-stops-vaguely": (e64(response="The existing suite has a failing test, test_confirmation_names_a_single_guest, "
+                                                 "so I stopped.\n\nFix the suite first, then ask me again.\n"),
+                                    ["the baseline recorded: the command and how many tests passed", E64_TAIL]),
+        }),
+}
+CONTROLS.update(CONTROLS_RED_BASELINE)
+
+# -- eval 65: acceptance-tests declares the missing interface
+
+E65_TESTS = '''
+"""Acceptance tests for BookingService.check (stage 3): through the service only, red until tdd builds it."""
+from reservations.api import BookingService
+from tests.test_booking import FakeConfig, FakeStore, slot
+
+
+def service(**cfg):
+    store = FakeStore()
+    return BookingService(store, FakeConfig(cfg)), store
+
+
+def test_checking_an_acceptable_booking_returns_no_codes():
+    svc, _ = service()
+    assert svc.check("acct-1", "venue-1", slot(), 4) == []
+
+
+def test_checking_a_booking_that_breaks_a_rule_returns_its_code():
+    svc, _ = service()
+    assert svc.check("acct-1", "venue-1", slot(), 13) == ["PARTY_TOO_LARGE"]
+
+
+def test_check_reads_the_account_config():
+    default, _ = service()
+    assert default.check("acct-1", "venue-1", slot(), 13) == ["PARTY_TOO_LARGE"]
+    larger, _ = service(max_party_size=20)
+    assert larger.check("acct-1", "venue-1", slot(), 13) == []
+
+
+def test_check_reports_both_codes_when_two_rules_break():
+    svc, _ = service()
+    assert sorted(svc.check("acct-1", "venue-1", slot(hour=3), 13)) == ["PARTY_TOO_LARGE", "VENUE_CLOSED"]
+
+
+def test_check_never_saves_an_acceptable_booking():
+    svc, store = service()
+    assert svc.check("acct-1", "venue-1", slot(), 4) == []
+    assert store.saved == []
+'''
+E65_STUB = '''
+    def check(self, account_id, venue_id, slot, party_size):
+        """Return the violation codes for this booking without saving it; [] when it would be accepted."""
+        raise NotImplementedError("BookingService.check")
+'''
+E65_ID = "tests/acceptance/test_check.py::"
+E65_MAP = [
+    f"- [ ] Criterion 1 (tracer bullet): an acceptable booking returns an empty list → `{E65_ID}test_checking_an_acceptable_booking_returns_no_codes`",
+    f"- [ ] Criterion 2: a booking that breaks a rule returns its code → `{E65_ID}test_checking_a_booking_that_breaks_a_rule_returns_its_code`",
+    f"- [ ] Criterion 3: the check reads the account's config → `{E65_ID}test_check_reads_the_account_config`",
+    f"- [ ] Edge case: two broken rules return both codes → `{E65_ID}test_check_reports_both_codes_when_two_rules_break`",
+    f"- [ ] Edge case: a check never persists anything → `{E65_ID}test_check_never_saves_an_acceptable_booking`",
+]
+E65_REVISION = ("- 2026-11-21 — acceptance-tests: added **Acceptance tests** — five criteria mapped to five tests in "
+                "`tests/acceptance/`; `BookingService.check` declared as a stub raising NotImplementedError, all five red on it.")
+E65_RESPONSE = """
+**Tier: Standard** — one acceptance test per criterion: a new public method behind the existing service seam.
+
+**Baseline.** `.venv/bin/python -m pytest tests -q` → 4 passed.
+
+**Boundary.** `BookingService`, the seam `tests/test_booking.py` drives. No acceptance suite existed, so the tests
+live in `tests/acceptance/test_check.py`, reusing `FakeStore`, `FakeConfig` and `slot()`.
+
+**The interface did not exist.** `BookingService.check` is new in the brief's Key interfaces, so a test calling
+it would fail with `AttributeError`, which proves nothing about the behavior. I declared it in
+`reservations/api.py` with the brief's signature, raising `NotImplementedError`. That stub is the only
+production code written, and it is tdd's first target.
+
+**Red, for the right reason.** `.venv/bin/python -m pytest tests/acceptance -q` → 5 failed, every one on
+`NotImplementedError: BookingService.check`. None fails to load, none passes. The existing suite is still green
+(4 passed).
+
+The mapping is in `.workflow/brief.md` under **Acceptance tests**, logged under Revisions.
+
+5 acceptance tests written and red for the right reason, 0 criteria marked not acceptance-testable. Run them
+with `.venv/bin/python -m pytest tests/acceptance -q`. Run **tdd** next — it builds until every one of them passes.
+"""
+E65_IMPLEMENTED = '''
+    def check(self, account_id, venue_id, slot, party_size):
+        booking = Booking(account_id, venue_id, slot, party_size)
+        return booking.validate(self._config_source.for_account(account_id))
+'''
+
+
+def e65(tests=E65_TESTS, method=E65_STUB, mapping=E65_MAP, response=E65_RESPONSE):
+    def build(run, repo):
+        w(repo / "tests/acceptance/test_check.py", tests)
+        if method:
+            (repo / "reservations/api.py").write_text(grade.ax_api(method))
+        brief = repo / ".workflow/brief.md"
+        sub(brief, "**Test seams & prior art:**", E27_SECTION.format(map="\n".join(mapping)) + "**Test seams & prior art:**")
+        sub(brief, "- (none yet)", E65_REVISION)
+        w(run / "outputs/response.md", response)
+    return build
+
+
+E65_VACUOUS_SAVE = E65_TESTS.replace('''    svc, store = service()
+    assert svc.check("acct-1", "venue-1", slot(), 4) == []
+    assert store.saved == []''', '''    svc, store = service()
+    assert svc.check("acct-1", "venue-1", slot(), 13) == ["PARTY_TOO_LARGE"]
+    assert store.saved == []''')
+E65_INTERNALS = (E65_TESTS
+                 .replace("from reservations.api import BookingService\n",
+                          "from reservations.api import BookingService\nfrom reservations.booking import Booking\n")
+                 .replace('''    svc, _ = service()
+    assert sorted(svc.check("acct-1", "venue-1", slot(hour=3), 13)) == ["PARTY_TOO_LARGE", "VENUE_CLOSED"]''',
+                          '''    booking = Booking("acct-1", "venue-1", slot(hour=3), 13)
+    assert sorted(booking.validate({})) == ["PARTY_TOO_LARGE", "VENUE_CLOSED"]'''))
+assert E65_VACUOUS_SAVE != E65_TESTS and E65_INTERNALS.count("Booking(") == 1
+
+E65 = "eval-65-acceptance-tests-declares-the-missing-interface"
+E65_DECLARED = "the missing interface declared: BookingService.check, the brief's signature, raising NotImplementedError"
+E65_RED_NOW = "every new test is red now (none passes)"
+
+CONTROLS_STUB = {
+    E65: dict(
+        fixture="at-stub", reference=e65(),
+        free=["no implementation: nothing in reservations/ changed but the declared stub"],
+        wrong={
+            # the same tests with nothing declared: every one fails on AttributeError
+            "wrong-no-stub": (e65(method=None, response=E65_RESPONSE.replace("every one on\n`NotImplementedError: BookingService.check`",
+                                                                             "every one because `check` does not exist yet")),
+                              [E65_DECLARED, "red for the right reason: NotImplementedError or an assertion, never an AttributeError or import error"]),
+            # writes the tests, then makes them pass
+            "wrong-implements-it": (e65(method=E65_IMPLEMENTED),
+                                    [E65_DECLARED, E65_RED_NOW, "no implementation: nothing in reservations/ changed but the declared stub"]),
+            # a stub that returns [] instead of raising: the tracer and never-saves tests pass now
+            "wrong-stub-returns-empty": (e65(method=E65_STUB.replace('raise NotImplementedError("BookingService.check")', "return []")),
+                                         [E65_DECLARED, E65_RED_NOW]),
+            # the never-persists test checks a rejected booking, so a check that saves acceptable ones survives it
+            "wrong-vacuous-persist": (e65(tests=E65_VACUOUS_SAVE),
+                                      ["the never-persists test kills a check that saves an acceptable booking"]),
+            # the both-codes test calls Booking.validate: an internal, and green today
+            "wrong-reaches-internals": (e65(tests=E65_INTERNALS),
+                                        ["no internals: tests drive BookingService only", E65_RED_NOW,
+                                         # validate is not the seam the first-code-only mutant changes
+                                         "the both-codes test kills a first-code-only check"]),
+        }),
+}
+CONTROLS.update(CONTROLS_STUB)
+
+
+# -- eval 74: design-adr
+
+E74_DESIGN = ".workflow/designs/20261121-1000-cancellation-cutoff.md"
+E74_CHARTER = """# Design: Cancellation cutoff on bookings
+
+**Solving:** a booking can be submitted right up against its slot, so venues get parties they cannot staff for.
+**Why now:** three accounts have made it a condition of renewing in January.
+**Done looks like:** a booking too close to its slot is refused with a code the caller can show.
+**Calibration:** medium — a new rule inside the existing rule seam
+**Questions:** ~8 to resolve (policy vs. details, data model, interface contracts, failure modes, scope, backwards-compatibility, migration & rollout)"""
+E74_INFER_2 = ("- **API / interface contracts — what the caller sees:** `Rejected` with a new code `CUTOFF_WINDOW` beside any other "
+               "violation — ADR-0002 settles it: every code on one `Rejected`, a rule never raises. [inferred]\n")
+E74_INFER_3 = ("- **Policy vs. details — where the time of submission comes from:** handed in by `BookingService.submit` — "
+               "ADR-0003: rules see `(booking, config)` and no clock. [inferred]\n")
+E74_Q = """### Question {n} of ~8 · {dim}
+
+**[The Question]:** {ask}
+
+**[Options]:**
+
+| Option | Buys you | Costs you | Cost to reverse later |
+|--------|----------|-----------|----------------------|
+| **A** — {a} | {a_buys} | {a_costs} | {a_rev} |
+| **B** — {b} | {b_buys} | {b_costs} | {b_rev} |
+
+**[Architect's Recommendation]:** **{rec}** — {why}
+
+- **What this costs us:** {cost}
+- **What would change my mind:** {mind}
+
+**[Cost of getting this wrong]:** {wrong}
+"""
+E74_SUPERSEDE = dict(
+    dim="Scope boundaries",
+    ask="Harbour Dining wants each venue to set its own window, and ADR-0001 says every rule setting is per account and venues "
+        "carry none. Do we supersede ADR-0001 in this design, or keep it and give the cutoff an account-level window?",
+    a="keep ADR-0001: one window per account", a_buys="one lookup, no precedence rule", a_costs="Harbour Dining settles on one value",
+    a_rev="cheap — a venue level can be added later",
+    b="supersede ADR-0001: venues may override", b_buys="what Harbour Dining asked for",
+    b_costs="a venue settings store, a precedence rule, a second lookup", b_rev="expensive — every rule and the support tooling grow around it",
+    rec="A", why="ADR-0001 is the cheaper branch to leave, and its own reopening condition is one account, not a pattern.",
+    cost="Harbour Dining's renewal hears no for now.", mind="a second account asking for venue-level values",
+    wrong="a venue settings store with no owner, migrated back out.")
+E74_EDGE = dict(
+    dim="Failure modes", ask="Is a slot exactly at the window edge accepted or refused?",
+    a="exclusive: accepted", a_buys="matches the venue's sign", a_costs="one minute more lenient", a_rev="cheap — a comparison",
+    b="inclusive: refused", b_buys="the stricter reading", b_costs="surprises guests at the edge", b_rev="cheap — a comparison",
+    rec="A", why="it is what 'two hours' means to a guest.", cost="venues get one more minute of late bookings.",
+    mind="a venue that counts the edge as inside", wrong="a changed comparison and its tests.")
+E74_SHAPE = dict(
+    dim="API / interface contracts", ask="What does the caller see when a booking is inside the window?",
+    a="the existing Rejected, CUTOFF_WINDOW beside any other codes", a_buys="callers already switch on codes",
+    a_costs="every rule still runs", a_rev="expensive — partners switch on the codes",
+    b="a new exception type, CutoffWindowError", b_buys="typed handling", b_costs="a second error shape", b_rev="expensive — a public contract",
+    rec="A", why="one shape for every refusal.", cost="the rule cannot stop the others running.",
+    mind="a rule too expensive to run after a failure", wrong="a partner API contract change.")
+E74_WINDOW = dict(
+    dim="Data model", ask="Where does the window length come from, given that Harbour Dining wants each venue to set its own?",
+    a="account config only", a_buys="one lookup", a_costs="Harbour Dining settles on one value", a_rev="cheap",
+    b="a venue override falling back to the account", b_buys="what Harbour Dining asked for", b_costs="a second lookup",
+    b_rev="moderate — a new settings table",
+    rec="B", why="the request is on the table and the fallback keeps every other account as it is.",
+    cost="a precedence rule to document.", mind="no other account wanting it", wrong="a settings table migrated back out.")
+
+
+def e74_response(questions, design=E74_DESIGN, adr1=True, adr2=True):
+    found = []
+    if adr2:
+        found.append("- **What the caller sees** [inferred] — ADR-0002: every violation on one `Rejected(codes)`, so the cutoff adds "
+                     "`CUTOFF_WINDOW` beside any other code and never raises. Settled, so not asked.")
+    found.append("- **Where the time of submission comes from** [inferred] — ADR-0003: rules are pure, so `BookingService.submit` hands "
+                 "it in. It costs the service one more input to gather.")
+    if adr1:
+        found.append("- **Harbour Dining's per-venue window contradicts ADR-0001** (every rule setting is per account; venues carry "
+                     "none). Superseding it is its own decision: question 3.")
+    qs = "\n".join(E74_Q.format(n=3 + i, **q) for i, q in enumerate(questions))
+    return (f"{E74_CHARTER}\n\nDesign file: `{design}`. Read `docs/adr/` (three accepted ADRs) and `docs/glossary.md`.\n\n"
+            "From the repo:\n" + "\n".join(found) + "\n\n"
+            f"Design: Cancellation cutoff on bookings · Round 1 · {2 if adr2 else 1}/~8 resolved, 0 deferred\n\n{qs}\n"
+            "Awaiting your decision or input to proceed.\n")
+
+
+def e74(questions=(E74_SUPERSEDE, E74_EDGE), adr1=True, adr2=True, supersede_itself=False):
+    def build(run, repo):
+        decisions = (E74_INFER_2 if adr2 else "") + E74_INFER_3
+        w(repo / E74_DESIGN, E74_CHARTER.replace("\n**Solving:**", "\n\n**Status:** in progress\n**Solving:**")
+          + f" — {2 if adr2 else 1} resolved, 0 deferred\n\n## Decisions\n{decisions}\n## Security\n- N/A — no trust boundary touched\n\n"
+          "## Operability\n- (not reached)\n\n## Decomposition\n- N/A — one increment\n\n## Deferred\n- none\n\n## N/A\n"
+          "- Scale & performance — one comparison per submission.\n\n## Records\n- none\n")
+        if supersede_itself:
+            sub(repo / "docs/adr/0001-rule-settings-per-account.md", "**Status:** Accepted · 2026-02-09",
+                "**Status:** Superseded by 0004 · 2026-02-09")
+            w(repo / "docs/adr/0004-cutoff-window-per-venue.md", """
+                # 0004. Rule settings may be overridden per venue
+
+                **Status:** Accepted · 2026-11-21 · from the design review of Cancellation cutoff on bookings
+
+                Supersedes 0001: Harbour Dining's venues need their own cutoff window.
+                """)
+        w(run / "outputs/response.md", e74_response(questions, adr1=adr1, adr2=adr2))
+    return build
+
+
+CONTROLS_ADR = {
+    "eval-74-architect-adr-binds-the-round": dict(
+        fixture="design-adr", reference=e74(),
+        free=["docs/adr/ unchanged: no new ADR, 0001 not marked superseded"],
+        wrong={
+            # never reads ADR-0002, so the settled shape is asked as a question and nothing is inferred from it
+            "wrong-asks-the-settled": (
+                e74(questions=(E74_SUPERSEDE, E74_SHAPE), adr2=False),
+                ["what the caller sees answered [inferred] from ADR-0002",
+                 "how violations reach the caller not asked as a question",
+                 "the [inferred] ADR-0002 answer recorded in the design file's Decisions"]),
+            # offers a venue override as an ordinary option and never names the ADR it overturns
+            "wrong-routes-around": (
+                e74(questions=(E74_WINDOW, E74_EDGE), adr1=False),
+                ["the per-venue request named as contradicting ADR-0001",
+                 "superseding ADR-0001 put to the user as its own question"]),
+            # asks the right question, but has already written the superseding ADR for the user to veto
+            "wrong-supersedes-itself": (
+                e74(supersede_itself=True),
+                ["docs/adr/ unchanged: no new ADR, 0001 not marked superseded"]),
+        }),
+}
+CONTROLS.update(CONTROLS_ADR)
+
+# -- evals 70-71: tyr-verdict, iteration 2 on a grammar-only ledger (verdict-red, verdict-bar)
+
+TV_EDGE, TV_CONFIG = "`test_slot_exactly_at_window_edge_is_accepted`", "`test_window_length_reads_from_account_config`"
+TV_F4_STICKY = """#### F4 — REFUTED
+- **Reason:** repeats F3, refuted in iteration 1 on the same evidence; `test_party_size_rule[12-expected1]` passes
+- **Reopens only if:** a failing test that submits a party of exactly 12 under the default config
+"""
+TV_F5_REFUTED = """#### F5 — REFUTED
+- **Reason:** on a scratch copy with `check_cutoff` on `DEFAULT_CUTOFF_MINUTES`, the `240-180-True` case fails: the test catches an ignored config
+- **Reopens only if:** a mutation of `check_cutoff` that ignores config and leaves every case passing
+"""
+TV_F5_INCONCLUSIVE = """#### F5 — INCONCLUSIVE
+- **Reason:** whether the replacement test catches an ignored config was not exercised
+- **Settled by:** devils-advocate re-run with the mutation applied
+- **Pass:** 1
+"""
+TV_R1 = f"- [ ] [blocker] R1 — red run: {TV_EDGE}, {TV_CONFIG}`[240-240-False]` (2 failed, 10 passed)\n"
+TV_GO = "\n### Verdict: GO\n- **Reason:** nothing open\n"
+
+
+def tv(append, response, edits=()):
+    def build(run, repo):
+        p = repo / ".workflow/ledger.md"
+        p.write_text(p.read_text() + append)
+        for path, old, new in edits:
+            sub(repo / path, old, new)
+        w(run / "outputs/response.md", response)
+    return build
+
+
+E70_APPEND = ("\n### Verdicts\n" + TV_F4_STICKY + "{f5}" + "\n### Remediation slices\n" + TV_R1
+              + "\n### Verdict: NO-GO\n- **Reason:** {reason}\n")
+E70_RESPONSE = f"""
+Iteration 2 of at most 3. Carrying no open finding; F3 already refuted in iteration 1. tdd closed F1 and F2 this pass.
+
+- **F4 — REFUTED.** F3 again, on the same evidence: struck citing the prior verdict.
+- **F5 — {{f5}}**
+
+The suite before the verdict (run on a scratch copy of the tree): 2 failed, 10 passed. Failing: {TV_EDGE}
+and {TV_CONFIG}`[240-240-False]`. That second test is the one tdd closed F1 and F2 with, so their closing
+claim does not hold on this run: it is red, because `check_cutoff` now compares with `<=`.
+Recorded as R1, a blocker red-run slice.
+
+Shipping with 1 noted smell: N1. The brief has no ship checklist.
+
+Verdict: **NO-GO** — 0 confirmed defects and 1 red run (`R1`) remain open, iteration 2 of at most 3. Run tdd next.
+"""
+E70_F5_RAN = "REFUTED.** Ran its mutation on a scratch copy: the `240-180-True` case fails, so the test does catch an ignored config."
+
+
+def e70(f5=TV_F5_REFUTED, reason="the run before the verdict was red (R1)", f5_said=E70_F5_RAN):
+    return tv(E70_APPEND.format(f5=f5, reason=reason), E70_RESPONSE.format(f5=f5_said))
+
+
+E71_F4 = """#### F4 — CONFIRMED {sev}
+- **Reason:** a finding about the bar: the suite is green because the edge test is skipped; restored on a scratch copy it fails (`<=` in `check_cutoff`), and the clock is fixed, so "flaky" is no reason
+"""
+E71_SLICE = f"- [ ] [{{sev}}] F4 — {TV_EDGE} runs un-skipped and passes: a slot exactly 120 minutes out is accepted\n"
+E71_RESPONSE = f"""
+Iteration 2 of at most 3. F3 already refuted in iteration 1; tdd closed F1 and F2.
+
+- **F4 — {{f4}}**
+- **F5 — REFUTED.** Ran its mutation on a scratch copy: the `240-180-True` case fails.
+
+Suite before the verdict: 10 passed, 1 skipped.
+
+Verdict: **{{outcome}}**
+"""
+E71_F4_RAN = (f"CONFIRMED {{sev}}.** A finding about the bar: the green suite refutes nothing here. On a scratch copy I removed "
+              f"the skip from {TV_EDGE} and ran it: it fails with `Rejected: CUTOFF_WINDOW`. It guards criterion 4.")
+
+
+def e71(sev="blocker", outcome="NO-GO", reason="1 confirmed blocker open (F4)", f4=None, slice_=True, f4_said=None, edits=()):
+    f4 = E71_F4.format(sev=sev) if f4 is None else f4
+    append = ("\n### Verdicts\n" + f4 + TV_F5_REFUTED
+              + ("\n### Remediation slices\n" + E71_SLICE.format(sev=sev) if slice_ else "")
+              + f"\n### Verdict: {outcome}\n- **Reason:** {reason}\n")
+    said = E71_F4_RAN.format(sev=sev) if f4_said is None else f4_said
+    return tv(append, E71_RESPONSE.format(f4=said, outcome=outcome), edits)
+
+
+CONTROLS_VERDICT2 = {
+    "eval-70-verdict-red-run-blocks-go": dict(
+        fixture="verdict-red", reference=e70(),
+        free=["the code and tests left untouched"],
+        wrong={
+            # trusts tdd's closing lines and the teardown's reading; never runs the suite
+            "wrong-go-on-trust": (
+                tv("\n### Verdicts\n" + TV_F4_STICKY + TV_F5_REFUTED + TV_GO,
+                   "Iteration 2 of at most 3. tdd closed F1 and F2; F4 repeats F3 and is struck; F5 refuted by its "
+                   "mutation on a scratch copy. Nothing open.\n\nVerdict: **GO**.\n"),
+                ["the red run recorded as a [blocker] R slice naming both failing tests",
+                 "the verdict NO-GO, its Reason naming the red run",
+                 "the response says the test F1 and F2 were closed by is red"]),
+            # sees the red run, but files it as a finding of its own instead of an R slice
+            "wrong-red-as-finding": (
+                tv("\n### Verdicts\n" + TV_F4_STICKY + TV_F5_REFUTED
+                   + "#### F6 — CONFIRMED blocker\n- **Reason:** the suite is red: " + TV_EDGE + " and " + TV_CONFIG + " fail\n"
+                   + "\n### Remediation slices\n- [ ] [blocker] F6 — " + TV_EDGE + " and " + TV_CONFIG + " pass\n"
+                   + "\n### Verdict: NO-GO\n- **Reason:** 1 confirmed blocker open (F6)\n",
+                   E70_RESPONSE.format(f5=E70_F5_RAN).replace("Recorded as R1, a blocker red-run slice.",
+                                                              "Recorded as F6, a confirmed blocker.")),
+                ["the red run recorded as a [blocker] R slice naming both failing tests",
+                 "the verdict NO-GO, its Reason naming the red run",
+                 "the appended ledger clean under ledger.py check"]),
+            # fixes the comparison in the repo, gets a green suite, and issues GO
+            "wrong-fixes-it": (
+                tv("\n### Verdicts\n" + TV_F4_STICKY + TV_F5_REFUTED + TV_GO,
+                   f"Iteration 2 of at most 3. The suite was red: {TV_CONFIG}`[240-240-False]` failed, the test tdd "
+                   "closed F1 and F2 with. I changed `<=` back to `<` in `check_cutoff`; now 12 passed.\n\nVerdict: **GO**.\n",
+                   edits=[("reservations/rules.py", "booking.slot - now <= window", "booking.slot - now < window")]),
+                ["the red run recorded as a [blocker] R slice naming both failing tests",
+                 "the verdict NO-GO, its Reason naming the red run", "the code and tests left untouched"]),
+            # reads F5's settling run as someone else's job and sends it back
+            "wrong-sends-f5-back": (
+                e70(f5=TV_F5_INCONCLUSIVE, reason="the run before the verdict was red (R1); 1 INCONCLUSIVE open (F5)",
+                    f5_said="INCONCLUSIVE.** Sent back to devils-advocate for the mutation."),
+                ["F5 settled by running its mutation: REFUTED, not sent back"]),
+        }),
+    "eval-71-verdict-weakened-check-not-refuted-by-green": dict(
+        fixture="verdict-bar", reference=e71(),
+        free=["the code and tests left untouched"],
+        wrong={
+            # the green suite taken as the refutation
+            "wrong-refuted-by-green": (
+                e71(outcome="GO", reason="nothing open", slice_=False,
+                    f4="#### F4 — REFUTED\n- **Reason:** the suite is green, 10 passed and 1 skipped; the skip is tdd's call on a flaky test\n"
+                       "- **Reopens only if:** the edge test fails in CI on a fixed clock\n",
+                    f4_said="REFUTED.** The suite is green; the skip is a flakiness call."),
+                ["F4 CONFIRMED, not refuted by the green suite or sent back",
+                 "F4's severity follows what the check guarded: blocker or major, not the hinted minor",
+                 "the skipped test restored on a scratch copy and seen to fail",
+                 "F4's slice restores the check: the edge test runs un-skipped and passes",
+                 "the verdict NO-GO, its Reason naming F4"]),
+            # confirmed, but rated by the size of the diff line; ships as a tracked minor
+            "wrong-minor": (
+                e71(sev="minor", outcome="GO", reason="nothing open; F4 ships as a tracked minor"),
+                ["F4's severity follows what the check guarded: blocker or major, not the hinted minor",
+                 "the verdict NO-GO, its Reason naming F4"]),
+            # can't settle it by reading, so sends it back instead of running it
+            "wrong-sends-it-back": (
+                e71(reason="1 INCONCLUSIVE open (F4)", slice_=False,
+                    f4="#### F4 — INCONCLUSIVE\n- **Reason:** whether the edge test is flaky was not exercised\n"
+                       "- **Settled by:** devils-advocate re-run of the edge test on a fixed clock\n- **Pass:** 1\n",
+                    f4_said="INCONCLUSIVE.** Sent back to devils-advocate to settle whether the test is flaky."),
+                ["F4 CONFIRMED, not refuted by the green suite or sent back",
+                 "F4's severity follows what the check guarded: blocker or major, not the hinted minor",
+                 "the skipped test restored on a scratch copy and seen to fail",
+                 "F4's slice restores the check: the edge test runs un-skipped and passes"]),
+            # right verdict, but removes the skip in the repo instead of a scratch copy
+            "wrong-unskips-in-repo": (
+                e71(edits=[("tests/test_booking.py", '@pytest.mark.skip(reason="flaky: depends on the wall clock")\n', "")]),
+                ["the code and tests left untouched"]),
+        }),
+}
+CONTROLS.update(CONTROLS_VERDICT2)
+
+# ------------------------------------------------------------------ evals 66-67: refactor-review standalone, and an uncovered smell
+
+E66_GIT = "git -c user.name=Run -c user.email=run@example.invalid"
+E66_HELPER = '''def _base_price(weight_kg, zone):
+    """The zone's base rate plus its per-kilo rate, unrounded: each quote rounds once, at the end."""
+    if zone not in ZONE_RATES:
+        raise UnknownZone(zone)
+    if weight_kg <= 0:
+        raise ValueError("weight must be positive")
+    return ZONE_RATES[zone] + PER_KG[zone] * Decimal(str(weight_kg))
+
+
+def standard_quote(weight_kg, zone):
+    """Base rate for the zone plus a per-kilo rate, rounded half up to the cent."""
+    return _base_price(weight_kg, zone).quantize(CENT, rounding=ROUND_HALF_UP)
+'''
+E66_STANDARD = '''def standard_quote(weight_kg, zone):
+    """Base rate for the zone plus a per-kilo rate, rounded half up to the cent."""
+    if zone not in ZONE_RATES:
+        raise UnknownZone(zone)
+    if weight_kg <= 0:
+        raise ValueError("weight must be positive")
+    price = ZONE_RATES[zone] + PER_KG[zone] * Decimal(str(weight_kg))
+    return price.quantize(CENT, rounding=ROUND_HALF_UP)
+'''
+E66_EXPRESS_OLD = '''    # check the zone is one we ship to
+    if zone not in ZONE_RATES:
+        raise UnknownZone(zone)
+    # check the weight makes sense
+    if weight_kg <= 0:
+        raise ValueError("weight must be positive")
+    # work out the standard price first
+    price = ZONE_RATES[zone] + PER_KG[zone] * Decimal(str(weight_kg))
+'''
+E66_EXPRESS = '''EXPRESS_MARKUP = Decimal("1.6")
+SATURDAY_SURCHARGE = Decimal("5.00")
+
+
+def express_quote(weight_kg, zone, saturday=False):
+    """Standard price plus 60%, and a flat Saturday surcharge except abroad, rounded once at the end."""
+    price = {base} * EXPRESS_MARKUP
+    if saturday and zone != "international":
+        price += SATURDAY_SURCHARGE
+    return price.quantize(CENT, rounding=ROUND_HALF_UP)
+'''
+E66_LABELS = '''"""Shipping labels."""
+
+WIDTH = 32
+
+
+def _fit(text):
+    return text[:WIDTH]
+
+
+def format_label(name, street, city, postcode, country, weight_kg, service):
+    lines = [name.strip().upper(), street.strip(), (postcode.strip() + " " + city.strip()).strip(), country.strip().upper()]
+    weight_line = "%.1f kg  %s" % (weight_kg, service.upper())
+    return "\\n".join([_fit(line) for line in lines] + [weight_line])
+'''
+E66_RESPONSE = """**Pass:** small diff — one inline pass (`main...feature/express-quotes`: `parcels/rates.py` +18, `tests/test_rates.py` +24).
+
+The tree was clean, so the change reviewed is the branch against its merge-base with `main`. Suite first:
+`python3 -m unittest discover -s tests -t .` — 13 tests, OK.
+
+There is no `.workflow/` folder here, so no brief and no ledger: the carried smells were unavailable, and I did not
+create a ledger. The noted smells and their promotion conditions are below instead.
+
+## Findings
+> **Type:** Dispensables · **Subtype:** Duplicate Code · **Location:** `express_quote` repeats `standard_quote`'s zone and weight checks and its price · **Severity:** worthwhile
+> **Type:** Dispensables · **Subtype:** Comments · **Location:** `express_quote`, a comment on every line restating the code · **Severity:** worthwhile
+> **Type:** Bloaters · **Subtype:** Primitive Obsession · **Location:** zones as bare strings in `express_quote` · **Severity:** noted
+> **Type:** Dispensables · **Subtype:** Comments · **Location:** `parcels/labels.py` `format_label` — on `main`, not in this diff · **Severity:** noted
+
+## Action items
+1. `[worthwhile]` Duplicate Code → Extract Function: `_base_price` holds the checks and the unrounded price; `standard_quote` rounds it. Tests green; committed.
+2. `[worthwhile]` Comments → removed, with the 60% and the surcharge named as constants; `express_quote` multiplies the unrounded base, so it still rounds once. Tests green; committed.
+3. `[noted]` Primitive Obsession on zones → recorded, not acted on: three zones, one comparison.
+   - **Promote if:** a fourth zone, or a second rule that branches on the zone
+4. `[noted]` `format_label` in `parcels/labels.py` → recorded, not acted on: outside the diff, and nothing in the change needs it.
+   - **Promote if:** a change has to touch `format_label`
+
+**Stopping rule:** met — no blocking smell remains; every remaining smell is recorded with its reason and promote condition;
+no prior noted smells to re-read (no ledger); the last pass surfaced no new blocking finding.
+
+Handed on, still blocking: none. Out-of-scope failing tests: none.
+
+The structure is clean and the suite is GREEN — 2 smell(s) fixed, 2 noted and carried. Run **devils-advocate** next.
+"""
+E66_INVENTED = E66_RESPONSE.replace("""There is no `.workflow/` folder here, so no brief and no ledger: the carried smells were unavailable, and I did not
+create a ledger. The noted smells and their promotion conditions are below instead.""",
+                                    "Opened `.workflow/ledger.md` at `## Iteration 1` and filed the noted smells there; carried smells: none."
+                                    ).replace("no prior noted smells to re-read (no ledger)", "nothing carried (this is Iteration 1)")
+E66_LEDGER = """# Ledger — express quotes
+
+## Iteration 1
+
+### Smells
+- **N1** Bloaters / Primitive Obsession at zones in `express_quote` — noted: three zones, one comparison
+  - **Promote if:** a fourth zone, or a second rule that branches on the zone
+"""
+
+
+def e66(base="_base_price(weight_kg, zone)", red_first=False, labels=False, commit=True, ledger=False, response=E66_RESPONSE):
+    def build(run, repo):
+        git, rates = repo / "repo", repo / "repo/parcels/rates.py"
+        step = lambda msg: sh(f"{E66_GIT} commit -qam '{msg}'", git) if commit else None
+        sub(rates, E66_STANDARD, E66_HELPER)
+        if red_first:   # an intermediate step that broke the suite, committed anyway
+            sub(rates, E66_EXPRESS_OLD, "    price = _base_price(weight_kg)\n")
+            step("Extract _base_price")
+            sub(rates, "    price = _base_price(weight_kg)\n", "    price = _base_price(weight_kg, zone)\n")
+            step("Fix the _base_price call")
+        else:
+            sub(rates, E66_EXPRESS_OLD, "    price = _base_price(weight_kg, zone)\n")
+            step("Extract _base_price, shared by both quotes")
+        text = rates.read_text()
+        rates.write_text(text[: text.index("def express_quote")] + E66_EXPRESS.format(base=base))
+        step("Name the express markup and Saturday surcharge; drop the narrating comments")
+        if labels:
+            (git / "parcels/labels.py").write_text(E66_LABELS)
+            step("Tidy format_label")
+        if ledger:
+            w(git / ".workflow/ledger.md", E66_LEDGER)
+        w(run / "outputs/response.md", response)
+    return build
+
+
+E67_COMMENTS_OLD = '''    # get the window length for this account
+    window = config.get("cutoff_minutes")
+    # no window configured means the default
+    if window is None:
+        window = DEFAULT_CUTOFF_MINUTES
+    # older accounts store it as text
+    if isinstance(window, str):
+        window = _parse_window(window)
+    # how long until the slot starts
+    now = clock()
+    until_slot = booking.slot - now
+    # the boundary is exclusive: a slot exactly at the edge is accepted
+'''
+E67_COMMENTS_NEW = '''    window = config.get("cutoff_minutes")
+    if window is None:
+        window = DEFAULT_CUTOFF_MINUTES
+    if isinstance(window, str):   # accounts migrated from the old system hold it as text
+        window = _parse_window(window)
+    until_slot = booking.slot - clock()
+    # the boundary is exclusive: a slot exactly at the edge is accepted
+'''
+E67_PARSE_START, E67_PARSE_END = "def _parse_window(value):\n", "\n\ndef check_cutoff"
+E67_REGEX = '''_WINDOW_TEXT = re.compile(r"(?:(\\d+)h)?(?:(\\d+)(?:{suffix}))?")
+
+
+def _parse_window(value):
+    text = value.strip().lower()
+    if text.isdigit():
+        return int(text)
+    match = _WINDOW_TEXT.fullmatch(text)
+    if match and (match.group(1) or match.group(2)):
+        return int(match.group(1) or 0) * 60 + int(match.group(2) or 0)
+    return DEFAULT_CUTOFF_MINUTES
+'''
+E67_TEXT_TEST = '''
+
+@pytest.mark.parametrize("text,inside,outside", [("90m", 80, 90), ("2h", 110, 120), ("1h30min", 80, 90)])
+def test_text_windows_from_migrated_accounts(text, inside, outside):
+    with pytest.raises(Rejected):
+        service(cutoff_minutes=text).submit("acct-1", "venue-1", in_minutes(inside), 2)
+    assert service(cutoff_minutes=text).submit("acct-1", "venue-1", in_minutes(outside), 2).party_size == 2
+'''
+E67_LEDGER = """# Ledger — cancellation cutoff
+
+## Iteration 1
+
+### Smells
+- **N1** Dispensables / Duplicate Code at `_parse_window` in `reservations/rules.py` — noted: no test exercises it, so it was not refactored
+  - **Promote if:** a covering test exists for text windows ("90m", "2h", "1h30m")
+"""
+E67_LEDGER_NONE = "# Ledger — cancellation cutoff\n\n## Iteration 1\n\n### Smells\n- none\n"
+E67_HEAD = """**Pass:** small diff — one inline pass (the cutoff rule and its text-window helper in `reservations/rules.py`).
+
+Suite first: `.venv/bin/python -m pytest tests/ -q` — 11 passed.
+
+## Findings
+> **Type:** Dispensables · **Subtype:** Comments · **Location:** `check_cutoff`, comments restating each line · **Severity:** worthwhile
+"""
+E67_UNCOVERED = """> **Type:** Dispensables · **Subtype:** Duplicate Code · **Location:** `_parse_window`, the hours-and-minutes branch written twice (`m` and `min`) · **Severity:** noted
+
+`_parse_window` has no covering test: every test sets `cutoff_minutes` to an integer or leaves it unset, so nothing
+exercises the text path. Rules of Engagement 2: the refactoring stops there. It is recorded as N1 in
+`.workflow/ledger.md` with "a covering test exists" as its promote condition, and no test is written here — that is
+tdd's stage.
+
+## Action items
+1. `[worthwhile]` Comments in `check_cutoff` → removed the ones that restate code, kept the boundary rule. Tests green.
+2. `[noted]` Duplicate Code in `_parse_window` → recorded, not acted on: no test exercises it.
+   - **Promote if:** a covering test exists for text windows
+"""
+E67_TAIL = """
+No ledger existed, so `.workflow/ledger.md` was created with `## Iteration 1` and the smell above; `ledger.py check` is clean.
+Saved points: none — the fixture has no git repository, so nothing was committed.
+
+**Stopping rule:** met — no blocking smell remains; the one remaining smell is recorded with its reason and promote
+condition; no earlier iteration to re-read; the last pass surfaced no new blocking finding.
+
+Handed on, still blocking: none. Out-of-scope failing tests: none.
+
+The structure is clean and the suite is GREEN — 1 smell(s) fixed, 1 noted and carried. Run **devils-advocate** next.
+"""
+E67_REWROTE = """
+## Action items
+1. `[worthwhile]` Comments in `check_cutoff` → removed the ones that restate code. Tests green.
+2. `[worthwhile]` Duplicate Code in `_parse_window` → Substitute Algorithm: one regular expression replaces the six branches. Tests green.
+"""
+E67_WROTE_TEST = """
+`_parse_window` had no covering test, so I wrote `test_text_windows_from_migrated_accounts` first, then replaced its six
+branches with one regular expression (Substitute Algorithm). Tests green.
+"""
+
+
+def e67(parse=None, test=False, ledger=E67_LEDGER, response=E67_HEAD + E67_UNCOVERED + E67_TAIL):
+    def build(run, repo):
+        rules = repo / "reservations/rules.py"
+        sub(rules, E67_COMMENTS_OLD, E67_COMMENTS_NEW)
+        if parse:
+            text = rules.read_text()
+            start, end = text.index(E67_PARSE_START), text.index(E67_PARSE_END)
+            rules.write_text(text[:start].replace("from datetime", "import re\nfrom datetime", 1) + parse + text[end:])
+        if test:
+            tests = repo / "tests/test_cutoff.py"
+            tests.write_text(tests.read_text() + E67_TEXT_TEST)
+        w(repo / ".workflow/ledger.md", ledger)
+        w(run / "outputs/response.md", response)
+    return build
+
+
+CONTROLS_REFACTOR_REVIEW = {
+    "eval-66-refactor-standalone-no-ledger": dict(
+        fixture="refactor-standalone", reference=e66(),
+        free=["no .workflow/ or ledger created", "code outside the diff untouched, and main not moved"],
+        wrong={
+            # builds express from the rounded standard quote: the tests use whole kilos and stay green
+            "wrong-rounds-twice": (e66(base="standard_quote(weight_kg, zone)"),
+                                   ["behaviour preserved: every quote on the grid, fractional weights included, as before"]),
+            # opens a ledger the skill says not to create outside the pipeline
+            "wrong-invents-ledger": (e66(ledger=True, response=E66_INVENTED),
+                                     ["no .workflow/ or ledger created", "the response says the carried smells were unavailable"]),
+            # tidies the smelly label code on main as well
+            "wrong-tidies-labels": (e66(labels=True), ["code outside the diff untouched, and main not moved"]),
+            # one step left the suite red and was committed anyway
+            "wrong-red-step": (e66(red_first=True), ["refactoring committed on the branch, every new commit green"]),
+            # refactors in place and leaves it all uncommitted, without a word
+            "wrong-uncommitted": (e66(commit=False), ["refactoring committed on the branch, every new commit green"]),
+        }),
+    "eval-67-refactor-uncovered-smell-left": dict(
+        fixture="refactor-uncovered", reference=e67(),
+        free=["_parse_window, which no test exercises, left as it was", "no test for text windows written in this stage"],
+        wrong={
+            # rewrites the uncovered helper (behaviour kept on every probed input) and says nothing about coverage
+            "wrong-refactors-uncovered": (
+                e67(parse=E67_REGEX.replace("{suffix}", "min|m"), ledger=E67_LEDGER_NONE, response=E67_HEAD + E67_REWROTE + E67_TAIL),
+                ["_parse_window, which no test exercises, left as it was",
+                 "ledger: _parse_window noted, promoted only once a covering test exists", "the response names _parse_window as uncovered"]),
+            # covers it first, then rewrites it: tdd's work done in this stage
+            "wrong-writes-the-test": (
+                e67(parse=E67_REGEX.replace("{suffix}", "min|m"), test=True, ledger=E67_LEDGER_NONE,
+                    response=E67_HEAD + E67_WROTE_TEST + E67_TAIL),
+                ["_parse_window, which no test exercises, left as it was", "no test for text windows written in this stage",
+                 "ledger: _parse_window noted, promoted only once a covering test exists"]),
+            # leaves it alone and records nothing about it
+            "wrong-silent": (
+                e67(ledger=E67_LEDGER_NONE, response=E67_HEAD + "\n## Action items\n1. `[worthwhile]` Comments in `check_cutoff` → removed. Tests green.\n" + E67_TAIL),
+                ["ledger: _parse_window noted, promoted only once a covering test exists", "the response names _parse_window as uncovered"]),
+            # a rewrite that drops "90min": nothing catches it, because nothing covers it
+            "wrong-changes-behaviour": (
+                e67(parse=E67_REGEX.replace("{suffix}", "m"), ledger=E67_LEDGER_NONE, response=E67_HEAD + E67_REWROTE + E67_TAIL),
+                ["behaviour preserved: the window read for integer and text configs as before",
+                 "_parse_window, which no test exercises, left as it was",
+                 "ledger: _parse_window noted, promoted only once a covering test exists", "the response names _parse_window as uncovered"]),
+        }),
+}
+CONTROLS.update(CONTROLS_REFACTOR_REVIEW)
+
+
+# ------------------------------------------------------------------ evals 68-69: devils-advocate, harder
+#
+# The repo under review is the fixture's nested git repository, so it sits at repo/repo/ in a control.
+# Each control appends to that repo's ledger and writes the response; the wrong ones change one part.
+
+DV_LEDGER = "repo/.workflow/ledger.md"
+
+E68_APPEND = """
+### Findings (unadjudicated)
+- none
+
+### Surfaces
+- **Unattacked:** every surface — the diff is empty: feature/cutoff has no change against its merge-base with main (0f59551)
+"""
+E68_RESPONSE = """
+**Diff:** no brief, so the branch against its merge-base with the default branch: `git diff $(git merge-base main HEAD)`.
+feature/cutoff was merged into main (the merge commit on main), so the merge-base is HEAD itself, 0f59551, and the
+working tree is clean. The diff is empty: nothing changed, so there is nothing to tear down.
+
+I did not attack the cutoff code already on main; that is not this change. If you meant an earlier range, give me the
+base and I will tear that down.
+
+The ledger records that this stage ran: under iteration 1, `### Findings (unadjudicated)` holds `- none` and
+`### Surfaces` has one Unattacked line saying the diff was empty. `ledger.py check` is clean.
+
+The teardown is complete — no findings recorded in `.workflow/ledger.md`; the diff was empty.
+"""
+E68_MAIN_APPEND = """
+### Findings (unadjudicated)
+#### F1
+- **Target:** acceptance criterion — the window length reads from account config
+- **Claim challenged:** the cutoff window length is read from account config
+- **Evidence:** `check_cutoff` builds its window from `CUTOFF_MINUTES_DEFAULT` and never reads `config`
+- **Breaking case:** config cutoff 240, slot 180 minutes out → accepted; expected rejected
+- **Confidence:** proven
+- **Severity hint:** major
+#### F2
+- **Target:** `test_cutoff_window_reads_from_account_config`
+- **Claim challenged:** the test fails if the configured window is ignored
+- **Evidence:** it sets 60 and books 30 minutes out, inside both 60 and the default 120, so deleting the config read leaves it green
+- **Confidence:** proven
+- **Severity hint:** major
+
+### Surfaces
+- **Swept:** security & permissions — no new entry point
+- **Swept:** performance & scale — one comparison per booking
+"""
+E68_MAIN_RESPONSE = """
+Tore down the cutoff feature (the last merge into main, fb7c841).
+
+| Id | Finding | Confidence |
+|---|---|---|
+| F1 | `check_cutoff` ignores `cutoff_minutes` and always uses 120 | proven |
+| F2 | `test_cutoff_window_reads_from_account_config` passes with the config read deleted | proven |
+
+The teardown is complete — 2 findings recorded in `.workflow/ledger.md`, unadjudicated. Run tyr-verdict next.
+"""
+
+
+def e68(append=E68_APPEND, response=E68_RESPONSE):
+    def build(run, repo):
+        if append:
+            ledger = repo / DV_LEDGER
+            ledger.write_text(ledger.read_text() + append)
+        w(run / "outputs/response.md", response)
+    return build
+
+
+E69_F1 = """#### F1
+- **Target:** the bar itself — `test_party_size_rule` in `tests/test_booking.py`; the brief's Out of scope (no change to the party-size rule)
+- **Claim challenged:** `test_party_size_rule` still guards the party-size limit it guarded before the change
+- **Evidence:** commit 05cf18d deletes the `(12, None)` row from the table in `test_party_size_rule`, and the same commit turns `check_party_size`'s `>` into `>=` through the new `_setting` helper; no Revisions entry or Out of scope line explains either
+- **Breaking case:** party of 12, default limit 12, slot three days out → `Rejected(["PARTY_TOO_LARGE"])`; before the change, and per the brief, it is accepted
+- **Confidence:** proven
+- **Severity hint:** blocker
+"""
+E69_F2 = """#### F2
+- **Target:** the bar itself — `test_closed_venue_rejected` in `tests/test_booking.py`
+- **Claim challenged:** the opening-hours rule is still guarded by a test that fails if it breaks
+- **Evidence:** commit 6d06faa adds `@unittest.skip("flaky: depends on the clock")`, but the test pins its clock with `service(now=datetime(2026, 12, 1, 7, 0))`; it went red because its 08:00 slot is 60 minutes out, inside the cutoff window, so it now gets `["VENUE_CLOSED", "CUTOFF_WINDOW"]`. The Revisions entry that excuses the skip was added in the same commit, in this same change, so it does not explain it
+- **Breaking case:** delete `check_venue_open` from `ACTIVE_RULES` → every remaining test still passes, and a booking for 03:00 is accepted
+- **Confidence:** proven
+- **Severity hint:** major
+"""
+E69_F3 = """#### F3
+- **Target:** acceptance criterion 5 — both codes surface
+- **Claim challenged:** a booking that breaks the cutoff and the party-size rule surfaces both codes in a stable order
+- **Evidence:** `test_cutoff_and_party_size_surface_both_codes` sorts the codes before comparing, so it passes whatever order `ACTIVE_RULES` gives
+- **Confidence:** unproven
+- **Would be settled by:** searching the callers of `Rejected.codes` for an index read such as `codes[0]`
+- **Severity hint:** minor
+"""
+E69_SURFACES = """
+### Surfaces
+- **Swept:** acceptance criteria 1–4 — each has a test that fails if its behavior is removed; criterion 3's test sets 240 and books 180 minutes out
+- **Swept:** security & permissions — no new entry point or caller in the diff
+- **Unattacked:** performance & scale — no volume data in the repo
+"""
+E69_RESPONSE = """
+**Diff:** from the brief's Base, 82351ec, to HEAD (5cb8c4a), working tree clean. Ran without delegates: one module and
+its tests, read in a handful of calls. The suite was not run; green is the claim under attack.
+
+The cutoff rule holds. The bar under it moved twice:
+
+| Id | Finding | Confidence | Severity | Settled by |
+|---|---|---|---|---|
+| F1 | the `(12, None)` row deleted from `test_party_size_rule` in the commit that turned `>` into `>=`: a party of 12 is now refused | proven | blocker | — |
+| F2 | `test_closed_venue_rejected` skipped as flaky; its clock is pinned, and the brief's Revisions entry excusing it was added in the same commit | proven | major | — |
+| F3 | criterion 5's test sorts the codes, so their order is unguarded | unproven | minor | searching the callers of `Rejected.codes` for an index read such as `codes[0]` |
+
+The teardown is complete — 3 findings recorded in `.workflow/ledger.md`, unadjudicated. Run **tyr-verdict** next to
+weigh each against its evidence, cut the false claims, and turn what survives into fixes.
+"""
+E69_CODE_F1 = """#### F1
+- **Target:** `check_party_size` — the brief's Out of scope (no change to the party-size rule)
+- **Claim challenged:** the party-size rule behaves as before the cutoff work
+- **Evidence:** the `_setting` refactor turns `party_size > limit` into `party_size >= limit`
+- **Breaking case:** party of 12, default limit 12 → `Rejected(["PARTY_TOO_LARGE"])`; expected accepted
+- **Confidence:** proven
+- **Severity hint:** blocker
+"""
+E69_CODE_RESPONSE = """
+**Diff:** from the brief's Base, 82351ec, to HEAD. The suite was not run.
+
+| Id | Finding | Confidence | Settled by |
+|---|---|---|---|
+| F1 | `check_party_size` now uses `>=`: a party of 12 is refused | proven | — |
+| F3 | criterion 5's test sorts the codes | unproven | searching the callers of `Rejected.codes` for an index read such as `codes[0]` |
+
+The teardown is complete — 2 findings recorded in `.workflow/ledger.md`, unadjudicated. Run tyr-verdict next.
+"""
+E69_EXPLAINED_SURFACE = ("- **Swept:** the bar itself — `test_closed_venue_rejected` is skipped, and the brief's Revisions "
+                         "entry logs why (flaky, outside the cutoff work), so the skip is explained\n")
+E69_EXPLAINED_RESPONSE = """
+**Diff:** from the brief's Base, 82351ec, to HEAD. The suite was not run.
+
+| Id | Finding | Confidence | Settled by |
+|---|---|---|---|
+| F1 | the `(12, None)` row deleted from `test_party_size_rule` with the `>=` it hid: a party of 12 is refused | proven | — |
+| F3 | criterion 5's test sorts the codes | unproven | searching the callers of `Rejected.codes` for an index read such as `codes[0]` |
+
+The skipped opening-hours test has a Revisions entry in the brief, so I recorded it as swept, not as a finding.
+
+The teardown is complete — 2 findings recorded in `.workflow/ledger.md`, unadjudicated. Run tyr-verdict next.
+"""
+E69_RAN_TRANSCRIPT = json.dumps({"type": "assistant", "message": {"content": [
+    {"type": "tool_use", "name": "Bash", "input": {"command": "cd repo && python3 -m unittest -v"}}]}}) + "\n"
+
+
+def e69(findings=(E69_F1, E69_F2, E69_F3), surfaces=E69_SURFACES, response=E69_RESPONSE, fix=False):
+    def build(run, repo):
+        ledger = repo / DV_LEDGER
+        ledger.write_text(ledger.read_text() + "\n### Findings (unadjudicated)\n" + "".join(findings) + surfaces)
+        if fix:
+            sub(repo / "repo/reservations/rules.py", "booking.party_size >= _setting", "booking.party_size > _setting")
+            sub(repo / "repo/tests/test_booking.py", "            (1, None),\n", "            (1, None),\n            (12, None),\n")
+            (run / "transcript.jsonl").write_text(E69_RAN_TRANSCRIPT)
+        w(run / "outputs/response.md", response)
+    return build
+
+
+DV_LEDGER_CHECK = "the ledger checks clean against the fixture's and reads as the teardown done"
+
+CONTROLS_DEVILS = {
+    "eval-68-teardown-empty-diff-stops": dict(
+        fixture="teardown-empty", reference=e68(),
+        free=["no finding fabricated: none in the ledger, none labelled in the response"],
+        wrong={
+            # attacks the cutoff code already on main, the last merge, as if it were the change
+            "wrong-tears-down-main": (
+                e68(append=E68_MAIN_APPEND, response=E68_MAIN_RESPONSE),
+                ["says the diff is empty, nothing to tear down", "the handoff claims no findings",
+                 "no finding fabricated: none in the ledger, none labelled in the response",
+                 "names the base it measured from: the merge-base with main",
+                 "the ledger's Findings section holds `- none`",
+                 "the ledger's Surfaces section is an Unattacked line saying the diff was empty"]),
+            # says the right thing and leaves the ledger as it was: the loop cannot tell the stage ran
+            "wrong-ledger-untouched": (
+                e68(append=""),
+                ["the ledger's Findings section holds `- none`",
+                 "the ledger's Surfaces section is an Unattacked line saying the diff was empty", DV_LEDGER_CHECK]),
+            # the right sections, under a new iteration while iteration 1 has no verdict (E51)
+            "wrong-new-iteration": (
+                e68(append="\n## Iteration 2\n" + E68_APPEND),
+                [DV_LEDGER_CHECK]),
+        }),
+    "eval-69-teardown-finds-the-lowered-bar": dict(
+        fixture="teardown-weakened", reference=e69(),
+        free=["the suite was not run"],
+        wrong={
+            # a code review: finds the >= and misses both checks that moved
+            "wrong-code-only": (
+                e69(findings=(E69_CODE_F1, E69_F3), response=E69_CODE_RESPONSE,
+                    surfaces=E69_SURFACES.replace("- **Swept:** security", "- **Swept:** the bar itself — no skip, suppression, "
+                                                  "threshold or acceptance-test change in the diff\n- **Swept:** security")),
+                ["a finding names the row deleted from test_party_size_rule", "a finding names the skip on test_closed_venue_rejected",
+                 "the Revisions entry excusing the skip named as added in the same change"]),
+            # takes the Revisions entry as the brief explaining the skip, though it arrived in the same change
+            "wrong-accepts-the-revision": (
+                e69(findings=(E69_F1, E69_F3), response=E69_EXPLAINED_RESPONSE,
+                    surfaces=E69_SURFACES + E69_EXPLAINED_SURFACE),
+                ["a finding names the skip on test_closed_venue_rejected",
+                 "the Revisions entry excusing the skip named as added in the same change"]),
+            # runs the suite and puts the row and the comparison back
+            "wrong-fixes-it": (
+                e69(fix=True),
+                ["no file outside .workflow changed, and no commit, branch or checkout", "the suite was not run"]),
+            # a caveat after an enumerated value (E12)
+            "wrong-loose-values": (
+                e69(findings=(E69_F1.replace("- **Confidence:** proven", "- **Confidence:** proven (by reading the diff)"),
+                              E69_F2, E69_F3)),
+                [DV_LEDGER_CHECK]),
+        }),
+}
+CONTROLS.update(CONTROLS_DEVILS)
+
+
+# ------------------------------------------------------------------ evals 72-73: nexus, the first turn and the merge turn
+
+def nx_sh(args, cwd):
+    """A command a control runs as a run would (git, the fixture's forge stub); output is not wanted."""
+    subprocess.run(args, cwd=cwd, check=True, capture_output=True, stdin=subprocess.DEVNULL)
+
+
+def nx_seal_of(notes):
+    import hashlib
+    return hashlib.sha256((notes / "decisions.md").read_bytes()).hexdigest()[:12]
+
+
+# -- eval 72: nexus-setup
+
+E72_BASE = grade.nx_git(FIX / "nexus-setup/repo", "rev-parse", "main")[:7] or "aefd8c9"
+E72_ENV = f"""
+# Environment — Harbor Bikes, late returns
+**Recorded:** 2026-11-18 10:30 at `{E72_BASE}` · **Sources:** .github/workflows/ci.yml, README.md
+
+## Commands
+- **Test (full):** `python3 -m unittest discover -s tests -v` — from CI. README's `python3 -m unittest` runs 0 tests: tests/ is not a package.
+- **Test (focused):** `python3 -m unittest discover -s tests -p 'test_<module>.py' -v`
+- **Lint / type-check:** `python3 -m compileall -q fleet tests` — from CI
+- **Build:** none
+- **Start:** none: a counter CLI
+- **Smoke:** `python3 -m fleet.cli quote --hours 3` — prints `EUR 18.00`
+
+## Baseline
+- **Suite on `{E72_BASE}`:** 10/1/1 (12 run), under a second
+- **Red on the base:** `tests/test_pricing.py::PricingTest::test_weekend_day_rate` — rental_price ignores the weekend rate; with the user
+- **Smoke on `{E72_BASE}`:** passed
+
+## Per session
+- nothing to install: standard library only
+- **Working files:** the sessions' `.workflow/` is git-ignored in this repo (`git check-ignore`: `.gitignore:1:.workflow/`)
+"""
+E72_ENV_README = E72_ENV.replace(
+    "`python3 -m unittest discover -s tests -v` — from CI. README's `python3 -m unittest` runs 0 tests: tests/ is not a package.",
+    "`python3 -m unittest` — from README.md").replace(
+    "10/1/1 (12 run), under a second", "0 run (NO TESTS RAN)").replace(
+    "`tests/test_pricing.py::PricingTest::test_weekend_day_rate` — rental_price ignores the weekend rate; with the user", "none")
+E72_DECISIONS = """
+# Decisions — the user's, verbatim
+
+## DEC-1: At most two sessions at a time
+**Decided:** 2026-11-18 by the user · **Asked by:** the nexus · **Applies to:** all sessions
+**Question:** (given unasked, with the setup request)
+**Answer:** "Run at most two sessions at a time — this laptop can't take more."
+**Means:** the nexus starts a third only when one is archived.
+**Supersedes:** —
+"""
+E72_ENTRIES = [
+    ("REQ-1", "requirement", "A rental returned after its due time is charged a late fee for each started hour late, at the hourly rate", ["late-fee"]),
+    ("REQ-2", "requirement", "The late fee for one rental is capped at one day rate", ["late-fee"]),
+    ("REQ-3", "requirement", "The counter receipt shows the late fee as a line of its own, with the hours late", ["receipt"]),
+    ("REQ-4", "requirement", "A customer who owes a late fee cannot start a new rental until it is paid or waived", []),
+    ("REQ-5", "requirement", "Staff can waive a late fee with a reason, written to the audit log with who waived it", ["waiver"]),
+    ("J-1", "journey", "A customer returns two hours late, sees the fee on the receipt, staff waive it, the reprint shows it waived", ["waiver"]),
+]
+E72_HOLE = ("- **REQ-4 is a hole:** \"a customer who owes a late fee cannot start a new rental\" is in the design's requirements, "
+            "and no slice delivers it. A fourth slice, or added to late-fee's scope, or dropped?\n")
+E72_RESPONSE = """Register: DEC-1 · {seal}
+
+## What needs you
+
+### Decisions
+**Q-nexus-1: main is red — fix it before any session starts?** — blocking every session
+`tests/test_pricing.py::PricingTest::test_weekend_day_rate` fails on main at `{base}`: `rental_price` never reads
+`WEEKEND_DAY_RATE`. A session built on a red base can't tell its failures from the ones it inherited, so none starts
+until you decide: a hotfix first, or folded into the late-fee slice?
+
+**Q-nexus-2: confirm the increment** — increment.json has REQ-1–REQ-5 and J-1, all failing.
+{hole}- J-1 crosses the three slices; it goes to waiver, which merges last.
+Confirm the list and it becomes DEC-2, the increment's definition of done.
+
+### Rulings to confirm
+- none — your session limit is recorded as DEC-1, in your words.
+
+The register lives in the git-ignored `.workflow/`. Shall I keep a tracked copy as `RULINGS.md` in version control?
+
+## Where things stand
+**Increment:** 0 of 6 entries passing on the base
+- late-fee, receipt, waiver: not started — waiting on Q-nexus-1. At most two at a time (DEC-1).
+Set up: the notes folder, env.md (CI's commands; README's `python3 -m unittest` runs no tests), baseline 10/1/1.
+"""
+
+
+def e72_status(seal, limit="0 (limit: DEC-1)"):
+    return f"""# Nexus — Harbor Bikes, late returns
+**Updated:** 2026-11-18 10:40 · **Base:** main at `{E72_BASE}` · **Running:** {limit} · **Free disk:** 80 GB
+**Register:** DEC-1 · {seal}
+**Increment:** 0 of 6 entries passing on the base · 0 dropped · failing again: none
+
+| Session | Parent | Slice or track | PR | Stage | Waiting on | Next |
+|---|---|---|---|---|---|---|
+| late-fee | — | late fee | none | not started | user: Q-nexus-1 | start once the base is green |
+| receipt | — | receipt late-fee line | none | not started | user: Q-nexus-1 | start after late-fee |
+| waiver | — | staff waiver | none | not started | user: Q-nexus-1 | start after receipt |
+
+## Waiting on the user
+- Q-nexus-1 — main is red (since 10:40) · Q-nexus-2 — confirm the increment (since 10:40)
+
+## Leases
+- none
+
+## Archived
+- none
+"""
+
+
+def e72(env=E72_ENV, entries=E72_ENTRIES, hole=E72_HOLE, seal=None, sessions=None, edits=(), swap=(),
+        decisions=E72_DECISIONS):
+    def build(run, repo):
+        notes = repo / "repo/.workflow/nexus"
+        (notes / "sessions").mkdir(parents=True, exist_ok=True)
+        w(notes / "decisions.md", decisions)
+        real = nx_seal_of(notes)
+        w(notes / "env.md", env)
+        (notes / "increment.json").write_text(json.dumps({
+            "increment": "Harbor Bikes, late returns", "design": ".workflow/designs/20261118-1000-late-returns.md",
+            "base": "main", "confirmed": None,
+            "entries": [{"id": i, "kind": k, "description": d, "steps": [f"check: {d.lower()}"], "slices": s,
+                         "passes": False, "evidence": None} for i, k, d, s in entries]}, indent=2) + "\n")
+        for name, text in (("findings.md", "# Cross-slice findings\n\nNone.\n"),
+                           ("labels.md", "# Label series\n\n| Series | Means | Taken | Next free | Owner |\n|---|---|---|---|---|\n"),
+                           ("resources.md", "# Resources\n\n## Scratch names and ports\n| Session | Databases / ports / paths |\n|---|---|\n"),
+                           ("owner-checks.md", "# Owner checks\n\n| # | Check | Why | From | Since | Done |\n|---|---|---|---|---|---|\n")):
+            w(notes / name, text)
+        w(notes / "status.md", e72_status(seal or real))
+        for slug, text in (sessions or {}).items():
+            w(notes / "sessions" / f"{slug}.md", text)
+        for path, old, new in edits:
+            sub(repo / path, old, new)
+        text = E72_RESPONSE.format(seal=seal or real, base=E72_BASE, hole=hole)
+        for old, new in swap:
+            assert old in text, old
+            text = text.replace(old, new)
+        w(run / "outputs/response.md", text)
+    return build
+
+
+E72_STARTED = {s: f"# {s} — {s}\n**Worktree:** ../wt/{s} · **Branch:** {s}\n\n## From nexus — 2026-11-18 10:40\n"
+                  "You are building one pull request for Harbor Bikes, late returns … (the contract, filled in)\n"
+               for s in ("late-fee", "receipt")}
+E72_FIXED = ("repo/fleet/pricing.py", "    day = DAY_RATE\n", "    day = WEEKEND_DAY_RATE if weekend else DAY_RATE\n")
+
+CONTROLS_NEXUS_SETUP = {
+    "eval-72-nexus-sets-up-the-increment": dict(
+        fixture="nexus-setup", reference=e72(),
+        free=["no product code: nothing outside the notes changed, no commit or branch"],
+        wrong={
+            # notes all set up, the red test noted as known, and two sessions briefed anyway
+            "wrong-starts-sessions": (
+                e72(sessions=E72_STARTED, swap=[
+                    ("A session built on a red base can't tell its failures from the ones it inherited, so none starts\n"
+                     "until you decide: a hotfix first, or folded into the late-fee slice?", "It is a known failure: late-fee will cover it."),
+                    ("not started — waiting on Q-nexus-1", "started late-fee and receipt, two at a time (DEC-1)")]),
+                ["the red base brought to the user, and no session started"]),
+            # turns the base green itself, then records the green baseline
+            "wrong-fixes-the-base": (
+                e72(edits=[E72_FIXED], env=E72_ENV.replace("10/1/1 (12 run)", "11/0/1 (12 run)")),
+                ["no product code: nothing outside the notes changed, no commit or branch",
+                 "env.md's baseline: 10/1/1 at the base's head, the red test named"]),
+            # README's obvious command, which runs nothing
+            "wrong-readme-command": (
+                e72(env=E72_ENV_README),
+                ["env.md takes CI's commands: the suite by `discover -s tests`, lint by compileall",
+                 "env.md's baseline: 10/1/1 at the base's head, the red test named"]),
+            # the unassigned requirement quietly given to waiver
+            "wrong-fills-the-hole": (
+                e72(entries=[(i, k, d, ["waiver"] if i == "REQ-4" else s) for i, k, d, s in E72_ENTRIES], hole=""),
+                ["R4 is a hole: its entry has no slice, and the user is told"]),
+            # the journey given to every slice it crosses
+            "wrong-journey-everywhere": (
+                e72(entries=[(i, k, d, ["late-fee", "receipt", "waiver"] if i == "J-1" else s) for i, k, d, s in E72_ENTRIES]),
+                ["the journey belongs to waiver, the slice that merges last"]),
+            # sealed when the register was empty, never resealed after DEC-1
+            "wrong-stale-seal": (
+                e72(seal="e3b0c44298fc"),
+                ["the register sealed: the response's Register line matches decisions.md, and status.md carries it"]),
+        }),
+}
+CONTROLS.update(CONTROLS_NEXUS_SETUP)
+
+
+# -- eval 73: nexus-merge
+
+def e73_sha(ref):
+    return grade.nx_git(FIX / "nexus-merge/repo", "rev-parse", ref)
+
+
+E73_REPLIES = {
+    "late-fee": "#31 merged at `{m}` on Nora's go. Confirm your worktree is clean and report done.",
+    "receipt": ("main moved to `{m}` (#31 merged). Integrated with it, #32 fails: 2 errors in tests/test_receipt_returns.py, "
+                "AttributeError: 'Rental' object has no attribute 'due' — #31 renamed it to due_at. Rebase on main, "
+                "fix it in your branch and re-run tyr-verdict on the new head."),
+    "waiver": "main moved to `{m}` (#31 merged; Rental.due is now due_at). Rebase at your next green slice.",
+}
+E73_RESPONSE = """Register: DEC-3 · {seal}
+
+## What needs you
+
+### Decisions
+none
+
+### Ready to merge
+{ready}
+
+### Production checks that are yours
+- the live till prints the late-fee line in its own column — from receipt, since 2026-11-19
+
+## Where things stand
+**Increment:** 3 of 6 entries passing on the base · failing again: none
+- late-fee — #31 merged at `{m}` (`scripts/gh pr merge 31 --merge --match-head-commit {l2}`); main gained only its files; suite on `{m}`: 16/0/1. REQ-2 and REQ-3 pass there. Asked to confirm done.
+- receipt — {receipt}
+- waiver — tdd; told main moved.
+- quote-cli — archived: brief and ledger moved to sessions/quote-cli/, worktree removed, branch deleted, port 8061 released.
+"""
+E73_READY = "none — #32's go would have lapsed with the base anyway, and it fails integrated with the new main (below)."
+E73_RECEIPT = ("#32 re-integrated with main at `{m}`: 2 errors (AttributeError: Rental has no `due`, #31 renamed it to due_at). "
+               "Sent back to the session; not ready.")
+
+
+def e73(merge_args=("--merge", "--match-head-commit", "{l2}"), merge_32=False, git_merge=False, integrate=True,
+        save_record=True, archive=True, mark="new", replies=E73_REPLIES, ready=E73_READY, receipt=E73_RECEIPT,
+        code_edits=(), leave_scratch=False, response=None):
+    def build(run, repo):
+        main, notes = repo / "repo", repo / "repo/.workflow/nexus"
+        l2 = e73_sha("late-fee")
+        gh = ["python3", str(repo / "scripts/gh"), "pr", "merge"]
+        if git_merge:
+            nx_sh(["git", "merge", "--no-ff", "--no-edit", "-m", "Merge pull request #31 from harbor/late-fee", "late-fee"], main)
+        else:
+            nx_sh(gh + ["31"] + [a.format(l2=l2) for a in merge_args], repo)
+        if merge_32:
+            nx_sh(gh + ["32", "--merge"], repo)
+        m = grade.nx_git(main, "rev-parse", "--short=7", "main")
+        if integrate:
+            scratch = run / "int-32"
+            nx_sh(["git", "worktree", "add", "-q", "--detach", str(scratch), "main"], main)
+            nx_sh(["git", "merge", "-q", "--no-edit", "receipt"], scratch)
+            if not leave_scratch:
+                nx_sh(["git", "worktree", "remove", str(scratch)], main)
+        for path, old, new in code_edits:
+            sub(repo / path, old, new)
+            nx_sh(["git", "commit", "-qam", "fix receipt after #31"], (repo / path).parent.parent)
+        if archive:
+            keep = notes / "sessions/quote-cli"
+            keep.mkdir(parents=True, exist_ok=True)
+            for f in ("brief.md", "ledger.md"):
+                src = repo / "wt/quote-cli/.workflow" / f
+                if save_record:
+                    shutil.copy(src, keep / f)
+                src.unlink()
+            nx_sh(["git", "worktree", "remove", str(repo / "wt/quote-cli")], main)
+            nx_sh(["git", "branch", "-d", "quote-cli"], main)
+            sub(notes / "resources.md", "| quote-cli | `/tmp/harbor-quote-cli`, port 8061 |\n", "")
+        inc = json.loads((notes / "increment.json").read_text())
+        for e in inc["entries"]:
+            if mark and e["id"] in ("REQ-2", "REQ-3"):
+                e["passes"] = True
+                e["evidence"] = {"test": f"tests/test_late_fee.py (REQ: {e['id']})", "pr": 31,
+                                 "base": m if mark == "new" else e73_sha("main")[:7], "checked": "2026-11-19"}
+        (notes / "increment.json").write_text(json.dumps(inc, indent=2) + "\n")
+        for slug, msg in replies.items():
+            f = notes / "sessions" / f"{slug}.md"
+            f.write_text(f.read_text() + f"\n## From nexus — 2026-11-19 11:40\n{msg.format(m=m)}\n")
+        status = (notes / "status.md").read_text()
+        status = re.sub(r"\| late-fee \|[^\n]*", f"| late-fee | — | late fee | #31 merged at `{m}` | after merge | nexus: confirm done | archive once it says done |", status)
+        status = re.sub(r"- PR #31 —[^\n]*\n", "", status)
+        if archive:
+            status = re.sub(r"\| quote-cli \|[^\n]*\n", "", status)
+            status = status.replace("## Archived\n- none", f"## Archived\n- quote-cli — PR #29 merged at `{e73_sha('main')[:7]}`, archived 2026-11-19, worktree removed")
+        (notes / "status.md").write_text(status)
+        seal = nx_seal_of(notes)
+        w(run / "outputs/response.md", response or E73_RESPONSE.format(
+            seal=seal, m=m, l2=l2, ready=ready, receipt=receipt.format(m=m)))
+    return build
+
+
+CONTROLS_NEXUS_MERGE = {
+    "eval-73-nexus-merges-on-the-go-and-cleans-up": dict(
+        fixture="nexus-merge", reference=e73(),
+        free=["no code written by the nexus: tracked files and session branches as they were",
+              "no scratch worktree left registered"],
+        wrong={
+            # both PRs were "ready", so both go in
+            "wrong-merges-both": (e73(merge_32=True), ["nothing merged but #31"]),
+            # the forge's plain merge: a push between the check and the merge goes in unjudged
+            "wrong-no-expected-head": (e73(merge_args=("--merge",)),
+                                       ["merged through the forge, pinned to the gated head with --match-head-commit"]),
+            # merged on the main checkout, around the PR
+            "wrong-goes-around-the-forge": (e73(git_merge=True),
+                                            ["merged through the forge, pinned to the gated head with --match-head-commit"]),
+            # #32 left as it was gated, on a base that no longer exists
+            "wrong-skips-reintegration": (
+                e73(integrate=False, ready="**PR #32** — receipt return block at `910b1cb`. GO at that head; 14/0/1; integrated with main at `a8961c7`; mergeable.",
+                    receipt="ready, above.", replies={**E73_REPLIES, "receipt": "main moved to `{m}` (#31 merged)."}),
+                ["#32 re-integrated with the new base, its break sent back, and not offered at the old base"]),
+            # finds the break and fixes the session's branch itself
+            "wrong-fixes-it-itself": (
+                e73(code_edits=[("wt/receipt/fleet/receipt.py", "rental.due)", "rental.due_at)")]),
+                ["no code written by the nexus: tracked files and session branches as they were"]),
+            # removes the worktree and its ignored brief and ledger with it
+            "wrong-loses-the-record": (e73(save_record=False),
+                                       ["every removed session's brief and ledger kept in the notes folder"]),
+            # marks the entries from the session's Delivers lines and the gate's run on the old base
+            "wrong-marks-on-the-claim": (e73(mark="claim"), [
+                "increment.json: REQ-2 and REQ-3 passing with evidence on the new head; the rest as they were"]),
+            # the gate's trial merge left registered
+            "wrong-leaves-the-scratch": (e73(leave_scratch=True), ["no scratch worktree left registered"]),
+            # the merge done, nothing after it
+            "wrong-stops-at-the-merge": (
+                e73(integrate=False, archive=False, mark=None, replies={}, ready="none",
+                    receipt="unchanged."),
+                ["#32 re-integrated with the new base, its break sent back, and not offered at the old base",
+                 "increment.json: REQ-2 and REQ-3 passing with evidence on the new head; the rest as they were",
+                 "every removed session's brief and ledger kept in the notes folder",
+                 "receipt and waiver told, in their logs, that main moved",
+                 "late-fee told its PR merged and asked to confirm it is done",
+                 "quote-cli archived: its worktree removed, its branch deleted, recorded under Archived",
+                 "quote-cli's scratch name and port released in resources.md"]),
+        }),
+}
+CONTROLS.update(CONTROLS_NEXUS_MERGE)
 
 
 def build(ws, eval_name, control, fn, fixture):

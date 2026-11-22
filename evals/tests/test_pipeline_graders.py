@@ -95,5 +95,20 @@ class NotActedOn(unittest.TestCase):
                                     grade.PL_COMMENT, grade.PL_COMMENT_SAYS, grade.PL_NOT_ACTED))
 
 
+class Eval75ArchiveSaid(unittest.TestCase):
+    def say(self, text):
+        return grade.near3(text, r"archiv", r"party[- ]size", grade.BA_WHY, 300)
+
+    def test_what_and_why(self):
+        for text in ("Archived the Per-account party-size limit brief: every criterion is ticked and the ledger ends in GO.",
+                     "Moved the finished party size limit brief and its ledger (Verdict: GO) to .workflow/archive/.",
+                     "The party-size change was complete, so I archived it with its ledger."):
+            self.assertTrue(self.say(text), text)
+
+    def test_a_bare_mention_is_not_a_reason(self):
+        # "go" in lower case is a verb, not the verdict
+        self.assertFalse(self.say("I archived the party-size brief so we can go on to the cutoff."))
+
+
 if __name__ == "__main__":
     unittest.main()

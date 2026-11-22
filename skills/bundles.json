@@ -1,0 +1,62 @@
+{
+ "with_every_bundle": ["repo-memory"],
+ "bundles": {
+  "builder": {
+   "description": "Build a change through the seven-stage pipeline, run several at once with nexus, and keep the work it starts from and ships",
+   "families": ["development"],
+   "skills": ["architect-deep-dive", "agent-brief", "acceptance-tests", "tdd", "refactor-review", "devils-advocate", "tyr-verdict", "nexus", "backlog", "ticket", "release-notes"],
+   "placed": {
+    "backlog": "maps and splits the stories and slices a build starts from",
+    "ticket": "opens, links and closes the work items a build answers to",
+    "release-notes": "turns a shipped version into what users can now do; the operations README says it stands alone from the response chain"
+   }
+  },
+  "reviewer": {
+   "description": "Review a change as it arrives: prepare it, read its history, review the code, its tests, its concurrency and its security, and learn from past reviews",
+   "families": ["review"],
+   "skills": ["pr-prep", "code-xray", "peer-review", "test-review", "concurrency-review", "review-retro", "threatmodel", "appsec", "hardening", "container-hardening"],
+   "placed": {
+    "threatmodel": "the security design of what a change builds; without it, appsec takes design prompts that are not its own",
+    "appsec": "where peer-review's security lens escalates; harness/prreview.py brings it in at the PR tier",
+    "hardening": "the security review of the hosts and cloud a change configures",
+    "container-hardening": "the security review of the container layer a change touches"
+   }
+  },
+  "on-call": {
+   "description": "Respond to a running system: hotfix, incident, post-mortem, the tracker that holds the follow-ups, and a misbehaving container",
+   "families": ["operations"],
+   "skills": ["hotfix", "incident-fix", "post-mortem", "ticket", "backlog", "container-debug"],
+   "placed": {
+    "container-debug": "for a container misbehaving in production; it hands application bugs to hotfix, and incident-fix gathers evidence with its tables"
+   }
+  },
+  "platform": {
+   "description": "Build and run the platform: images, stacks, orchestration, infrastructure as code, CI/CD, and the hosts underneath",
+   "families": ["containers", "infrastructure"],
+   "skills": ["dockerfile", "docker-compose", "container-hardening", "container-debug", "docker-swarm", "terraform", "pipelines", "hardening"],
+   "placed": {
+    "hardening": "reviews the hosts and cloud accounts the platform runs on"
+   }
+  },
+  "data": {
+   "description": "Architect, audit, design, diagram, propose, build and tune relational databases",
+   "families": ["database"],
+   "skills": ["dbarchitect", "dbaudit", "dbdesign", "dbdiagram", "dbpropose", "dbbuild", "dbquery"],
+   "placed": {}
+  },
+  "network": {
+   "description": "Audit, design, diagram, propose and blueprint networks",
+   "families": ["networking"],
+   "skills": ["netaudit", "netdesign", "netdiagram", "netpropose", "netblueprint"],
+   "placed": {}
+  },
+  "security": {
+   "description": "Threat-model a system, then review its application code, its hosts and cloud, and its containers",
+   "families": ["security"],
+   "skills": ["threatmodel", "appsec", "hardening", "container-hardening"],
+   "placed": {
+    "container-hardening": "the security review of the container layer"
+   }
+  }
+ }
+}
