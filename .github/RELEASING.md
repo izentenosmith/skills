@@ -25,7 +25,9 @@ On a branch from an up-to-date `main`:
    ```
 
 3. If the README's pinning example names a version, move it to the new one.
-4. Run `python3 .github/scripts/check_repo.py` (0 problems), commit as
+4. Set the plugin's `"version"` in `.claude-plugin/marketplace.json` to `X.Y.Z`. Plugin installs update only when
+   this number changes, and `check_repo.py` fails until it matches the new changelog heading.
+5. Run `python3 .github/scripts/check_repo.py` (0 problems), commit as
    `release: X.Y.Z`, and open the pull request. `main` needs the four CI checks green.
 
 ## 3. Merge, then tag on main
@@ -63,4 +65,13 @@ From an empty directory, confirm the tag installs:
 
 ```bash
 npx skills add izentenosmith/skills@vX.Y.Z --list
+```
+
+and that the plugin installs at the new version (in a throwaway config, so your own is untouched):
+
+```bash
+export CLAUDE_CONFIG_DIR="$(mktemp -d)"
+claude plugin marketplace add izentenosmith/skills
+claude plugin install izentenosmith-skills@izentenosmith
+claude plugin details izentenosmith-skills@izentenosmith   # X.Y.Z, Skills (43)
 ```

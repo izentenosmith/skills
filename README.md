@@ -519,6 +519,29 @@ tdd's 0.78 came from the grader. Every run wrote a boundary test, but one put it
 
 ## How to use
 
+### Install as a Claude Code plugin
+
+All 43 skills install as one plugin, `izentenosmith-skills`, from the marketplace this repo declares in [`.claude-plugin/marketplace.json`](.claude-plugin/marketplace.json). The plugin is the `skills/` folder alone: the [harness](harness/README.md) and the evals stay in a clone. On Claude Code 2.1.275 or later, one command in a session:
+
+```
+/plugin install izentenosmith-skills --marketplace izentenosmith/skills
+```
+
+Or from a shell, in two steps:
+
+```bash
+claude plugin marketplace add izentenosmith/skills
+```
+
+```bash
+claude plugin install izentenosmith-skills@izentenosmith
+```
+
+- **It is all or nothing.** The plugin carries every skill, and their descriptions add about 8k tokens to every session. For a few skills or a bundle, use `npx` below.
+- **Skills get the plugin's namespace** when you call them by hand: `/izentenosmith-skills:tdd`. Claude still picks them by description on its own.
+- **It follows releases, not `main`.** The plugin's `version` in [`marketplace.json`](.claude-plugin/marketplace.json) is the release number in [CHANGELOG.md](CHANGELOG.md), and Claude Code updates an install only when that number changes.
+- **It is for Claude Code only.** Cursor and other agents install with `npx`.
+
 ### Install with `npx`
 
 Every skill installs by name through the [`skills` CLI](https://github.com/vercel-labs/skills) — nothing to clone. The CLI finds each `SKILL.md` in this repo by its frontmatter `name`, so commands name skills, never family folders. Run them from the root of the repo you want the skills in.
