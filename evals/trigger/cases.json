@@ -3,9 +3,10 @@
  "split": {
   "method": "random, stratified: one of every three cases per (skill, should_trigger) held out",
   "seed": 20261118,
-  "train": 56,
-  "heldout": 28,
-  "added": "2026-11-20: 36 cases for six development skills whose descriptions changed (agent-brief, architect-deep-dive, devils-advocate, tyr-verdict, refactor-review, nexus), split the same way with seed 20261120; no earlier case moved"
+  "train": 80,
+  "heldout": 40,
+  "added": "2026-11-20: 36 cases for six development skills whose descriptions changed (agent-brief, architect-deep-dive, devils-advocate, tyr-verdict, refactor-review, nexus), split the same way with seed 20261120; no earlier case moved",
+  "added_2026_11_21": "36 cases for the platform, network and security bundles (dockerfile, docker-compose, netaudit, netdesign, threatmodel, appsec), split the same way with seed 20261121; no earlier case moved"
  },
  "cases": [
   {
@@ -679,6 +680,294 @@
    "expected": null,
    "split": "train",
    "prompt": "Run the test suite and the linter at the same time and tell me which one fails."
+  },
+  {
+   "id": "dockerfile-yes-1",
+   "skill": "dockerfile",
+   "should_trigger": true,
+   "expected": "dockerfile",
+   "split": "train",
+   "prompt": "Our Node API runs fine with npm start but we've never shipped it in a container. Ops wants an image that runs as non-root, stays small and leaves the dev dependencies out. Can you set up the image build for this repo?"
+  },
+  {
+   "id": "dockerfile-yes-2",
+   "skill": "dockerfile",
+   "should_trigger": true,
+   "expected": "dockerfile",
+   "split": "train",
+   "prompt": "The image for our Django app is 2.3 GB and every code change reinstalls all the pip packages, so CI builds take 14 minutes. Can you fix how the image is built so it's smaller and caches the dependency layer?"
+  },
+  {
+   "id": "dockerfile-yes-3",
+   "skill": "dockerfile",
+   "should_trigger": true,
+   "expected": "dockerfile",
+   "split": "heldout",
+   "prompt": "A security scan flagged that our Go service's container runs as root and uses golang:latest as its base. Rewrite the image build so it's multi-stage, pinned and runs as an unprivileged user."
+  },
+  {
+   "id": "dockerfile-no-1",
+   "skill": "dockerfile",
+   "should_trigger": false,
+   "expected": "docker-compose",
+   "split": "heldout",
+   "prompt": "I want new devs to be able to run our app, Postgres and Redis locally with one command. Right now everyone installs Postgres by hand and the README is out of date. Can you set that up?"
+  },
+  {
+   "id": "dockerfile-no-2",
+   "skill": "dockerfile",
+   "should_trigger": false,
+   "expected": "container-debug",
+   "split": "train",
+   "prompt": "Our payments container keeps restarting in staging with exit code 137, and the logs show nothing useful before it dies. Can you figure out what's killing it?"
+  },
+  {
+   "id": "dockerfile-no-3",
+   "skill": "dockerfile",
+   "should_trigger": false,
+   "expected": "container-hardening",
+   "split": "train",
+   "prompt": "Can you review how we run our containers in production? The compose file mounts the Docker socket into the monitoring agent and a couple of services run privileged. I want to know how bad that is and what to change."
+  },
+  {
+   "id": "docker-compose-yes-1",
+   "skill": "docker-compose",
+   "should_trigger": true,
+   "expected": "docker-compose",
+   "split": "train",
+   "prompt": "Every time someone starts our local stack the API comes up before Postgres is ready and crashes, and after `docker compose down` the database is empty again. Can you fix our local environment setup?"
+  },
+  {
+   "id": "docker-compose-yes-2",
+   "skill": "docker-compose",
+   "should_trigger": true,
+   "expected": "docker-compose",
+   "split": "heldout",
+   "prompt": "We have a Rails app that talks to Postgres, Redis and Elasticsearch. I'd like a one-command local environment with sensible defaults and an example env file, so onboarding takes minutes instead of a day."
+  },
+  {
+   "id": "docker-compose-yes-3",
+   "skill": "docker-compose",
+   "should_trigger": true,
+   "expected": "docker-compose",
+   "split": "train",
+   "prompt": "Can you give this repo a local dev environment that brings up the worker, the web app and the RabbitMQ it uses, with health checks so things start in the right order and a dev override that mounts the source?"
+  },
+  {
+   "id": "docker-compose-no-1",
+   "skill": "docker-compose",
+   "should_trigger": false,
+   "expected": "dockerfile",
+   "split": "train",
+   "prompt": "Our Python image is huge because it copies the whole repo, including .git and the test fixtures. Can you fix the image build and its ignore file so only what's needed ends up in the image?"
+  },
+  {
+   "id": "docker-compose-no-2",
+   "skill": "docker-compose",
+   "should_trigger": false,
+   "expected": "docker-swarm",
+   "split": "heldout",
+   "prompt": "We run our stack on a three-node Swarm with docker stack deploy. Last week an update took everything down because the new tasks never passed health checks and nothing rolled back. Can you review the cluster and the stack file?"
+  },
+  {
+   "id": "docker-compose-no-3",
+   "skill": "docker-compose",
+   "should_trigger": false,
+   "expected": "container-debug",
+   "split": "train",
+   "prompt": "Locally the web container can't reach the db container (connection refused on port 5432) even though both show as running. It worked yesterday. What's going on?"
+  },
+  {
+   "id": "netaudit-yes-1",
+   "skill": "netaudit",
+   "should_trigger": true,
+   "expected": "netaudit",
+   "split": "train",
+   "prompt": "Attached is our Azure hub-and-spoke Terraform plus the NSG rules. Before the auditors come next month I want an honest assessment of the network: what's solid, what's risky, and a score we can track."
+  },
+  {
+   "id": "netaudit-yes-2",
+   "skill": "netaudit",
+   "should_trigger": true,
+   "expected": "netaudit",
+   "split": "train",
+   "prompt": "We inherited a branch office network: two Cisco routers, a stack of switches and a FortiGate. I have the running configs. Can you assess how resilient and well segmented it is, single points of failure especially?"
+  },
+  {
+   "id": "netaudit-yes-3",
+   "skill": "netaudit",
+   "should_trigger": true,
+   "expected": "netaudit",
+   "split": "heldout",
+   "prompt": "Our AWS VPCs grew organically over five years: overlapping CIDRs, peering everywhere, security groups nobody understands. Before we change anything I want to know what we actually have and how bad it is."
+  },
+  {
+   "id": "netaudit-no-1",
+   "skill": "netaudit",
+   "should_trigger": false,
+   "expected": "netdesign",
+   "split": "heldout",
+   "prompt": "We're opening a new warehouse site with about 200 devices: cameras, scanners and an office. Can you plan the addressing, VLANs and routing back to HQ?"
+  },
+  {
+   "id": "netaudit-no-2",
+   "skill": "netaudit",
+   "should_trigger": false,
+   "expected": "netdiagram",
+   "split": "train",
+   "prompt": "I have the topology.json from last quarter's network review. Can you draw it as a draw.io diagram with the zones and flows, so I can drop it into the wiki?"
+  },
+  {
+   "id": "netaudit-no-3",
+   "skill": "netaudit",
+   "should_trigger": false,
+   "expected": "netpropose",
+   "split": "train",
+   "prompt": "The audit and the target design for our data center network are done. Management wants a recommendation they can sign off: what to change first, how to cut over, what the risk is and how we roll back."
+  },
+  {
+   "id": "netdesign-yes-1",
+   "skill": "netdesign",
+   "should_trigger": true,
+   "expected": "netdesign",
+   "split": "train",
+   "prompt": "We're moving from one flat /16 in AWS to a proper landing zone across three accounts and two regions. Can you design the address plan, segmentation and routing?"
+  },
+  {
+   "id": "netdesign-yes-2",
+   "skill": "netdesign",
+   "should_trigger": true,
+   "expected": "netdesign",
+   "split": "heldout",
+   "prompt": "Last month's network assessment found our office and lab share a flat network with no segmentation. Can you design the target network (zones, VLANs, firewall flows) that fixes those findings?"
+  },
+  {
+   "id": "netdesign-yes-3",
+   "skill": "netdesign",
+   "should_trigger": true,
+   "expected": "netdesign",
+   "split": "train",
+   "prompt": "Greenfield: a small SaaS company needs its first production network in GCP plus a site-to-site VPN to the office. Address plan, zones, failure domains: design it so we don't regret it in two years."
+  },
+  {
+   "id": "netdesign-no-1",
+   "skill": "netdesign",
+   "should_trigger": false,
+   "expected": "netaudit",
+   "split": "heldout",
+   "prompt": "Here are the configs for our core switches and firewalls. I don't want a redesign yet, just an evidence-based review of what's there, with a score."
+  },
+  {
+   "id": "netdesign-no-2",
+   "skill": "netdesign",
+   "should_trigger": false,
+   "expected": "netblueprint",
+   "split": "train",
+   "prompt": "The network proposal was approved by the change board yesterday. Now I need the final topology package (diagrams, the design document that explains them and the accepted topology.json) to hand to the team that writes the Terraform."
+  },
+  {
+   "id": "netdesign-no-3",
+   "skill": "netdesign",
+   "should_trigger": false,
+   "expected": null,
+   "split": "train",
+   "prompt": "What's the difference between a /24 and a /23, and how many usable hosts does each give me?"
+  },
+  {
+   "id": "threatmodel-yes-1",
+   "skill": "threatmodel",
+   "should_trigger": true,
+   "expected": "threatmodel",
+   "split": "heldout",
+   "prompt": "We're designing a new feature for sharing patient records between clinics. Before we build it, I want to work through who might attack it, where the trust boundaries are, and what the access-control model should be."
+  },
+  {
+   "id": "threatmodel-yes-2",
+   "skill": "threatmodel",
+   "should_trigger": true,
+   "expected": "threatmodel",
+   "split": "train",
+   "prompt": "Here's our architecture doc for the payments platform: services, queues, the HSM and the partner API. Can you review the security design itself (assets, adversaries, data flows, key management) and score it?"
+  },
+  {
+   "id": "threatmodel-yes-3",
+   "skill": "threatmodel",
+   "should_trigger": true,
+   "expected": "threatmodel",
+   "split": "train",
+   "prompt": "Our IoT devices phone home to a cloud backend and get firmware updates over the air. I need a security design for the whole system: what we're protecting, from whom, and how keys are managed and rotated."
+  },
+  {
+   "id": "threatmodel-no-1",
+   "skill": "threatmodel",
+   "should_trigger": false,
+   "expected": "appsec",
+   "split": "heldout",
+   "prompt": "Can you check our Express API code for injection, broken access control and how it sets session cookies? We're about to go live and nobody has looked at the code from a security angle."
+  },
+  {
+   "id": "threatmodel-no-2",
+   "skill": "threatmodel",
+   "should_trigger": false,
+   "expected": "hardening",
+   "split": "train",
+   "prompt": "We have 40 Ubuntu servers and an Azure subscription with no real security baseline: SSH open to the world on some, no disk encryption, and nobody knows who has owner rights. Can you put a baseline together?"
+  },
+  {
+   "id": "threatmodel-no-3",
+   "skill": "threatmodel",
+   "should_trigger": false,
+   "expected": "container-hardening",
+   "split": "train",
+   "prompt": "Our Kubernetes manifests run several pods as root with hostPath mounts and every capability. Can you review that runtime config and tell us what to lock down?"
+  },
+  {
+   "id": "appsec-yes-1",
+   "skill": "appsec",
+   "should_trigger": true,
+   "expected": "appsec",
+   "split": "heldout",
+   "prompt": "Before our pen test, can you go through this Spring Boot app for the usual problems (SQL injection, how passwords are hashed, CSRF, what ends up in the logs) and tell me what to fix?"
+  },
+  {
+   "id": "appsec-yes-2",
+   "skill": "appsec",
+   "should_trigger": true,
+   "expected": "appsec",
+   "split": "train",
+   "prompt": "Our GraphQL API lets clients query anything and has no rate limits. A customer just pulled other tenants' order data by guessing IDs. Review the API's security and tell me what else is exposed."
+  },
+  {
+   "id": "appsec-yes-3",
+   "skill": "appsec",
+   "should_trigger": true,
+   "expected": "appsec",
+   "split": "train",
+   "prompt": "We're adding OAuth login and file uploads to our PHP site. Can you review the code that handles both (session handling, upload path checks, content types) before it ships?"
+  },
+  {
+   "id": "appsec-no-1",
+   "skill": "appsec",
+   "should_trigger": false,
+   "expected": "threatmodel",
+   "split": "train",
+   "prompt": "We haven't written any code yet. We're deciding how a new B2B marketplace should handle identity across tenants, who is trusted at which boundary and how we'll manage keys. Help us get the security design right first."
+  },
+  {
+   "id": "appsec-no-2",
+   "skill": "appsec",
+   "should_trigger": false,
+   "expected": "hardening",
+   "split": "heldout",
+   "prompt": "Our nginx and Postfix servers were set up by hand years ago. I'd like a baseline for the hosts themselves (patching, SSH, firewall, logging, backups), not the application code."
+  },
+  {
+   "id": "appsec-no-3",
+   "skill": "appsec",
+   "should_trigger": false,
+   "expected": null,
+   "split": "train",
+   "prompt": "In plain terms, what's the difference between hashing and encrypting a password, and which one should I use?"
   }
  ]
 }

@@ -1,6 +1,6 @@
 # Merging, and after a merge — marking, cleanup and the end of the increment
 
-Open this when a PR with a sequence-numbered file nears the gate, when the user gives a go to merge, in the turn a merge lands, at step 7's sweep of every turn when a session is `done` with its PR merged or closed, and when the last PR has merged. The gate that comes before a merge is in [SKILL.md](SKILL.md#the-pr-gate--before-a-pr-reaches-the-user).
+Open this when a PR with a sequence-numbered file nears the gate, when the user gives a go to merge, in the turn a merge lands, at step 7's sweep of every turn when a session is `done` with its PR merged or closed, and when the last PR has merged. The gate that comes before a merge is in `gate.md`.
 
 ## Merging
 
@@ -10,7 +10,7 @@ Two of your rules meet here. You write no product code, and a renamed migration 
 
 1. When a session reports that a PR with a sequence-numbered file is ready for its final tyr-verdict, or brings it to the gate still under a placeholder, assign the number: one above the highest of the base branch, the release branch, production, and any number already assigned to a PR that merges ahead of it. Record it in `resources.md`.
 2. The session renames its placeholder, commits, re-runs its suite, and records its tyr-verdict GO on that head. You never make the rename. The gate is run on that head.
-3. **If the base moved after the GO so that the number must change** — another PR merged with that number, or a hotfix took it — assign the new number, and the session makes one commit that renames the file and does nothing else. Then check two things yourself: `git diff --stat <GO head>..<new head>` shows that one file renamed, with no line changed anywhere, and the integrated suite ([the gate](SKILL.md#the-pr-gate--before-a-pr-reaches-the-user)'s **Integrated with today's base**) passes on the new head. If both hold, carry the GO forward to the new head and say so in the digest: `GO at <old sha>, carried to <new sha>: rename only, V<n> → V<m>`. This is the one exception to rule 1, and it is narrow on purpose: a file name is the only thing a verdict on the code cannot be changed by. Anything else in that diff, and the GO has lapsed: the session needs a verdict on the new head.
+3. **If the base moved after the GO so that the number must change** — another PR merged with that number, or a hotfix took it — assign the new number, and the session makes one commit that renames the file and does nothing else. Then check two things yourself: `git diff --stat <GO head>..<new head>` shows that one file renamed, with no line changed anywhere, and the integrated suite (`gate.md`'s **Integrated with today's base**) passes on the new head. If both hold, carry the GO forward to the new head and say so in the digest: `GO at <old sha>, carried to <new sha>: rename only, V<n> → V<m>`. This is the one exception to rule 1, and it is narrow on purpose: a file name is the only thing a verdict on the code cannot be changed by. Anything else in that diff, and the GO has lapsed: the session needs a verdict on the new head.
 4. The exception carries the GO, never the user's go. A go given at the earlier head has lapsed (rule 2): show the PR again at the new head.
 
 **The merge.** Only on the user's go for that PR at that head, given in this conversation (rule 2).
