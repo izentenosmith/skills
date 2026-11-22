@@ -18,12 +18,12 @@
 | 19-netpropose-contains-before-restructuring | i49 | 3 | 1.00 ± 0.00 | 0.70 | +0.30 | 1.00 | 1.00 |
 | 2-tdd-reads-brief-vertical | i55 | 3 | 1.00 ± 0.00 | 0.00 | +1.00 | 1.00 | 1.00 |
 | 20-netblueprint-waits-for-acceptance | i49 | 3 | 1.00 ± 0.00 | 0.67 | +0.33 | 1.00 | 1.00 |
-| 21-terraform-review-state-and-secrets | i49 | 3 | 1.00 ± 0.00 | 0.50 | +0.50 | 1.00 | 0.83 |
-| 22-terraform-design-isolates-state | i49 | 3 | 0.98 ± 0.03 | 0.59 | +0.39 | 0.78 | 0.67 |
-| 23-terraform-propose-no-recreate | i49 | 3 | 0.91 ± 0.11 | 0.50 | +0.41 | 1.00 | 1.00 |
-| 24-pipelines-review-untrusted-and-rebuild | i49 | 3 | 0.98 ± 0.04 | 0.53 | +0.45 | 1.00 | 0.75 |
-| 25-pipelines-design-build-once-progressive | i49 | 3 | 1.00 ± 0.00 | 0.59 | +0.41 | 1.00 | 1.00 |
-| 26-pipelines-propose-keeps-prod-up | i49 | 3 | 0.90 ± 0.00 | 0.40 | +0.50 | 1.00 | 1.00 |
+| 21-terraform-review-state-and-secrets | i70 | 3 | 1.00 ± 0.00 | 0.50 | +0.50 | 1.00 | 0.83 |
+| 22-terraform-design-isolates-state | i70 | 3 | 1.00 ± 0.00 | 0.65 | +0.35 | 1.00 | 1.00 |
+| 23-terraform-propose-no-recreate | i70 | 3 | 0.93 ± 0.00 | 0.64 | +0.29 | 1.00 | 1.00 |
+| 24-pipelines-review-untrusted-and-rebuild | i70 | 3 | 0.95 ± 0.04 | 0.47 | +0.49 | 1.00 | 1.00 |
+| 25-pipelines-design-build-once-progressive | i70 | 3 | 1.00 ± 0.00 | 0.59 | +0.41 | 1.00 | 1.00 |
+| 26-pipelines-propose-keeps-prod-up | i70 | 3 | 0.97 ± 0.06 | 0.60 | +0.37 | 1.00 | 1.00 |
 | 27-acceptance-tests-red-for-the-right-reason | i58 | 3 | 1.00 ± 0.00 | 0.25 | +0.75 | 1.00 | 0.67 |
 | 28-dockerfile-repair-pins-and-drops-root | i49 | 3 | 0.99 ± 0.02 | 0.62 | +0.37 | 1.00 | 1.00 |
 | 29-release-notes-translates-drops-and-leads-with-breaking | i49 | 3 | 1.00 ± 0.00 | 0.54 | +0.46 | 1.00 | 0.86 |
@@ -81,7 +81,7 @@
 | 8-hotfix-node-shared-cause | i49 | 3 | 1.00 ± 0.00 | 0.38 | +0.62 | 1.00 | 1.00 |
 | 9-hotfix-jvm-both-callers | i49 | 3 | 1.00 ± 0.00 | 0.71 | +0.29 | 1.00 | 1.00 |
 
-**Delta — current 0.98 vs baseline 0.50**
+**Delta — current 0.98 vs baseline 0.51**
 **Capability — current 1.00 vs baseline 0.87**
 **Held-out (eval 59), not in the two lines above: delta — current 1.00 vs baseline 0.44; capability — current 1.00 vs baseline 1.00**
 
@@ -105,12 +105,12 @@
 | 19-netpropose-contains-before-restructuring | 3/3 | 3/3 | 1 | +0.30 | — | $0.78 | $0.51 | noise unknown; saturated |
 | 2-tdd-reads-brief-vertical | 3/3 | 3/3 | 1 | +1.00 | — | $0.70 | $0.60 | noise unknown; saturated |
 | 20-netblueprint-waits-for-acceptance | 3/3 | 3/3 | 1 | +0.33 | — | $0.42 | $0.67 | noise unknown; saturated |
-| 21-terraform-review-state-and-secrets | 3/3 | 3/3 | 1 | +0.50 | — | $1.06 | $0.30 | noise unknown; saturated |
-| 22-terraform-design-isolates-state | 3/3 | 2/3 | 1 | +0.39 | — | $0.91 | $0.39 | inconsistent; noise unknown; saturated |
-| 23-terraform-propose-no-recreate | 3/3 | 1/3 | 1 | +0.41 | — | $1.05 | $0.59 | inconsistent; noise unknown |
-| 24-pipelines-review-untrusted-and-rebuild | 3/3 | 2/3 | 1 | +0.45 | — | $1.09 | $0.32 | inconsistent; noise unknown; saturated |
-| 25-pipelines-design-build-once-progressive | 3/3 | 3/3 | 1 | +0.41 | — | $0.93 | $0.36 | noise unknown; saturated |
-| 26-pipelines-propose-keeps-prod-up | 3/3 | 0/3 | 1 | +0.50 | — | $0.82 | $0.53 | inconsistent; noise unknown |
+| 21-terraform-review-state-and-secrets | 3/3 | 3/3 | 1 | +0.50 | — | $1.01 | $0.32 | noise unknown; saturated |
+| 22-terraform-design-isolates-state | 3/3 | 3/3 | 1 | +0.35 | — | $0.83 | $0.34 | noise unknown; saturated |
+| 23-terraform-propose-no-recreate | 3/3 | 0/3 | 1 | +0.29 | — | $0.98 | $0.68 | inconsistent; noise unknown |
+| 24-pipelines-review-untrusted-and-rebuild | 3/3 | 1/3 | 1 | +0.49 | — | $0.96 | $0.39 | inconsistent; noise unknown; saturated |
+| 25-pipelines-design-build-once-progressive | 3/3 | 3/3 | 1 | +0.41 | — | $0.96 | $0.38 | noise unknown; saturated |
+| 26-pipelines-propose-keeps-prod-up | 3/3 | 2/3 | 1 | +0.37 | — | $0.88 | $0.61 | inconsistent; noise unknown; saturated |
 | 27-acceptance-tests-red-for-the-right-reason | 3/3 | 3/3 | 1 | +0.75 | — | $0.53 | $0.42 | noise unknown; saturated |
 | 28-dockerfile-repair-pins-and-drops-root | 3/3 | 2/3 | 1 | +0.37 | — | $1.34 | $0.65 | inconsistent; noise unknown; saturated |
 | 29-release-notes-translates-drops-and-leads-with-breaking | 3/3 | 3/3 | 1 | +0.46 | — | $0.41 | $0.28 | noise unknown; saturated |
@@ -168,7 +168,7 @@
 | 8-hotfix-node-shared-cause | 3/3 | 3/3 | 1 | +0.62 | — | $0.62 | $0.20 | noise unknown; saturated |
 | 9-hotfix-jvm-both-callers | 3/3 | 3/3 | 1 | +0.29 | — | $0.46 | $0.19 | noise unknown; saturated |
 
-**63 of 76 evals are saturated**, so they work as regression tests. Only the others can show that a skill edit helped.
+**64 of 76 evals are saturated**, so they work as regression tests. Only the others can show that a skill edit helped.
 **9 baseline(s) score 0.80 or more on delta** without the skill.
 
 ## Delta assertions the baseline also passed (still non-discriminating)
@@ -243,6 +243,7 @@
 - payments isolated for PCI
 - leadership's one-bucket workspaces ask declined with a reason
 - prod state isolated from non-prod
+- version pinning policy with a committed lockfile
 - CI applies with per-environment OIDC roles
 - apply consumes a saved, reviewed plan
 - humans read-only in prod, with break-glass
@@ -252,16 +253,18 @@
 
 **eval-23-terraform-propose-no-recreate**
 - the leaked key rotated before it is removed
+- Critical exposure contained before structural work
 - address changes declared with moved blocks
 - the expected plan for the moves is zero destroys
-- needs-data flags carried as open questions
+- database protection lands before the identity moves
+- state migrated with a backup, not hand state surgery
+- every step has validation and rollback
 - code, review and design untouched
 - nothing applied
 
 **eval-24-pipelines-review-untrusted-and-rebuild**
 - no secret value echoed (kind and location only)
 - rotation for the committed webhook
-- PR-title script injection found
 - deploys not gated by any test found
 - no post-deploy check or real rollback found
 - the @master action holding prod credentials found
@@ -270,13 +273,13 @@
 
 **eval-25-pipelines-design-build-once-progressive**
 - build once, promote the same digest
+- per-environment builds with baked config replaced
 - rollout region by region with automated rollback
 - migrations expand/contract, decoupled from the deploy
 - deploy decoupled from release with flags
 - the every-deploy approval meeting declined with a reason
 - separation of duties enforced by the pipeline
 - OIDC with per-environment roles
-- third-party actions pinned by SHA
 - Terraform planned on PR, saved plan applied from CI
 - open questions listed
 
@@ -284,6 +287,8 @@
 - the webhook rotated before it is removed
 - NPM_TOKEN treated as possibly exposed
 - untrusted-trigger containment comes first
+- the new pipeline runs alongside the old before cut-over
+- needs-data flags carried as open questions
 - no workflow, script, review or design file changed
 
 **eval-27-acceptance-tests-red-for-the-right-reason**
@@ -780,17 +785,12 @@
 **eval-16-netaudit-hub-spoke-recovers-and-scores**
 - gate stated as failing, condition by condition (2/3)
 
-**eval-22-terraform-design-isolates-state**
-- environments differ only by inputs, no environment conditionals (2/3)
-
-**eval-23-terraform-propose-no-recreate**
-- Critical exposure contained before structural work (2/3)
-- database protection lands before the identity moves (2/3)
-- every step names its expected plan, pre-check and blast radius (2/3)
-- moved/import blocks removed only after every environment applied them (2/3)
-
 **eval-24-pipelines-review-untrusted-and-rebuild**
+- score arithmetic shown, capped by the Critical (2/3)
 - the gate stated with its conditions (2/3)
+
+**eval-26-pipelines-propose-keeps-prod-up**
+- build-once lands before rollback-by-digest and progressive delivery (2/3)
 
 **eval-28-dockerfile-repair-pins-and-drops-root**
 - port and health from the source: EXPOSE 8080, /healthz with a tool the runtime has (or left to the k8s probes) (2/3)
