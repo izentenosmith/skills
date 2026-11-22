@@ -1,5 +1,7 @@
 # Symptoms — what each one usually is, and the command that tells the causes apart
 
+**Contents:** Exit codes · Won't start · Won't stay up · Can't connect · Unhealthy · Slow, or different from outside a container
+
 The table behind [SKILL.md](SKILL.md) Step 2. Each row lists causes **most common first** and the
 **discriminating probe**: the one command whose output separates them. Read-only unless marked. Commands
 use Docker; [toolkit.md](toolkit.md) has the Compose, Swarm and Kubernetes equivalents.
@@ -22,7 +24,7 @@ forensic snapshot). Current-practice items (BuildKit, `kubectl debug`, cgroup v2
 | 127 | — | Not found, **when a shell ran the command**: wrong path or stage; the interpreter in `#!` not found — a CRLF line ending makes it look for `/bin/sh\r`; a glibc binary on musl (alpine) whose loader doesn't exist | `od -c <script> \| head -2` (look for `\r`); `file <binary>`; `ldd` in a glibc image |
 | 255 | — | The runtime couldn't exec an **exec-form** entrypoint at all: `exec /app/entrypoint.sh: no such file or directory` on a file that exists (CRLF on its `#!` line, a missing loader), or `exec format error` (wrong architecture). `.State.Error` is often empty; the message is the container's only log line | `docker logs <c>`; `od -c <script> \| head -1`; the image's architecture |
 | 134 | ABRT (6) | The process aborted itself: an assertion, a native-library error, a JVM fatal error | logs; a core or `hs_err` file in the writable layer (`docker diff`) |
-| 137 | KILL (9) | **OOM-killed** (`.State.OOMKilled=true`) · **`docker stop` timed out** after the grace period · an orchestrator killed it (liveness probe, eviction, `docker kill`) | `docker inspect -f '{{.State.OOMKilled}}'`; `docker events --filter container=<c>` (`oom` vs `kill`/`stop`); Kubernetes `Last State: Terminated, Reason: OOMKilled` |
+| 137 | KILL (9) | **OOM-killed** (`.State.OOMKilled=true`) · **`docker stop` timed out** after the grace period · an orchestrator killed it (liveness probe, eviction, `docker kill`) | `docker inspect -f '{{.State.OOMKilled}}'`; `docker events --since 1h --until "$(date +%s)" --filter container=<c>` (`oom` vs `kill`/`stop`); Kubernetes `Last State: Terminated, Reason: OOMKilled` |
 | 139 | SEGV (11) | A crash in native code: a library built for another libc or CPU feature set, an emulated (QEMU) binary, a real bug | the image's architecture vs the host's; does it crash under `--platform` emulation only? |
 | 143 | TERM (15) | A normal stop that the app handled — expected on `docker stop`, unexpected in a crash loop (something keeps stopping it: a liveness probe, an updater, a deploy) | `docker events` for who sent `stop`/`kill` |
 

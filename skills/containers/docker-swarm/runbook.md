@@ -1,5 +1,7 @@
 # Runbook — Read-Only Commands, Failure Modes, the Design Skeleton
 
+**Contents:** 1. Read-only evidence · 2. Failure modes and drills · 3. Design skeleton
+
 > §1 is what a review may run. §2 is what a review **recommends** the team rehearse — every command
 > in it changes cluster state, so this skill names them and never runs them unless the user asks for
 > that specific command. §3 is the stack file skeleton Design starts from.

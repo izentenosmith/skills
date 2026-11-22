@@ -1,8 +1,12 @@
 # Toolkit — reading a container without disturbing it
 
+**Contents:** Per platform: the same questions · The `inspect` templates that answer most questions · Inside the container's view · From the host · Keeping the evidence · What each tool can't see
+
 The commands behind [SKILL.md](SKILL.md) Steps 1 and 3, grouped by the question they answer, with
 what each can't see. **Read-only** unless the row says otherwise; anything marked ⚠️ changes state —
 locally that's fine once the evidence is captured, in production it needs the user's yes.
+`docker events` without `--until` and `docker stats` without `--no-stream` never return: always
+bound them, or the session hangs on the stream.
 
 ---
 
@@ -12,13 +16,13 @@ locally that's fine once the evidence is captured, in production it needs the us
 |---|---|---|---|---|
 | What's running, what exited | `docker ps -a` | `docker compose ps -a` | `docker service ps --no-trunc <svc>` | `kubectl get pods -o wide` |
 | Why it stopped | `docker inspect -f '{{json .State}}' <c>` | same, on the container name | the ERROR column above; `docker inspect <task-container>` on its node | `kubectl describe pod <p>` → Last State |
-| What it said | `docker logs --timestamps --tail 200 <c>` | `docker compose logs --timestamps --tail 200 <svc>` | `docker service logs --timestamps <svc>` | `kubectl logs <p> [-c <container>] --previous` |
-| What happened, in order | `docker events --since 30m --filter container=<c>` | same | `docker events --filter service=<svc>` | `kubectl get events --sort-by=.lastTimestamp` |
-| Resource use now | `docker stats --no-stream` | `docker compose stats` | `docker stats` on the node | `kubectl top pod` (metrics-server) |
+| What it said | `docker logs --timestamps --tail 200 <c>` | `docker compose logs --timestamps --tail 200 <svc>` | `docker service logs --timestamps --tail 200 <svc>` | `kubectl logs <p> [-c <container>] --previous` |
+| What happened, in order | `docker events --since 30m --until "$(date +%s)" --filter container=<c>` | same | `docker events --since 30m --until "$(date +%s)" --filter service=<svc>` | `kubectl get events --sort-by=.lastTimestamp` |
+| Resource use now | `docker stats --no-stream` | `docker compose stats --no-stream` | `docker stats --no-stream` on the node | `kubectl top pod` (metrics-server) |
 | Processes | `docker top <c>` | `docker compose top` | on the node | `kubectl exec <p> -- ps` (if the image has `ps`) |
 | A shell in a fresh copy | ⚠️ `docker run --rm -it --entrypoint sh <img>` | ⚠️ `docker compose run --rm --entrypoint sh <svc>` | as Docker, on any node | ⚠️ `kubectl run dbg --rm -it --image=<img> --command -- sh` |
 | A shell in the running one | ⚠️ `docker exec -it <c> sh` | ⚠️ `docker compose exec <svc> sh` | ⚠️ `docker exec` on the node | ⚠️ `kubectl exec -it <p> -- sh` |
-| Tools beside a shell-less one | ⚠️ `docker run --rm -it --network container:<c> --pid container:<c> nicolaka/netshoot` | same, with the container name | same, on the node | ⚠️ `kubectl debug -it <p> --image=busybox --target=<container>` |
+| Tools beside a shell-less one | ⚠️ `docker run --rm -it --network container:<c> --pid container:<c> nicolaka/netshoot:<tag>` (pulls a third-party image) | same, with the container name | same, on the node | ⚠️ `kubectl debug -it <p> --image=busybox --target=<container>` |
 
 ---
 

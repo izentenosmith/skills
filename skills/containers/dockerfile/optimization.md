@@ -1,5 +1,7 @@
 # Dockerfile optimization
 
+**Contents:** Choosing a base image · Layer ordering · Cache mounts · Multi-stage builds · Build platform vs. target platform · Combining `RUN` instructions · Compiled languages · Secrets · Running as non-root · Signals and PID 1 · ENTRYPOINT and CMD · `HEALTHCHECK` · Logging · Labels and tags · When the build fails · Publishing: SBOM, provenance, signatures · Verification commands · Sources
+
 The reference catalog behind [SKILL.md](SKILL.md). Each entry says what the technique buys and what it costs — a technique with no stated cost is usually one you don't understand yet.
 
 ---

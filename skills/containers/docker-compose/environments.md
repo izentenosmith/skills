@@ -1,5 +1,7 @@
 # Environments, overrides and secrets
 
+**Contents:** The three files · What goes where · Merge rules that surprise people · `develop.watch` · Profiles · Writing `.env.example` · Interpolation · Secrets · Housekeeping that saves an afternoon · If the same file goes to `docker stack deploy` · Where the dev/prod line actually sits
+
 The reference behind [SKILL.md](SKILL.md) Step 5.
 
 ---
