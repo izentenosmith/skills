@@ -52,7 +52,7 @@ class Tmp(unittest.TestCase):
 
     def row(self):
         found = aggregate.collect([self.tmp / "iteration-1"])
-        _, reps, base, _, runs = found["eval-0-x"]
+        _, reps, base, _, runs, _ = found["eval-0-x"]
         dm = aggregate.mean(r["delta_rate"] for r in reps)
         db = aggregate.mean(b["delta_rate"] for b in base)
         sd = aggregate.st.stdev([r["delta_rate"] for r in reps]) if len(reps) > 1 else 0.0
@@ -82,7 +82,7 @@ class Baseline(Tmp):
     def test_a_single_baseline_run_is_not_mistaken_for_its_repo_folder(self):
         self.write_run("with_skill/rep1", grading(4))
         self.write_run("old_skill", grading(1))
-        _, _, base, _, runs = aggregate.collect([self.tmp / "iteration-1"])["eval-0-x"]
+        _, _, base, _, runs, _ = aggregate.collect([self.tmp / "iteration-1"])["eval-0-x"]
         self.assertEqual([b["delta_passed"] for b in base], [1])
         self.assertEqual(len(runs["base"]), 1)
 
@@ -90,7 +90,7 @@ class Baseline(Tmp):
         self.write_run("with_skill/rep1", grading(4))
         for i, passed in enumerate((1, 3), 1):
             self.write_run(f"old_skill/rep{i}", grading(passed))
-        _, _, base, _, _ = aggregate.collect([self.tmp / "iteration-1"])["eval-0-x"]
+        _, _, base, _, _, _ = aggregate.collect([self.tmp / "iteration-1"])["eval-0-x"]
         self.assertEqual([b["delta_passed"] for b in base], [1, 3])
 
 

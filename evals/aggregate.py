@@ -8,7 +8,8 @@ Reports capability and delta pass rates separately — only the delta column is
 evidence that this session's edits helped.
 
 Writes benchmark.md, benchmark.json and scores.json next to the iteration
-directories. scores.json says, per eval, which iteration its score comes from
+directories. scores.json says, per eval, which iteration its score comes from,
+the day its latest scored run ended, its with-skill delta and capability means,
 and the skill_hash and staging run.py recorded for it; check_repo.py compares
 that hash with the skill as it is now. --record also writes benchmark.md and
 scores.json into evals/, the copies this repo commits.
@@ -19,6 +20,7 @@ gain is larger than the run-to-run noise, whether the eval still has room to
 show an improvement, and what a run costs with and without the skill.
 """
 import argparse
+import datetime as dt
 import json
 import math
 import pathlib
@@ -52,8 +54,27 @@ def collect(dirs):
                 dispatched = [load(p / "run.json") for p in sorted(ed.glob("with_skill/rep*"))]
                 found[ed.name] = (d.name, reps, base, runs,
                                   {"with": [r for r in dispatched if r],
-                                   "base": [r for r in (load(p / "run.json") for p in bdirs) if r]})
+                                   "base": [r for r in (load(p / "run.json") for p in bdirs) if r]},
+                                  run_date(graded))
     return found
+
+
+def run_date(reps):
+    """(date, where it came from) of the latest scored with-skill run, as a UTC
+    YYYY-MM-DD. run.py records `finished` in run.json since 2026-11-21; older
+    runs recorded no date, so their run.json's mtime stands in: run.py writes
+    that file once, when the run ends, and grading never rewrites it (it does
+    rewrite grading.json, so that file's mtime would date the last re-grade).
+    (None, None) when no graded rep has a run.json."""
+    stamps = [load(p / "run.json") or {} for p in reps]
+    finished = [r["finished"] for r in stamps if r.get("finished")]
+    if finished and len(finished) == len(reps):
+        return max(finished)[:10], "run.json finished"
+    mtimes = [(p / "run.json").stat().st_mtime for p in reps if (p / "run.json").is_file()]
+    if not mtimes:
+        return None, None
+    day = dt.datetime.fromtimestamp(max(mtimes), dt.timezone.utc).date().isoformat()
+    return day, "run.json mtime"
 
 
 def baseline_dirs(ed):
@@ -200,8 +221,9 @@ def main():
     found = collect(args.dirs)
     out = []
     for name in sorted(found):
-        src, reps, base, runs, dispatched = found[name]
-        row = {"eval": name, "source": src, "n": len(reps), **provenance(name, runs, skills)}
+        src, reps, base, runs, dispatched, (date, date_from) = found[name]
+        row = {"eval": name, "source": src, "n": len(reps), "date": date, "date_from": date_from,
+               **provenance(name, runs, skills)}
         for label, key in (("all", "pass_rate"), ("delta", "delta_rate"),
                            ("cap", "capability_rate")):
             v = rate(reps, key)
@@ -235,9 +257,15 @@ def main():
     (ws / "benchmark.json").write_text(json.dumps(bench, indent=2))
     scores = {"note": "Written by evals/aggregate.py. skill_hash is the content hash of the skill "
                       "folder the scored runs saw (null: scored before run.py recorded it); "
-                      ".github/scripts/check_repo.py reports each skill whose current hash differs.",
+                      ".github/scripts/check_repo.py reports each skill whose current hash differs. "
+                      "date is the UTC day the latest scored with-skill run ended, read from "
+                      "run.json's `finished` or, for runs from before run.py recorded it, from "
+                      "run.json's mtime (date_from says which). delta_mean and cap_mean are the "
+                      "with-skill means benchmark.md shows.",
               "evals": {r["eval"]: {"skill": r["skill"], "iteration": r["source"], "n": r["n"],
-                                    "staging": r["staging"], "skill_hash": r["skill_hash"]}
+                                    "staging": r["staging"], "skill_hash": r["skill_hash"],
+                                    "date": r["date"], "date_from": r["date_from"],
+                                    "delta_mean": r["delta_mean"], "cap_mean": r["cap_mean"]}
                         for r in out if r["skill"]}}
 
     L = ["# Benchmark", "",

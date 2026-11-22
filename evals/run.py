@@ -437,6 +437,8 @@ def execute(r, timeout):
     except Exception as e:  # never let one run abort the batch
         rec.update(exit_code=None, timed_out=False, error=repr(e), response="missing")
     rec["seconds"] = round(time.time() - t0, 1)
+    # The scored run's date in scores.json (aggregate.py::run_date).
+    rec["finished"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     rec["ok"] = rec["response"] != "missing" and not rec.get("is_error") and (
         rec.get("exit_code") == 0 or (r.get("runner") == "loop" and rec.get("exit_code") == 3))
     (run / "run.json").write_text(json.dumps(rec, indent=2))
