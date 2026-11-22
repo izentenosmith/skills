@@ -80,9 +80,55 @@ class Aggregate(unittest.TestCase):
                             str(ws / "iteration-1"), str(ws / "iteration-2")],
                            check=True, capture_output=True)
             score = json.loads((ws / "scores.json").read_text())["evals"]
+            day = aggregate.run_date([ws / "iteration-2/eval-7-postmortem-widens-range-and-describes"
+                                      "/with_skill/rep1"])[0]
             self.assertEqual(score["eval-7-postmortem-widens-range-and-describes"],
                              {"skill": "post-mortem", "iteration": "iteration-2", "n": 1,
-                              "staging": "standalone", "skill_hash": "abc"})
+                              "staging": "standalone", "skill_hash": "abc",
+                              "date": day, "date_from": "run.json mtime",
+                              "delta_mean": 1.0, "cap_mean": 1.0})
+
+
+class RunDate(unittest.TestCase):
+    """The day a score's runs ended: run.py's `finished` stamp, else run.json's mtime."""
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.tmp = pathlib.Path(tmp.name)
+
+    def rep(self, name, record):
+        p = self.tmp / name
+        p.mkdir()
+        if record is not None:
+            (p / "run.json").write_text(json.dumps(record))
+        return p
+
+    def test_latest_finished_stamp_wins(self):
+        reps = [self.rep("rep1", {"finished": "2026-11-20T23:59:00Z"}),
+                self.rep("rep2", {"finished": "2026-11-21T00:10:00Z"})]
+        self.assertEqual(aggregate.run_date(reps), ("2026-11-21", "run.json finished"))
+
+    def test_old_runs_fall_back_to_run_json_mtime_in_utc(self):
+        import os
+        reps = [self.rep("rep1", {}), self.rep("rep2", {"finished": "2026-11-21T00:10:00Z"})]
+        # 2026-11-18T23:30Z, and an earlier one: the later mtime gives the day.
+        os.utime(reps[0] / "run.json", (1795044600, 1795044600))
+        os.utime(reps[1] / "run.json", (1794916800, 1794916800))
+        self.assertEqual(aggregate.run_date(reps), ("2026-11-18", "run.json mtime"))
+
+    def test_no_run_json_means_no_date(self):
+        self.assertEqual(aggregate.run_date([self.rep("rep1", None)]), (None, None))
+
+    def test_run_py_stamps_finished_in_utc(self):
+        run_dir = self.tmp / "run"
+        (run_dir / "repo").mkdir(parents=True)
+        (run_dir / "outputs").mkdir()
+        rec = run.execute({"run": run_dir, "eval": "eval-15-x", "kind": "with_skill",
+                           "skill_md": None, "runner": "loop", "prompt": None,
+                           "cmd": [sys.executable, "-c", "pass"]}, timeout=60)
+        self.assertRegex(rec["finished"], r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
+        self.assertEqual(json.loads((run_dir / "run.json").read_text())["finished"], rec["finished"])
 
 
 if __name__ == "__main__":
