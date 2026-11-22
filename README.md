@@ -564,8 +564,8 @@ npx skills add izentenosmith/skills --skill repo-memory
 # builder — the seven-stage pipeline and nexus, plus the tracker pair and release-notes
 npx skills add izentenosmith/skills --skill architect-deep-dive agent-brief acceptance-tests tdd refactor-review devils-advocate tyr-verdict nexus backlog ticket release-notes repo-memory
 
-# reviewer — the review family, plus appsec, where peer-review's security lens escalates
-npx skills add izentenosmith/skills --skill pr-prep code-xray peer-review test-review concurrency-review review-retro appsec repo-memory
+# reviewer — the review family, plus the security family, where peer-review's security lens escalates
+npx skills add izentenosmith/skills --skill pr-prep code-xray peer-review test-review concurrency-review review-retro threatmodel appsec hardening container-hardening repo-memory
 
 # on-call — the response chain and the tracker pair, plus container-debug
 npx skills add izentenosmith/skills --skill hotfix incident-fix post-mortem ticket backlog container-debug repo-memory

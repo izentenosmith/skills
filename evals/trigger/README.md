@@ -103,6 +103,12 @@ workspace under `trigger/bundles-20261121/<bundle>/`.
 - **reviewer: `appsec-no-1` falsely triggers appsec, 3 of 3.** Its prompt asks for the security
   design of a system not yet built, which belongs to threatmodel; threatmodel is not in the reviewer
   bundle, so appsec, the nearest installed skill, takes it. Every other bundle keeps its skills apart.
+  **Fixed** by adding the rest of the security family (threatmodel, hardening, container-hardening)
+  to the reviewer bundle. Re-run the same day, same model and reps (`trigger/bundles-20261121-reviewer2/`,
+  11 skills staged, 72 runs, about $5): trigger 36/36, false-trigger 0/36, picked what was expected
+  72/72. `appsec-no-1` now picks threatmodel 3 of 3; `appsec-no-2`, which picked nothing while
+  hardening was outside the bundle, now picks hardening; every case from the first run picks what it
+  picked before or better.
 - **builder: the 9 misses are not false triggers.** Three near-misses belong to peer-review, which
   is not in the bundle; all 9 runs picked the CLI's built-in `code-review` instead, never the skill
   under test.
