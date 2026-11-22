@@ -212,11 +212,11 @@
     },
     "eval-27-acceptance-tests-red-for-the-right-reason": {
       "skill": "acceptance-tests",
-      "iteration": "iteration-55",
+      "iteration": "iteration-58",
       "n": 3,
       "staging": "harness",
-      "skill_hash": "4363ddf263685ad4488170d7ccfa87bf782729ed85abf7e973a38c059b46ebc4",
-      "date": "2026-11-20",
+      "skill_hash": "7759d3a3090d2f12693c44e7d06a47fb7f1ec4b919bb4bf862e284337353c2f0",
+      "date": "2026-11-21",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
       "cap_mean": 1.0
@@ -458,7 +458,7 @@
       "n": 3,
       "staging": "harness",
       "skill_hash": "3389c1dca2d431a92d8f70f13affc234a764abfe738a8627d87120992822bf20",
-      "date": "2026-11-18",
+      "date": "2026-11-22",
       "date_from": "run.json mtime",
       "delta_mean": 0.976,
       "cap_mean": 0.944
@@ -487,11 +487,11 @@
     },
     "eval-5-verdict-cuts-and-slices": {
       "skill": "tyr-verdict",
-      "iteration": "iteration-55",
+      "iteration": "iteration-58",
       "n": 3,
       "staging": "harness",
-      "skill_hash": "f8a29844a73619b7f8f9ba44a116554608b8f24deda2290c4fe311be067df214",
-      "date": "2026-11-20",
+      "skill_hash": "9a4e5ccf48988b0c9af2007fe702301c3facd30a697ee7a940d2785dc247ddd0",
+      "date": "2026-11-21",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
       "cap_mean": 1.0
@@ -586,11 +586,11 @@
     },
     "eval-58-nexus-judges-the-record": {
       "skill": "nexus",
-      "iteration": "iteration-55",
+      "iteration": "iteration-58",
       "n": 3,
       "staging": "standalone",
-      "skill_hash": "c3cf7b1044025751ae2e3444fc3e9bd8690e69f822a58b416dfdde6ce3f47b62",
-      "date": "2026-11-20",
+      "skill_hash": "73b8cf95ecd3758eedb6fe477988c5ade545e714caf193b875963c7580c47837",
+      "date": "2026-11-21",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
       "cap_mean": 1.0
@@ -661,6 +661,72 @@
       "delta_mean": 1.0,
       "cap_mean": 1.0
     },
+    "eval-64-acceptance-tests-red-baseline-writes-nothing": {
+      "skill": "acceptance-tests",
+      "iteration": "iteration-58",
+      "n": 3,
+      "staging": "harness",
+      "skill_hash": "7759d3a3090d2f12693c44e7d06a47fb7f1ec4b919bb4bf862e284337353c2f0",
+      "date": "2026-11-21",
+      "date_from": "run.json mtime",
+      "delta_mean": 1.0,
+      "cap_mean": 1.0
+    },
+    "eval-65-acceptance-tests-declares-the-missing-interface": {
+      "skill": "acceptance-tests",
+      "iteration": "iteration-58",
+      "n": 3,
+      "staging": "harness",
+      "skill_hash": "7759d3a3090d2f12693c44e7d06a47fb7f1ec4b919bb4bf862e284337353c2f0",
+      "date": "2026-11-21",
+      "date_from": "run.json mtime",
+      "delta_mean": 1.0,
+      "cap_mean": 1.0
+    },
+    "eval-66-refactor-standalone-no-ledger": {
+      "skill": "refactor-review",
+      "iteration": "iteration-57",
+      "n": 3,
+      "staging": "standalone",
+      "skill_hash": "fe338eeeba887761bda585ba93f13168627dc68342ea7c5e7895222cd5789b34",
+      "date": "2026-11-21",
+      "date_from": "run.json mtime",
+      "delta_mean": 0.944,
+      "cap_mean": 1.0
+    },
+    "eval-67-refactor-uncovered-smell-left": {
+      "skill": "refactor-review",
+      "iteration": "iteration-57",
+      "n": 3,
+      "staging": "harness",
+      "skill_hash": "fe338eeeba887761bda585ba93f13168627dc68342ea7c5e7895222cd5789b34",
+      "date": "2026-11-21",
+      "date_from": "run.json mtime",
+      "delta_mean": 1.0,
+      "cap_mean": 1.0
+    },
+    "eval-68-teardown-empty-diff-stops": {
+      "skill": "devils-advocate",
+      "iteration": "iteration-57",
+      "n": 3,
+      "staging": "harness",
+      "skill_hash": "d8db4d3e80cec9d3c769995eab690a6956a888c99011eafd089f8db4dbfd2eee",
+      "date": "2026-11-21",
+      "date_from": "run.json mtime",
+      "delta_mean": 1.0,
+      "cap_mean": 1.0
+    },
+    "eval-69-teardown-finds-the-lowered-bar": {
+      "skill": "devils-advocate",
+      "iteration": "iteration-57",
+      "n": 3,
+      "staging": "harness",
+      "skill_hash": "d8db4d3e80cec9d3c769995eab690a6956a888c99011eafd089f8db4dbfd2eee",
+      "date": "2026-11-21",
+      "date_from": "run.json mtime",
+      "delta_mean": 1.0,
+      "cap_mean": 1.0
+    },
     "eval-7-postmortem-widens-range-and-describes": {
       "skill": "post-mortem",
       "iteration": "iteration-49",
@@ -670,6 +736,72 @@
       "date": "2026-11-18",
       "date_from": "run.json mtime",
       "delta_mean": 0.967,
+      "cap_mean": 1.0
+    },
+    "eval-70-verdict-red-run-blocks-go": {
+      "skill": "tyr-verdict",
+      "iteration": "iteration-58",
+      "n": 3,
+      "staging": "harness",
+      "skill_hash": "9a4e5ccf48988b0c9af2007fe702301c3facd30a697ee7a940d2785dc247ddd0",
+      "date": "2026-11-21",
+      "date_from": "run.json mtime",
+      "delta_mean": 0.958,
+      "cap_mean": 1.0
+    },
+    "eval-71-verdict-weakened-check-not-refuted-by-green": {
+      "skill": "tyr-verdict",
+      "iteration": "iteration-58",
+      "n": 3,
+      "staging": "harness",
+      "skill_hash": "9a4e5ccf48988b0c9af2007fe702301c3facd30a697ee7a940d2785dc247ddd0",
+      "date": "2026-11-21",
+      "date_from": "run.json mtime",
+      "delta_mean": 1.0,
+      "cap_mean": 1.0
+    },
+    "eval-72-nexus-sets-up-the-increment": {
+      "skill": "nexus",
+      "iteration": "iteration-58",
+      "n": 3,
+      "staging": "standalone",
+      "skill_hash": "73b8cf95ecd3758eedb6fe477988c5ade545e714caf193b875963c7580c47837",
+      "date": "2026-11-21",
+      "date_from": "run.json mtime",
+      "delta_mean": 1.0,
+      "cap_mean": 1.0
+    },
+    "eval-73-nexus-merges-on-the-go-and-cleans-up": {
+      "skill": "nexus",
+      "iteration": "iteration-58",
+      "n": 3,
+      "staging": "standalone",
+      "skill_hash": "73b8cf95ecd3758eedb6fe477988c5ade545e714caf193b875963c7580c47837",
+      "date": "2026-11-21",
+      "date_from": "run.json mtime",
+      "delta_mean": 0.97,
+      "cap_mean": 1.0
+    },
+    "eval-74-architect-adr-binds-the-round": {
+      "skill": "architect-deep-dive",
+      "iteration": "iteration-57",
+      "n": 3,
+      "staging": "harness",
+      "skill_hash": "6abad36261746e8101f3c4ab981dc23efb98979ea307a28bbe9b303c706303fc",
+      "date": "2026-11-21",
+      "date_from": "run.json mtime",
+      "delta_mean": 0.875,
+      "cap_mean": 1.0
+    },
+    "eval-75-brief-archives-finished-change": {
+      "skill": "agent-brief",
+      "iteration": "iteration-57",
+      "n": 3,
+      "staging": "harness",
+      "skill_hash": "4820b6c0bd1a48a04a74c74d0a42d6e76a1c56c369e89b2ce7da2f87f6b46599",
+      "date": "2026-11-21",
+      "date_from": "run.json mtime",
+      "delta_mean": 1.0,
       "cap_mean": 1.0
     },
     "eval-8-hotfix-node-shared-cause": {

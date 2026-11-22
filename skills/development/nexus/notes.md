@@ -32,7 +32,29 @@ A session writes only its own log. Everything else it asks the nexus for.
 
 ## `status.md` — the whole state
 
-Rewritten, not appended, at the end of every nexus turn. It is what the nexus reads first after a compaction, so it must stand on its own. The template is in [SKILL.md](SKILL.md#every-turn--read-route-record), the one copy, so the two cannot drift; this section explains its fields.
+Rewritten, not appended, at the end of every nexus turn. It is what the nexus reads first after a compaction, so it must stand on its own.
+
+```markdown
+# Nexus — <increment>
+**Updated:** <YYYY-MM-DD HH:MM> · **Base:** <branch> at `<sha>` · **Running:** <n> (limit: <DEC-n, or none>) · **Free disk:** <n> GB
+**Register:** DEC-<n> · <12 hex>
+**Increment:** <n> of <total> entries passing on the base · <n> dropped · failing again: <REQ-ids or none>
+
+| Session | Parent | Slice or track | PR | Stage | Waiting on | Next |
+|---|---|---|---|---|---|---|
+| <slug> (<id or link>) | — or <owner slug> | <slice or track> | #n at `<sha>` | <stage> | nothing / user: Q-… / nexus / resource: … / run: … / **stalled since <time>** | <one step> |
+
+## Waiting on the user
+- Q-<slug>-<n> — <question in a line> (since <time>) · PR #n — ready to merge at `<sha>` (since <time>)
+
+## Leases
+- <resource> — <holder> since <time>, limit <time>; queue: <slug>, <slug>
+
+## Archived
+- <slug> — PR #n merged at `<sha>`, archived <date>, worktree removed
+```
+
+Its fields:
 
 - **Updated, Base, Running, Free disk** — when this was written; the base branch and its head, which a later turn compares with `git log` to see a move nobody recorded; how many sessions are running, against the user's limit and its `DEC-n` if they set one; the disk left for worktrees and scratch databases.
 - **Register** — the register's seal: the highest `DEC-n` and the first 12 hex characters of `shasum -a 256 decisions.md`, rewritten whenever a decision is recorded or confirmed. The same line opens every digest, and that copy is the authoritative one; this one is a convenience ([`decisions.md`](#decisionsmd--the-users-decisions)).

@@ -11,7 +11,9 @@ alone.
 `cases.json` holds six prompts for each of fourteen skills that have close neighbours: `hotfix` and
 `incident-fix`, `dbaudit` and `dbdesign`, `peer-review` and `pr-prep`, `ticket` and `backlog`, and (added
 2026-11-20, when their descriptions changed) six development skills: `agent-brief`, `architect-deep-dive`,
-`devils-advocate`, `tyr-verdict`, `refactor-review` and `nexus`.
+`devils-advocate`, `tyr-verdict`, `refactor-review` and `nexus`; and (added 2026-11-21, so every bundle
+in `skills/bundles.json` has cases) `dockerfile` and `docker-compose`, `netaudit` and `netdesign`,
+`threatmodel` and `appsec`.
 
 - Three **should trigger**: the skill under test is the right first pick.
 - Three **should not**: near-misses. Most belong to a neighbour (`expected` names it:
@@ -33,7 +35,7 @@ Each case records:
 ## The split, and the rule
 
 One of every three cases in each (skill, should/should-not) group was drawn at random into
-`heldout` (seeds recorded in `cases.json`): 56 train, 28 held-out. The split is stored, not
+`heldout` (seeds recorded in `cases.json`): 80 train, 40 held-out. The split is stored, not
 re-derived, so adding cases never moves an existing one.
 
 **Only train cases may be read while editing a description.** Run `--split train`, read those
@@ -55,6 +57,20 @@ python3 evals/trigger/run_trigger.py --model sonnet --reps 3         # the full 
 Also `--skills hotfix,incident-fix`, `--cases hotfix-yes-1`, `--max-turns`, `--max-budget-usd`,
 `--concurrency`, `--timeout`, `--out`.
 
+### Per bundle (coexistence)
+
+```bash
+python3 evals/trigger/run_trigger.py --bundle on-call --model claude-opus-5-5 --reps 3
+```
+
+`--bundle NAME` stages only what a user who installs that bundle has: its skills from
+`skills/bundles.json` and the ones offered with every bundle (repo-memory). It runs the cases whose
+skill under test is in the bundle, so it asks whether the descriptions still route correctly among
+the skills that are installed together. A should-not case whose expected neighbour is not in the
+bundle cannot pick that neighbour; its `expected` becomes no skill for the run, and results.jsonl
+keeps the original as `expected_outside_bundle`. The false-trigger rate is unaffected; "picked what
+was expected" then means the run left the skill under test alone and picked nothing else.
+
 Each run is one headless `claude -p` given the case's prompt and nothing else. All of this repo's
 skills are copied to `<tmp>/skills-home/.claude/skills/` and attached with `--add-dir`; the working
 directory is an empty folder beside it. `--setting-sources project` keeps your own skills, plugins
@@ -66,6 +82,34 @@ Results go to `../skills-workspace/trigger/<stamp>/`, outside git like every oth
 `results.jsonl`, `transcripts/`, `summary.json` and `summary.md`. `summary.json` also records a
 hash of each tested description (so a rate can be tied to the wording it measured) and the skills
 the runs were offered that are not from this repo.
+
+### Results: every bundle, 2026-11-21
+
+Opus (`claude-opus-5-5`), three runs per case, all cases (train and held-out) whose skill is in the
+bundle; 414 runs, no errors, about $26 (the 57 runs that finished reported $3.80; the 357 stopped at
+their skill choice report tokens only, priced here from the finished runs' rate). Results are in the
+workspace under `trigger/bundles-20261121/<bundle>/`.
+
+| bundle | skills staged | runs | trigger rate | false-trigger rate | picked what was expected |
+|---|---|---|---|---|---|
+| builder | 12 | 144 | 72/72 | 0/72 | 135/144 |
+| reviewer | 8 | 54 | 27/27 | **3/27** | 51/54 |
+| on-call | 7 | 72 | 36/36 | 0/36 | 72/72 |
+| platform | 9 | 36 | 18/18 | 0/18 | 36/36 |
+| data | 8 | 36 | 15/18 | 0/18 | 33/36 |
+| network | 6 | 36 | 18/18 | 0/18 | 36/36 |
+| security | 5 | 36 | 18/18 | 0/18 | 36/36 |
+
+- **reviewer: `appsec-no-1` falsely triggers appsec, 3 of 3.** Its prompt asks for the security
+  design of a system not yet built, which belongs to threatmodel; threatmodel is not in the reviewer
+  bundle, so appsec, the nearest installed skill, takes it. Every other bundle keeps its skills apart.
+- **builder: the 9 misses are not false triggers.** Three near-misses belong to peer-review, which
+  is not in the bundle; all 9 runs picked the CLI's built-in `code-review` instead, never the skill
+  under test.
+- **data: `dbdesign-yes-3` picks nothing, 3 of 3.** A one-line normal-form question the model answers
+  itself; it picked no skill in all ten earlier all-skills runs too, so it is not a bundle effect.
+- The runs were also offered 22 skills that are not this repo's (the CLI's built-ins such as
+  `code-review`, `debug`, `simplify`); none of the user's own skills leaked in.
 
 ## Reading the summary
 

@@ -1,6 +1,6 @@
 # Parallel tracks — a tree of sessions
 
-Open this when a slice's brief lists **Parallel tracks**, or when you are the session that owns such a brief. The rules it refers to — briefing, the PR gate, cleanup — are in [SKILL.md](SKILL.md) and `setup.md`.
+Open this when a slice's brief lists **Parallel tracks**, or when you are the session that owns such a brief. The rules it refers to — briefing, the PR gate, cleanup — are in [SKILL.md](SKILL.md), `gate.md` and `setup.md`.
 
 A PR whose brief lists **Parallel tracks** (agent-brief writes them only when each track has its own write area, needs nothing another track builds, and meets the others only at seams the brief fixed) can be built by several sessions at once. The session that owns the brief becomes the **nexus of its tracks**: this skill, one level down.
 

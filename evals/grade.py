@@ -12,6 +12,7 @@ Only `delta` assertions can fairly be read as evidence that the edits helped.
 import ast
 import datetime
 import difflib
+import hashlib
 import html
 import ipaddress
 import json
@@ -6864,6 +6865,1365 @@ def eval63(run):
     ]
 
 
+AD = "design-adr"
+
+
+def ad_adr(n):
+    """ADR n cited: `ADR-0002`, `ADR 2`, `ADR-002`, `0002-violations…`, `docs/adr/0002`."""
+    return rf"\bADR[-\s#]*0*{n}\b|\b000{n}\b"
+
+
+# How a violation reaches the caller: the question ADR-0002 settled. Read from a question's option rows,
+# not its prose, so an edge question that says "rejected with CUTOFF_WINDOW" is not mistaken for it.
+AD_SHAPE = (r"new exception|exception (type|class)|own exception|raises? (a |its )?(new|own|separate)|short[- ]?circuit"
+            r"|first violation|(beside|alongside|with) (the |any )?other (codes?|violations?|rules?)|\balone\b"
+            r"|(all|every) (the )?(violation )?codes|only (the )?(cutoff|CUTOFF_WINDOW)")
+AD_CONFLICT = (r"contradict|conflict|supersed|overturn|re-?open|amend|revisit|at odds|clash|goes against|runs against"
+               r"|incompatib|inconsisten|rules out|forbids|says otherwise")
+
+
+def ad_blocks(r):
+    """[(heading, ask, option rows)] for each `### Question q of ~n` block."""
+    heads = list(re.finditer(r"^#{2,5}\s*\**Question\s+\d+\s+of\s+~?\s*\d+[^\n]*$", r, re.M))
+    out = []
+    for i, m in enumerate(heads):
+        body = r[m.end(): heads[i + 1].start() if i + 1 < len(heads) else len(r)]
+        ask, _, rest = body.partition("[Options]")
+        rows = "\n".join(l for l in rest.splitlines() if re.match(r"\s*\|\s*\**\s*[A-D]\b", l))
+        out.append((m.group(0), ask[:1500], rows))
+    return out
+
+
+def ad_designs(repo):
+    d = repo / ".workflow/designs"
+    return sorted(p for p in d.glob("*.md")) if d.is_dir() else []
+
+
+def eval74(run):
+    """architect-deep-dive's opening round on a repo with ADRs: ADR-0002 answers what the caller sees
+    ([inferred], not asked), the per-venue request contradicts ADR-0001 and becomes its own supersede
+    question, and docs/adr/ is left as it was."""
+    repo, r = run / "repo", resp(run)
+    designs = ad_designs(repo)
+    design = read(designs[0]) if len(designs) == 1 else ""
+    t = r + "\n\n" + design
+    qs = ar_questions(r)
+    sec = re.search(r"^## Decisions\s*\n(.*?)(?=^## |\Z)", design, re.S | re.M)
+    bullets = [" ".join(b.split()) for b in re.split(r"\n(?=\s*[-*]\s+\S)", "\n" + (sec.group(1) if sec else ""))
+               if re.match(r"\s*[-*]\s+\S", b)]
+    cited = [n for n in (1, 2, 3) if re.search(ad_adr(n), t, re.I)]
+    asked_shape = [h.strip()[:80] for h, ask, rows in ad_blocks(r)
+                   if re.search(AD_SHAPE, rows, re.I) and not re.search(ad_adr(2), h + ask, re.I)]
+    supersede_q = [q[2].strip()[:80] for q in qs
+                   if re.search(r"venue", q[2] + q[3], re.I) and re.search(ad_adr(1), q[2] + q[3], re.I)]
+    awaiting = list(re.finditer(r"Awaiting your decision or input to proceed", r))
+    heads = list(re.finditer(r"^#{2,5}\s*\**Question\s+\d+\s+of", r, re.M))
+    fx_adr, run_adr = FIXTURES / AD / "docs/adr", repo / "docs/adr"
+    was = {p.name: read(p) for p in fx_adr.glob("*")}
+    now = {p.name: read(p) for p in run_adr.glob("*")} if run_adr.is_dir() else {}
+    adr_changed = sorted(n for n in set(was) | set(now) if was.get(n) != now.get(n))
+    name_ok = [p.name for p in designs if re.fullmatch(r"(\d{8}-\d{4}-)?[a-z0-9]+(-[a-z0-9]+)*\.md", p.name)]
+    return [
+        # capability
+        ("charter: Solving, Why now, Done looks like",
+         has(r, r"Solving", r"Why now", r"Done looks like"), "", C),
+        ("one to three questions, each in the four-section format",
+         1 <= len(qs) <= 3 and all(len(re.findall(p, r)) >= len(qs) for p in AR_SECTIONS),
+         f"{len(qs)} question(s); sections {[len(re.findall(p, r)) for p in AR_SECTIONS]}", C),
+        ("closes with the awaiting-decision line, once",
+         len(awaiting) == 1 and bool(heads) and awaiting[0].start() > heads[-1].start(), f"{len(awaiting)} time(s)", C),
+        # delta
+        # SKILL.md First action "ADRs covering that area. An ADR is a resolved decision"
+        ("the ADRs loaded: at least two of the three cited", len(cited) >= 2, f"cited {cited}", D),
+        # First action "treat it as [inferred] and binding"; rule 4 "Mark such answers [inferred]"
+        ("what the caller sees answered [inferred] from ADR-0002",
+         near(t, r"\[?inferred\]?", ad_adr(2), 400), "", D),
+        # rule 4 "If the answer … can be inferred … do not ask me"
+        ("how violations reach the caller not asked as a question",
+         bool(qs) and not asked_shape, f"asked: {asked_shape[:1]}" if asked_shape else f"{len(qs)} question(s)", D),
+        # First action "If the design … contradicts one, say so explicitly"
+        ("the per-venue request named as contradicting ADR-0001",
+         near(r, ad_adr(1), r"venue", 400) and near(r, ad_adr(1), AD_CONFLICT, 300), "", D),
+        # First action "make superseding it its own decision — never route around it silently"
+        ("superseding ADR-0001 put to the user as its own question",
+         bool(supersede_q), supersede_q[0] if supersede_q else f"{len(qs)} question(s), none naming ADR-0001 and venues", D),
+        # rule 6; The design file "<YYYYMMDD-HHMM>-<slug>.md", "Create it before the first round, with Status: in progress",
+        # "Say the path in your first response"
+        ("one design file under .workflow/designs/, `in progress`, its path in the response",
+         len(designs) == 1 and bool(name_ok) and bool(re.search(r"\*\*Status:?\*\*:?\s*in progress", design))
+         and designs[0].name in r, f"designs: {[p.name for p in designs]}", D),
+        # The design file "Append each decision the moment it resolves"; rule 4 "they count as resolved"
+        ("the [inferred] ADR-0002 answer recorded in the design file's Decisions",
+         any(re.search(ad_adr(2), b, re.I) and re.search(r"inferred", b, re.I) for b in bullets),
+         f"{len(bullets)} decision line(s)", D),
+        # records.md "Do not write one for an [inferred] answer an existing ADR already settled";
+        # "When the user takes the new branch, write the new ADR … Superseded by"
+        ("docs/adr/ unchanged: no new ADR, 0001 not marked superseded",
+         not adr_changed, f"changed: {adr_changed}" if adr_changed else "", D),
+    ]
+
+
+# ------------------------------------------------- eval 75: agent-brief over a finished change
+
+BA = "brief-archive"
+BA_DESIGN = "20261113-1420-cancellation-cutoff"
+# Why it was archived: the skill's two signs that the change is finished. GO case-sensitive: "go" is a word.
+BA_WHY = r"tick|verdict|finish|complet|shipped|(?-i:\bGO\b)"
+
+
+def ba_fold(s):
+    return " ".join(s.split())
+
+
+def ba_archived(repo):
+    """(folders holding the fixture's brief, those of them also holding its ledger) under .workflow/archive/.
+    Contained, not equal: a run that adds an archive note to a file it moved still moved it."""
+    arch = repo / ".workflow/archive"
+    if not arch.is_dir():
+        return [], []
+    old_b, old_l = (ba_fold(read(FIXTURES / BA / ".workflow" / n)) for n in ("brief.md", "ledger.md"))
+    held = sorted({p.parent for p in arch.rglob("*.md") if old_b in ba_fold(read(p))})
+    both = [d for d in held if any(old_l in ba_fold(read(p)) for p in d.glob("*.md"))]
+    return held, both
+
+
+def eval75(run):
+    """agent-brief with the last change's brief and ledger still in .workflow/: both finished (ticked, GO), so
+    they move together to .workflow/archive/<slug>/ before the new brief is written, from the one free
+    resolved design (not the newer `in progress` one)."""
+    repo, r = run / "repo", resp(run)
+    brief = read(repo / ".workflow/brief.md")
+    held, both = ba_archived(repo)
+    left = read(repo / ".workflow/ledger.md")
+    stale = bool(left) and bool(re.search(r"party-size limit|F1 — REFUTED", left))
+    n_crit = len(re.findall(r"^\s*-\s*\[ \]", brief.split("## Revisions")[0], re.M))
+    status = re.search(r"\*\*Status:?\*\*:?\s*([^\n]*)", brief)
+    design = re.search(r"\*\*Design:?\*\*:?\s*([^\n]*)", brief)
+    fx_designs = FIXTURES / BA / ".workflow/designs"
+    run_designs = repo / ".workflow/designs"
+    designs_ok = (sorted(p.name for p in run_designs.glob("*")) == sorted(p.name for p in fx_designs.glob("*"))
+                  and all(read(run_designs / p.name) == read(p) for p in fx_designs.glob("*")))
+    code = [f for fs in changes(run, BA) for f in fs if ".pytest_cache" not in f]
+    return [
+        # capability
+        ("a new brief with ordered criteria, the tracer bullet first",
+         n_crit >= 4 and any_of(brief, r"\[ \]\s*\*{0,2}Tracer"), f"{n_crit} open criteria", C),
+        ("the cutoff design's decisions carried: CUTOFF_WINDOW, cutoff_minutes",
+         has(brief, r"CUTOFF_WINDOW", r"cutoff_minutes"), "", C),
+        ("the designs and the code untouched", designs_ok and not code,
+         f"code changed: {code[:4]}" if code else ("" if designs_ok else "a design file changed or was added"), C),
+        # delta
+        # Upstream "take the one resolved design in that folder that no brief has been written from"; "Record it"
+        ("the brief's Design line names the one free resolved design",
+         bool(design) and BA_DESIGN in design.group(1), design.group(0)[:90] if design else "no Design line", D),
+        # Before you write "A finished brief for other work … Move brief.md and ledger.md together to .workflow/archive/<slug>/"
+        ("the finished brief moved to a folder under .workflow/archive/",
+         bool(held), f"in {[d.relative_to(repo).as_posix() for d in held]}" if held else "not found under .workflow/archive/", D),
+        ("its ledger moved with it, into the same folder", bool(both), "", D),
+        # "a ledger left behind would hand the new change another change's findings"
+        ("no ledger of the finished change left at .workflow/ledger.md", not stale,
+         "the party-size ledger is still there" if stale else "", D),
+        # "Say what you are archiving and why: its title, and that every criterion is ticked and the ledger ends in GO"
+        ("the response says what it archived and why",
+         near3(r, r"archiv", r"party[- ]size", BA_WHY, 300), "", D),
+        # The approval gate "When nobody can answer … leave it draft — awaiting approval, and say so in your last line"
+        ("the new brief left `draft — awaiting approval`",
+         bool(status) and bool(re.match(r"\W*draft", status.group(1), re.I)),
+         f"Status: {status.group(1).strip()[:60]!r}" if status else "no Status line", D),
+        ("the last lines say the brief is a draft awaiting approval",
+         any_of(pl_tail(r), PL_UNAPPROVED), pl_tail(r, 2)[-160:], D),
+    ]
+
+
+
+# ------------------------------------------------------- acceptance-tests, more (64-65)
+# Two variants of the tdd fixture. 64: the suite is red before any work (an unrelated receipt test), so the
+# stage writes no tests and says so in its last line. 65: the brief's public interface does not exist yet,
+# so the stage declares it as a stub that raises NotImplementedError, and its tests are red on that, not on
+# an AttributeError. Every pytest runs at local noon, as eval 27's do.
+
+AX_CONFIG = r"(^|/)(conftest\.py|pytest\.ini|tox\.ini|setup\.cfg|pyproject\.toml)$"
+
+
+def ax_changed(run, fixture):
+    """(added, modified, deleted) like changes(), without pytest's cache."""
+    return tuple([f for f in fs if ".pytest_cache" not in f] for fs in changes(run, fixture))
+
+
+def ax_base(py, fixture):
+    """(classname, test) of a fixture's own tests, collected the way at_pytest collects a run's."""
+    key = f"{py}|{fixture}"
+    if key not in _AT_BASE:
+        tmp = pathlib.Path(tempfile.mkdtemp(prefix="ax-base-"))
+        try:
+            _AT_BASE[key] = {at_key(k) for k in at_pytest(py, at_copy(FIXTURES / fixture, tmp / "repo"), ALL_TESTS)}
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+    return _AT_BASE[key]
+
+
+def ax_added_tests(run, fixture):
+    """The test code the run added (new files whole, changed files' new lines) and its new test names."""
+    added, modified, _ = ax_changed(run, fixture)
+    code, names = [], set()
+    for f in added + modified:
+        if not re.search(AT_TEST_FILE, f):
+            continue
+        text, before = read(run / "repo" / f), read(FIXTURES / fixture / f)
+        old = set(before.splitlines())
+        code += [line for line in text.splitlines() if line not in old]
+        names |= at_test_names(text) - at_test_names(before)
+    return "\n".join(code), names
+
+
+def ax_internals(run, fixture):
+    """at_internals for another fixture: imports of the rule or aggregate modules, private names."""
+    added, modified, _ = ax_changed(run, fixture)
+    hits = set()
+    for f in added + modified:
+        if not re.search(AT_TEST_FILE, f):
+            continue
+        try:
+            tree = ast.parse(read(run / "repo" / f))
+        except SyntaxError:
+            continue
+        for n in ast.walk(tree):
+            if isinstance(n, ast.Import):
+                hits |= {a.name for a in n.names if re.match(r"reservations\.(rules|booking)\b", a.name)}
+            elif isinstance(n, ast.ImportFrom):
+                mod = n.module or ""
+                if re.match(r"reservations\.(rules|booking)\b", mod):
+                    hits.add(mod)
+                elif mod == "reservations":
+                    hits |= {f"reservations.{a.name}" for a in n.names if a.name in ("rules", "booking")}
+            elif isinstance(n, ast.Attribute) and n.attr in AT_PRIVATE | {"validate"}:
+                hits.add(n.attr)
+            elif isinstance(n, ast.Name) and n.id in AT_PRIVATE:
+                hits.add(n.id)
+    return sorted(hits)
+
+
+def ax_mapping(sec, crits):
+    """[(criterion, line)] for each mapping line, by `Criterion n` or by the first pattern in `crits` it matches."""
+    out = []
+    for line in sec.splitlines():
+        if not re.match(r"\s*[-*]\s", line) or re.search(r"\*\*Command", line):
+            continue
+        n = re.search(r"Criterion\s*#?\s*(\d)", line, re.I)
+        if n:
+            out.append((int(n.group(1)), line))
+            continue
+        crit = re.split(r"→|->", line)[0]
+        for c, pat in crits:
+            if re.search(pat, crit, re.I):
+                out.append((c, line))
+                break
+    return out
+
+
+def ax_unmapped(mapping, names):
+    """Mapping lines whose test ids the run did not add, or with neither a test id nor a reason."""
+    bad = []
+    for c, line in mapping:
+        ids = [t[-1] for t in (re.findall(r"\btest\w*", span) for span in re.findall(r"`([^`]+)`", line)) if t]
+        if ids:
+            bad += [i for i in ids if i not in names]
+        elif not re.search(r"not acceptance.?testable\b.*?(?:—|–|-|:|because)\s*\w+(?:\W+\w+){2,}", line, re.I):
+            bad.append(f"criterion {c}: no test id and no reason")
+    return bad
+
+
+def ax_revised(brief):
+    """New Revisions lines that mention the acceptance tests."""
+    revs = brief.split("## Revisions", 1)[1] if "## Revisions" in brief else ""
+    revs = revs[:m.start()] if (m := re.search(r"^(?:\*\*|#)", revs, re.M)) else revs
+    return [line for line in re.findall(r"^\s*-\s+(.+)$", revs, re.M)
+            if "(none yet)" not in line and re.search(r"acceptance", line, re.I)]
+
+
+RB = "at-red-baseline"
+RB_RED = "test_confirmation_names_a_single_guest"
+RB_RED_FILE = "tests/test_receipt.py"
+# SKILL.md "Before any test: record the baseline": "the command, and how many tests passed". The fixture: 5 passed, 1 failed.
+RB_COUNT = r"\b5\s+(?:tests?\s+)?pass|\bpass(?:ed|ing)?\W{0,3}5\b|\b5\s*(?:/|of)\s*6\b"
+
+
+def eval64(run):
+    """acceptance-tests on a suite that is red before any work: one receipt test, unrelated to the brief,
+    fails. The skill writes no tests, leaves the failure as found, records the baseline, and says so last."""
+    repo, r = run / "repo", resp(run)
+    brief = read(repo / ".workflow/brief.md")
+    res, _, gev = pl_suite(run, RB)
+    added, modified, deleted = ax_changed(run, RB)
+    old = pl_tests(FIXTURES / RB)
+    new = sorted(n for n in pl_tests(repo) if n not in old) if (repo / "tests").is_dir() else []
+    new_files = [f for f in added if re.search(AT_TEST_FILE, f)]
+    mapped = [l.strip()[:90] for l in at_section(brief).splitlines()
+              if re.match(r"\s*[-*]\s", l) and re.search(r"`[^`]*\btest\w*", l) and not re.search(r"\*\*Command", l)]
+    red = pl_outcomes(res, RB_RED)
+    others = {k: v for k, v in res.items() if k[1].split("[")[0] in old and k[1] != RB_RED}
+    test_touched = [f for f in added + modified + deleted if f == RB_RED_FILE or re.search(AX_CONFIG, f)]
+    code = [f for f in added + modified + deleted if f.startswith("reservations/")]
+    tail = pl_tail(r)
+    return [
+        # capability
+        ("the response names the failing test", RB_RED in r or "test_receipt" in r, "", C),
+        ("the suite's other tests still present and green",
+         len(others) >= 5 and all(o == "passed" for o, _ in others.values()), gev, C),
+        # delta
+        # SKILL.md "If it is already red, write no tests"
+        ("no acceptance tests written: no test function added, none mapped in the brief",
+         not new and not new_files and not mapped,
+         f"added: {(new or new_files)[:3]}; mapped: {mapped[:1]}" if new or new_files or mapped else "none", D),
+        # "This stage adds failing acceptance tests … and nothing else"; the red test is not this stage's to settle
+        ("the red test left as found: not fixed, skipped, edited or deleted",
+         red == ["failure"] and not test_touched,
+         f"outcome {red}; touched: {test_touched[:3]}", D),
+        ("no production code changed: the receipt not fixed, no cutoff written",
+         not code, f"changed: {code[:3]}" if code else "reservations/ as found", D),
+        # "Run the full suite as it stands and record the result — the command, and how many tests passed"
+        ("the baseline recorded: the command and how many tests passed",
+         any_of(r + "\n" + brief, r"pytest") and any_of(r + "\n" + brief, RB_COUNT), "", D),
+        # "your last line is 'baseline red: `<the failing tests>` — no acceptance tests written'"
+        ("the last lines say the baseline is red, name the failing test, and that no tests were written",
+         any_of(tail, r"baseline\W{0,3}(?:(?:is|was|suite|run)\s+)?(?:already\s+)?red") and RB_RED in tail
+         and any_of(tail, r"no (?:new )?acceptance tests?\b|(?:wrote|written|writing) no (?:acceptance )?tests"),
+         tail[-200:], D),
+    ]
+
+
+AX = "at-stub"
+AX_SIGNATURE = ["self", "account_id", "venue_id", "slot", "party_size"]
+AX_REFERENCE = '''
+    def check(self, account_id, venue_id, slot, party_size):
+        booking = Booking(account_id, venue_id, slot, party_size)
+        codes = booking.validate({config})
+{save}        return codes{first}
+'''
+AX_MUTANTS = {
+    # saves the booking when it would be accepted: a check that books
+    "saves": dict(save="        if not codes:\n            self._store.save(booking)\n"),
+    # only the first violation
+    "first-only": dict(first="[:1]"),
+    # the default rules, not the account's config
+    "default-config": dict(config="{}"),
+}
+AX_CRITERIA = [  # checked in this order: criterion 3 also names a party of 13, criterion 5 also says "accepted"
+    (4, r"\bboth\b|two (rules|codes)|opening|VENUE_CLOSED|\bfirst\b"),
+    (5, r"persist|\bsav(e|es|ed|ing)\b|\bstore\b"),
+    (3, r"config|max_party_size|\b20\b"),
+    (2, r"break|PARTY_TOO_LARGE|rule'?s code|violat"),
+    (1, r"tracer|accept|empty|\[\]"),
+]
+AX_PROBE = """
+from datetime import datetime, timedelta
+from reservations.api import BookingService
+class Store:
+    def save(self, b): pass
+class Config:
+    def for_account(self, a): return {}
+slot = (datetime.now() + timedelta(days=30)).replace(hour=19, minute=0, second=0, microsecond=0)
+try:
+    print(f"check(party of 13): {BookingService(Store(), Config()).check('acct-1', 'venue-1', slot, 13)!r}")
+except Exception as e:
+    print(f"check(party of 13): {type(e).__name__}")
+"""
+
+
+def ax_api(method):
+    """The fixture's api.py with `method` appended to BookingService (the module's last class)."""
+    return read(FIXTURES / AX / "reservations/api.py").rstrip("\n") + "\n" + method
+
+
+def ax_overlay(repo, method):
+    for f in ("__init__.py", "booking.py", "rules.py"):
+        (repo / "reservations" / f).write_text(read(FIXTURES / AX / "reservations" / f))
+    (repo / "reservations/api.py").write_text(ax_api(method))
+
+
+def ax_stub(run):
+    """(declared, rest_untouched, evidence): BookingService.check declared with the brief's signature and a body
+    that only raises NotImplementedError; everything else in reservations/ as the fixture has it."""
+    src, fx = read(run / "repo/reservations/api.py"), read(FIXTURES / AX / "reservations/api.py")
+    try:
+        tree = ast.parse(src)
+    except SyntaxError:
+        return False, False, "api.py does not parse"
+    cls = [n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == "BookingService"]
+    meth = [n for n in (cls[0].body if cls else []) if isinstance(n, ast.FunctionDef) and n.name == "check"]
+    declared, ev = False, "no BookingService.check"
+    if meth:
+        m = meth[0]
+        body = [s for s in m.body if not (isinstance(s, ast.Expr) and isinstance(s.value, ast.Constant))]
+        exc = body[0].exc if len(body) == 1 and isinstance(body[0], ast.Raise) else None
+        exc = exc.func if isinstance(exc, ast.Call) else exc
+        args = [a.arg for a in m.args.posonlyargs + m.args.args]
+        declared = args == AX_SIGNATURE and isinstance(exc, ast.Name) and exc.id == "NotImplementedError"
+        ev = f"check({', '.join(args)}): " + ("raises NotImplementedError" if exc is not None and getattr(exc, "id", "") == "NotImplementedError"
+                                             else f"a {len(body)}-statement body")
+        cls[0].body = [n for n in cls[0].body if n is not m]
+    tree.body = [n for n in tree.body if not (isinstance(n, ast.ImportFrom) and n.module in ("typing", "__future__"))]
+    rest = ast.dump(tree) == ast.dump(ast.parse(fx))
+    added, modified, deleted = ax_changed(run, AX)
+    others = [f for f in added + modified + deleted if f.startswith("reservations/") and f != "reservations/api.py"]
+    return declared, rest and not others, ev + (f"; also changed: {others[:3]}" if others else "" if rest else "; api.py changed beyond check")
+
+
+def eval65(run):
+    """acceptance-tests on a brief whose public interface does not exist yet: BookingService.check is declared
+    as a stub that raises NotImplementedError, the tests are red on it, and nothing is implemented."""
+    repo = run / "repo"
+    py = pl_python(run, AX)
+    code, names = ax_added_tests(run, AX)
+    brief = read(repo / ".workflow/brief.md")
+    sec = at_section(brief)
+    r = resp(run)
+    base = ax_base(py, AX)
+    declared, rest_ok, stub_ev = ax_stub(run)
+    tmp = pathlib.Path(tempfile.mkdtemp(prefix="ax-grade-"))
+    try:
+        own = at_copy(repo, tmp / "own")
+        now = at_pytest(py, own, ALL_TESTS)
+        new = {k: v for k, v in now.items() if at_key(k) not in base}
+        old = {k: v for k, v in now.items() if at_key(k) in base}
+        try:
+            pr = subprocess.run([str(py), "-c", AX_PROBE], cwd=own, capture_output=True, text=True,
+                                env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}, timeout=60)
+            probe = ((pr.stdout + pr.stderr).strip().splitlines() or [""])[-1][:200]
+        except Exception as e:
+            probe = f"probe failed to run: {e}"[:200]
+        cmd = re.search(r"\*\*Command:?\*\*:?\s*`([^`]+)`", sec)
+        args = at_command(cmd.group(1)) if cmd else None
+        ran = at_pytest(py, own, args) if args is not None else {}
+
+        over = at_copy(repo, tmp / "over")
+        plain = dict(config="self._config_source.for_account(account_id)", save="", first="")
+        ax_overlay(over, AX_REFERENCE.format(**plain))
+        ref = {k: v for k, v in at_pytest(py, over, ALL_TESTS).items() if at_key(k) not in base}
+        green_ref = {k for k, v in ref.items() if v[0] == "passed"}
+        killed = {}
+        for name, mut in AX_MUTANTS.items():
+            ax_overlay(over, AX_REFERENCE.format(**{**plain, **mut}))
+            res = at_pytest(py, over, ALL_TESTS)
+            hit = sorted(k[1] for k in green_ref if res.get(k, ("missing",))[0] != "passed")
+            killed[name] = (bool(hit), f"failed on the mutant: {hit[:3]}" if hit else
+                            f"no test green on the reference fails it ({len(green_ref)} green on the reference)")
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+    passing = sorted(k[1] for k, v in new.items() if v[0] == "passed")
+    wrong = sorted(f"{k[1]}: {v[1][:70]}" for k, v in new.items()
+                   if v[0] != "passed" and (v[0] != "failure" or not re.match(AT_BEHAVIOR, v[1])))
+    old_bad = sorted(k[1] for k, v in old.items() if v[0] != "passed")
+    old_missing = base - {at_key(k) for k in old}
+    ref_bad = sorted(f"{k[1]}: {v[1][:60]}" for k, v in ref.items() if v[0] != "passed")
+    internals = ax_internals(run, AX)
+    doubles = re.findall(r"^\s*class\s+((?!FakeStore\b|FakeConfig\b)\w*(?:Store|Config|Clock|Fake|Stub|Mock|Spy)\w*)", code, re.M)
+    doubles += re.findall(r"unittest\.mock|MagicMock|\bmocker\b", code)
+    mapping = ax_mapping(sec, AX_CRITERIA)
+    counts = {c: sum(1 for n, _ in mapping if n == c) for c in range(1, 6)}
+    unmapped = ax_unmapped(mapping, names)
+    revised = ax_revised(brief)
+    implemented = "PARTY_TOO_LARGE" in probe
+    return [
+        # capability
+        ("acceptance tests added that drive BookingService.check",
+         len(names) >= 3 and has(code, r"\.check\("), f"{len(names)} new test functions", C),
+        ("the pre-existing tests still present and green", bool(old) and not old_bad and not old_missing,
+         f"failing: {old_bad}; missing: {sorted(old_missing)}" if old_bad or old_missing else f"{len(old)} green", C),
+        ("tests reuse FakeStore and FakeConfig, no new doubles",
+         bool(code) and has(code, r"\bFakeStore\b", r"\bFakeConfig\b") and not doubles, f"{doubles or 'none new'}", C),
+        ("every new test passes once a correct check is laid over the repo",
+         bool(ref) and not ref_bad, f"{ref_bad[:3]}" if ref_bad else f"{len(ref)} green on the reference", C),
+        ("the never-persists test kills a check that saves an acceptable booking", *killed["saves"], C),
+        ("the both-codes test kills a first-code-only check", *killed["first-only"], C),
+        ("the config test kills a check that ignores the account's config", *killed["default-config"], C),
+        # delta
+        # SKILL.md Step 3 "Where the public interface itself doesn't exist yet … declare it — the signature the
+        # brief's Key interfaces name, failing with a not-implemented error"
+        ("the missing interface declared: BookingService.check, the brief's signature, raising NotImplementedError",
+         declared, stub_ev, D),
+        ("every new test is red now (none passes)", bool(new) and not passing,
+         f"passing now: {passing[:4]}" if passing else f"{len(new)} new, all red", D),
+        # "A failure to load is not red": an AttributeError on a method that does not exist proves nothing
+        ("red for the right reason: NotImplementedError or an assertion, never an AttributeError or import error",
+         bool(new) and not wrong, f"{wrong[:3]}" if wrong else f"{len(new) - len(passing)} of {len(new)} fail on behavior"
+         if new else "no new tests ran", D),
+        # "That stub is the only production code this stage writes"
+        ("no implementation: nothing in reservations/ changed but the declared stub",
+         rest_ok and not implemented, f"{probe}; {stub_ev}", D),
+        ("no internals: tests drive BookingService only", bool(code) and not internals,
+         f"{internals}" if internals else "public seam only" if code else "no test code", D),
+        ("brief gains an Acceptance tests section with a Command line", bool(sec) and bool(cmd),
+         cmd.group(1)[:120] if cmd else ("section, no **Command:**" if sec else "no Acceptance tests section"), D),
+        ("the recorded command runs exactly the new acceptance tests", bool(new) and set(ran) == set(new),
+         f"command collects {len(ran)}, new tests {len(new)}" + ("" if args is not None else " (no pytest command)"), D),
+        ("every one of the 5 criteria mapped exactly once", all(v == 1 for v in counts.values()), f"{counts}", D),
+        ("every mapped test id names a test the run added", bool(mapping) and not unmapped,
+         f"{unmapped[:4]}" if unmapped else f"{len(mapping)} mapping lines", D),
+        ("the mapping logged under Revisions", bool(revised), revised[0][:120] if revised else "no new Revisions entry", D),
+        ("hands off to tdd next", near(r, r"\btdd\b", r"\bnext\b", 120), "", D),
+    ]
+
+
+# -- evals 70-71: tyr-verdict on a ledger written wholly in the grammar (no legacy preamble), iteration 2
+
+TV_EDGE = "test_slot_exactly_at_window_edge_is_accepted"
+TV_CONFIG = "test_window_length_reads_from_account_config"
+TV_SKIP_GONE = (r"un-?skip|without (the |its |a |any )?skip|no (longer )?skip|skip\w* (marker |decorator )?(is |are )?(removed|gone|dropped)"
+                r"|remov\w* (the |its )?(skip|@pytest\.mark\.skip)|restor")
+
+
+def tv_appended(run, fixture):
+    """What the run added below the fixture's ledger (the whole file when it rewrote what was there)."""
+    old, new = read(FIXTURES / fixture / ".workflow/ledger.md"), read(run / "repo/.workflow/ledger.md")
+    return new[len(old):] if new.startswith(old) else new
+
+
+def tv_verdicts(text):
+    """{F id: (verdict, severity)} for every `#### F<n> — …` verdict heading in text."""
+    return {m.group(1): (m.group(2).upper(), (m.group(3) or "").lower())
+            for m in re.finditer(r"^#### (F\d+)\s+—\s+(CONFIRMED|REFUTED|INCONCLUSIVE)\b[ \t]*(blocker|major|minor)?",
+                                 text, re.M | re.I)}
+
+
+def tv_entry(text, fid):
+    """The verdict block for fid: its heading and the lines up to the next heading."""
+    m = re.search(rf"^#### {fid}\b[^\n]*(?:\n(?!#)[^\n]*)*", text, re.M)
+    return m.group(0) if m else ""
+
+
+def tv_outcome(text):
+    """(outcome, reason) of the last `### Verdict:` in text, or (None, "")."""
+    ms = list(re.finditer(r"^### Verdict:\s*(GO|NO-GO|ESCALATED)\s*$((?:\n(?!#)[^\n]*)*)", text, re.M | re.I))
+    if not ms:
+        return None, ""
+    reason = re.search(r"\*\*Reason:\*\*\s*([^\n]*)", ms[-1].group(2))
+    return ms[-1].group(1).upper(), reason.group(1) if reason else ""
+
+
+def tv_slices(text, prefix):
+    """Every remediation slice line (with its continuation lines) whose id starts with prefix (F4, R)."""
+    return [m.group(0) for m in re.finditer(
+        rf"^- (?:\[ \]\s*)?\[(?:blocker|major|minor)\]\s+{prefix}\d*\s+—[^\n]*(?:\n(?!- |#|\s*$)[^\n]*)*", text, re.M | re.I)]
+
+
+def tv_clean(run, fixture):
+    """A verdict appended, and ledger.py check clean against the fixture's ledger: every code, since the
+    fixture has no legacy preamble for the numbering checks to trip on (unlike evals 3-5)."""
+    if not re.search(r"^### Verdict:", tv_appended(run, fixture), re.M):
+        return False, "no ### Verdict: appended"
+    try:
+        r = subprocess.run([sys.executable, str(LEDGER_PY), "check", "--json",
+                            "--against", str(FIXTURES / fixture / ".workflow/ledger.md"),
+                            str(run / "repo/.workflow/ledger.md")], capture_output=True, text=True, timeout=60)
+        out = json.loads(r.stdout)
+    except Exception as e:
+        return False, f"ledger.py check failed to run: {e}"
+    return not out["errors"], "; ".join(out["errors"])[:240] or f"0 errors, computed {out.get('computed')}"
+
+
+def tv_code_changed(run, fixture):
+    """Source and test files that differ from the fixture's: the verdict stage runs evidence on a scratch copy."""
+    out = []
+    for sub in ("reservations", "tests"):
+        a = {p.relative_to(FIXTURES / fixture): p.read_bytes() for p in (FIXTURES / fixture / sub).rglob("*.py")}
+        b = {p.relative_to(run / "repo"): p.read_bytes() for p in (run / "repo" / sub).rglob("*.py")}
+        out += [str(k) for k in set(a) | set(b) if a.get(k) != b.get(k)]
+    return sorted(out)
+
+
+def eval70(run):
+    """Iteration 2: tdd closed F1 and F2, the teardown found only a repeat and a mutation question, and the
+    suite is red. The arithmetic over the findings says GO; the run before the verdict says no."""
+    fx = "verdict-red"
+    r, added = resp(run), tv_appended(run, fx)
+    v = tv_verdicts(added)
+    outcome, reason = tv_outcome(added)
+    red = tv_slices(added, "R")
+    red_ok = [s for s in red if re.search(r"\[blocker\]\s+R\d+\s+—\s+red run:", s, re.I) and TV_EDGE in s and TV_CONFIG in s]
+    changed = tv_code_changed(run, fx)
+    return [
+        # capability
+        ("F4 and F5 each adjudicated", {"F4", "F5"} <= set(v), f"verdicts: {sorted(v)}", C),
+        ("F4 REFUTED", v.get("F4", ("",))[0] == "REFUTED", "", C),
+        ("a verdict stated in the ledger", outcome is not None, outcome or "none", C),
+        # delta
+        # SKILL.md rule 1 "REFUTED is sticky … strike it in one line citing the prior verdict"
+        ("F4 struck as F3's repeat, citing it",
+         v.get("F4", ("",))[0] == "REFUTED" and bool(re.search(r"\bF3\b|iteration 1|already refuted|prior", tv_entry(added, "F4"), re.I)),
+         tv_entry(added, "F4")[:160], D),
+        # Mandate "Running the evidence is your job … its Would be settled by line is the run to make"
+        ("F5 settled by running its mutation: REFUTED, not sent back",
+         v.get("F5", ("",))[0] == "REFUTED", f"F5: {v.get('F5')}", D),
+        # Merge verdict "Before a GO" 1-2: run the full suite; red → `[blocker] R<id> — red run: <the failing tests, by name>`
+        ("the red run recorded as a [blocker] R slice naming both failing tests",
+         bool(red_ok), (red or ["no R slice"])[0][:200], D),
+        ("the verdict NO-GO, its Reason naming the red run",
+         outcome == "NO-GO" and bool(re.search(r"\bR\d+\b", reason)), f"{outcome}: {reason[:120]}", D),
+        # the closed slices checked against the run: the test tdd closed F1 and F2 with is red
+        ("the response says the test F1 and F2 were closed by is red",
+         near3(r, TV_CONFIG, r"fail|\bred\b", r"\bF1\b|\bF2\b|clos"), "", D),
+        # NO-GO handoff "iteration <i> of at most 3"
+        ("iteration 2 of at most 3 stated",
+         any_of(r, r"[Ii]teration 2") and any_of(r, r"of (at most )?(3|three)\b|at most (3|three)|\bcap\b|third (iteration|pass)"), "", D),
+        # Mandate: every reproduction, mutation and restored check runs in a scratch copy
+        ("the code and tests left untouched", not changed, f"changed: {changed[:4]}" if changed else "", D),
+        ("the appended ledger clean under ledger.py check", *tv_clean(run, fx), D),
+    ]
+
+
+def eval71(run):
+    """Iteration 2: tdd made the suite green by skipping the window-edge test as flaky on a fixed clock.
+    special-findings.md 'Findings about the bar itself': a green suite refutes nothing there."""
+    fx = "verdict-bar"
+    r, added = resp(run), tv_appended(run, fx)
+    v = tv_verdicts(added)
+    outcome, reason = tv_outcome(added)
+    f4 = v.get("F4", ("", ""))
+    slices = tv_slices(added, "F4")
+    changed = tv_code_changed(run, fx)
+    return [
+        # capability
+        ("F4 adjudicated", "F4" in v, f"F4: {v.get('F4')}", C),
+        ("F5 adjudicated", "F5" in v, f"F5: {v.get('F5')}", C),
+        ("a verdict stated in the ledger", outcome is not None, outcome or "none", C),
+        # delta
+        # special-findings "A green suite refutes nothing here … restore it on a scratch copy … and run it"
+        ("F4 CONFIRMED, not refuted by the green suite or sent back", f4[0] == "CONFIRMED", f"F4: {f4}", D),
+        # "Severity follows what the weakened check was guarding, not how small the diff line is"
+        ("F4's severity follows what the check guarded: blocker or major, not the hinted minor",
+         f4[0] == "CONFIRMED" and f4[1] in ("blocker", "major"), f"F4: {f4}", D),
+        ("the skipped test restored on a scratch copy and seen to fail",
+         near3(r, TV_SKIP_GONE, r"fail|\bred\b|CUTOFF_WINDOW|Rejected", rf"{TV_EDGE}|window edge|edge test|criterion 4"), "", D),
+        # "The slice restores the check, then fixes what it catches"
+        ("F4's slice restores the check: the edge test runs un-skipped and passes",
+         any(re.search(rf"{TV_EDGE}|edge test|window edge|exactly at the (window )?edge", s, re.I)
+             and re.search(TV_SKIP_GONE, s, re.I) and re.search(r"pass", s, re.I) for s in slices),
+         (slices or ["no F4 slice"])[0][:200], D),
+        ("the verdict NO-GO, its Reason naming F4",
+         outcome == "NO-GO" and bool(re.search(r"\bF4\b", reason)), f"{outcome}: {reason[:120]}", D),
+        ("the code and tests left untouched", not changed, f"changed: {changed[:4]}" if changed else "", D),
+        ("the appended ledger clean under ledger.py check", *tv_clean(run, fx), D),
+    ]
+
+
+# ------------------------------------------------- refactor-review standalone, and an uncovered smell (66-67)
+
+RS = "refactor-standalone"
+RS_BRANCH = "feature/express-quotes"
+RS_OUT_OF_DIFF = ("parcels/labels.py", "tests/test_labels.py")   # on main, untouched by the branch
+# Every quote over a grid that includes fractional weights: express rounds once, at the end, and a refactor
+# that builds it from the rounded standard quote changes 2.345 kg domestic from 10.20 to 10.21.
+RS_PROBE = r'''
+import json, sys
+sys.path.insert(0, sys.argv[1])
+from parcels import rates
+out = {}
+for fn in ("standard_quote", "express_quote"):
+    for zone in ("domestic", "regional", "international", "mars"):
+        for w in (0.5, 1, 2.345, 3.3333, 7.125, 10, 0, -1):
+            for args in ([(w, zone)] if fn == "standard_quote" else [(w, zone, False), (w, zone, True)]):
+                try:
+                    v = str(getattr(rates, fn)(*args))
+                except Exception as e:
+                    v = type(e).__name__
+                out[fn + repr(args)] = v
+print(json.dumps(out, sort_keys=True))
+'''
+RS_UNAVAILABLE = (r"unavailable|not available|no ledger|without a ledger|no `?\.workflow|nothing (to|was) re-?read"
+                  r"|none to re-?read|no (prior|earlier|previous) (pass|ledger|review)")
+_RS = {}
+
+
+def rs_git(repo, *a):
+    return subprocess.run(["git", "-C", str(repo), *a], capture_output=True, text=True).stdout.strip()
+
+
+def rs_unittest(root):
+    """(green, last line) for the project's own suite command, run in root."""
+    try:
+        r = subprocess.run([sys.executable, "-B", "-m", "unittest", "discover", "-s", "tests", "-t", "."],
+                           cwd=root, capture_output=True, text=True, stdin=subprocess.DEVNULL, timeout=120)
+        tail = (r.stdout + r.stderr).strip().splitlines()[-1:] or [""]
+        return r.returncode == 0, tail[0][:120]
+    except Exception as e:
+        return False, str(e)[:120]
+
+
+def rs_probe(root):
+    try:
+        r = subprocess.run([sys.executable, "-I", "-B", "-c", RS_PROBE, str(root)],
+                           capture_output=True, text=True, stdin=subprocess.DEVNULL, timeout=60)
+        return json.loads(r.stdout)
+    except Exception:
+        return None
+
+
+def rs_fixture():
+    """The fixture branch's tip and main, and the quotes its working tree gives."""
+    if not _RS:
+        fx = FIXTURES / RS / "repo"
+        _RS.update(tip=rs_git(fx, "rev-parse", RS_BRANCH), main=rs_git(fx, "rev-parse", "main"), probe=rs_probe(fx))
+    return _RS
+
+
+def rs_commits(repo, tip):
+    """[(sha, green, evidence)] for every commit the run added on top of the fixture's branch tip."""
+    out = []
+    for sha in rs_git(repo, "rev-list", "--reverse", f"{tip}..HEAD").split():
+        tmp = pathlib.Path(tempfile.mkdtemp(prefix="rs-commit-"))
+        try:
+            arc = subprocess.run(["git", "-C", str(repo), "archive", sha], capture_output=True)
+            subprocess.run(["tar", "-x", "-C", str(tmp)], input=arc.stdout, capture_output=True)
+            green, ev = rs_unittest(tmp)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+        out.append((sha[:7], green, ev))
+    return out
+
+
+def eval66(run):
+    """refactor-review standalone: a branch in a git repo, no .workflow/, no brief and no ledger. Review the
+    branch's change, refactor it in green steps on the branch, and keep the noted smells in the response."""
+    repo, r = run / "repo" / "repo", resp(run)
+    fx = rs_fixture()
+    green, gev = rs_unittest(repo)
+    probe = rs_probe(repo)
+    diffs = sorted(k for k in fx["probe"] or {} if (probe or {}).get(k) != fx["probe"][k])
+    kept = subprocess.run(["git", "-C", str(repo), "merge-base", "--is-ancestor", fx["tip"], "HEAD"],
+                          capture_output=True).returncode == 0
+    on_branch = rs_git(repo, "symbolic-ref", "-q", "--short", "HEAD") == RS_BRANCH
+    commits = rs_commits(repo, fx["tip"]) if kept else []
+    red = [s for s, ok, _ in commits if not ok]
+    said_no_commit = near(r, r"\bcommit", r"can(no|')t|could(n'| no)t|unable|not able|not permitted|no permission", 80)
+    touched = [f for f in RS_OUT_OF_DIFF if read(repo / f) != read(FIXTURES / RS / "repo" / f)]
+    touched += [f for f in rs_git(repo, "diff", "--name-only", fx["tip"], "HEAD").split() if f in RS_OUT_OF_DIFF]
+    main_moved = rs_git(repo, "rev-parse", "main") != fx["main"]
+    invented = [p.relative_to(run / "repo").as_posix() for p in (run / "repo").rglob("*")
+                if p.name == ".workflow" or (p.name == "ledger.md" and ".git" not in p.parts)]
+    return [
+        # capability
+        ("suite green after the refactor", green, gev, C),
+        ("behaviour preserved: every quote on the grid, fractional weights included, as before",
+         bool(probe) and bool(fx["probe"]) and not diffs,
+         f"{len(diffs)} differ, e.g. {diffs[0]}: {fx['probe'][diffs[0]]} → {(probe or {}).get(diffs[0])}" if diffs
+         else "probe failed to run" if not probe else "identical", C),
+        ("the duplication in express_quote found", near(r, r"express_quote|standard_quote", r"duplicat", 300), "", C),
+        ("the change reviewed is the branch against main",
+         any_of(r, r"merge-?base", r"main\s*\.\.\.?\s*(HEAD|feature|`)", r"\.\.\.\s*feature/express",
+                r"(against|vs\.?|versus|relative to|compared (to|with)|off|from) `?(origin/)?main\b",
+                r"compared `?[\w./-]+`? (to|with|against) `?(origin/)?main\b"), "", C),
+        # delta
+        ("severity vocabulary applied to findings",
+         any_of(r, r"\bblocking\b", r"\bworthwhile\b") and any_of(r, r"\bnoted\b"), "blocking or worthwhile, and noted", D),
+        # "Without a ledger … don't create one"
+        ("no .workflow/ or ledger created", not invented, f"created: {invented[:3]}" if invented else "", D),
+        # "… and say the carried smells were unavailable"
+        ("the response says the carried smells were unavailable",
+         near(r, r"carried|prior (pass|smell)|earlier (pass|smell)|previous (pass|smell)|re-?read|ledger", RS_UNAVAILABLE, 160), "", D),
+        # "put the noted smells and their promotion conditions in your response"
+        ("noted smells kept in the response with a promotion condition",
+         any_of(r, r"[Pp]romote if") and any_of(r, r"\bnoted\b"), "", D),
+        # Rules of Engagement 3: one technique, run tests, commit; never on the default branch
+        ("refactoring committed on the branch, every new commit green",
+         on_branch and kept and ((bool(commits) and not red) or (not commits and said_no_commit)),
+         f"HEAD on {RS_BRANCH}: {on_branch}; history kept: {kept}; commits: {[(s, ok) for s, ok, _ in commits]}"
+         + ("; said it could not commit" if said_no_commit and not commits else ""), D),
+        # Rules of Engagement 5 "New code only", and Save points "never on the default branch"
+        ("code outside the diff untouched, and main not moved",
+         not touched and not main_moved, f"touched: {sorted(set(touched))}; main moved: {main_moved}", D),
+    ]
+
+
+RU = "refactor-uncovered"
+RU_TEXT_TEST = r"_parse_window|parse_window|cutoff_minutes['\"]?\s*[:=]\s*['\"]|['\"]\s*\d+\s*(h|m|min|hours?|minutes?)\b"
+RU_UNCOVERED = (r"no test|not covered|uncovered|untested|no covering|without (a |any )?(covering )?tests?|coverage"
+                r"|not exercised|nothing exercises|never (runs|exercised|executed)")
+RU_CONFIGS = [None, 30, 120, "90m", "90min", "2h", "1h30m", "1h30min", " 2H ", "45", "1.5h", "", "abc", "0h", "1h30", "5h"]
+# The first minute ahead of a held clock that the cutoff accepts, per config: the window the rule reads.
+RU_PROBE = r'''
+import json, sys
+from datetime import datetime, timedelta
+sys.path.insert(0, sys.argv[1])
+from reservations import rules
+from reservations.booking import Booking
+now = datetime(2026, 11, 18, 12, 0)
+rules.clock = lambda: now
+out = {}
+for cfg in json.loads(sys.argv[2]):
+    config = {"opens_at": 0, "closes_at": 24, **({} if cfg is None else {"cutoff_minutes": cfg})}
+    first = None
+    for m in range(0, 400):
+        if "CUTOFF_WINDOW" not in rules.validate(Booking("a", "v", now + timedelta(minutes=m), 2), config):
+            first = m
+            break
+    out[repr(cfg)] = first
+print(json.dumps(out))
+'''
+_RU = {}
+
+
+def ru_window(root):
+    try:
+        r = subprocess.run([sys.executable, "-I", "-B", "-c", RU_PROBE, str(root), json.dumps(RU_CONFIGS)],
+                           capture_output=True, text=True, stdin=subprocess.DEVNULL, timeout=60)
+        return json.loads(r.stdout)
+    except Exception:
+        return None
+
+
+def ru_func(src, name):
+    """ast.dump of a top-level function, its docstring left out (a docstring is not a refactoring)."""
+    try:
+        tree = ast.parse(src)
+    except SyntaxError:
+        return None
+    for node in tree.body:
+        if isinstance(node, ast.FunctionDef) and node.name == name:
+            body = node.body[1:] if (node.body and isinstance(node.body[0], ast.Expr)
+                                     and isinstance(getattr(node.body[0], "value", None), ast.Constant)
+                                     and isinstance(node.body[0].value.value, str)) else node.body
+            return ast.dump(ast.Module(body=body, type_ignores=[])) + ast.dump(node.args)
+    return None
+
+
+def ru_added_test_lines(run):
+    """Lines the run added to any test file, new files included."""
+    added = []
+    for p in sorted((run / "repo/tests").rglob("*.py")) if (run / "repo/tests").is_dir() else []:
+        old = read(FIXTURES / RU / "tests" / p.relative_to(run / "repo/tests")).splitlines()
+        added += [l[1:] for l in difflib.unified_diff(old, read(p).splitlines(), lineterm="", n=0)
+                  if l.startswith("+") and not l.startswith("+++")]
+    return added
+
+
+def ru_entries(ledger):
+    """[(entry line, its indented fields)] for every `- **N<id>**` line in the ledger."""
+    out, lines = [], ledger.splitlines()
+    for i, l in enumerate(lines):
+        if re.match(r"\s*-\s*\*\*N\d+\*\*", l) and not l.startswith(" "):
+            fields = []
+            for f in lines[i + 1:]:
+                if not f.startswith(" ") or not f.strip():
+                    break
+                fields.append(f)
+            out.append((l, "\n".join(fields)))
+    return out
+
+
+def ru_ledger_check(ledger):
+    """(ok, evidence): ledger.py finds no error at all in a ledger the run created from nothing."""
+    if not ledger.exists():
+        return False, "no .workflow/ledger.md"
+    empty = pathlib.Path(tempfile.mkdtemp(prefix="ru-ledger-")) / "empty.md"
+    empty.write_text("")
+    try:
+        r = subprocess.run([sys.executable, str(LEDGER_PY), "check", "--json", "--against", str(empty), str(ledger)],
+                           capture_output=True, text=True, timeout=60)
+        errors = json.loads(r.stdout)["errors"]
+    except Exception as e:
+        return False, f"ledger.py check failed to run: {e}"
+    finally:
+        shutil.rmtree(empty.parent, ignore_errors=True)
+    return not errors, "; ".join(errors)[:240] or "no errors"
+
+
+def eval67(run):
+    """refactor-review on a change with one uncovered helper: _parse_window, which no test reaches, is left as
+    it is and recorded as noted until a covering test exists; no test is written for it in this stage."""
+    repo, r = run / "repo", resp(run)
+    rules_src = read(repo / "reservations/rules.py")
+    res, green, gev = pl_suite(run, RU)
+    if not _RU:
+        _RU.update(fn=ru_func(read(FIXTURES / RU / "reservations/rules.py"), "_parse_window"), window=ru_window(FIXTURES / RU))
+    now_fn = ru_func(rules_src, "_parse_window")
+    window = ru_window(repo)
+    wdiff = sorted(k for k in _RU["window"] or {} if (window or {}).get(k) != _RU["window"][k])
+    test_lines = [l.strip()[:80] for l in ru_added_test_lines(run) if re.search(RU_TEXT_TEST, l, re.I)]
+    ledger_path = repo / ".workflow/ledger.md"
+    ledger = read(ledger_path)
+    held = [(e, f) for e, f in ru_entries(ledger)
+            if re.search(r"parse_window|text (window|value|format)|window (text|string)", e, re.I)
+            and re.search(r"\bnoted\b", e, re.I)
+            and re.search(r"Promote if:?\**:?[^\n]*(test|cover)", f, re.I)]
+    lok, lev = ru_ledger_check(ledger_path)
+    return [
+        # capability
+        ("smells named by type/subtype",
+         any_of(r, r"Dispensables|Bloaters|Couplers|Change Preventers|Object-Orientation"), "", C),
+        ("suite green after the pass", green, gev, C),
+        ("behaviour preserved: the window read for integer and text configs as before",
+         bool(window) and bool(_RU["window"]) and not wdiff,
+         f"{len(wdiff)} differ, e.g. {wdiff[0]}: {_RU['window'][wdiff[0]]} → {(window or {}).get(wdiff[0])}" if wdiff
+         else "probe failed to run" if not window else "identical", C),
+        # delta
+        # Rules of Engagement 2 "where no test exercises the code a refactoring would touch, stop that refactoring"
+        ("_parse_window, which no test exercises, left as it was",
+         now_fn is not None and now_fn == _RU["fn"], "unchanged" if now_fn == _RU["fn"] else
+         "removed or moved" if now_fn is None else "rewritten", D),
+        # "Don't write the missing tests here — that is tdd's stage"
+        ("no test for text windows written in this stage", not test_lines, f"added: {test_lines[:2]}" if test_lines else "", D),
+        # "record the smell as noted with 'a covering test exists' as its promote condition"
+        ("ledger: _parse_window noted, promoted only once a covering test exists", bool(held),
+         held[0][0].strip()[:120] if held else f"{len(ru_entries(ledger))} N entries, none on _parse_window with a test condition", D),
+        # "… and report it"
+        ("the response names _parse_window as uncovered",
+         near(r, r"_parse_window|parse_window", RU_UNCOVERED, 250), "", D),
+        # "Inside the pipeline, where .workflow/ exists but the ledger doesn't yet … create the file and open ## Iteration 1"
+        ("ledger created with ## Iteration 1 and ### Smells, clean under its checker",
+         lok and bool(re.search(r"^## Iteration 1\s*$", ledger, re.M)) and bool(re.search(r"^### Smells\s*$", ledger, re.M)),
+         lev, D),
+    ]
+
+
+# ------------------------------------------------- devils-advocate, harder (68-69)
+#
+# Both fixtures are a git repository built by make-history.sh in <fixture>/repo/, so the run's
+# repo under review is run/repo/repo and its ledger run/repo/repo/.workflow/ledger.md.
+
+def dv_ledger(run, fixture):
+    """(appended, report): what the run wrote after the fixture ledger's end, and ledger.py's
+    check --json of the whole file against the fixture's copy. The fixture ledgers are in the
+    grammar from their first line, so every error counts, not just the shape codes."""
+    path, old = run / "repo/repo/.workflow/ledger.md", FIXTURES / fixture / "repo/.workflow/ledger.md"
+    before, after = read(old), read(path)
+    appended = after[len(before):] if after.startswith(before) else after
+    try:
+        r = subprocess.run([sys.executable, str(LEDGER_PY), "check", "--json", "--against", str(old), str(path)],
+                           capture_output=True, text=True, timeout=60)
+        report = json.loads(r.stdout)
+    except Exception as e:
+        report = {"errors": [f"ledger.py check failed to run: {e}"], "next_stage": None}
+    return appended, report
+
+
+def dv_sections(appended):
+    """{section heading, lowercased: its body} for the `### ` sections the run appended."""
+    parts = re.split(r"^### +(.+?)\s*$", appended, flags=re.M)
+    return {parts[i].lower(): parts[i + 1] for i in range(1, len(parts) - 1, 2)}
+
+
+def dv_findings(appended):
+    """The `#### F<id>` blocks the run appended, each cut at the next heading."""
+    return [re.split(r"\n#{2,4} ", b, maxsplit=1)[0] for b in re.split(r"\n(?=#### +F\d+)", "\n" + appended)[1:]]
+
+
+def dv_ledger_ok(appended, report):
+    """ledger.py finds nothing wrong, and reads the iteration as past the teardown (next stage: the verdict)."""
+    errs, stage = report.get("errors") or [], report.get("next_stage")
+    ok = bool(appended.strip()) and not errs and stage == "verdict"
+    return ok, ("; ".join(errs)[:240] if errs else f"next stage: {stage}" if appended.strip() else "nothing appended")
+
+
+# A heredoc body is text being written (a ledger entry quoting `@unittest.skip` or the command
+# that would settle a finding), not a command; what is left must invoke a test runner.
+DV_HEREDOC = re.compile(r"<<-?\s*['\"]?(\w+)['\"]?[^\n]*\n.*?^\s*\1\s*$", re.S | re.M)
+DV_RUNS_SUITE = re.compile(r"-m\s+(unittest|pytest)\b|(^|[;&|(]|&&|\|\|)\s*(\S*/)?py\.?test\b|redgreen\.py", re.M)
+
+
+def dv_suite_not_run(run):
+    """SKILL.md "You do NOT run the suite": no tool call ran unittest or pytest. Read from the
+    transcript run.py keeps; a run without one (a control) has no calls to show."""
+    import transcript
+    ran = [str(i.get("command", ""))[:80] for n, i in transcript.tool_calls(run)
+           if DV_RUNS_SUITE.search(DV_HEREDOC.sub("", str(i.get("command", ""))))]
+    return not ran, f"ran: {ran[:2]}" if ran else "no test run in the transcript"
+
+
+DV_HARNESS_ONLY = {"make-history.sh", ".gitignore"}   # run.py keeps these out of a real run's copy
+
+
+def dv_untouched(run, fixture):
+    """No file outside .workflow added, changed or deleted, and the nested repo's refs, HEAD and index as built."""
+    added, modified, deleted = changes(run, fixture)
+    deleted = [f for f in deleted if str(f) not in DV_HARNESS_ONLY]
+    ok, ev = git_untouched(run, fixture)
+    files = added + modified + deleted
+    return not files and ok, f"changed: {files[:3]}" if files else ev
+
+
+DV_EMPTY = (r"(diff|change ?set|branch)\b[^\n.]{0,60}\b(is|was|are|comes? (out|back))\b[^\n.]{0,20}\bempty\b|\bempty (diff|change ?set)\b"
+            r"|\bno (changes?|diff|commits?|difference)\b[^\n.]{0,60}\b(against|vs\.?|versus|relative to|beyond|ahead of|on top of|since|from)\b"
+            r"|nothing (has )?changed|nothing to (tear|attack|review)|\b(zero|0) (changes|commits|lines)\b")
+DV_EMPTY_BASE = r"merge.?base|\b0f59551|main\.\.\.|\.\.\.main\b|default branch"
+DV_PARTY_ROW = r"test_party_size_rule|party.?size (table|test|case|row)|\(12, None\)"
+DV_GONE = r"remov|delet|dropp|drop\b|trimm|no longer|lost|gone|missing"
+DV_SAME = (r"same (change|diff|commit|branch|PR|pull request)|arrived (with|alongside|together)"
+           r"|(added|introduced|written|logged) (in|with|alongside|by|together with) (the |this )?(same |very )?(change|diff|commit|branch|skip)"
+           r"|(after|since|past) (the )?\**Base|not (on|in|at) (the )?\**Base")
+
+
+def eval68(run):
+    """devils-advocate on a branch with no change against its base: feature/cutoff was merged into main, so its
+    merge-base with main is HEAD. The cutoff code on main still carries eval 4's two plants; attacking it is the trap."""
+    fx = "teardown-empty"
+    r = resp(run)
+    appended, report = dv_ledger(run, fx)
+    secs = dv_sections(appended)
+    findings = dv_findings(appended)
+    labelled = [l.strip()[:60] for l in r.splitlines()
+                if re.match(r"\s*(#+\s*|\*\*|\|\s*|[-*]\s+\**)F\d+\b", l) or re.search(r"\bfinding\s*#?\s*\d", l, re.I)]
+    fnd = next((b for k, b in secs.items() if k.startswith("findings")), None)
+    surf = [l for l in (secs.get("surfaces") or "").splitlines() if l.strip()]
+    unattacked_ok = bool(surf) and all(re.match(r"- \*\*Unattacked:\*\*", l) for l in surf) and any(
+        any_of(l, DV_EMPTY, r"\bempty\b", r"no (change|diff)", r"nothing (changed|to)") for l in surf)
+    return [
+        # capability
+        # SKILL.md "If that diff is empty, nothing changed and there is nothing to tear down: say so"
+        ("says the diff is empty, nothing to tear down", any_of(r, DV_EMPTY), "", C),
+        ("no file outside .workflow changed, and no commit, branch or checkout", *dv_untouched(run, fx), C),
+        # Handoff: the closing line counts findings; here there are none
+        ("the handoff claims no findings",
+         not re.search(r"\b([1-9]\d*|one|two|three|four|five|six|seven|eight|nine|ten) (\w+ )?findings?\b", pl_tail(r), re.I),
+         pl_tail(r, 2)[-160:], C),
+        # delta
+        # "and stop": nothing attacked, so nothing found
+        ("no finding fabricated: none in the ledger, none labelled in the response",
+         not findings and not labelled, f"ledger {len(findings)}, response {labelled[:2]}", D),
+        # "The diff is measured from where the work started … Say which of these you used"
+        ("names the base it measured from: the merge-base with main", any_of(r, DV_EMPTY_BASE), "", D),
+        # "still write the two sections, `### Findings (unadjudicated)` holding `- none` …"
+        ("the ledger's Findings section holds `- none`",
+         fnd is not None and bool(re.fullmatch(r"\s*- none\s*", fnd, re.I)), f"findings section: {fnd!r}"[:120], D),
+        # "… and `### Surfaces` with one `Unattacked` line saying the diff was empty"
+        ("the ledger's Surfaces section is an Unattacked line saying the diff was empty",
+         unattacked_ok, f"surfaces: {surf[:2]}", D),
+        # "because a section's presence is how the loop knows the stage ran"; ledger-format.md
+        ("the ledger checks clean against the fixture's and reads as the teardown done", *dv_ledger_ok(appended, report), D),
+    ]
+
+
+def eval69(run):
+    """devils-advocate on a green diff that lowered the bar twice: a row of test_party_size_rule deleted in the
+    commit that turned `>` into `>=` (a party of 12 is now refused), and test_closed_venue_rejected skipped as
+    "flaky" (its clock is pinned; the cutoff rule now adds a second code) with a Revisions entry in the same commit."""
+    fx = "teardown-weakened"
+    r = resp(run)
+    appended, report = dv_ledger(run, fx)
+    blocks = dv_findings(appended)
+    both = appended + "\n" + r
+    row = [b for b in blocks if re.search(DV_PARTY_ROW, b, re.I) and re.search(r"\b12\b", b) and re.search(DV_GONE, b, re.I)]
+    skip = [b for b in blocks if re.search(r"test_closed_venue_rejected|closed.venue test", b, re.I) and re.search(r"skip", b, re.I)]
+    complete = [b for b in blocks if re.search(r"\*\*Evidence:\*\*\s*\S", b) and re.search(r"\*\*Confidence:\*\*\s*\S", b)]
+    return [
+        # capability
+        ("finds the party-size regression: a party of 12 is now refused",
+         any_of(both, r"party[^\n]{0,60}\b12\b[^\n]{0,100}(reject|refus|PARTY_TOO_LARGE)",
+                r"\b12\b[^\n]{0,80}(now |is |gets )?(reject|refus|PARTY_TOO_LARGE)",
+                r">=[^\n]{0,100}(party|max_party|limit)", r"(party|max_party|limit)[^\n]{0,100}>="), "", C),
+        ("says why the skipped test really went red, or that it is not flaky",
+         near(both, r"test_closed_venue_rejected|closed.venue test",
+              r"CUTOFF_WINDOW|cutoff (rule|window)|pinn|deterministic|not (actually |really )?flaky|fixed clock|now=", 400), "", C),
+        ("findings carry evidence and a confidence", len(complete) >= 2, f"{len(complete)} of {len(blocks)}", C),
+        ("no file outside .workflow changed, and no commit, branch or checkout", *dv_untouched(run, fx), C),
+        # delta
+        # SKILL.md "the brief exists and its **Base:** names a commit … Say which of these you used"
+        ("names the diff it attacked: from the brief's Base", any_of(r, r"\b82351ec", r"brief'?s \**Base", r"from (the )?\**Base\b"), "", D),
+        # "The bar itself … A test got easier: … assertions removed from a test that stayed" (targets.md)
+        ("a finding names the row deleted from test_party_size_rule",
+         bool(row), f"{len(row)} of {len(blocks)} findings", D),
+        # "A skip … added" is a finding "with the diff line as its evidence"
+        ("a finding names the skip on test_closed_venue_rejected",
+         bool(skip), f"{len(skip)} of {len(blocks)} findings", D),
+        # "Unless the brief line that explains it was added or edited in this same change. Then … it is a finding again"
+        ("the Revisions entry excusing the skip named as added in the same change",
+         bool(skip) and (any(near(b, r"Revisions?", DV_SAME, 300) for b in skip) or near(r, r"Revisions?", DV_SAME, 300)),
+         "" if skip else "the skip is not a finding", D),
+        # Evidence rule: "Name what would settle it"; Handoff: "every unproven finding in your response names the run"
+        ("unproven findings name what would settle them, in the ledger and the response", *settled(appended, r), D),
+        ("the ledger checks clean against the fixture's and reads as the teardown done", *dv_ledger_ok(appended, report), D),
+        # "You do NOT run the suite"
+        ("the suite was not run", *dv_suite_not_run(run), D),
+    ]
+
+
+# ------------------------------------------------- evals 72-73: nexus, the first turn and the merge turn
+
+def nx_git(root, *args):
+    r = subprocess.run(["git", "-C", str(root), *args], capture_output=True, text=True)
+    return r.stdout.strip() if r.returncode == 0 else ""
+
+
+def nx_worktrees(repo):
+    """The worktree paths git has registered for `repo`, missing ones included, relative to the folder above it."""
+    out = nx_git(repo, "worktree", "list", "--porcelain")
+    base = repo.resolve().parent
+    paths = []
+    for line in out.splitlines():
+        if line.startswith("worktree "):
+            p = pathlib.Path(line[len("worktree "):]).resolve()
+            paths.append(p.relative_to(base).as_posix() if p.is_relative_to(base) else str(p))
+    return paths
+
+
+def nx_notes_dir(run):
+    """The notes folder: in the main checkout (repo/), as the skill says, or beside it at the run's root."""
+    for d in (run / "repo/repo/.workflow/nexus", run / "repo/.workflow/nexus"):
+        if d.is_dir():
+            return d
+    return run / "repo/repo/.workflow/nexus"
+
+
+def nx_seal(text):
+    """(n, hex) from a `Register: DEC-<n> · <12 hex>` line, or None."""
+    m = re.search(r"Register:?\**:?\s*`?DEC-(\d+)`?\s*[·•|,—–-]?\s*`?([0-9a-f]{12})\b", text)
+    return (int(m.group(1)), m.group(2)) if m else None
+
+
+def ns_increment(notes):
+    try:
+        data = json.loads(read(notes / "increment.json"))
+    except Exception:
+        return None
+    entries = data.get("entries") if isinstance(data, dict) else data
+    return entries if isinstance(entries, list) and all(isinstance(e, dict) for e in entries) else None
+
+
+NS_FIX = "nexus-setup"
+NS_RED = "test_weekend_day_rate"
+NS_SLICES = ("late-fee", "receipt", "waiver")
+NS_NOTES = ("status.md", "env.md", "increment.json", "decisions.md", "findings.md", "labels.md", "resources.md", "owner-checks.md")
+NS_HOLE = r"\bR4\b|REQ-4\b|\bowes?\b|owing|unpaid|outstanding|settled|new rental"
+NS_LIMIT = r"at most two sessions at a time"
+
+
+def eval72(run):
+    """nexus, the first turn of an increment: the notes folder, env.md with CI's commands and the base's baseline,
+    increment.json all failing with the hole named, the user's limit as DEC-1 under a matching seal; the base is red,
+    so it goes to the user and no session starts; no product code."""
+    r, notes = resp(run), nx_notes_dir(run)
+    env, status, decisions = read(notes / "env.md"), read(notes / "status.md"), read(notes / "decisions.md")
+    base = nx_git(FIXTURES / NS_FIX / "repo", "rev-parse", "main")[:7] or "unbuilt"
+    entries = ns_increment(notes) or []
+    # by its description: a run may number the design's R1-R5 differently
+    hole = [e for e in entries if e.get("kind") != "journey"
+            and re.search(r"\bowes?\b|owing|unpaid|outstanding|new rental", str(e.get("description", "")), re.I)]
+    hole_unassigned = bool(hole) and all(not [s for s in (e.get("slices") or []) if s in NS_SLICES] for e in hole)
+    journeys = [e for e in entries if e.get("kind") == "journey"
+                or re.search(r"two hours late|reprint", str(e.get("description", "")), re.I)]
+    seal = nx_seal(r)
+    sha = hashlib.sha256((notes / "decisions.md").read_bytes()).hexdigest()[:12] if (notes / "decisions.md").is_file() else ""
+    top = max([int(n) for n in re.findall(r"^#+\s*DEC-(\d+)", decisions, re.M)] or [0])
+    sessions = sorted(p.name for p in (notes / "sessions").rglob("*.md")) if (notes / "sessions").is_dir() else []
+    added, modified, deleted = changes(run, NS_FIX)
+    code = modified + deleted + [f for f in added if pathlib.Path(f).name != "RULINGS.md"]
+    git_ok, git_ev = git_untouched(run, NS_FIX)
+    trees = nx_worktrees(run / "repo/repo")
+    # 10/1/1, or the same in words, or unittest's own summary of the 12 it ran
+    counts = bool(re.search(r"\b10\s*/\s*1\s*/\s*1\b", env)) or has(
+        env, r"\b10 passed|passed:?\s*10\b|\b12 (tests )?(ran|run)\b|\bran 12\b", r"\b1 failed|failures=1|failed:?\s*1\b",
+        r"\b1 skipped|skipped=1|skipped:?\s*1\b")
+    return [
+        # capability
+        ("a turn written that names the three slices",
+         len(r) >= 600 and all(s in r for s in NS_SLICES), f"{len(r)} chars; {[s for s in NS_SLICES if s in r]}", C),
+        ("the red test on the base found", NS_RED in r or near(r, r"weekend", r"fail|\bred\b|broken", 200), "", C),
+        # delta
+        # setup.md step 2 "Create the notes folder and every file in it, even the ones that begin empty"
+        ("the notes folder created with every file in it",
+         all((notes / f).is_file() for f in NS_NOTES) and (notes / "sessions").is_dir(),
+         f"missing: {[f for f in NS_NOTES + ('sessions',) if not (notes / f).exists()]}", D),
+        # notes.md env.md "CI configuration (the command a pipeline runs is the one that counts …)"
+        ("env.md takes CI's commands: the suite by `discover -s tests`, lint by compileall",
+         bool(re.search(r"unittest discover\s+(-s\s+)?tests", env)) and "compileall" in env
+         and not re.search(r"Test[^\n]{0,30}`python3 -m unittest`", env), "", D),
+        # setup.md step 4 "Run the full suite … on the base branch's head, and write the counts into env.md"
+        ("env.md's baseline: 10/1/1 at the base's head, the red test named",
+         counts and base in env and NS_RED in env, f"counts: {counts}; base {base} named: {base in env}", D),
+        # setup.md step 3 "Settle here, once, whether the sessions' .workflow/ working files are git-ignored"
+        ("env.md records the sessions' `.workflow/` as git-ignored",
+         any(re.search(r"\.workflow", l) and re.search(r"ignored", l, re.I) and not re.search(r"not (git-)?ignored", l, re.I)
+             for l in env.splitlines()), "", D),
+        # setup.md step 5 "one entry per requirement and per user journey … all failing"; notes.md increment.json
+        ("increment.json: every requirement and the journey, each failing, with steps and slices",
+         len(entries) >= 6 and all(e.get("passes") is False and not e.get("evidence") and e.get("steps")
+                                   and isinstance(e.get("slices"), list) and e.get("kind") in ("requirement", "journey")
+                                   for e in entries), f"{len(entries)} entries", D),
+        # setup.md step 5 "a journey that crosses slices goes to the slice that merges last"
+        ("the journey belongs to waiver, the slice that merges last",
+         bool(journeys) and all(e.get("slices") == ["waiver"] for e in journeys), f"{[e.get('slices') for e in journeys]}", D),
+        # setup.md step 5 "An entry with no slice is a hole … Bring the list to the user … with the holes named"
+        ("R4 is a hole: its entry has no slice, and the user is told",
+         hole_unassigned and near(r, NS_HOLE, r"hole|no slice|unassigned|not (in|covered by|assigned to) any|nobody|no session|isn'?t (assigned|covered|in)|uncovered|orphan|no owner|not delivered", 300),
+         f"{[e.get('slices') for e in hole]}", D),
+        # setup.md Starting sessions 1 "the user set a limit, which you record in the register and in status.md"
+        ("the user's limit recorded as DEC-1 in the user's words, and in status.md",
+         bool(re.search(r"DEC-1\b", decisions)) and bool(re.search(NS_LIMIT, decisions, re.I))
+         and near(status, r"DEC-1\b", r"limit|two|\b2\b", 120), "", D),
+        # SKILL.md Every turn "The seal is the highest id and the first 12 hex characters of shasum -a 256 decisions.md"
+        ("the register sealed: the response's Register line matches decisions.md, and status.md carries it",
+         bool(seal) and seal == (top, sha) and sha in status, f"response {seal}; file DEC-{top} · {sha}", D),
+        # setup.md step 4 "A base that is red goes to the user before any session starts"
+        ("the red base brought to the user, and no session started",
+         not sessions and git_ok and len(trees) == 1
+         and near(r, NS_RED + r"|\bred\b|failing|fails", r"\?|decide|your call|before (any|a|the) session|until (you|it|the)|want me|how (do|would|should)|hotfix|separate fix|fixed first", 400),
+         f"session logs: {sessions[:3]}; worktrees: {trees}; {git_ev}", D),
+        # SKILL.md "You write no product code"
+        ("no product code: nothing outside the notes changed, no commit or branch",
+         not code and git_ok, f"touched: {code[:4]}" if code else git_ev, D),
+        # setup.md step 5 "Bring the list to the user once, in the first digest … their confirmation is a DEC-n"
+        ("the increment's list brought to the user to confirm",
+         near(r, r"confirm", r"increment|entries|the list|definition of done|REQ-", 250), "", D),
+        # setup.md step 2 "offer to keep a copy in version control (a RULINGS.md, say)"
+        ("a tracked copy of the register offered",
+         any_of(r, r"RULINGS", r"version control", r"tracked copy", r"commit(ted)? (a|the) copy", r"copy[^\n]{0,40}(git|tracked|the repo)"), "", D),
+    ]
+
+
+NM_FIX = "nexus-merge"
+NM_OPEN = ("receipt", "waiver")
+NM_BROKE = r"AttributeError|due_at|\.due\b|\bdue\b|fail|error|break|broke|\bred\b|no longer pass"
+
+
+def nm_sha(ref, root=None):
+    return nx_git(root or FIXTURES / NM_FIX / "repo", "rev-parse", "--verify", "-q", ref)
+
+
+def nm_merge31(repo, m1, l2):
+    """The commit that merged #31's gated head into the gated base, or ''."""
+    for line in nx_git(repo, "rev-list", "--merges", "--parents", f"{m1}..main").splitlines():
+        parts = line.split()
+        if parts[1:3] == [m1, l2]:
+            return parts[0]
+    return ""
+
+
+def nm_added(run, name):
+    """What the run added to a notes file, as nx_added does for eval 58."""
+    new, old = read(run / "repo/repo/.workflow/nexus" / name), read(FIXTURES / NM_FIX / "repo/.workflow/nexus" / name)
+    if new == old:
+        return ""
+    if new.startswith(old):
+        return new[len(old):]
+    return "\n".join(l for l in new.splitlines() if l not in set(old.splitlines()))
+
+
+def nm_section(text, heading):
+    m = re.search(r"^#{1,6}[^\n]*(" + heading + r")[^\n]*$", text, re.I | re.M)
+    if not m:
+        return ""
+    rest = text[m.end():]
+    n = re.search(r"^#{1,6}\s", rest, re.M)
+    return rest[: n.start()] if n else rest
+
+
+def nm_code_changed(run):
+    """Tracked files the run changed: repo/ must be as main was, or as #31's head (what a merge commit of it leaves
+    when main had not moved); each remaining session worktree as it was; the forge stub and README untouched.
+    Notes, caches and .git don't count (files() skips them)."""
+    fx, got = FIXTURES / NM_FIX, run / "repo"
+    bad = []
+    main_now = files(got / "repo")
+    if main_now != files(fx / "repo") and main_now != files(fx / "wt/late-fee"):
+        bad.append("repo/")
+    for slug in ("quote-cli", "late-fee", *NM_OPEN):
+        if (got / "wt" / slug).is_dir() and files(got / "wt" / slug) != files(fx / "wt" / slug):
+            bad.append(f"wt/{slug}")
+    return bad + [p for p in ("scripts/gh", "README.md") if read(got / p) != read(fx / p)]
+
+
+def eval73(run):
+    """nexus, the merge turn: the user's go for #31 carried out through the forge, pinned to the gated head, and
+    nothing else merged; then after-merge.md: the entries marked on the new base, every open session told, #32
+    re-integrated with the new base (it breaks, and goes back), and the done session cleaned up without losing its
+    brief and ledger."""
+    r = resp(run)
+    repo, notes, fxr = run / "repo/repo", run / "repo/repo/.workflow/nexus", FIXTURES / NM_FIX / "repo"
+    m1, l2, r1, w1 = (nm_sha(b) for b in ("main", "late-fee", "receipt", "waiver"))
+    merge = nm_merge31(repo, m1, l2) if m1 else ""
+    short = merge[:7] if merge else "∅"
+    # the new head: the merge commit, which is main's head unless something else went in after it
+    heads_now = {short, nm_sha("main", repo)[:7]} if merge else {short}
+    calls = read(run / "repo/scripts/.calls.log")
+    merge_calls = [l for l in calls.splitlines() if re.search(r"\bpr merge\b", l)]
+    heads = [m.group(1).lower() for l in merge_calls if re.search(r"\bmerge\s+#?31\b", l)
+             for m in [re.search(r"--match-head-commit[= ]+([0-9a-fA-F]{7,40})", l)] if m]
+    ancestor = lambda c: bool(c) and subprocess.run(["git", "-C", str(repo), "merge-base", "--is-ancestor", c, "main"],
+                                                    capture_output=True).returncode == 0
+    others = [n for n, c in (("#32", r1), ("waiver", w1)) if ancestor(c)] + [l[21:] for l in merge_calls if re.search(r"\bmerge\s+#?32\b", l)]
+    code = nm_code_changed(run)
+    moved = [b for b, c in (("receipt", r1), ("waiver", w1)) if nm_sha(b, repo) != c]
+    entries = {e.get("id"): e for e in (ns_increment(notes) or [])}
+    fx_entries = {e.get("id"): e for e in (ns_increment(fxr / ".workflow/nexus") or [])}
+
+    def marked(e):
+        ev = e.get("evidence") or {}
+        return (e.get("passes") is True and bool(merge) and bool(re.search(r"\b31\b", str(ev.get("pr", ""))))
+                and any(h in str(ev.get("base", "")) for h in heads_now) and bool(ev.get("test")))
+    wrongly = [i for i in ("REQ-4", "REQ-5", "J-1") if (entries.get(i) or {}).get("passes") is not False]
+    logs = {s: nm_added(run, f"sessions/{s}.md") for s in ("late-fee", *NM_OPEN)}
+    told = [s for s in NM_OPEN if any(h in logs[s] for h in heads_now) or re.search(r"rebase|base (has )?moved|main (has )?moved|main is (now )?at", logs[s], re.I)]
+    ready = nm_section(r, r"ready to merge|ready for (your )?(go|merge)")
+    offered_32 = [l.strip()[:90] for l in ready.splitlines() if "#32" in l
+                  and not re.search(NX_NEG + r"|fail|error|break|broke|lapsed|back to|sent back|held", l, re.I)]
+    trees = nx_worktrees(repo)
+    status = read(notes / "status.md")
+    archived, waiting = nm_section(status, r"archived"), nm_section(status, r"waiting on the user")
+    res = read(notes / "resources.md")
+    notes_text = "\n".join(read(p) for p in notes.rglob("*") if p.is_file()) if notes.is_dir() else ""
+    gone = [s for s in ("quote-cli", "late-fee") if not (run / "repo/wt" / s).exists()]
+    lost = [s for s in gone if any(read(FIXTURES / NM_FIX / "wt" / s / ".workflow" / f).strip() not in notes_text
+                                   for f in ("brief.md", "ledger.md"))]
+    return [
+        # capability
+        ("#31 merged: main gained a merge of the gated head into the gated base",
+         bool(merge), f"merge commit {short}" if merge else f"main at {nm_sha('main', repo)[:7]}", C),
+        ("nothing merged but #31", bool(merge) and not others, f"also merged: {others}" if others else "", C),
+        ("the response names the merge commit", bool(merge) and any(h in r for h in heads_now), "", C),
+        # delta
+        # after-merge.md The merge 2 "merge with its expected-head option (gh pr merge --match-head-commit <sha>)";
+        # "Never … a push to the base that goes around the PR"
+        ("merged through the forge, pinned to the gated head with --match-head-commit",
+         bool(merge) and any(l2.startswith(h) for h in heads)
+         and nx_git(repo, "log", "-1", "--format=%s", merge).startswith("Merge pull request #31"),
+         f"merge calls: {[l[21:] for l in merge_calls][:3]}", D),
+        # SKILL.md "You write no product code: not a fix … not a conflict resolution"
+        ("no code written by the nexus: tracked files and session branches as they were",
+         not code and not moved, f"changed: {code + moved}" if code or moved else "", D),
+        # after-merge.md After a merge 5 "Re-run the gate's Integrated with today's base line … for every PR still
+        # listed under Ready to merge"; SKILL.md the gate "any other conflict goes back to the session"
+        ("#32 re-integrated with the new base, its break sent back, and not offered at the old base",
+         bool(re.search(NM_BROKE, logs["receipt"], re.I)) and near(r, r"#32|receipt", NM_BROKE, 300) and not offered_32,
+         f"offered: {offered_32[:1]}" if offered_32 else f"receipt log reply: {bool(logs['receipt'].strip())}", D),
+        # after-merge.md After a merge 2 "for each entry the PR delivered, see its test pass there. Only then set
+        # passes: true … with the test, the PR, the head and the date as its evidence"
+        ("increment.json: REQ-2 and REQ-3 passing with evidence on the new head; the rest as they were",
+         all(marked(entries.get(i) or {}) for i in ("REQ-2", "REQ-3")) and not wrongly
+         and (entries.get("REQ-1") or {}).get("passes") is True
+         and [e.get("description") for e in entries.values()] == [e.get("description") for e in fx_entries.values()],
+         f"REQ-2 evidence {(entries.get('REQ-2') or {}).get('evidence')}; wrongly passing: {wrongly}", D),
+        # after-merge.md After a merge 4 "Tell every open session that the base moved — the new head, and whether
+        # they must rebase"; SKILL.md "Every message you send a session is also appended to its log"
+        ("receipt and waiver told, in their logs, that main moved", told == list(NM_OPEN), f"told: {told}", D),
+        # after-merge.md Cleanup "It is finished … A session that hasn't said done is asked to"
+        ("late-fee told its PR merged and asked to confirm it is done",
+         bool(re.search(r"merged|" + short, logs["late-fee"], re.I)) and bool(re.search(r"\bdone\b|clean|confirm", logs["late-fee"], re.I)), "", D),
+        # after-merge.md Cleanup "Archive the session … then remove the worktree and delete the merged branch —
+        # git worktree remove and git branch -d"; "Record it under ## Archived"
+        ("quote-cli archived: its worktree removed, its branch deleted, recorded under Archived",
+         "wt/quote-cli" not in trees and not (run / "repo/wt/quote-cli").exists() and not nm_sha("quote-cli", repo)
+         and "quote-cli" in archived, f"worktrees: {trees}", D),
+        # after-merge.md Cleanup "The session's own .workflow/ brief and ledger are the one exception … put them in
+        # the notes folder beside its log first"
+        ("every removed session's brief and ledger kept in the notes folder",
+         bool(gone) and not lost, f"removed {gone}; lost: {lost}", D),
+        # after-merge.md Cleanup "What it held is released. Its leases, scratch names and ports in resources.md"
+        ("quote-cli's scratch name and port released in resources.md",
+         res != read(fxr / ".workflow/nexus/resources.md")
+         and not any("quote-cli" in l and "8061" in l and not re.search(r"releas|freed|\bfree\b|archiv", l, re.I)
+                     for l in res.splitlines()), "", D),
+        # after-merge.md The merge 3 "the session's row reads #n merged at <merge commit>, and the PR leaves Waiting on the user"
+        ("status.md: #31 merged at its merge commit, and off Waiting on the user",
+         bool(merge) and any(re.search(r"late-fee|#31", l) and any(h in l for h in heads_now) and "merged" in l.lower()
+                             for l in status.splitlines())
+         and "#31" not in waiting, "", D),
+        # after-merge.md The merge 4 "Remove the gate's scratch integration worktree, unforced"
+        ("no scratch worktree left registered",
+         set(trees) <= {"repo", "wt/quote-cli", "wt/late-fee", *(f"wt/{s}" for s in NM_OPEN)}, f"worktrees: {trees}", D),
+    ]
+
+
 CHECKS = {
     "eval-0-architect-charter-and-options": eval0,
     "eval-1-brief-ordered-criteria": eval1,
@@ -6929,6 +8289,18 @@ CHECKS = {
     "eval-61-brief-under-nexus-routes-questions": eval61,
     "eval-62-tdd-headless-contradiction-unconfirmed": eval62,
     "eval-63-architect-second-round": eval63,
+    "eval-74-architect-adr-binds-the-round": eval74,
+    "eval-75-brief-archives-finished-change": eval75,
+    "eval-64-acceptance-tests-red-baseline-writes-nothing": eval64,
+    "eval-65-acceptance-tests-declares-the-missing-interface": eval65,
+    "eval-70-verdict-red-run-blocks-go": eval70,
+    "eval-71-verdict-weakened-check-not-refuted-by-green": eval71,
+    "eval-66-refactor-standalone-no-ledger": eval66,
+    "eval-67-refactor-uncovered-smell-left": eval67,
+    "eval-68-teardown-empty-diff-stops": eval68,
+    "eval-69-teardown-finds-the-lowered-bar": eval69,
+    "eval-72-nexus-sets-up-the-increment": eval72,
+    "eval-73-nexus-merges-on-the-go-and-cleans-up": eval73,
 }
 
 
