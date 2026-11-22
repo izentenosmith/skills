@@ -62,6 +62,13 @@ The first tagged release: what had built up on `main` since the repo started in 
   pull request with the four CI checks green.
 - **Install by name** with the `skills` CLI (`npx skills add izentenosmith/skills --skill <name>`),
   or by copying a skill folder.
+- **Install as a Claude Code plugin**: `.claude-plugin/` makes the repo a marketplace,
+  `izentenosmith`, offering every skill as one plugin, `izentenosmith-skills`, at version 1.0.0. The plugin is
+  `skills/` alone; `harness/` and `evals/` are not installed
+  (`claude plugin marketplace add izentenosmith/skills`, then
+  `claude plugin install izentenosmith-skills@izentenosmith`). `check_repo.py` fails when the
+  plugin's version differs from the top release here, when its family list misses a family, or when
+  its source widens past `skills/`.
 
 [Unreleased]: https://github.com/izentenosmith/skills/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/izentenosmith/skills/releases/tag/v1.0.0

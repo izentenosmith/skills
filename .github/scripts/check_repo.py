@@ -47,6 +47,13 @@ Bundles
     only for a skill its bundle lists
   - README.md's `### Bundles` has a `# <name>` comment and install line per
     bundle, each installing exactly that bundle's skills plus the extras
+Plugin (.claude-plugin/marketplace.json)
+  - the marketplace has one plugin, sourced from ./skills with strict false,
+    so an install copies the skills and none of harness/ or evals/
+  - its `skills` lists exactly the family folders that hold a skill (the
+    plugin scan is one level deep, so a family missing here installs none of
+    its skills)
+  - its `version` is the top released version in CHANGELOG.md
 Branch protection
   - every status check .github/rulesets/main.json requires is a job name the
     workflows report — a renamed job would otherwise block every merge
@@ -317,6 +324,26 @@ if ruleset_path.exists():
             if check["context"] not in reported:
                 problem(f".github/rulesets/main.json: required check {check['context']!r} matches no workflow job "
                         f"— merges into main would wait for it forever (jobs: {sorted(reported)})")
+
+# ---------------------------------------------------------------- plugin
+
+MARKET = ".claude-plugin/marketplace.json"
+entries = json.loads((ROOT / MARKET).read_text()).get("plugins", [])
+if len(entries) != 1 or entries[0].get("source") != "./skills" or entries[0].get("strict") is not False:
+    problem(f"{MARKET}: needs exactly one plugin with \"source\": \"./skills\" and \"strict\": false "
+            f"(a root source installs harness/ and evals/ too)")
+else:
+    entry = entries[0]
+    families = sorted({f"./{rel.parts[1]}" for rel in skills.values()})
+    if sorted(entry.get("skills", [])) != families:
+        problem(f"{MARKET}: skills is {sorted(entry.get('skills', []))}, expected the family folders {families}")
+    released = registry.version(ROOT)
+    if entry.get("version") != released:
+        problem(f"{MARKET}: version {entry.get('version')!r} is not the top released version in "
+                f"CHANGELOG.md ({released!r}); a release moves both")
+    if (ROOT / ".claude-plugin/plugin.json").exists():
+        problem(".claude-plugin/plugin.json: the marketplace entry is the plugin's whole definition "
+                "(strict false); a plugin.json beside it would be a second, unchecked one")
 
 # --------------------------------------------------------------- bundles
 
