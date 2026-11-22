@@ -83,6 +83,34 @@ Results go to `../skills-workspace/trigger/<stamp>/`, outside git like every oth
 hash of each tested description (so a rate can be tied to the wording it measured) and the skills
 the runs were offered that are not from this repo.
 
+### Results: every bundle, 2026-11-21
+
+Opus (`claude-opus-5-5`), three runs per case, all cases (train and held-out) whose skill is in the
+bundle; 414 runs, no errors, about $26 (the 57 runs that finished reported $3.80; the 357 stopped at
+their skill choice report tokens only, priced here from the finished runs' rate). Results are in the
+workspace under `trigger/bundles-20261121/<bundle>/`.
+
+| bundle | skills staged | runs | trigger rate | false-trigger rate | picked what was expected |
+|---|---|---|---|---|---|
+| builder | 12 | 144 | 72/72 | 0/72 | 135/144 |
+| reviewer | 8 | 54 | 27/27 | **3/27** | 51/54 |
+| on-call | 7 | 72 | 36/36 | 0/36 | 72/72 |
+| platform | 9 | 36 | 18/18 | 0/18 | 36/36 |
+| data | 8 | 36 | 15/18 | 0/18 | 33/36 |
+| network | 6 | 36 | 18/18 | 0/18 | 36/36 |
+| security | 5 | 36 | 18/18 | 0/18 | 36/36 |
+
+- **reviewer: `appsec-no-1` falsely triggers appsec, 3 of 3.** Its prompt asks for the security
+  design of a system not yet built, which belongs to threatmodel; threatmodel is not in the reviewer
+  bundle, so appsec, the nearest installed skill, takes it. Every other bundle keeps its skills apart.
+- **builder: the 9 misses are not false triggers.** Three near-misses belong to peer-review, which
+  is not in the bundle; all 9 runs picked the CLI's built-in `code-review` instead, never the skill
+  under test.
+- **data: `dbdesign-yes-3` picks nothing, 3 of 3.** A one-line normal-form question the model answers
+  itself; it picked no skill in all ten earlier all-skills runs too, so it is not a bundle effect.
+- The runs were also offered 22 skills that are not this repo's (the CLI's built-ins such as
+  `code-review`, `debug`, `simplify`); none of the user's own skills leaked in.
+
 ## Reading the summary
 
 - **Trigger rate**: of the should-trigger runs, how many picked the skill first.
