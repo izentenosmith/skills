@@ -2,11 +2,21 @@
 
 > How a pipeline review is graded and written down. **Rubric version: `v1.0`.** Every output records
 > the rubric version it was graded against and the source version (commit) it read. Each finding
-> names the principle it violates from [`theory.md`](theory.md) (P-N). A review that asserts a defect
+> names the principle it violates from `theory.md` (P-N). A review that asserts a defect
 > without naming the principle is incomplete — a defect without a principle is taste.
 >
 > The formula is the same one the database, networking and Terraform skills use, so a 7.4 means the
 > same thing everywhere.
+
+## Contents
+
+- [Severity taxonomy](#severity-taxonomy)
+- [Quality scale (per criterion)](#quality-scale-per-criterion)
+- [Detection confidence](#detection-confidence)
+- [Scoring model](#scoring-model)
+- [Triage for large estates](#triage-for-large-estates)
+- [Theory → domain mapping](#theory--domain-mapping)
+- [Templates](#templates)
 
 ## Severity taxonomy
 
@@ -40,7 +50,7 @@ explicitly asks.
 ### Evaluation units
 
 One evaluation per **domain** per pipeline system (one repo's CI, usually), each graded with its
-section of [`review-rubric.md`](review-rubric.md):
+section of `review-rubric.md`:
 
 | Domain | In-scope objects (the weight) |
 |---|---|
@@ -97,7 +107,7 @@ State the score-based result and each gate condition separately.
 ## Triage for large estates
 
 Above **~30 pipeline definitions or ~300 jobs**, signal-scan everything with
-[`detection-signals.md`](detection-signals.md), deep-read the pipelines that deploy to production
+`detection-signals.md`, deep-read the pipelines that deploy to production
 plus the worst 10% by signal density, sample ~5 more, and state coverage. Shared templates
 (reusable workflows, GitLab `include:`, Azure templates, Jenkins shared libraries) are always
 deep-read: one defect there is a defect in every caller.

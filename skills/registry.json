@@ -611,7 +611,7 @@
       "name": "pipelines",
       "family": "infrastructure",
       "path": "skills/infrastructure/pipelines/SKILL.md",
-      "purpose": "Review, design, or propose changes to CI/CD pipelines \u2014 GitHub Actions, GitLab CI, Azure Pipelines, Jenkins, CircleCI, Bitbucket and similar \u2014 graded against Continuous Delivery, DevOps Handbook and SRE release-engineering theory.",
+      "purpose": "Reviews CI/CD pipelines, or designs or proposes changes to them \u2014 GitHub Actions, GitLab CI, Azure Pipelines, Jenkins, CircleCI, Bitbucket \u2014 graded against Continuous Delivery, DevOps Handbook and SRE release-engineering theory.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {},
@@ -653,7 +653,7 @@
       "name": "terraform",
       "family": "infrastructure",
       "path": "skills/infrastructure/terraform/SKILL.md",
-      "purpose": "Review, design, or propose changes to Terraform/OpenTofu infrastructure code \u2014 module and repo structure, state and backends, version pinning, security, change safety (resource identity, destructive changes, drift) and the path from commit to apply \u2014 graded against Infrastructure-as-Code theory, a scored rubric and the AWS provider best practices.",
+      "purpose": "Reviews Terraform/OpenTofu infrastructure code, or designs or proposes changes to it \u2014 module and repo structure, state and backends, version pinning, security, change safety (resource identity, destructive changes, drift) and the path from commit to apply \u2014 graded against Infrastructure-as-Code theory, a scored rubric and the AWS provider best practices.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {},

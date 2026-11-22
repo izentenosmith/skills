@@ -2,11 +2,20 @@
 
 > The criteria Review mode grades against. Each domain has 🟢 what good looks like, 🔴 the
 > anti-patterns (**What / Why / Detect / Severity**), and the **Checklist** whose criteria are scored
-> proportionally per [`scoring.md`](scoring.md). Every 🔴 names its principle in
-> [`theory.md`](theory.md). Grep for candidates with [`detection-signals.md`](detection-signals.md),
+> proportionally per `scoring.md`. Every 🔴 names its principle in
+> `theory.md`. Grep for candidates with `detection-signals.md`,
 > then read each in context — a match is a candidate, not a finding.
 
 ---
+
+## Contents
+
+- [1. structure — layout, modules, interfaces](#1-structure--layout-modules-interfaces)
+- [2. state — backends, isolation, blast radius](#2-state--backends-isolation-blast-radius)
+- [3. dependencies — versions and sources](#3-dependencies--versions-and-sources)
+- [4. security — identity, secrets, exposure, defaults](#4-security--identity-secrets-exposure-defaults)
+- [5. change-safety — identity, destructive changes, drift](#5-change-safety--identity-destructive-changes-drift)
+- [6. delivery — the path from commit to apply](#6-delivery--the-path-from-commit-to-apply)
 
 ## 1. structure — layout, modules, interfaces
 
@@ -376,7 +385,7 @@ production outside a gated pipeline.
 ## 6. delivery — the path from commit to apply
 
 In scope: root modules. Grade *whether* each root has a safe path; the pipeline's internal design is
-the [pipelines](../pipelines/SKILL.md) skill's job.
+the `pipelines` skill's job.
 
 ### 🟢 Well done
 - Pre-commit and CI run `fmt -check`, `validate`, `tflint`, and a security scanner, and **fail** on
