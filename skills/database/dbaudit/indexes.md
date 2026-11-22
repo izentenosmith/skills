@@ -1,5 +1,7 @@
 # Indexes — Query Optimization & Write Overhead
 
+**Contents:** 🟢 Well done · 🔴 Not well done · Checklist
+
 > Criteria for grading `indexes.sql`. An index is a trade between read speed and write cost; legacy
 > systems drift toward either **index starvation** or **index bloat**. We judge only what the DDL
 > reveals — index *definitions*, and the predicates in view/procedure bodies that use them — not

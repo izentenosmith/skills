@@ -1,5 +1,7 @@
 # Views — Abstraction Layers & Performance
 
+**Contents:** 🟢 Well done · 🔴 Not well done · Checklist
+
 > Criteria for grading `views.sql`. Views are excellent for abstracting complex schemas, but they
 > frequently **mask** underlying structural flaws, tank runtime efficiency, and — when they return
 > duplicates or accept writes they can't show — return wrong answers. Severity per

@@ -1,5 +1,7 @@
 # Architecture Rubric — A1–A12
 
+**Contents:** A1. Load parameters are stated · A2. One system of record per fact · A3. Derived data is named-source, one-way and rebuildable · A4. Derived stores are fed by the database, CDC or an outbox — never dual writes · A5. Each read path states its freshness and consistency need · A6. Each workflow names the anomalies it can't tolerate · A7. Hard constraints have a coordination point · A8. Retries are safe end to end · A9. No heterogeneous distributed transactions · A10. Replication and failover are designed, not defaulted · A11. Partitioning is justified and keyed from the access pattern · A12. Analytics are separated from transactions · Summary table (Review mode)
+
 > The rules a data architecture is built from (Design mode) and graded against (Review mode). Each item
 > gives the rule, why it matters, the evidence a review looks for, and the question to ask when the
 > evidence isn't there. Theory references are to [`theory.md`](theory.md); store-specific choices are in

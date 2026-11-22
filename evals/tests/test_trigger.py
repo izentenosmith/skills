@@ -187,7 +187,7 @@ class Staging(unittest.TestCase):
         with contextlib.redirect_stdout(buf):
             self.assertEqual(rt.main(["--dry-run", "--model", "haiku", "--split", "train"]), 0)
         out = buf.getvalue()
-        self.assertIn("80 cases × 1 rep(s) = 80 runs", out)
+        self.assertIn("100 cases × 1 rep(s) = 100 runs", out)
         self.assertIn("estimated cost", out)
         self.assertIn("nothing staged, nothing run", out)
 

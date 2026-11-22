@@ -1,5 +1,7 @@
 # Proposal — From Audit and Design to a Decision
 
+**Contents:** Inputs and limits · Recommendation decisions · Breaking changes and their consumers · Ordering rules · Build and migration plan · Deliverable
+
 This reference governs the recommendation stage. It consumes an audit and a separately reviewed design
 when those artifacts apply. **Do not perform the audit, redesign the model, or redraw diagrams here.**
 The companion stages are [dbaudit](../dbaudit/SKILL.md), [dbdesign](../dbdesign/SKILL.md), and
@@ -16,7 +18,7 @@ complete: name the gap and route it to `dbdiagram`. An in-place remediation that
 For an existing database, use the per-file evaluations, the per-database summary and the estate synthesis
 when available. `scores.json` and `gate.md` exist only when the harness ran. Without them, read the score,
 its cap and the gate reasons from the audit summary. For a redesign or migration, also use the design
-document, the **modelo entidad relación** draw.io file and the **modelo relacional** draw.io file. For a
+document, the **Barker ER model** draw.io file and the **relational model** draw.io file. For a
 new database, use the requirements, design and both diagrams. If a needed artifact is absent, identify the
 gap and scope the proposal accordingly; never imply a missing design or diagram exists.
 

@@ -1,5 +1,7 @@
 # ER Modelling — Pure Modelling Standard (CAP1–CAP4)
 
+**Contents:** A. Model in three phases (Connolly & Begg; CASE\*METHOD) · A0. Reverse-engineering a legacy schema into a model · CAP1 — Conceptual data modelling basics · CAP2 — Advanced data modelling · CAP3 — Database design: mapping the ER model to relations · CAP4 — Modelling drills
+
 > Engine-agnostic. How to find the entities, relationships, attributes and identifiers; how to model
 > recursion, roles, subtypes, exclusive relationships and history; how to map an ER model to
 > relations; and the drills that check a model before it is signed off. Notation is the Barker /

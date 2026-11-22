@@ -8,12 +8,13 @@ alone.
 
 ## The cases
 
-`cases.json` holds six prompts for each of fourteen skills that have close neighbours: `hotfix` and
+`cases.json` holds six prompts for each of twenty-five skills that have close neighbours: `hotfix` and
 `incident-fix`, `dbaudit` and `dbdesign`, `peer-review` and `pr-prep`, `ticket` and `backlog`, and (added
 2026-11-20, when their descriptions changed) six development skills: `agent-brief`, `architect-deep-dive`,
 `devils-advocate`, `tyr-verdict`, `refactor-review` and `nexus`; and (added 2026-11-21, so every bundle
 in `skills/bundles.json` has cases) `dockerfile` and `docker-compose`, `netaudit` and `netdesign`,
-`threatmodel` and `appsec`.
+`threatmodel` and `appsec`; and (added 2026-11-21) the other five database skills: `dbquery`, `dbpropose`, `dbbuild`,
+`dbdiagram` and `dbarchitect`.
 
 - Three **should trigger**: the skill under test is the right first pick.
 - Three **should not**: near-misses. Most belong to a neighbour (`expected` names it:
@@ -35,7 +36,7 @@ Each case records:
 ## The split, and the rule
 
 One of every three cases in each (skill, should/should-not) group was drawn at random into
-`heldout` (seeds recorded in `cases.json`): 80 train, 40 held-out. The split is stored, not
+`heldout` (seeds recorded in `cases.json`): 100 train, 50 held-out. The split is stored, not
 re-derived, so adding cases never moves an existing one.
 
 **Only train cases may be read while editing a description.** Run `--split train`, read those
