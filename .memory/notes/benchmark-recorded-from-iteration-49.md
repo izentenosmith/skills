@@ -1,6 +1,6 @@
 ---
 name: benchmark-recorded-from-iteration-49
-description: The benchmark's rows come from iteration 49 (a full re-run), with eval 59 from 48, the development evals 0–5, 27, 58, 60–63 from 55 64–75 from 57, and nine evals from 58; --record over 48, 49, 50, 55, 57, 58 is complete
+description: The benchmark's rows come from iteration 49 (a full re-run), with eval 59 from 48, the development evals 0–5, 27, 58, 60–63 from 55 64–75 from 57, and nine evals from 58; --record over 48, 49, 50, 55, 56, 57, 58, filtered 60, 62, 70 is complete
 type: fact
 source: evals/benchmark.md, evals/scores.json, evals/aggregate.py, session 2026-11-19
 verified: 2026-11-21
@@ -29,6 +29,5 @@ Since 2026-11-21 the database rows come from iteration 56 (evals 30–34, 47 and
 audit), iteration 60 (34 and 48 again) and iteration 62 (30–34 and 47 after five fixes). Iterations
 60 and 61 also hold another branch's development runs (by `--iteration` collision), so never pass 60
 or 61 whole: the full record is `--record` over 48, 49, 50, 55, 56, 57, 58, then a scratch folder
-named `iteration-60` of symlinks to only `eval-34-*` and `eval-48-*`, then `iteration-62`, then
-`iteration-80` (evals 6, 28, 35–37 after the container audit; it holds only those five). Check all
+named `iteration-60` of symlinks to only `eval-34-*` and `eval-48-*`, then `iteration-62`. Since 2026-11-21 iteration 70 (the infrastructure evals 21–26, re-run after the skill audit) follows `iteration-62`, then `iteration-80` (evals 6, 28, 35–37 after the container audit; it holds only those five). Check all
 76 rows remain and that no row outside the re-run moved.

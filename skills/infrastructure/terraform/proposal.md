@@ -10,6 +10,14 @@ an open Critical caps a domain at 2.0, an open High at 6.0; 9.0 is the score thr
 also needs remote locked state with prod isolated, and every root applied only through a reviewed
 saved plan in a pipeline.
 
+## Contents
+
+- [Decisions per domain](#decisions-per-domain)
+- [The refactoring rule: no resource is recreated by accident](#the-refactoring-rule-no-resource-is-recreated-by-accident)
+- [Sequencing](#sequencing)
+- [The register](#the-register)
+- [Deliverable — `proposal.md`](#deliverable--proposalmd)
+
 ## Decisions per domain
 
 Use each domain's band as the starting posture, then explain any evidence-based override:
@@ -52,11 +60,11 @@ Order the work:
 2. **Foundations others depend on.** Remote backend with locking and encryption per environment;
    pinned core and providers with a committed `.terraform.lock.hcl`; a pipeline that runs
    `fmt`/`validate`/lint/scan and posts the plan on every change (hand the pipeline design to the
-   [pipelines](../pipelines/SKILL.md) skill).
+   `pipelines` skill).
 3. **Apply path.** Move apply into the pipeline with a saved plan and an approval on production; remove
    human write credentials to production. This step names what the apply path must guarantee (saved
    plan, approval, per-environment role) and hands the pipeline that carries it to the
-   [pipelines](../pipelines/SKILL.md) skill, by name, in the step itself — the jobs, triggers and
+   `pipelines` skill, by name, in the step itself — the jobs, triggers and
    promotion are that skill's design, not this proposal's.
 4. **Structural refactors in dependency order.** Split states leaf-first: the components other roots
    read (network, DNS, identity) stay put until their consumers read them through a stable interface
@@ -81,7 +89,7 @@ Each step names:
   step is one-way);
 - the blast radius (roots, environments and services touched while it is in flight);
 - the owner and window, if known — and, for a step whose change is the pipeline itself, that its
-  design is handed to [pipelines](../pipelines/SKILL.md).
+  design is handed to the `pipelines` skill.
 
 All changes are proposals for review. This skill never runs `apply`, `import` or `state` commands
 against a real backend.

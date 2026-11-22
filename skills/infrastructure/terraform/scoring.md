@@ -2,11 +2,21 @@
 
 > How a Terraform review is graded and written down. **Rubric version: `v1.0`.** Every output
 > records the rubric version it was graded against and the source version (commit) it read. Each
-> finding names the principle it violates from [`theory.md`](theory.md) (T-N). A review that asserts
+> finding names the principle it violates from `theory.md` (T-N). A review that asserts
 > a defect without naming the principle is incomplete — a defect without a principle is taste.
 >
 > The formula is the same one the database and networking families use, so a 7.4 means the same thing
 > in all three.
+
+## Contents
+
+- [Severity taxonomy](#severity-taxonomy)
+- [Quality scale (per criterion)](#quality-scale-per-criterion)
+- [Detection confidence](#detection-confidence)
+- [Scoring model](#scoring-model)
+- [Triage for large codebases](#triage-for-large-codebases)
+- [Theory → domain mapping](#theory--domain-mapping)
+- [Templates](#templates)
 
 ## Severity taxonomy
 
@@ -42,7 +52,7 @@ backend unless the user explicitly asks; `init -backend=false`, `validate` and `
 ### Evaluation units
 
 One evaluation per **domain** per root (or per repo, for a small one), each graded with its section of
-[`review-rubric.md`](review-rubric.md):
+`review-rubric.md`:
 
 | Domain | In-scope objects (the weight) |
 |---|---|
@@ -107,7 +117,7 @@ laptop is not good enough.
 
 Above **~50 root modules or ~2,000 resources**, don't read everything cold:
 
-1. **Signal-scan** everything with [`detection-signals.md`](detection-signals.md) and record counts per
+1. **Signal-scan** everything with `detection-signals.md` and record counts per
    anti-pattern.
 2. **Rank** roots by signal density. Deep-read the worst 10% or 10 roots, whichever is larger, plus
    every module they call, plus a random sample of ~5.

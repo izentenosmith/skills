@@ -2,11 +2,20 @@
 
 > The criteria Review mode grades against. Each domain has 🟢 what good looks like, 🔴 the
 > anti-patterns (**What / Why / Detect / Severity**), and the **Checklist** whose criteria are scored
-> proportionally per [`scoring.md`](scoring.md). Every 🔴 names its principle in
-> [`theory.md`](theory.md). Find candidates with [`detection-signals.md`](detection-signals.md),
+> proportionally per `scoring.md`. Every 🔴 names its principle in
+> `theory.md`. Find candidates with `detection-signals.md`,
 > then read each job in context — a match is a candidate, not a finding.
 
 ---
+
+## Contents
+
+- [1. flow — the path from commit to artifact to production](#1-flow--the-path-from-commit-to-artifact-to-production)
+- [2. feedback — tests, gates and stopping the line](#2-feedback--tests-gates-and-stopping-the-line)
+- [3. release — deploying, verifying, rolling back](#3-release--deploying-verifying-rolling-back)
+- [4. security — credentials, untrusted input, supply chain](#4-security--credentials-untrusted-input-supply-chain)
+- [5. environments — parity and configuration](#5-environments--parity-and-configuration)
+- [6. infrastructure — delivering IaC](#6-infrastructure--delivering-iac)
 
 ## 1. flow — the path from commit to artifact to production
 
@@ -377,7 +386,7 @@ takes effect.
 ## 6. infrastructure — delivering IaC
 
 In scope: IaC roots delivered by a pipeline. N/A when the repo has none — say so. The IaC content
-itself is the [terraform](../terraform/SKILL.md) skill's job.
+itself is the `terraform` skill's job.
 
 ### 🟢 Well done
 - PRs run fmt/validate/lint/scan and post a plan per affected root × environment (P22).

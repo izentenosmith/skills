@@ -19,6 +19,16 @@
 
 ---
 
+## Contents
+
+- [Part A — What infrastructure as code is for](#part-a--what-infrastructure-as-code-is-for)
+- [Part B — State](#part-b--state)
+- [Part C — Code structure](#part-c--code-structure)
+- [Part D — Change safety](#part-d--change-safety)
+- [Part E — Security](#part-e--security)
+- [Part F — Delivery and testing](#part-f--delivery-and-testing)
+- [Theory → domain index](#theory--domain-index)
+
 ## Part A — What infrastructure as code is for
 
 ### T1 — Everything is defined in code, in version control

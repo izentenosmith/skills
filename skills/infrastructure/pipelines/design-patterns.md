@@ -1,10 +1,23 @@
 # Design Patterns — Stages, Promotion, Release, Security, IaC
 
 > The patterns Design mode chooses between, each with when it fits, what it costs, and **the
-> default**. Cite the principle (P-N, [`theory.md`](theory.md)) when you pick one; say why when you
+> default**. Cite the principle (P-N, `theory.md`) when you pick one; say why when you
 > deviate.
 
 ---
+
+## Contents
+
+- [§1 The reference pipeline](#1-the-reference-pipeline)
+- [§2 Branching and triggers](#2-branching-and-triggers)
+- [§3 Artifact and promotion model](#3-artifact-and-promotion-model)
+- [§4 Test placement](#4-test-placement)
+- [§5 Release strategies](#5-release-strategies)
+- [§6 Infrastructure delivery](#6-infrastructure-delivery)
+- [§7 Security model](#7-security-model)
+- [§8 Change approval](#8-change-approval)
+- [§9 Templates and ownership](#9-templates-and-ownership)
+- [§10 Measuring the pipeline](#10-measuring-the-pipeline)
 
 ## §1 The reference pipeline
 

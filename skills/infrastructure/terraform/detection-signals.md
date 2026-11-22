@@ -1,13 +1,24 @@
 # Detection Signals — Reproducible Grep Appendix
 
 > Copy-pasteable commands for the rubric's anti-patterns, each with its **confidence tag**
-> (✅ decidable / ⚠️ proxy / 🔬 needs-data — see [`scoring.md`](scoring.md)). Run from the codebase
+> (✅ decidable / ⚠️ proxy / 🔬 needs-data — see `scoring.md`). Run from the codebase
 > root. A match is a **candidate**: read the block in context before recording a finding. HCL is
 > nested; one-line grep can't tell an `ingress` from an `egress` or see a variable's final value.
 >
 > Prefer real tools when present — they parse HCL: `terraform fmt -check -recursive`,
 > `terraform validate`, `tflint --recursive` (with the provider ruleset), `checkov -d .`,
 > `trivy config .`, `gitleaks detect`. Grep is the fallback and the triage scan.
+
+## Contents
+
+- [Platform notes](#platform-notes)
+- [Inventory](#inventory)
+- [structure](#structure)
+- [state](#state)
+- [dependencies](#dependencies)
+- [security](#security)
+- [change-safety](#change-safety)
+- [delivery](#delivery)
 
 ## Platform notes
 
@@ -73,6 +84,10 @@ Signals are written for Terraform + AWS. On other providers the anti-pattern hol
 | Registry module without version | `grep -rnA3 -E 'source\s*=\s*"[a-z0-9-]+/[a-z0-9-]+/[a-z0-9-]+"' --include='*.tf' . \| grep -c 'version'` per block (0 = unpinned) | ✅ |
 
 ## security
+
+The secret greps below print the matching line, value and all. Read it to classify the finding,
+then record only the kind and `file:line`; never paste the matched text into an output. Where only
+presence matters, `grep -l` (files) or `grep -c` (counts) never print the value.
 
 | Anti-pattern | Command | Conf. |
 |---|---|---|
