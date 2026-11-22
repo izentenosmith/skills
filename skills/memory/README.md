@@ -30,7 +30,7 @@ runs the skill's install mode in each repository that should have a memory.
 **1. Install the skill.** Pick one:
 
 ```bash
-# with the skills CLI (needs read access to this private repo; see the root README)
+# with the skills CLI (the repo is public; see the root README)
 npx skills add izentenosmith/skills --skill repo-memory
 
 # or copy the folder by hand into the target repo (or your user-level skills directory)

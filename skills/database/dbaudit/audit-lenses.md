@@ -1,5 +1,7 @@
 # Audit Lenses — Cross-Cutting Inspection
 
+**Contents:** 1. Structural & schema debt · 2. Cross-database coupling · 3. Performance & indexing health *(statically deducible only)* · 4. Data quality & "dark data" · 5. Business-logic drift & configuration · 6. Security & data sensitivity · 7. Concurrency · 8. Derived data & integration plumbing · 9. TL;DR audit checklist *(static-DDL only)* · Explicitly excluded
+
 > The inspection lenses that span **all** object types. Where the object-type docs grade a single
 > `tables.sql` or `procedures.sql`, these lenses grade a database or an estate as a whole. Theory terms
 > (1NF, SSOT, ACID, functional dependency, ER constructs) are defined in [`theory.md`](theory.md).

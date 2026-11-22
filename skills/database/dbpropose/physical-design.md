@@ -1,10 +1,12 @@
 # Physical Design — PostgreSQL 18 Standard
 
+**Contents:** 1. Realize the model, don't re-invent it · 2. Keys & identity · 3. Naming conventions and schema layout · 4. Normalization targets · 5. Integrity by construction · 6. Data types (PostgreSQL 18) · 7. Indexing strategy (Winand, applied to PG) · 8. Collation & encoding · 9. Where logic lives · 10. Views, materialized views, partitioning, scale · 11. Access design · 12. Modeling checklist
+
 > How a modelled design becomes PostgreSQL 18 DDL: keys, naming, normalization targets, integrity,
 > arcs/subtypes/history in the engine, rules no constraint can hold, types, indexes, collation, where
 > logic lives, views and scale, access design. It realizes a model built with
 > [`er-modeling.md`](er-modeling.md) — it never replaces one. Every "rework"/"rebuild" verdict in
-> [`proposal.md`](../dbpropose/proposal.md) means "remodel with `er-modeling.md`, then bring it up to
+> dbpropose's `proposal.md` means "remodel with `er-modeling.md`, then bring it up to
 > this document." For another target engine, keep the model and translate these choices.
 
 ## 1. Realize the model, don't re-invent it

@@ -1,5 +1,7 @@
 # Stored Procedures & Functions — Business-Logic Isolation
 
+**Contents:** 🟢 Well done · 🔴 Not well done — set processing and error handling · 🔴 Not well done — concurrency (theory §5.2) · 🔴 Not well done — query shape and correctness · Engine notes — PostgreSQL (PL/pgSQL) · Checklist
+
 > Criteria for grading `procedures.sql`. Usually the heaviest category in a legacy estate — hundreds
 > of procedures per database is common. Legacy databases often act as an application framework rather
 > than a storage engine; evaluate procedures for maintainability, hidden resource drains, wrong results

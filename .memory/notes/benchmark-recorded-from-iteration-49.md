@@ -24,3 +24,10 @@ another branch's grader fix can re-grade an old iteration in place (eval 47 in i
 scratch tree that re-grades such an eval with this branch's grader instead.
 If iteration 49 is ever deleted for disk space, the
 replace-rows rule applies again.
+
+Since 2026-11-21 the database rows come from iteration 56 (evals 30–34, 47 and 48 after the skill
+audit), iteration 60 (34 and 48 again) and iteration 62 (30–34 and 47 after five fixes). Iterations
+60 and 61 also hold another branch's development runs (by `--iteration` collision), so never pass 60
+or 61 whole: the full record is `--record` over 48, 49, 50, 55, 56, 57, 58, then a scratch folder
+named `iteration-60` of symlinks to only `eval-34-*` and `eval-48-*`, then `iteration-62`. Check all
+76 rows remain and that no row outside the re-run moved.
