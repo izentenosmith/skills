@@ -11,7 +11,9 @@ alone.
 `cases.json` holds six prompts for each of fourteen skills that have close neighbours: `hotfix` and
 `incident-fix`, `dbaudit` and `dbdesign`, `peer-review` and `pr-prep`, `ticket` and `backlog`, and (added
 2026-11-20, when their descriptions changed) six development skills: `agent-brief`, `architect-deep-dive`,
-`devils-advocate`, `tyr-verdict`, `refactor-review` and `nexus`.
+`devils-advocate`, `tyr-verdict`, `refactor-review` and `nexus`; and (added 2026-11-21, so every bundle
+in `skills/bundles.json` has cases) `dockerfile` and `docker-compose`, `netaudit` and `netdesign`,
+`threatmodel` and `appsec`.
 
 - Three **should trigger**: the skill under test is the right first pick.
 - Three **should not**: near-misses. Most belong to a neighbour (`expected` names it:
@@ -33,7 +35,7 @@ Each case records:
 ## The split, and the rule
 
 One of every three cases in each (skill, should/should-not) group was drawn at random into
-`heldout` (seeds recorded in `cases.json`): 56 train, 28 held-out. The split is stored, not
+`heldout` (seeds recorded in `cases.json`): 80 train, 40 held-out. The split is stored, not
 re-derived, so adding cases never moves an existing one.
 
 **Only train cases may be read while editing a description.** Run `--split train`, read those
@@ -54,6 +56,20 @@ python3 evals/trigger/run_trigger.py --model sonnet --reps 3         # the full 
 
 Also `--skills hotfix,incident-fix`, `--cases hotfix-yes-1`, `--max-turns`, `--max-budget-usd`,
 `--concurrency`, `--timeout`, `--out`.
+
+### Per bundle (coexistence)
+
+```bash
+python3 evals/trigger/run_trigger.py --bundle on-call --model claude-opus-5-5 --reps 3
+```
+
+`--bundle NAME` stages only what a user who installs that bundle has: its skills from
+`skills/bundles.json` and the ones offered with every bundle (repo-memory). It runs the cases whose
+skill under test is in the bundle, so it asks whether the descriptions still route correctly among
+the skills that are installed together. A should-not case whose expected neighbour is not in the
+bundle cannot pick that neighbour; its `expected` becomes no skill for the run, and results.jsonl
+keeps the original as `expected_outside_bundle`. The false-trigger rate is unaffected; "picked what
+was expected" then means the run left the skill under test alone and picked nothing else.
 
 Each run is one headless `claude -p` given the case's prompt and nothing else. All of this repo's
 skills are copied to `<tmp>/skills-home/.claude/skills/` and attached with `--add-dir`; the working
