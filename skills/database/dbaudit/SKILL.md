@@ -5,13 +5,14 @@ description: Audits a relational database, legacy or current, from its DDL or su
 
 # 🔎 dbaudit
 
-Give a balanced assessment: what is working well, what is deficient, and what could improve. A score of 9.0 or more is the score threshold for “good,” but do not call a database unconditionally good when the workflow gate finds open Critical/High findings, unused/copy status, or more than 10 % of its objects carrying unresolved needs-data flags. State the score-based result and those risk conditions separately, in the gate block ([🚦 The gate](#-the-gate)).
+Give a balanced assessment: what is working well, what is deficient, and what could improve. A score of 9.0 or more counts as “good”, but do not call a database unconditionally good when the workflow gate finds open Critical/High findings, unused/copy status, or more than 10 % of its objects carrying unresolved needs-data flags. State the score-based result and those risk conditions separately, in the gate block ([🚦 The gate](#-the-gate)).
 
 ## Where this fits
 
 For a redesign, continue with [dbdesign](../dbdesign/SKILL.md), then
 [dbdiagram](../dbdiagram/SKILL.md) and [dbpropose](../dbpropose/SKILL.md) when a complete recommendation
-is wanted. The workflow coordinator is `harness/dbworkflow.py` (in a clone of the skills repo; installs don't include it). The 🔬 flags
+is wanted. Optionally, `harness/dbworkflow.py` coordinates these stages; it exists only in a clone of the skills
+repo, and this skill never needs it. The 🔬 flags
 this audit raises — hot paths, real index usage, plan behaviour, cardinality — are settled by
 [dbquery](../dbquery/SKILL.md) when plans and workload statistics are available.
 
@@ -169,7 +170,7 @@ Gate — <db>: does not pass | passes
 - 🔬 flags ≤ 10 % of objects: <k> of <N> (<r> %) — ❌ / ✅
 ```
 
-Where the repo carries the workflow harness, `harness/dbreview.py` applies the same four conditions to
+Optional, clone only: where the repo carries the workflow harness, `harness/dbreview.py` applies the same four conditions to
 decide whether a database goes on to a proposal, so an audit run alone and one run by the harness reach
 the same verdict.
 
@@ -223,7 +224,8 @@ not file excerpts."* Delegates **never score** and **never write** outside their
 5. **Evaluate, don't prescribe.** A fix hint in a finding is fine ("set-based rewrite over the
    pseudo-tables"); a redesign is dbdesign's job.
 6. **Read-only.** Never alter a database, a dump or a live instance.
-7. **Record the rubric version** (`v1.2`) and the source version in every output.
+7. **Record the rubric version** (stated at the top of [scoring.md](scoring.md)) and the source version in
+   every output.
 8. **Never echo a secret.** A password, key, token or connection string found in a dump, config or
    procedure is a finding cited by file:line with the value redacted (`PASSWORD '<redacted>'`) — in
    the evaluation files, the summary, the response and any delegate's brief.
@@ -232,7 +234,7 @@ not file excerpts."* Delegates **never score** and **never write** outside their
 
 ## Handoff
 
-> Audited `<N>` objects across `<D>` databases (rubric v1.2, source `<commit/date>`). Estate score
+> Audited `<N>` objects across `<D>` databases (rubric `<version>`, source `<commit/date>`). Estate score
 > `<x.x>` — `<band>`, capped by `<finding>`. `<c>` Critical · `<h>` High · `<m>` Medium · `<l>` Low;
 > `<k>` 🔬 flags open. Outputs: `<paths>`.
 

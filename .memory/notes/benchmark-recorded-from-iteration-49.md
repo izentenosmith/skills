@@ -22,5 +22,9 @@ replace-rows rule applies again.
 
 Since 2026-11-21 iteration 56 (the database evals 30–34, 47 and 48, re-run after the skill audit)
 is part of the record, and so is iteration 60 (evals 34 and 48 again, after dbbuild gained `skills/database/dbbuild/theory.md`
-and dbarchitect a new description): pass 48, 49, 50, 55, 56 and 60. Iterations 57–59 belong to another
-branch's development evals; never pass them from here.
+and dbarchitect a new description), and so is iteration 62 (evals 30–34 and 47 after five fixes).
+Iterations 60 and 61 are shared with another branch, whose development evals (0–5, 27, 58, 60–63)
+landed in them by `--iteration` collision; 57–59 are wholly that branch's. Never pass 57–61 whole:
+record from a scratch folder named `iteration-60` holding symlinks to only `eval-34-*` and `eval-48-*`,
+plus `iteration-62`, after 48, 49, 50, 55 and 56, and check all 64 rows and that only database rows
+moved.

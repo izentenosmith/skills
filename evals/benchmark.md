@@ -28,11 +28,11 @@
 | 28-dockerfile-repair-pins-and-drops-root | i49 | 3 | 0.99 ± 0.02 | 0.62 | +0.37 | 1.00 | 1.00 |
 | 29-release-notes-translates-drops-and-leads-with-breaking | i49 | 3 | 1.00 ± 0.00 | 0.54 | +0.46 | 1.00 | 0.86 |
 | 3-refactor-promotes-noted-smell | i55 | 3 | 0.96 ± 0.07 | 0.12 | +0.83 | 1.00 | 0.75 |
-| 30-dbaudit-postgres-dump-scored-not-fixed | i56 | 3 | 0.95 ± 0.04 | 0.36 | +0.60 | 1.00 | 1.00 |
-| 31-dbdesign-sqlite-from-requirements-traps | i56 | 3 | 0.97 ± 0.04 | 0.54 | +0.44 | 1.00 | 1.00 |
-| 32-dbdiagram-barker-and-relational-from-design | i56 | 3 | 0.98 ± 0.03 | 0.71 | +0.27 | 1.00 | 1.00 |
-| 33-dbpropose-orphans-before-constraints | i56 | 3 | 1.00 ± 0.00 | 0.54 | +0.46 | 1.00 | 0.80 |
-| 34-dbbuild-executable-ddl-from-accepted-proposal | i60 | 3 | 1.00 ± 0.00 | 0.89 | +0.11 | 1.00 | 1.00 |
+| 30-dbaudit-postgres-dump-scored-not-fixed | i62 | 3 | 0.95 ± 0.04 | 0.36 | +0.60 | 1.00 | 1.00 |
+| 31-dbdesign-sqlite-from-requirements-traps | i62 | 3 | 0.97 ± 0.04 | 0.54 | +0.44 | 1.00 | 1.00 |
+| 32-dbdiagram-barker-and-relational-from-design | i62 | 3 | 1.00 ± 0.00 | 0.77 | +0.23 | 1.00 | 1.00 |
+| 33-dbpropose-orphans-before-constraints | i62 | 3 | 0.97 ± 0.04 | 0.39 | +0.59 | 1.00 | 0.80 |
+| 34-dbbuild-executable-ddl-from-accepted-proposal | i62 | 3 | 1.00 ± 0.00 | 0.89 | +0.11 | 1.00 | 1.00 |
 | 35-container-hardening-review-socket-and-firewall | i49 | 3 | 1.00 ± 0.00 | 0.57 | +0.43 | 1.00 | 1.00 |
 | 36-container-debug-oom-localhost-crlf | i49 | 3 | 0.99 ± 0.02 | 0.50 | +0.49 | 1.00 | 1.00 |
 | 37-docker-swarm-review-quorum-and-state | i49 | 3 | 1.00 ± 0.00 | 0.56 | +0.44 | 1.00 | 1.00 |
@@ -46,7 +46,7 @@
 | 44-hardening-review-mixed-estate | i49 | 3 | 0.98 ± 0.03 | 0.68 | +0.30 | 1.00 | 1.00 |
 | 45-hardening-design-tier-aware-baseline | i49 | 3 | 1.00 ± 0.00 | 0.73 | +0.27 | 1.00 | 1.00 |
 | 46-hardening-propose-no-lockout | i49 | 3 | 0.97 ± 0.04 | 0.61 | +0.36 | 1.00 | 1.00 |
-| 47-dbquery-workload-ranked-plans-read-indexes-weighed | i56 | 3 | 1.00 ± 0.00 | 0.79 | +0.21 | 1.00 | 1.00 |
+| 47-dbquery-workload-ranked-plans-read-indexes-weighed | i62 | 3 | 1.00 ± 0.00 | 0.86 | +0.14 | 1.00 | 1.00 |
 | 48-dbarchitect-one-system-of-record-no-dual-writes | i60 | 3 | 1.00 ± 0.00 | 0.73 | +0.27 | 1.00 | 1.00 |
 | 49-peer-review-claim-omission-injection | i49 | 3 | 1.00 ± 0.00 | 0.29 | +0.71 | 1.00 | 1.00 |
 | 5-verdict-cuts-and-slices | i55 | 3 | 1.00 ± 0.00 | 0.33 | +0.67 | 1.00 | 1.00 |
@@ -69,7 +69,7 @@
 | 8-hotfix-node-shared-cause | i49 | 3 | 1.00 ± 0.00 | 0.38 | +0.62 | 1.00 | 1.00 |
 | 9-hotfix-jvm-both-callers | i49 | 3 | 1.00 ± 0.00 | 0.71 | +0.29 | 1.00 | 1.00 |
 
-**Delta — current 0.98 vs baseline 0.50**
+**Delta — current 0.98 vs baseline 0.49**
 **Capability — current 1.00 vs baseline 0.88**
 **Held-out (eval 59), not in the two lines above: delta — current 1.00 vs baseline 0.44; capability — current 1.00 vs baseline 1.00**
 
@@ -103,11 +103,11 @@
 | 28-dockerfile-repair-pins-and-drops-root | 3/3 | 2/3 | 1 | +0.37 | — | $1.34 | $0.65 | inconsistent; noise unknown; saturated |
 | 29-release-notes-translates-drops-and-leads-with-breaking | 3/3 | 3/3 | 1 | +0.46 | — | $0.41 | $0.28 | noise unknown; saturated |
 | 3-refactor-promotes-noted-smell | 3/3 | 2/3 | 1 | +0.83 | — | $0.77 | $0.53 | inconsistent; noise unknown; saturated |
-| 30-dbaudit-postgres-dump-scored-not-fixed | 3/3 | 1/3 | 1 | +0.60 | — | $2.15 | $0.33 | inconsistent; noise unknown; saturated |
-| 31-dbdesign-sqlite-from-requirements-traps | 3/3 | 2/3 | 1 | +0.44 | — | $1.20 | $0.43 | inconsistent; noise unknown; saturated |
-| 32-dbdiagram-barker-and-relational-from-design | 3/3 | 2/3 | 1 | +0.27 | — | $1.47 | $0.87 | inconsistent; noise unknown; saturated |
-| 33-dbpropose-orphans-before-constraints | 3/3 | 3/3 | 1 | +0.46 | — | $1.10 | $1.12 | noise unknown; saturated |
-| 34-dbbuild-executable-ddl-from-accepted-proposal | 3/3 | 3/3 | 1 | +0.11 | — | $0.71 | $0.43 | noise unknown; baseline high; saturated |
+| 30-dbaudit-postgres-dump-scored-not-fixed | 3/3 | 1/3 | 1 | +0.60 | — | $2.07 | $0.34 | inconsistent; noise unknown; saturated |
+| 31-dbdesign-sqlite-from-requirements-traps | 3/3 | 2/3 | 1 | +0.44 | — | $1.28 | $0.48 | inconsistent; noise unknown; saturated |
+| 32-dbdiagram-barker-and-relational-from-design | 3/3 | 3/3 | 1 | +0.23 | — | $1.46 | $0.82 | noise unknown; saturated |
+| 33-dbpropose-orphans-before-constraints | 3/3 | 2/3 | 1 | +0.59 | — | $1.11 | $1.04 | inconsistent; noise unknown; saturated |
+| 34-dbbuild-executable-ddl-from-accepted-proposal | 3/3 | 3/3 | 1 | +0.11 | — | $0.65 | $0.42 | noise unknown; baseline high; saturated |
 | 35-container-hardening-review-socket-and-firewall | 3/3 | 3/3 | 1 | +0.43 | — | $0.90 | $0.25 | noise unknown; saturated |
 | 36-container-debug-oom-localhost-crlf | 3/3 | 2/3 | 1 | +0.49 | — | $0.54 | $0.43 | inconsistent; noise unknown; saturated |
 | 37-docker-swarm-review-quorum-and-state | 3/3 | 3/3 | 1 | +0.44 | — | $1.07 | $0.45 | noise unknown; saturated |
@@ -121,7 +121,7 @@
 | 44-hardening-review-mixed-estate | 3/3 | 2/3 | 1 | +0.30 | — | $1.63 | $0.42 | inconsistent; noise unknown; saturated |
 | 45-hardening-design-tier-aware-baseline | 3/3 | 3/3 | 1 | +0.27 | — | $1.88 | $0.61 | noise unknown; saturated |
 | 46-hardening-propose-no-lockout | 3/3 | 2/3 | 1 | +0.36 | — | $1.15 | $0.52 | inconsistent; noise unknown; saturated |
-| 47-dbquery-workload-ranked-plans-read-indexes-weighed | 3/3 | 3/3 | 1 | +0.21 | — | $0.96 | $0.50 | noise unknown; saturated |
+| 47-dbquery-workload-ranked-plans-read-indexes-weighed | 3/3 | 3/3 | 1 | +0.14 | — | $1.06 | $0.54 | noise unknown; baseline high; saturated |
 | 48-dbarchitect-one-system-of-record-no-dual-writes | 3/3 | 3/3 | 1 | +0.27 | — | $0.77 | $0.34 | noise unknown; saturated |
 | 49-peer-review-claim-omission-injection | 3/3 | 3/3 | 1 | +0.71 | — | $0.98 | $0.31 | noise unknown; saturated |
 | 5-verdict-cuts-and-slices | 3/3 | 3/3 | 1 | +0.67 | — | $0.62 | $0.37 | noise unknown; saturated |
@@ -145,7 +145,7 @@
 | 9-hotfix-jvm-both-callers | 3/3 | 3/3 | 1 | +0.29 | — | $0.46 | $0.19 | noise unknown; saturated |
 
 **54 of 64 evals are saturated**, so they work as regression tests. Only the others can show that a skill edit helped.
-**4 baseline(s) score 0.80 or more on delta** without the skill.
+**5 baseline(s) score 0.80 or more on delta** without the skill.
 
 ## Delta assertions the baseline also passed (still non-discriminating)
 
@@ -322,6 +322,7 @@
 - every relationship carries a lowercase role name at each end
 - each end's optionality drawn: dashed may-be, solid must-be
 - cell IDs are semantic and trace each entity to its table
+- the inferred PET – VET relationship labelled as inferred
 - a UID bar on each relationship in a UID, and on no other
 - every alternate key on the relational page, composite ones included
 - microchip not drawn as a key while Q3 is open
@@ -329,8 +330,6 @@
 - the design left untouched
 
 **eval-33-dbpropose-orphans-before-constraints**
-- orphan rows resolved before the foreign keys are declared
-- the Critical handled before the name split
 - no finding id invented
 - the design and both diagrams cited by path
 - needs-data flags carried as open questions
@@ -502,6 +501,7 @@
 - the redundant proposed index on order_line(order_id) rejected
 - the note index rejected on write cost
 - product search needs a trigram (or full-text) index, not a B-tree on name
+- prescriptions name how to verify them
 - the dbaudit flags settled by id
 - no secret value echoed
 - never connected: no psql-staging call
@@ -702,14 +702,14 @@
 - carried smells recorded with a promotion condition (2/3)
 
 **eval-30-dbaudit-postgres-dump-scored-not-fixed**
+- findings carry confidence, theory, severity and file:line (2/3)
 - runtime facts flagged needs-data, never graded (2/3)
-- strengths recorded: the payment table (2/3)
 
 **eval-31-dbdesign-sqlite-from-requirements-traps**
-- Codd's rules reviewed (2/3)
+- the member subtypes mapped deliberately, with the choice stated (2/3)
 
-**eval-32-dbdiagram-barker-and-relational-from-design**
-- the inferred PET – VET relationship labelled as inferred (2/3)
+**eval-33-dbpropose-orphans-before-constraints**
+- the Critical handled before the name split (2/3)
 
 **eval-36-container-debug-oom-localhost-crlf**
 - evidence-only mode named (2/3)

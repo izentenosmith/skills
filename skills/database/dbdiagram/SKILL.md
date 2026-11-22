@@ -5,7 +5,7 @@ description: "Draws a database's two editable draw.io diagrams from a design, DD
 
 # dbdiagram
 
-Create two clear, editable draw.io diagrams: the **modelo entidad relación**, always in **Barker / Oracle CASE*METHOD notation**, and the **modelo relacional**, using table, column, key, constraint, and foreign-key notation. This skill can run independently from a supplied design or database structure, or consume the output of `dbdesign`. Barker rules apply to the ER view; do not force ER symbols onto the relational view.
+Create two clear, editable draw.io diagrams: the **ER model** (*modelo entidad relación*), always in **Barker / Oracle CASE*METHOD notation**, and the **relational model** (*modelo relacional*), using table, column, key, constraint, and foreign-key notation. This skill can run independently from a supplied design or database structure, or consume the output of `dbdesign`. Barker rules apply to the ER view; do not force ER symbols onto the relational view.
 
 ## Inputs and evidence
 

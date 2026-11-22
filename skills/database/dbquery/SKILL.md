@@ -59,9 +59,11 @@ The confidence tags of [scoring.md](scoring.md) apply, with this meaning here:
 
 **Running anything yourself.** Don't connect to a database unless the user says to, and then only
 read: `EXPLAIN` without `ANALYZE`, catalog and statistics views. **`EXPLAIN ANALYZE` executes the
-statement** — on a `SELECT` it costs a full run, and on `INSERT`/`UPDATE`/`DELETE` it changes data. Never
-run it on DML except inside a transaction that is rolled back, never on production without explicit
-permission, and say in the review what you ran and where.
+statement**, so it is allowed only on a `SELECT`, only outside production, and only when the user has
+said which database to use. Never run it on `INSERT`, `UPDATE`, `DELETE` or `MERGE`: even inside a
+transaction that is rolled back, the statement takes row locks, fires triggers and consumes sequence
+values. For those, read the plan from `EXPLAIN` alone or ask the user for one. Say in the review what you
+ran and where.
 
 ---
 
@@ -163,7 +165,8 @@ stop.
 
 ## Rules of engagement
 
-1. **Read-only.** Never run DML, DDL or configuration changes; `EXPLAIN ANALYZE` only as described above.
+1. **Read-only.** Never run DML, DDL or configuration changes; `EXPLAIN ANALYZE` only on a `SELECT`,
+   outside production, as described above.
 2. **Evidence is a plan node, a statistic or a line.** "This query looks slow" is not a finding.
 3. **Workload before statement.** Rank by total time; the slowest query is rarely the costliest.
 4. **Wrong results first,** then races, then cost.

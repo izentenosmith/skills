@@ -63,7 +63,11 @@ Number the scripts in the order they run: `ddl/001-schema.sql`, `ddl/002-indexes
 -- Not executed: review, then apply with your own tooling.
 ```
 
-## PostgreSQL target (PG18)
+## PostgreSQL target
+
+Written for the PostgreSQL version [physical-design.md](physical-design.md) targets; on an older
+version, say which of these features it lacks.
+
 
 - **Order:** `CREATE SCHEMA … AUTHORIZATION <owner_role>` → `CREATE EXTENSION IF NOT EXISTS … WITH SCHEMA extensions` → types and domains → tables (PK and column `CHECK`s inline) → FKs and cross-table constraints → indexes → views, materialized views and their unique index → functions → triggers → `REVOKE`/`GRANT` and `ALTER DEFAULT PRIVILEGES` (physical-design §11) → `COMMENT ON` every table and every non-obvious column, from the data dictionary.
 - **Pin name resolution.** Schema-qualify every reference; start each script with `SET search_path = …` naming the schemas it creates in; give every function — `SECURITY DEFINER` ones above all — its own `SET search_path`. Never depend on the session's path.

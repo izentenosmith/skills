@@ -44,7 +44,7 @@ python3 harness/prreview.py --repo . --pr 482
 npx skills add izentenosmith/skills --skill pr-prep code-xray peer-review test-review concurrency-review review-retro
 ```
 
-The repo is private: you need read access and GitHub auth first. That setup, and the flags (`-a`, `-g`, `-y`), are in the [root README](../../README.md#install-with-npx). Or copy the
+The repo is public, so no GitHub account is needed; the flags (`-a`, `-g`, `-y`) are in the [root README](../../README.md#install-with-npx). Or copy the
 folders. Each is self-contained: `SKILL.md` plus its reference docs (and code-xray's script), no symlinks.
 
 Invoke by name, or let the description trigger it:
