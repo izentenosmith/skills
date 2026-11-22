@@ -690,9 +690,9 @@ The commands above install whatever is on `main`. Releases are git tags (`v1.0.0
 npx skills add izentenosmith/skills@v1.0.0 --skill tdd refactor-review
 ```
 
-The same form takes a full 40-character commit SHA. Checked with `skills@1.9.0`: the CLI reads `@v1.0.0` as a ref and clones with `--branch v1.0.0`, and `npx skills add izentenosmith/skills@<full sha> --list` lists the skills at that commit. Not yet run end to end against the `v1.0.0` tag itself, which is pushed after this change merges. Whether `npx skills update` keeps a tag pin or moves to `main` is not verified; to change versions, run `add` again with the new tag.
+The same form takes a full 40-character commit SHA. Checked against the pushed tag on 2026-11-22: `npx skills add izentenosmith/skills@v1.0.0 --list` reads the source as `@ v1.0.0` and finds all 43 skills. Whether `npx skills update` keeps a tag pin or moves to `main` is not verified; to change versions, run `add` again with the new tag.
 
-Without the CLI, clone the tag and copy folders as in [Or copy by hand](#or-copy-by-hand) (not yet run against the tag):
+Without the CLI, clone the tag and copy folders as in [Or copy by hand](#or-copy-by-hand):
 
 ```bash
 git clone --branch v1.0.0 --depth 1 https://github.com/izentenosmith/skills
