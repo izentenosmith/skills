@@ -12,11 +12,14 @@
    }
   },
   "reviewer": {
-   "description": "Review a change as it arrives: prepare it, read its history, review the code, its tests and its concurrency, and learn from past reviews",
+   "description": "Review a change as it arrives: prepare it, read its history, review the code, its tests, its concurrency and its security, and learn from past reviews",
    "families": ["review"],
-   "skills": ["pr-prep", "code-xray", "peer-review", "test-review", "concurrency-review", "review-retro", "appsec"],
+   "skills": ["pr-prep", "code-xray", "peer-review", "test-review", "concurrency-review", "review-retro", "threatmodel", "appsec", "hardening", "container-hardening"],
    "placed": {
-    "appsec": "where peer-review's security lens escalates; harness/prreview.py brings it in at the PR tier"
+    "threatmodel": "the security design of what a change builds; without it, appsec takes design prompts that are not its own",
+    "appsec": "where peer-review's security lens escalates; harness/prreview.py brings it in at the PR tier",
+    "hardening": "the security review of the hosts and cloud a change configures",
+    "container-hardening": "the security review of the container layer a change touches"
    }
   },
   "on-call": {
