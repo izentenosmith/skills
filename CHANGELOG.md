@@ -39,6 +39,16 @@ One version covers the whole repository: every skill, the harness and the evals.
   shrink. `--report` prints the distributions the thresholds come from.
 - **Trigger cases for the 18 skills that had none**, three should-trigger and three near-miss each,
   so all 43 skills are covered: 258 cases, 172 train and 86 held out (seed 20261124).
+- **Five outcome evals (76–80)** for the skills whose baselines most often already succeed, each a
+  real trap a no-skill run plausibly misses and graded on the outcome: hotfix (a changelog-guided
+  revert that locks out accounts stored with capitals), appsec (four Critical defects only an
+  endpoint inventory and source-to-sink tracing reach, beside two safe decoys), hardening (an
+  "already hardened" PCI host open to password SSH over IPv6), threatmodel (a support path that
+  writes the payout account and skips the 72-hour hold, behind a SIM-swap decoy) and pipelines (a
+  `workflow_run` deploy that extracts a fork-built artifact over its own checkout). Their controls
+  separate. Run three times each against a no-skill baseline (iteration 81, $17.41): appsec and
+  hardening show an outcome gain of +0.10; hotfix, threatmodel and pipelines don't, since their
+  baselines also scored 1.00 on capability.
 
 ### Changed
 
@@ -48,6 +58,12 @@ One version covers the whole repository: every skill, the harness and the evals.
   neighbouring skills: 31,263 → 19,873 characters across the 43 skills (average 727 → 462).
   On the trigger eval (Opus, 450 runs each side) no skill lost a hit or gained a false trigger:
   should-trigger 219/225 → 223/225, false triggers 0/225 both times.
+- **The eval benchmark leads with the outcome gain**: capability with the skill minus capability
+  without it, in `benchmark.md`, `benchmark.json` and `scores.json` (`cap_base`, `outcome_gain`).
+  Delta becomes the secondary, instruction-following column. Evals whose baseline already passes
+  every capability assertion are flagged "baseline already succeeds" (58 of 80 with evals 76–80), since
+  on outcome they can only catch a regression. The earlier rows are unchanged; with evals 76–80 the
+  outcome gain is +0.12 (1.00 vs 0.88) and the instruction-following gain +0.47 (0.98 vs 0.51).
 
 ## [1.0.0] - 2026-11-21
 

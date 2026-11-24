@@ -1,0 +1,16 @@
+$ sudo auditctl -s
+enabled 1
+failure 1
+pid 702
+rate_limit 0
+backlog_limit 8192
+lost 0
+backlog 0
+backlog_wait_time 60000
+backlog_wait_time_actual 0
+
+$ sudo auditctl -l | wc -l
+36
+
+$ systemctl is-active auditd
+active

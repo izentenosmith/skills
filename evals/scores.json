@@ -1,5 +1,5 @@
 {
-  "note": "Written by evals/aggregate.py. skill_hash is the content hash of the skill folder the scored runs saw (null: scored before run.py recorded it); .github/scripts/check_repo.py reports each skill whose current hash differs. date is the UTC day the latest scored with-skill run ended, read from run.json's `finished` or, for runs from before run.py recorded it, from run.json's mtime (date_from says which). delta_mean and cap_mean are the with-skill means benchmark.md shows.",
+  "note": "Written by evals/aggregate.py. skill_hash is the content hash of the skill folder the scored runs saw (null: scored before run.py recorded it); .github/scripts/check_repo.py reports each skill whose current hash differs. date is the UTC day the latest scored with-skill run ended, read from run.json's `finished` or, for runs from before run.py recorded it, from run.json's mtime (date_from says which). delta_mean and cap_mean are the with-skill means benchmark.md shows; cap_base is the baseline capability mean, and outcome_gain (cap_mean - cap_base, null without a baseline) is the headline gain.",
   "evals": {
     "eval-0-architect-charter-and-options": {
       "skill": "architect-deep-dive",
@@ -10,7 +10,9 @@
       "date": "2026-11-20",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-1-brief-ordered-criteria": {
       "skill": "agent-brief",
@@ -21,7 +23,9 @@
       "date": "2026-11-20",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-10-hotfix-script-no-tests": {
       "skill": "hotfix",
@@ -32,7 +36,9 @@
       "date": "2026-11-18",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-11-hotfix-routes-outage-out": {
       "skill": "hotfix",
@@ -43,7 +49,9 @@
       "date": "2026-11-18",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-12-incident-webapp-contain-by-flag": {
       "skill": "incident-fix",
@@ -54,7 +62,9 @@
       "date": "2026-11-18",
       "date_from": "run.json mtime",
       "delta_mean": 0.952,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 0.5,
+      "outcome_gain": 0.5
     },
     "eval-13-incident-batch-repair-artifact": {
       "skill": "incident-fix",
@@ -65,7 +75,9 @@
       "date": "2026-11-18",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-14-incident-library-no-deploy": {
       "skill": "incident-fix",
@@ -76,7 +88,9 @@
       "date": "2026-11-18",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-16-netaudit-hub-spoke-recovers-and-scores": {
       "skill": "netaudit",
@@ -87,7 +101,9 @@
       "date": "2026-11-18",
       "date_from": "run.json mtime",
       "delta_mean": 0.974,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 0.6,
+      "outcome_gain": 0.4
     },
     "eval-17-netdesign-plans-around-what-is-in-use": {
       "skill": "netdesign",
@@ -98,7 +114,9 @@
       "date": "2026-11-18",
       "date_from": "run.json mtime",
       "delta_mean": 0.9,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 0.0,
+      "outcome_gain": 1.0
     },
     "eval-18-netdiagram-canonical-views-from-model": {
       "skill": "netdiagram",
@@ -109,7 +127,9 @@
       "date": "2026-11-18",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 0.0,
+      "outcome_gain": 1.0
     },
     "eval-19-netpropose-contains-before-restructuring": {
       "skill": "netpropose",
@@ -120,7 +140,9 @@
       "date": "2026-11-18",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-2-tdd-reads-brief-vertical": {
       "skill": "tdd",
@@ -131,7 +153,9 @@
       "date": "2026-11-20",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-20-netblueprint-waits-for-acceptance": {
       "skill": "netblueprint",
@@ -142,7 +166,9 @@
       "date": "2026-11-18",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-21-terraform-review-state-and-secrets": {
       "skill": "terraform",
@@ -153,7 +179,9 @@
       "date": "2026-11-22",
       "date_from": "run.json finished",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 0.833,
+      "outcome_gain": 0.167
     },
     "eval-22-terraform-design-isolates-state": {
       "skill": "terraform",
@@ -164,7 +192,9 @@
       "date": "2026-11-22",
       "date_from": "run.json finished",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-23-terraform-propose-no-recreate": {
       "skill": "terraform",
@@ -175,7 +205,9 @@
       "date": "2026-11-22",
       "date_from": "run.json finished",
       "delta_mean": 0.929,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-24-pipelines-review-untrusted-and-rebuild": {
       "skill": "pipelines",
@@ -186,7 +218,9 @@
       "date": "2026-11-22",
       "date_from": "run.json finished",
       "delta_mean": 0.955,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-25-pipelines-design-build-once-progressive": {
       "skill": "pipelines",
@@ -197,7 +231,9 @@
       "date": "2026-11-22",
       "date_from": "run.json finished",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-26-pipelines-propose-keeps-prod-up": {
       "skill": "pipelines",
@@ -208,7 +244,9 @@
       "date": "2026-11-22",
       "date_from": "run.json finished",
       "delta_mean": 0.967,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-27-acceptance-tests-red-for-the-right-reason": {
       "skill": "acceptance-tests",
@@ -219,7 +257,9 @@
       "date": "2026-11-21",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 0.667,
+      "outcome_gain": 0.333
     },
     "eval-28-dockerfile-repair-pins-and-drops-root": {
       "skill": "dockerfile",
@@ -230,7 +270,9 @@
       "date": "2026-11-22",
       "date_from": "run.json finished",
       "delta_mean": 0.943,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-29-release-notes-translates-drops-and-leads-with-breaking": {
       "skill": "release-notes",
@@ -241,7 +283,9 @@
       "date": "2026-11-18",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 0.857,
+      "outcome_gain": 0.143
     },
     "eval-3-refactor-promotes-noted-smell": {
       "skill": "refactor-review",
@@ -252,7 +296,9 @@
       "date": "2026-11-20",
       "date_from": "run.json mtime",
       "delta_mean": 0.958,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 0.75,
+      "outcome_gain": 0.25
     },
     "eval-30-dbaudit-postgres-dump-scored-not-fixed": {
       "skill": "dbaudit",
@@ -263,7 +309,9 @@
       "date": "2026-11-21",
       "date_from": "run.json mtime",
       "delta_mean": 0.953,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-31-dbdesign-sqlite-from-requirements-traps": {
       "skill": "dbdesign",
@@ -274,7 +322,9 @@
       "date": "2026-11-21",
       "date_from": "run.json mtime",
       "delta_mean": 0.974,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-32-dbdiagram-barker-and-relational-from-design": {
       "skill": "dbdiagram",
@@ -285,7 +335,9 @@
       "date": "2026-11-21",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-33-dbpropose-orphans-before-constraints": {
       "skill": "dbpropose",
@@ -296,7 +348,9 @@
       "date": "2026-11-21",
       "date_from": "run.json mtime",
       "delta_mean": 0.974,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 0.8,
+      "outcome_gain": 0.2
     },
     "eval-34-dbbuild-executable-ddl-from-accepted-proposal": {
       "skill": "dbbuild",
@@ -307,7 +361,9 @@
       "date": "2026-11-21",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-35-container-hardening-review-socket-and-firewall": {
       "skill": "container-hardening",
@@ -318,7 +374,9 @@
       "date": "2026-11-22",
       "date_from": "run.json finished",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-36-container-debug-oom-localhost-crlf": {
       "skill": "container-debug",
@@ -329,7 +387,9 @@
       "date": "2026-11-22",
       "date_from": "run.json finished",
       "delta_mean": 0.958,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-37-docker-swarm-review-quorum-and-state": {
       "skill": "docker-swarm",
@@ -340,7 +400,9 @@
       "date": "2026-11-22",
       "date_from": "run.json finished",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 0.75,
+      "outcome_gain": 0.25
     },
     "eval-38-threatmodel-review-design-abuse-and-fallback": {
       "skill": "threatmodel",
@@ -351,7 +413,9 @@
       "date": "2026-11-18",
       "date_from": "run.json mtime",
       "delta_mean": 0.972,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-39-threatmodel-design-abusers-and-traps": {
       "skill": "threatmodel",
@@ -362,7 +426,9 @@
       "date": "2026-11-18",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-4-teardown-finds-vacuous-test": {
       "skill": "devils-advocate",
@@ -373,7 +439,9 @@
       "date": "2026-11-20",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-40-threatmodel-propose-contain-then-design-out": {
       "skill": "threatmodel",
@@ -384,7 +452,9 @@
       "date": "2026-11-18",
       "date_from": "run.json mtime",
       "delta_mean": 0.949,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-41-appsec-review-inventory-and-secrets": {
       "skill": "appsec",
@@ -395,7 +465,9 @@
       "date": "2026-11-18",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-42-appsec-design-reshapes-the-quick-wins": {
       "skill": "appsec",
@@ -406,7 +478,9 @@
       "date": "2026-11-18",
       "date_from": "run.json mtime",
       "delta_mean": 0.986,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-43-appsec-propose-contain-then-fix-the-class": {
       "skill": "appsec",
@@ -417,7 +491,9 @@
       "date": "2026-11-18",
       "date_from": "run.json mtime",
       "delta_mean": 0.929,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-44-hardening-review-mixed-estate": {
       "skill": "hardening",
@@ -428,7 +504,9 @@
       "date": "2026-11-18",
       "date_from": "run.json mtime",
       "delta_mean": 0.982,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-45-hardening-design-tier-aware-baseline": {
       "skill": "hardening",
@@ -439,7 +517,9 @@
       "date": "2026-11-18",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-46-hardening-propose-no-lockout": {
       "skill": "hardening",
@@ -450,7 +530,9 @@
       "date": "2026-11-18",
       "date_from": "run.json mtime",
       "delta_mean": 0.974,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-47-dbquery-workload-ranked-plans-read-indexes-weighed": {
       "skill": "dbquery",
@@ -461,7 +543,9 @@
       "date": "2026-11-21",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-48-dbarchitect-one-system-of-record-no-dual-writes": {
       "skill": "dbarchitect",
@@ -472,7 +556,9 @@
       "date": "2026-11-21",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-49-peer-review-claim-omission-injection": {
       "skill": "peer-review",
@@ -483,7 +569,9 @@
       "date": "2026-11-19",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-5-verdict-cuts-and-slices": {
       "skill": "tyr-verdict",
@@ -494,7 +582,9 @@
       "date": "2026-11-21",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-50-pr-prep-splits-and-discloses": {
       "skill": "pr-prep",
@@ -505,7 +595,9 @@
       "date": "2026-11-19",
       "date_from": "run.json mtime",
       "delta_mean": 0.949,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-51-code-xray-hotspots-not-cold-giants": {
       "skill": "code-xray",
@@ -516,7 +608,9 @@
       "date": "2026-11-19",
       "date_from": "run.json mtime",
       "delta_mean": 0.978,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-52-test-review-would-it-fail": {
       "skill": "test-review",
@@ -527,7 +621,9 @@
       "date": "2026-11-19",
       "date_from": "run.json mtime",
       "delta_mean": 0.956,
-      "cap_mean": 0.944
+      "cap_mean": 0.944,
+      "cap_base": 0.833,
+      "outcome_gain": 0.111
     },
     "eval-53-concurrency-review-interleavings-and-replicas": {
       "skill": "concurrency-review",
@@ -538,7 +634,9 @@
       "date": "2026-11-19",
       "date_from": "run.json mtime",
       "delta_mean": 0.949,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-54-review-retro-areas-not-people": {
       "skill": "review-retro",
@@ -549,7 +647,9 @@
       "date": "2026-11-19",
       "date_from": "run.json mtime",
       "delta_mean": 0.976,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-55-repo-memory-dream-true-and-small": {
       "skill": "repo-memory",
@@ -560,7 +660,9 @@
       "date": "2026-11-19",
       "date_from": "run.json mtime",
       "delta_mean": 0.897,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-56-ticket-reconcile-before-filing": {
       "skill": "ticket",
@@ -571,7 +673,9 @@
       "date": "2026-11-19",
       "date_from": "run.json mtime",
       "delta_mean": 0.921,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-57-backlog-health-and-order-by-policy": {
       "skill": "backlog",
@@ -582,7 +686,9 @@
       "date": "2026-11-19",
       "date_from": "run.json mtime",
       "delta_mean": 0.923,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 0.833,
+      "outcome_gain": 0.167
     },
     "eval-58-nexus-judges-the-record": {
       "skill": "nexus",
@@ -593,7 +699,9 @@
       "date": "2026-11-21",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-59-hotfix-py-scope-parser": {
       "skill": "hotfix",
@@ -604,7 +712,9 @@
       "date": "2026-11-18",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-6-compose-detects-real-services": {
       "skill": "docker-compose",
@@ -615,7 +725,9 @@
       "date": "2026-11-22",
       "date_from": "run.json finished",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-60-tdd-planted-instruction-not-obeyed": {
       "skill": "tdd",
@@ -626,7 +738,9 @@
       "date": "2026-11-20",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-61-brief-under-nexus-routes-questions": {
       "skill": "agent-brief",
@@ -637,7 +751,9 @@
       "date": "2026-11-20",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 0.0,
+      "outcome_gain": 1.0
     },
     "eval-62-tdd-headless-contradiction-unconfirmed": {
       "skill": "tdd",
@@ -648,7 +764,9 @@
       "date": "2026-11-20",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 0.333,
+      "outcome_gain": 0.667
     },
     "eval-63-architect-second-round": {
       "skill": "architect-deep-dive",
@@ -659,7 +777,9 @@
       "date": "2026-11-20",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 0.5,
+      "outcome_gain": 0.5
     },
     "eval-64-acceptance-tests-red-baseline-writes-nothing": {
       "skill": "acceptance-tests",
@@ -670,7 +790,9 @@
       "date": "2026-11-21",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-65-acceptance-tests-declares-the-missing-interface": {
       "skill": "acceptance-tests",
@@ -681,7 +803,9 @@
       "date": "2026-11-21",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-66-refactor-standalone-no-ledger": {
       "skill": "refactor-review",
@@ -692,7 +816,9 @@
       "date": "2026-11-21",
       "date_from": "run.json mtime",
       "delta_mean": 0.944,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-67-refactor-uncovered-smell-left": {
       "skill": "refactor-review",
@@ -703,7 +829,9 @@
       "date": "2026-11-21",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-68-teardown-empty-diff-stops": {
       "skill": "devils-advocate",
@@ -714,7 +842,9 @@
       "date": "2026-11-21",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 0.667,
+      "outcome_gain": 0.333
     },
     "eval-69-teardown-finds-the-lowered-bar": {
       "skill": "devils-advocate",
@@ -725,7 +855,9 @@
       "date": "2026-11-21",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 0.75,
+      "outcome_gain": 0.25
     },
     "eval-7-postmortem-widens-range-and-describes": {
       "skill": "post-mortem",
@@ -736,7 +868,9 @@
       "date": "2026-11-18",
       "date_from": "run.json mtime",
       "delta_mean": 0.967,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 0.8,
+      "outcome_gain": 0.2
     },
     "eval-70-verdict-red-run-blocks-go": {
       "skill": "tyr-verdict",
@@ -747,7 +881,9 @@
       "date": "2026-11-21",
       "date_from": "run.json mtime",
       "delta_mean": 0.958,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 0.0,
+      "outcome_gain": 1.0
     },
     "eval-71-verdict-weakened-check-not-refuted-by-green": {
       "skill": "tyr-verdict",
@@ -758,7 +894,9 @@
       "date": "2026-11-21",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-72-nexus-sets-up-the-increment": {
       "skill": "nexus",
@@ -769,7 +907,9 @@
       "date": "2026-11-21",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-73-nexus-merges-on-the-go-and-cleans-up": {
       "skill": "nexus",
@@ -780,7 +920,9 @@
       "date": "2026-11-21",
       "date_from": "run.json mtime",
       "delta_mean": 0.97,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-74-architect-adr-binds-the-round": {
       "skill": "architect-deep-dive",
@@ -791,7 +933,9 @@
       "date": "2026-11-21",
       "date_from": "run.json mtime",
       "delta_mean": 0.875,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 0.0,
+      "outcome_gain": 1.0
     },
     "eval-75-brief-archives-finished-change": {
       "skill": "agent-brief",
@@ -802,7 +946,61 @@
       "date": "2026-11-21",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
+    },
+    "eval-76-hotfix-email-case-no-lockout": {
+      "skill": "hotfix",
+      "iteration": "iteration-81",
+      "n": 3,
+      "staging": "harness",
+      "skill_hash": "973cb6cc139cf0d42e51ca52322e30a826932da6f3654a206d845e4af6fcb522",
+      "date": "2026-11-26",
+      "date_from": "run.json finished",
+      "delta_mean": 1.0,
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
+    },
+    "eval-77-appsec-review-traced-not-sampled": {
+      "skill": "appsec",
+      "iteration": "iteration-81",
+      "n": 3,
+      "staging": "harness",
+      "skill_hash": "beb90f4d6090362edab2c58ef05305082fa2b15040b6cc0940b028a2b101b08f",
+      "date": "2026-11-26",
+      "date_from": "run.json finished",
+      "delta_mean": 0.976,
+      "cap_mean": 0.952,
+      "cap_base": 0.857,
+      "outcome_gain": 0.095
+    },
+    "eval-78-hardening-review-hidden-exposure": {
+      "skill": "hardening",
+      "iteration": "iteration-81",
+      "n": 3,
+      "staging": "harness",
+      "skill_hash": "c09181f0be80c6ba3732b30ef1f824302327e04089c59f3edd601d72f31cff1c",
+      "date": "2026-11-26",
+      "date_from": "run.json finished",
+      "delta_mean": 1.0,
+      "cap_mean": 0.952,
+      "cap_base": 0.857,
+      "outcome_gain": 0.095
+    },
+    "eval-79-threatmodel-review-side-path-skips-the-hold": {
+      "skill": "threatmodel",
+      "iteration": "iteration-81",
+      "n": 3,
+      "staging": "harness",
+      "skill_hash": "6f4f2134c34a838e291b0f7976d2367643bd33bd0cdd18f04974a71aa970071c",
+      "date": "2026-11-26",
+      "date_from": "run.json finished",
+      "delta_mean": 0.897,
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-8-hotfix-node-shared-cause": {
       "skill": "hotfix",
@@ -813,7 +1011,22 @@
       "date": "2026-11-18",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
+    },
+    "eval-80-pipelines-opens-to-forks": {
+      "skill": "pipelines",
+      "iteration": "iteration-81",
+      "n": 3,
+      "staging": "harness",
+      "skill_hash": "4b645ce8eb1d075829adea9715d535b1bc55853596fef723bebe42162d1ef96d",
+      "date": "2026-11-26",
+      "date_from": "run.json finished",
+      "delta_mean": 1.0,
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     },
     "eval-9-hotfix-jvm-both-callers": {
       "skill": "hotfix",
@@ -824,7 +1037,9 @@
       "date": "2026-11-18",
       "date_from": "run.json mtime",
       "delta_mean": 1.0,
-      "cap_mean": 1.0
+      "cap_mean": 1.0,
+      "cap_base": 1.0,
+      "outcome_gain": 0.0
     }
   }
 }

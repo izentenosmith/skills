@@ -31,6 +31,14 @@ for f in verdict-red verdict-bar; do
 done
 
 echo
+echo "== hotfix-accounts (eval 76) =="
+# Standard library only (CI runs unittest), so a bare venv: run.py treats a
+# fixture with tests/ as unbuilt until it has .venv/bin/python.
+f=hotfix-accounts
+[ -d "$f/.venv" ] || python3 -m venv --without-pip "$f/.venv"
+(cd "$f" && .venv/bin/python -m unittest discover -s tests -p '*_test.py' 2>&1 | tail -1) || true
+
+echo
 echo "== incident fixture =="
 ./incident/make-history.sh
 

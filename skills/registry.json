@@ -737,7 +737,7 @@
         "scripts": [],
         "harness": true
       },
-      "last_eval": "2026-11-22",
+      "last_eval": "2026-11-26",
       "evals": [
         {
           "eval": "eval-24-pipelines-review-untrusted-and-rebuild",
@@ -764,6 +764,15 @@
           "n": 3,
           "date": "2026-11-22",
           "delta_mean": 0.967,
+          "cap_mean": 1.0
+        },
+        {
+          "eval": "eval-80-pipelines-opens-to-forks",
+          "id": 80,
+          "iteration": "iteration-81",
+          "n": 3,
+          "date": "2026-11-26",
+          "delta_mean": 1.0,
           "cap_mean": 1.0
         }
       ]
@@ -1028,7 +1037,7 @@
         "scripts": [],
         "harness": true
       },
-      "last_eval": "2026-11-18",
+      "last_eval": "2026-11-26",
       "evals": [
         {
           "eval": "eval-8-hotfix-node-shared-cause",
@@ -1072,6 +1081,15 @@
           "iteration": "iteration-48",
           "n": 3,
           "date": "2026-11-18",
+          "delta_mean": 1.0,
+          "cap_mean": 1.0
+        },
+        {
+          "eval": "eval-76-hotfix-email-case-no-lockout",
+          "id": 76,
+          "iteration": "iteration-81",
+          "n": 3,
+          "date": "2026-11-26",
           "delta_mean": 1.0,
           "cap_mean": 1.0
         }
@@ -1352,7 +1370,7 @@
         "scripts": [],
         "harness": true
       },
-      "last_eval": "2026-11-18",
+      "last_eval": "2026-11-26",
       "evals": [
         {
           "eval": "eval-41-appsec-review-inventory-and-secrets",
@@ -1380,6 +1398,15 @@
           "date": "2026-11-18",
           "delta_mean": 0.929,
           "cap_mean": 1.0
+        },
+        {
+          "eval": "eval-77-appsec-review-traced-not-sampled",
+          "id": 77,
+          "iteration": "iteration-81",
+          "n": 3,
+          "date": "2026-11-26",
+          "delta_mean": 0.976,
+          "cap_mean": 0.952
         }
       ]
     },
@@ -1394,7 +1421,7 @@
         "scripts": [],
         "harness": true
       },
-      "last_eval": "2026-11-18",
+      "last_eval": "2026-11-26",
       "evals": [
         {
           "eval": "eval-44-hardening-review-mixed-estate",
@@ -1422,6 +1449,15 @@
           "date": "2026-11-18",
           "delta_mean": 0.974,
           "cap_mean": 1.0
+        },
+        {
+          "eval": "eval-78-hardening-review-hidden-exposure",
+          "id": 78,
+          "iteration": "iteration-81",
+          "n": 3,
+          "date": "2026-11-26",
+          "delta_mean": 1.0,
+          "cap_mean": 0.952
         }
       ]
     },
@@ -1436,7 +1472,7 @@
         "scripts": [],
         "harness": true
       },
-      "last_eval": "2026-11-18",
+      "last_eval": "2026-11-26",
       "evals": [
         {
           "eval": "eval-38-threatmodel-review-design-abuse-and-fallback",
@@ -1463,6 +1499,15 @@
           "n": 3,
           "date": "2026-11-18",
           "delta_mean": 0.949,
+          "cap_mean": 1.0
+        },
+        {
+          "eval": "eval-79-threatmodel-review-side-path-skips-the-hold",
+          "id": 79,
+          "iteration": "iteration-81",
+          "n": 3,
+          "date": "2026-11-26",
+          "delta_mean": 0.897,
           "cap_mean": 1.0
         }
       ]

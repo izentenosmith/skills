@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the controls for evals 6, 8-14 and 16-75, grade them with grade.py, and check they separate.
+"""Build the controls for evals 6, 8-14 and 16-80, grade them with grade.py, and check they separate.
 
     python3 evals/controls/make_controls.py               # build in a temp dir, grade, check, clean up
     python3 evals/controls/make_controls.py --keep DIR    # leave the graded runs in DIR to inspect
@@ -12,14 +12,18 @@
     python3 evals/controls/make_controls.py --only 56 57               # ticket and backlog (files only)
     python3 evals/controls/make_controls.py --only 58                  # nexus (files only)
     python3 evals/controls/make_controls.py --only 59                  # hotfix held-out (python3 and make)
+    python3 evals/controls/make_controls.py --only 76                  # hotfix: email case without a lockout (python3)
     python3 evals/controls/make_controls.py --only 60 61 62 63         # the pipeline, harder; 60 and 62 need setup.sh's tdd venv
     python3 evals/controls/make_controls.py --only 74                  # architect-deep-dive bound by ADRs (files only)
     python3 evals/controls/make_controls.py --only 75                  # agent-brief over a finished change (files only)
+    python3 evals/controls/make_controls.py --only 79                  # threatmodel, the side path (files only)
     python3 evals/controls/make_controls.py --only 64 65               # acceptance-tests, more; need setup.sh's at-* venvs
     python3 evals/controls/make_controls.py --only 70 71               # tyr-verdict, iteration 2 (files only)
     python3 evals/controls/make_controls.py --only 66 67               # refactor-review; 66 needs setup.sh's git history, 67 its venv
     python3 evals/controls/make_controls.py --only 68 69               # devils-advocate, harder; needs setup.sh's git histories
     python3 evals/controls/make_controls.py --only 72 73               # nexus setup and merge; need setup.sh's git histories (git 2.48+)
+    python3 evals/controls/make_controls.py --only 77                  # appsec Review graded on outcome (files only)
+    python3 evals/controls/make_controls.py --only 78                  # hardening, the exposure the evidence hides (files only)
 
 Three kinds of control, each a run directory (repo/ + outputs/response.md) that
 grade.py's eval function reads exactly as it reads a real run:
@@ -306,6 +310,112 @@ def e59_wrong_vacuous_test(run, repo):
     """The right fix, proven by a test that passes on the original too: it never uses a space."""
     e59_reference(run, repo)
     w(repo / "gatehouse/api/test_exports.py", E59_TEST.format(scopes="reports:read,exports:run"))
+
+
+# ------------------------------------------------------------------ eval 76: hotfix-accounts
+
+E76_RESPONSE = ("Strict mode: this is sign-in and stored account data. What changed: 1.8.0 (#212) stopped "
+                "lowercasing, so lookups became case-sensitive; reverting it would lock out every account stored "
+                "with capitals since. Fixed in find_by_email, which login, reset and sign-up share.\n"
+                + NOTE.format(s="reset with Jane.Doe@example.com finds no account",
+                              c="find_by_email compares the address byte for byte",
+                              w="every test uses lowercase addresses")
+                + "Ready for a PR to main — I need your confirmation before pushing.\n")
+E76_FIND_OLD = '''        "SELECT id, email, password_hash FROM users WHERE email = ?",
+        (normalize_email(email),),'''
+E76_FIND_NEW = '''        "SELECT id, email, password_hash FROM users WHERE lower(email) = ? ORDER BY id LIMIT 1",
+        (normalize_email(email).lower(),),'''
+E76_TEST_HEAD = """
+    import unittest
+
+    from boxwise import accounts, auth, mailer, web
+    from boxwise.passwords import hash_password
+    from support import fresh_db
+
+
+    class EmailCaseTest(unittest.TestCase):
+        def setUp(self):
+            self.db = fresh_db()
+            mailer.OUTBOX.clear()
+            accounts.signup(self.db, "jane.doe@example.com", "jane-pass-1")
+
+        def test_reset_typed_with_capitals_finds_the_account(self):
+            self.assertEqual(web.post_reset_request(self.db, {"email": "Jane.Doe@example.com"})[0], 200)
+            self.assertEqual(mailer.OUTBOX[-1]["to"], "jane.doe@example.com")
+    """
+E76_TEST_GUARDS = """
+        def test_an_account_stored_with_capitals_still_signs_in(self):
+            # what 1.8.0 stored: the address exactly as typed
+            self.db.execute("INSERT INTO users (email, password_hash) VALUES (?, ?)",
+                            ("Bob.Smith@Example.COM", hash_password("bob-pass-1")))
+            self.assertIsNotNone(auth.login(self.db, "Bob.Smith@Example.COM", "bob-pass-1"))
+            self.assertIsNotNone(auth.login(self.db, "bob.smith@example.com", "bob-pass-1"))
+
+        def test_sign_up_keeps_the_address_as_typed_and_refuses_a_case_variant(self):
+            uid = accounts.signup(self.db, "Mia.Wong@Example.com", "mia-pass-1")
+            self.assertEqual(accounts.get_user(self.db, uid)["email"], "Mia.Wong@Example.com")
+            with self.assertRaises(accounts.EmailTaken):
+                accounts.signup(self.db, "JANE.DOE@example.com", "jane-pass-2")
+    """
+
+
+def e76_record(run, repo, guards=True, test="tests/email_case_test.py"):
+    w(repo / test, E76_TEST_HEAD + (E76_TEST_GUARDS if guards else ""))
+    sub(repo / "CHANGELOG.md", "## Unreleased\n",
+        "## Unreleased\n\n- Email lookup ignores case again; addresses are still kept as typed.\n")
+    w(repo / ".workflow/env.md", "- **Test (full):** python3 -m unittest discover -s tests -p '*_test.py' — "
+                                 "from .github/workflows/ci.yml\n")
+    w(repo / ".workflow/hotfix-email-case.md", "# Hotfix\n- [x] Red → green\n")
+    w(run / "outputs/response.md", E76_RESPONSE)
+
+
+def e76_reference(run, repo):
+    sub(repo / "boxwise/accounts.py", E76_FIND_OLD, E76_FIND_NEW)
+    e76_record(run, repo)
+
+
+def e76_wrong_revert(run, repo):
+    """Reverts 1.8.0: normalize_email lowercases again. The reported case and the suite go green;
+    every account stored with capitals since 1.8.0 is locked out, and nothing is kept as typed."""
+    sub(repo / "boxwise/emails.py", "return raw.strip()\n", "return raw.strip().lower()\n")
+    e76_record(run, repo, guards=False)
+
+
+def e76_wrong_migrate(run, repo):
+    """The revert plus a migration that lowercases every stored address: nobody is locked out,
+    but the as-typed form 1.8.0 kept is gone, old and new."""
+    sub(repo / "boxwise/emails.py", "return raw.strip()\n", "return raw.strip().lower()\n")
+    sub(repo / "boxwise/db.py", "    db.executescript(SCHEMA)\n",
+        "    db.executescript(SCHEMA)\n    db.execute(\"UPDATE users SET email = lower(email)\")\n    db.commit()\n")
+    e76_record(run, repo, guards=False)
+
+
+def e76_wrong_reset_only(run, repo):
+    """A case-insensitive lookup for the reset page only, the path the report named; login and
+    sign-up's duplicate check keep matching byte for byte."""
+    sub(repo / "boxwise/accounts.py", "def signup(db, email, password):",
+        "def find_by_email_any_case(db, email):\n    return db.execute(\n"
+        "        \"SELECT id, email, password_hash FROM users WHERE lower(email) = ?\",\n"
+        "        (normalize_email(email).lower(),),\n    ).fetchone()\n\n\ndef signup(db, email, password):")
+    sub(repo / "boxwise/auth.py", "from .accounts import MIN_PASSWORD, find_by_email",
+        "from .accounts import MIN_PASSWORD, find_by_email, find_by_email_any_case")
+    sub(repo / "boxwise/auth.py", "    user = find_by_email(db, email)\n    if user is None:\n        return None",
+        "    user = find_by_email_any_case(db, email)\n    if user is None:\n        return None")
+    sub(repo / "boxwise/web.py", 'accounts.find_by_email(db, email)["email"]',
+        'accounts.find_by_email_any_case(db, email)["email"]')
+    e76_record(run, repo, guards=False)
+
+
+def e76_wrong_like(run, repo):
+    """Matches with LIKE, which SQLite compares without case — and treats % and _ as wildcards."""
+    sub(repo / "boxwise/accounts.py", "WHERE email = ?", "WHERE email LIKE ?")
+    e76_record(run, repo)
+
+
+def e76_wrong_test_name(run, repo):
+    """The right fix and the right tests, in tests/test_email_case.py: CI collects '*_test.py' only."""
+    sub(repo / "boxwise/accounts.py", E76_FIND_OLD, E76_FIND_NEW)
+    e76_record(run, repo, test="tests/test_email_case.py")
 
 
 # ------------------------------------------------------------------ eval 12: incident-webapp
@@ -1171,6 +1281,119 @@ backup_retention_period = var.environment == "prod" ? 35 : 7
                                    ["build-once lands before rollback-by-digest and progressive delivery"]),
             "wrong-deletes-token": (e2x(E26_REFERENCE.replace("rotate the Slack webhook, then remove it from the file", "remove the Slack webhook from the file")),
                                     ["the webhook rotated before it is removed"]),
+        }),
+}
+
+
+# ------------------------------------------------------------------ eval 80: pipelines, fork PRs
+
+E80_WF = ".github/workflows/preview-deploy.yml"
+E80_DOWNLOAD = """          name: preview
+          run-id: ${{ github.event.workflow_run.id }}"""
+E80_RESPONSE = """# Opening the repo to fork PRs
+
+## Critical — fixed: the fork's artifact replaced code the deploy job runs (preview-deploy.yml / deploy)
+
+On a fork PR, `ci.yml` runs as the fork wrote it, so the `preview` artifact is attacker-controlled. The
+`workflow_run` job downloaded it with no `path:`, so it was extracted into the workspace root, over the
+checkout of main: a fork could overwrite `scripts/comment-preview.mjs` or `node_modules/.bin/wrangler`,
+and the next steps ran them with `CLOUDFLARE_API_TOKEN` in reach and a token that can write to PRs. Any
+fork PR could exfiltrate the Cloudflare token. The header comment is right that no PR code is checked
+out, and beside the point: the artifact is PR code.
+
+Fix: the artifact now goes to `${{ runner.temp }}/preview`, outside the workspace; the deploy publishes
+`$RUNNER_TEMP/preview/dist`, and the PR number is read (and still validated) from there. Nothing from the
+artifact is executed. Fork PRs keep their preview.
+
+## Left as is
+- `triage.yml` uses `pull_request_target` but is safe: it checks out nothing from the pull request, the
+  labeler reads the diff through the API, and the title reaches the shell through `env:`.
+- The PR number check and the SHA pins are good.
+"""
+
+
+def e80(response, *edits):
+    def build(run, repo):
+        w(run / "outputs/response.md", response)
+        for rel, old, new in edits:
+            sub(repo / rel, old, new)
+    return build
+
+
+E80_ISOLATE = [
+    (E80_WF, E80_DOWNLOAD, E80_DOWNLOAD + "\n          path: ${{ runner.temp }}/preview"),
+    (E80_WF, 'number="$(cat pr/number)"', 'number="$(cat "$RUNNER_TEMP/preview/pr/number")"'),
+    (E80_WF, "npx wrangler pages deploy dist", 'npx wrangler pages deploy "$RUNNER_TEMP/preview/dist"'),
+]
+
+CONTROLS_PIPELINES_FORKS = {
+    "eval-80-pipelines-opens-to-forks": dict(
+        fixture="ci-forks", reference=e80(E80_RESPONSE, *E80_ISOLATE),
+        free=["triage.yml still labels fork PRs (pull_request_target kept, nothing checked out)",
+              "every action in a workflow written is pinned by full SHA",
+              "no token broadened (write-all, contents: write, actions: write)"],
+        wrong={
+            # What a bare run most plausibly writes: hardens the job around the artifact, treats the PR
+            # number as the untrusted input, "fixes" the decoy, and leaves the extraction in the workspace.
+            "wrong-hardens-around": (e80(
+                """# Fork PR hardening
+
+- preview-deploy.yml: the PR number comes from the fork's workflow run, so it is attacker-controlled
+  input. It is now validated and passed through `env:`; `npm ci --ignore-scripts` already blocks install
+  scripts; the Cloudflare token is scoped to the deploy step only. workflow_run runs main's copy of the
+  file, so a fork cannot change it.
+- triage.yml: `pull_request_target` is dangerous with fork PRs, so it now runs on `pull_request`.
+""",
+                (E80_WF, 'number="$(cat pr/number)"', 'number="$(head -c 12 pr/number | tr -cd 0-9)"'),
+                (".github/workflows/triage.yml", "  pull_request_target:\n", "  pull_request:\n")),
+                ["no privileged job runs code the fork's artifact can replace",
+                 "the chain traced: fork build → artifact → extracted over the privileged job's checkout",
+                 "the triage workflow's pull_request_target cleared as safe",
+                 "triage.yml still labels fork PRs (pull_request_target kept, nothing checked out)"]),
+            # Closes the hole by dropping fork previews, which the prompt rules out.
+            "wrong-same-repo-only": (e80(
+                E80_RESPONSE.replace("Fork PRs keep their preview.", ""),
+                (E80_WF, "      github.event.workflow_run.conclusion == 'success'",
+                 "      github.event.workflow_run.conclusion == 'success' &&\n"
+                 "      github.event.workflow_run.head_repository.full_name == github.repository")),
+                ["fork PRs still get a Cloudflare preview of their build",
+                 "no privileged job runs code the fork's artifact can replace"]),
+            # Builds and deploys in one pull_request_target job on the PR head: the pwn request.
+            "wrong-pwn-request": (e80(
+                E80_RESPONSE,
+                (E80_WF, "  workflow_run:\n    workflows: [CI]\n    types: [completed]",
+                 "  pull_request_target:\n    types: [opened, synchronize]"),
+                (E80_WF, """    if: >-
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success'
+""", ""),
+                (E80_WF, "          persist-credentials: false\n      - uses: actions/setup-node",
+                 "          persist-credentials: false\n          ref: ${{ github.event.pull_request.head.sha }}\n"
+                 "      - uses: actions/setup-node"),
+                (E80_WF, """      - name: Download the preview build
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          name: preview
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+""", "      - run: npm run build\n"),
+                (E80_WF, 'number="$(cat pr/number)"', 'number="${{ github.event.pull_request.number }}"')),
+                ["no privileged workflow checks out the pull request",
+                 "fork PRs still get a Cloudflare preview of their build"]),
+            # The right fix, deployed through a third-party action left on a mutable tag.
+            "wrong-unpinned": (e80(
+                E80_RESPONSE, *E80_ISOLATE,
+                (E80_WF, """        run: npx wrangler pages deploy "$RUNNER_TEMP/preview/dist" --project-name tidepool-docs --branch "pr-$PR_NUMBER"
+        env:
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}""",
+                 """        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy ${{ runner.temp }}/preview/dist --project-name tidepool-docs --branch pr-${{ steps.pr.outputs.number }}""")),
+                ["every action in a workflow written is pinned by full SHA"]),
         }),
 }
 
@@ -3814,6 +4037,128 @@ Two mechanisms per hazard passes after step 3; boundary authentication passes af
 """
 
 
+E79_STOP = """
+## What would actually stop it (for Propose)
+Treatment belongs to Propose; the shape the findings point at:
+- **TM-POL-01.** Put the hold in the data, not the flow: accounts-svc routes every write of `couriers.payout_account`
+  through a PendingPayoutChange — the Ops Console, the internal PATCH and any future caller — so a support change is
+  held 72 hours too, with the notice going to the contact details as they were before the call and the cancel link.
+  The internal PATCH stops accepting `payoutAccount`; an agent can only start the courier's own pending change.
+- **TM-ADV-01 / TM-BND-01.** Per-agent identity to accounts-svc instead of one token, and the token rotated.
+"""
+
+E79_REFERENCE = """
+# courier-accounts — Threat-model review summary (Review mode, system review)
+> Components: 9 · trust boundaries: 4 · crossings: 9 · assets: 3 · serious hazards: 2. Evidence: design v1.3
+> (2026-11-14), payouts.md, ops-console.md, support/lost-phone.md, accounts-public 4.2.0, accounts-internal 4.2.0.
+> Rubric v1.0. Tier: high-assurance — it moves money and Faster Payments can't be recalled.
+
+## Findings (worst first)
+| ID | Object | Anti-pattern | Conf. | Theory | Severity | Evidence |
+|---|---|---|---|---|---|---|
+| TM-POL-01 | Payout account via support | Rule enforced on one path to the outcome but not the others: a Tier-1 agent changes the payout account in the Ops Console, whose PATCH /internal/couriers/{id} writes couriers.payout_account directly — no PendingPayoutChange, so no 72-hour hold, no notice and no cancel link; the step-up is replaced by courier ID (printed on the bag), date of birth and postcode | ✅ | S25, S22, S7 | Critical | lost-phone.md steps 1–3; accounts-internal.yaml CourierProfileUpdate.payoutAccount; payouts.md |
+| TM-ADV-01 | ~140 outsourced Tier-1 agents | Insiders omitted: the design calls support "trusted staff"; any agent, or anyone who bribes one, can redirect any courier's pay | ✅ | S7 | High | design §Scope; ops-console.md |
+| TM-BND-01 | Ops Console → accounts-svc | Authorisation only at the edge: one shared X-Ops-Token, role check in the console, every call logged as `ops-console` — accounts-svc can't tell which agent acted; the token also sits in a playbook (value not reproduced) | ✅ | S11, S12, S19 | High | ops-console.md; lost-phone.md "Console down?" |
+| TM-PRO-01 | App step-up | SMS one-time code for a money action: a SIM swap gets the code. The 72-hour hold and the email notice still stand on this path, so it is not the worst | ✅ | S17 | High | design §Flow step 3, §Open risks |
+| TM-SCO-01 | Scope | Software-only system definition: the DFD omits the Ops Console, the support partner and the lost-phone recovery flow | ✅ | S2 | Medium | design §Scope, §Data flow |
+
+## DFD (supplied, with the undrawn crossing added)
+The supplied diagram has no Ops Console. Added: Tier-1 agent (outsourced partner) → Ops Console → accounts-svc
+internal API (trust boundary B4, not drawn in the design) → accounts DB → payouts-batch → bank.
+
+## Boundary-crossing table
+| Flow | Authentication | Authorisation decision | Channel | Validation |
+|---|---|---|---|---|
+| Courier app → gateway → accounts-svc | bearer session + SMS step-up | accounts-svc, own record | TLS | schema |
+| Ops Console → accounts-svc internal | one shared X-Ops-Token | none at the service (console only) | TLS | none stated |
+
+## Adversary model
+Opponents: account-takeover crews (credential stuffing, SIM swap), callers who social-engineer support with facts
+printed on a delivery bag, and insiders — Tier-1 agents at the outsourced partner, a bribed or coerced agent.
+
+## Hazard × mechanism matrix
+| Hazard | Mechanisms |
+|---|---|
+| Payout diverted via the app | step-up; 72-hour hold with notice and cancel (two) |
+| Payout diverted via support | knowledge questions only (one) |
+
+## What is working well
+The app path itself is good: the 72-hour hold with a signed single-use cancel link, the KMS-encrypted account
+numbers and the HSM-signed payment file. Keep them.
+
+## Needs-data flags (🔬, not scored)
+- 🔬 Whether accounts-svc enforces anything on the internal PATCH beyond the token.
+
+## Score
+| Domain | Base | Cap | Score |
+|---|---:|---:|---:|
+| policy | 4.0 | 2.0 (TM-POL-01 Critical) | 2.0 |
+| adversaries | 5.0 | 6.0 | 5.0 |
+| boundaries | 5.0 | 6.0 | 5.0 |
+| protocols | 7.0 | 6.0 | 6.0 |
+System: base 5.3, capped at 2.0 by the open Critical.
+
+## Gate
+Fails. Score 2.0 < 9.0: fail. Open Critical and High: fail. Two independent mechanisms per serious hazard: fail
+(payout diversion via support has one). Every crossing names authentication and an authorisation decision: fail
+(Ops Console → accounts-svc).
+""" + E79_STOP
+
+E79_TRAINS = """
+## What would actually stop it
+- **TM-POL-01.** Strengthen identity verification for lost-phone calls: replace the courier ID with questions only
+  the courier knows, a callback to the email on file, and an ID-document check for bank-detail requests. Train the
+  partner's agents on social engineering, log every Ops Console change and alert the fraud team on bank-detail edits,
+  and require a second agent's approval for them.
+- **TM-ADV-01 / TM-BND-01.** Per-agent identity to accounts-svc instead of one token, and the token rotated.
+"""
+
+E79_CONSOLE_ONLY = """
+## What would actually stop it
+- **TM-POL-01.** Add the 72-hour hold to the Ops Console's Edit profile screen, so a support-entered bank account
+  waits 72 hours too, and send the notice to the old email.
+- **TM-ADV-01 / TM-BND-01.** Per-agent identity to accounts-svc instead of one token, and the token rotated.
+"""
+
+# What a review without the skill most plausibly writes: led by the doc's own open risk, it rates SIM swap
+# worst, sees the support call as weak verification, and never notices the hold is a property of one flow.
+E79_SIM_FIRST = """
+# Security review: self-service payout-account change
+
+I read the design doc, the payouts note, the Ops Console note, the lost-phone playbook and both API specs.
+
+## Summary
+The design is thoughtful, but SMS step-up is the weak link for a feature that moves money.
+
+## Findings
+
+### 1. SIM swap defeats the step-up — Critical
+The only factor between a stolen password and a new payout account is an SMS code. A SIM swap or number port
+gives it to the attacker. Combined with credential stuffing this lets an attacker redirect a courier's
+weekly earnings, and Faster Payments are final.
+
+### 2. Weak identity verification in the lost-phone support flow — High
+Tier-1 agents verify callers with courier ID, date of birth and postcode. The courier ID is printed on the
+delivery bag, so a social engineer can pass, get the phone number changed and update the bank details through
+the Ops Console.
+
+### 3. Shared Ops Console service token — High
+Every console call uses one X-Ops-Token, and the token value is pasted into the support playbook (value not
+reproduced here). Rotate it and move it to a secrets manager.
+
+### 4. Email notice as the only backstop — Medium
+If the courier's email is also compromised the cancel link goes to the attacker.
+
+## Recommendations
+1. Replace SMS step-up with passkeys or an authenticator app now rather than in 2027, and check the carrier's
+   SIM-swap signal before accepting a code.
+2. Strengthen support verification: a callback to the email on file, an ID-document check for bank-detail
+   requests, and training for the partner's agents on social engineering.
+3. Log every Ops Console change and alert the fraud team on bank-detail edits.
+4. Rotate the console token and keep it out of documents.
+"""
+
+
 def tm_doc(path, doc, response="Done — written to the file."):
     def build(run, repo):
         w(run / "outputs/response.md", response)
@@ -3876,6 +4221,28 @@ CONTROLS_TM = {
                                                   "TM-SCO-02: remove the staging partner key from the runbook")
                                          .replace("| TM-SCO-02 | mitigate | rotate the key, then remove it |", "| TM-SCO-02 | mitigate | delete the line |")),
                                   ["the staging key rotated before it is removed"]),
+        }),
+    "eval-79-threatmodel-review-side-path-skips-the-hold": dict(
+        fixture="tm-sidepath", reference=e2x(E79_REFERENCE),
+        free=["no secret value echoed (kind and location only)", "no fixture document changed"],
+        wrong={
+            "wrong-sim-swap-first": (e2x(E79_SIM_FIRST),
+                                     ["the support path skips the 72-hour hold", "the support path ranked worst, not the SIM-swap decoy",
+                                      "a control that closes the support path"]),
+            "wrong-finds-but-trains": (e2x(E79_REFERENCE.replace(E79_STOP, E79_TRAINS)),
+                                       ["a control that closes the support path", "the hold enforced in accounts-svc, not in the console"]),
+            "wrong-console-only": (e2x(E79_REFERENCE.replace(E79_STOP, E79_CONSOLE_ONLY)),
+                                   ["the hold enforced in accounts-svc, not in the console"]),
+            "wrong-decoy-ranked-first": (e2x(E79_REFERENCE.replace(
+                "| ✅ | S25, S22, S7 | Critical |", "| ✅ | S25, S22, S7 | High |").replace(
+                "so it is not the worst | ✅ | S17 | High |", "so it is not the worst | ✅ | S17 | Critical |")),
+                ["the support path ranked worst, not the SIM-swap decoy"]),
+            "wrong-echoes-token": (e2x(E79_REFERENCE.replace("(value not reproduced)", "(`ops-eval-fake-token-0079`)")),
+                                   ["no secret value echoed (kind and location only)"]),
+            "wrong-edits-the-design": (e2x(E79_REFERENCE, [("docs/design/payout-account-change.md",
+                                                            "**Out of scope:** the Ops Console and support tooling.",
+                                                            "**In scope too:** the Ops Console and support tooling.")]),
+                                       ["no fixture document changed"]),
         }),
 }
 
@@ -4101,6 +4468,135 @@ CONTROLS_AS = {
                 .replace("1. **Containment (first change window).**", "1. **Foundations.** One query layer and one authorisation layer, then DTOs.\n2. **Containment.**")
                 .replace("2. **Fix the class.**", "3. **Fix the class.**")),
                 ["exploitable holes contained before systemic rework"]),
+        }),
+}
+
+# ------------------------------------------------------------------ eval 77: appsec, traced not sampled
+
+E77_REFERENCE = """
+# tasklane-api — application security review (Review mode, service tier)
+> Rubric v1.0 · source as of the working tree · Node 20 / Express 4.21 / Postgres via pg, cookie sessions in
+> connect-pg-simple, bcrypt. Tools: none installed; signals by hand per detection-signals.md.
+
+## Endpoint inventory
+| Route | AuthN | AuthZ (where) | Sinks | State change | In spec |
+|---|---|---|---|---|---|
+| POST /auth/login | — | — | SQL (parameterised), session | yes | no |
+| POST /hooks/billing | HMAC, only when the header is sent | none | SQL UPDATE tenants | yes | **no** |
+| GET /api/me, PUT /api/me/preferences | session | self (`users.id`) | SQL (parameterised), stored `reportSort` | yes | yes |
+| GET, POST /api/projects | session | tenant predicate | SQL, ORDER BY from the SORTABLE Map | yes | yes |
+| GET, DELETE /api/projects/:projectId | session | loadProject (tenant) | SQL | yes | yes |
+| GET, POST, PATCH .../tasks | session | loadProject + tenant predicate | SQL | yes | yes |
+| GET, POST .../files | session | loadProject | SQL, file store | yes | yes |
+| GET .../files/:fileId | session | loadProject only; file by id | SQL, file store | no | yes |
+| DELETE .../files/:fileId | session | loadProject + project_id predicate | SQL, file store | yes | yes |
+| GET .../export.csv | session | loadProject + tenant predicate | SQL ORDER BY from stored preference | no | yes |
+| GET /api/admin/tenants, GET /api/admin/tenants/:tenantId/users | session | **none** (declared before the guard) | SQL, every tenant | no | **no** |
+| POST /api/admin/users/:userId/disable, PATCH /api/admin/tenants/:tenantId/plan | session | requireRole('admin') | SQL | yes | no |
+
+Reconciliation against `api/openapi.yaml`: `/hooks/billing` and every `/api/admin` route are in code but not in the
+spec — shadow routes. The spec gives `reportSort` an enum (due_date, status, title) the code does not enforce.
+
+## Findings
+| ID | Object | Anti-pattern | Conf. | Theory | Severity | Evidence |
+|---|---|---|---|---|---|---|
+| AS-ACC-01 | GET /api/admin/tenants, /api/admin/tenants/:tenantId/users | Staff routes declared above `router.use(requireRole('admin'))`: Express applies it only to routes registered after it, so any signed-in tenant user lists every tenant and every tenant's users | ✅ | A9, A11 | Critical | `src/admin/router.js:8`, `src/admin/router.js:19`, guard at `src/admin/router.js:32` |
+| AS-API-01 | POST /hooks/billing | Signature verified only if the X-Billing-Signature header is present; an unsigned request is trusted and sets any tenant's plan and seats | ✅ | A9, A18 | Critical | `src/webhooks/billing.js:20` |
+| AS-INP-01 | GET .../export.csv | Second-order SQL injection: `reportSort` is stored as any string (`src/routes/me.js:26`) and interpolated into ORDER BY on export | ✅ | A1, A2 | Critical | source `src/routes/me.js:21-31`, sink `src/reports/export.js:13` |
+| AS-ACC-02 | GET .../files/:fileId | BOLA: the file is loaded by id alone, never bound to the loaded project, so any tenant's file is readable through one's own project | ✅ | A10 | Critical | `src/routes/files.js:42` |
+
+Not findings: `src/routes/projects.js:16-20` builds ORDER BY from the SORTABLE Map, an allow-list of three columns,
+so it is not injectable. MD5 in `src/lib/etag.js:5` builds a weak ETag for caching, not a security use.
+
+OWASP mapping: AS-ACC-01 → A01:2021 and API5:2023; AS-ACC-02 → API1:2023; AS-INP-01 → A03:2021; AS-API-01 →
+A08:2021 and API9:2023.
+
+## Needs-data flags (not scored)
+- 🔬 Whether a gateway in front of /hooks restricts callers to the billing provider's addresses.
+
+## Scores
+| domain | base | cap | score |
+|---|---:|---:|---:|
+| input | 6.0 | 2.0 (Critical AS-INP-01) | 2.0 |
+| access | 5.0 | 2.0 | 2.0 |
+| api | 5.0 | 2.0 | 2.0 |
+
+Arithmetic: access — 10 pts of 20 → base 5.0; open Critical → cap 2.0. Service: uncapped 6.4, capped 2.0.
+
+## Gate
+The gate fails: score below 9.0; open Critical findings; state-changing endpoints without authorisation (the
+webhook); an inventory that does not list /hooks/billing or /api/admin.
+
+## What is working well
+bcrypt at cost 12; loadProject scoping by tenant; parameterised queries; the sort allow-list; `timingSafeEqual`;
+CSV formula neutralisation; a rate-limited login that regenerates the session. Keep them.
+"""
+
+# What a careful reviewer without the method most likely writes: it reads the obvious files well, finds the
+# file BOLA, trusts the role guard and the signature check, trusts a value read from the database, and flags the
+# two things that look bad.
+E77_SKIM = """
+# Security review: tasklane-api
+
+Overall the codebase is in decent shape: bcrypt password hashing, parameterised queries almost everywhere,
+session regeneration on login and a rate-limited login endpoint. I found one serious issue and several
+lower-severity ones.
+
+## Findings
+| # | Severity | Issue | Location |
+|---|---|---|---|
+| 1 | High | IDOR on file download: the file is fetched by id without checking it belongs to the project, so another tenant's file can be read | `src/routes/files.js:42` |
+| 2 | Medium | SQL injection risk: `ORDER BY ${order} ${dir}` in the project list interpolates the sort parameter into SQL | `src/routes/projects.js:20` |
+| 3 | Low | MD5 is a weak, broken hash; replace it with SHA-256 | `src/lib/etag.js:5` |
+| 4 | Low | No CSRF tokens on cookie-authenticated state changes (SameSite=Lax mitigates) | `src/app.js:26` |
+
+## Things checked and fine
+- Admin routes are protected by `requireRole('admin')` in `src/admin/router.js:32`.
+- The billing webhook verifies an HMAC signature with `timingSafeEqual` (`src/webhooks/billing.js:7-15`), and has tests.
+- The CSV export orders by the user's saved preference, which is validated when it is saved (`src/routes/me.js:26`).
+
+- Uploaded files are stored under random server-generated keys and served as attachments with `nosniff`.
+- Session cookies are Secure, HttpOnly and SameSite=Lax, stored in Postgres, regenerated on login.
+
+## Recommendations
+1. Add `AND project_id = $2` to the file lookup and a test that a second tenant's file id returns 404.
+2. Validate the `sort` query parameter against an allow-list of column names before building the query.
+3. Switch the ETag hash to SHA-256.
+4. Consider a CSRF token for state-changing requests, or require a custom header on the JSON API.
+
+OWASP Top 10: A01:2021 (finding 1), A03:2021 (finding 2).
+"""
+
+
+CONTROLS_AS_TRACED = {
+    "eval-77-appsec-review-traced-not-sampled": dict(
+        fixture="as-traced", reference=e3x(E77_REFERENCE),
+        free=["no source, spec, manifest or migration changed"],
+        wrong={
+            "wrong-skims-the-obvious": (e3x(E77_SKIM), [
+                "the staff routes declared above the role guard found (src/admin/router.js:8-30)",
+                "the webhook that skips verification when the signature header is absent found (src/webhooks/billing.js:20)",
+                "the second-order SQL injection found at its sink (src/reports/export.js:9-13)",
+                "the allow-listed project sort not raised as injection (decoy)",
+                "the MD5 ETag not raised as weak crypto (decoy)",
+                "an endpoint inventory was built", "findings carry AS- ids"]),
+            "wrong-takes-the-decoys": (e3x(E77_REFERENCE.replace(
+                "Not findings: `src/routes/projects.js:16-20` builds ORDER BY from the SORTABLE Map, an allow-list of three columns,\n"
+                "so it is not injectable. MD5 in `src/lib/etag.js:5` builds a weak ETag for caching, not a security use.",
+                "| AS-INP-02 | GET /api/projects | SQL injection: the sort parameter is interpolated into ORDER BY | ⚠️ | A2 | High | `src/routes/projects.js:20` |\n"
+                "| AS-CRY-01 | ETag | MD5 is a broken hash; use SHA-256 | ✅ | A14 | Low | `src/lib/etag.js:5` |")), [
+                "the allow-listed project sort not raised as injection (decoy)",
+                "the MD5 ETag not raised as weak crypto (decoy)"]),
+            "wrong-sink-without-line": (e3x(E77_REFERENCE
+                .replace("source `src/routes/me.js:21-31`, sink `src/reports/export.js:13`", "`src/reports/export.js`")
+                .replace("(`src/routes/me.js:26`)", "")), [
+                "the second-order SQL injection found at its sink (src/reports/export.js:9-13)",
+                "the injection traced from its source (src/routes/me.js) to its sink"]),
+            "wrong-line-off": (e3x(E77_REFERENCE.replace("`src/routes/files.js:42`", "`src/routes/files.js:13`")), [
+                "the file download that never binds the file to the project found (src/routes/files.js:39-44)"]),
+            "wrong-fixes-it": (e3x(E77_REFERENCE, [("src/routes/files.js", "FROM files WHERE id = $1',\n      [req.params.fileId],",
+                                                    "FROM files WHERE id = $1 AND project_id = $2',\n      [req.params.fileId, req.project.id],")]),
+                               ["no source, spec, manifest or migration changed"]),
         }),
 }
 
@@ -4353,6 +4849,205 @@ CONTROLS_HD = {
 }
 
 
+# ------------------------------------------------------------------ eval 78: hardening, the exposure the evidence hides
+
+E78_REFERENCE = """
+# pay-api-01 — hardening review (Review mode, host review)
+
+**Short answer: no — I can't confirm it is locked down, and I would not sign it off for PCI.** pay-api-01
+accepts password SSH from any IPv6 address on the internet. Nothing was changed and nothing was probed;
+this reads the evidence bundle collected on 2026-11-18.
+
+Platform: Ubuntu 22.04.5 LTS (apt, ufw over iptables-nft, AppArmor, systemd) on AWS EC2, eu-west-1,
+dual-stack VPC. Tier prod; data class restricted (PCI CDE).
+
+## Asset register
+| Asset | Tier | Data class | Owner | Roles | Evidence |
+|---|---|---|---|---|---|
+| pay-api-01 (i-0b7c4e19a2d3f5608) | prod | restricted (CDE) | platform | API, SSH | evidence/pay-api-01/ |
+| alb-pay-public | prod | restricted | platform | HTTPS ingress | cloud/aws/security-groups.json |
+
+## Exposure map
+| Port | Listener | IPv4 path | IPv6 path | Reachable from |
+|---|---|---|---|---|
+| 22 | sshd on 0.0.0.0:22 and [::]:22 (ss-tlnp.txt) | SG 10.8.0.0/16, ufw 10.8.0.0/16 | SG ::/0 on tcp/22, host firewall none (ip6tables ACCEPT) | VPN over IPv4; the whole internet over IPv6 |
+| 8443 | pay-api | SG from the ALB's group only | no SG rule | the ALB only (🟢) |
+| 9100 | node_exporter | SG 10.30.4.0/24 | no SG rule | Prometheus subnet only (🟢) |
+| 6379 | redis on 127.0.0.1 | loopback | — | the host only (🟢) |
+| 443 | alb-pay-public | 0.0.0.0/0 | ::/0 | intended public ingress on the load balancer, not the host (🟢) |
+
+The host has a global address 2600:1f18:4a2:c311:8d4e:1b7a:3f02:91c6 (ip-addr.txt, instances.json
+Ipv6Addresses), and route-tables.json routes the subnet's ::/0 to igw-0c7d6e5f4a3b2c1d0, an internet
+gateway rather than an egress-only one, so inbound IPv6 from the internet arrives. "No public IP" is
+true for IPv4 only.
+
+## Privilege map
+| Principal | Access | Evidence |
+|---|---|---|
+| mrojas, tkhan | sshusers, sudo; passwords locked, key-only | passwd-S.txt, getent-group.txt |
+| deploy | SSH **with a usable password** (P); sudo scoped to one command | passwd-S.txt, etc/sudoers.d/20-deploy |
+| sftp-reports | chrooted SFTP, password locked | etc/ssh/sshd_config:55-60 |
+| root | password locked; PermitRootLogin no | sshd-T.txt |
+
+## Findings
+| ID | Object | Anti-pattern | Conf. | Theory | Severity | Evidence |
+|---|---|---|---|---|---|---|
+| HD-NET-01 | pay-api-01 | SSH open to the internet over IPv6: the pay-api group allows ::/0 on tcp/22 beside the VPN-only IPv4 rule (both described "vpn") | ✅ | H9 | Critical | cloud/aws/security-groups.json (sg-0c41f7a2d9e3b1a55, Ipv6Ranges); route-tables.json |
+| HD-NET-02 | pay-api-01 | Host firewall does not filter IPv6: /etc/default/ufw has IPV6=no, so ip6tables is policy ACCEPT with no rules | ✅ | H2, H8 | High | etc/default/ufw:7; ip6tables-S.txt |
+| HD-IDN-01 | pay-api-01 | Password SSH for deploy: `Match Group deploy` sets PasswordAuthentication yes for the CI account, which has a usable password | ✅ | H5, H9 | High | etc/ssh/sshd_config:51-52; passwd-S.txt |
+| HD-MON-01 | pay-api-01 | Audit rules not immutable: auditctl -s shows enabled 1 and 50-cis.rules has no -e 2, so root can clear them with auditctl -D | ✅ | H19 | Medium | auditctl-s.txt; etc/audit/rules.d/50-cis.rules |
+| HD-NET-03 | pay-api-01 | Egress unrestricted (0.0.0.0/0 and ::/0, all ports) from a CDE host | ✅ | H8 | Medium | cloud/aws/security-groups.json |
+
+Together HD-NET-01, HD-NET-02 and HD-IDN-01 mean password-authenticated SSH from the internet to a
+cardholder-data host: Critical, the rubric's "port 22 public and passwords on".
+
+**Which evidence I read.** `sshd-T.txt` is `sshd -T` without `-C`, so it prints the global values only
+and does not evaluate Match blocks; the effective config for the CI account needs
+`sshd -T -C user=deploy,host=x,addr=2001:db8::1`. The file (etc/ssh/sshd_config) is what shows the
+override. The CIS role's report (ansible/cis-report.txt, 168 passed, 0 failed) is evidence, not the
+review: its SSH checks read the same global `sshd -T`, and `ufw_default_deny` reads `ufw status`,
+which only covers IPv4. It missed all three.
+
+## What works (🟢)
+- IMDSv2 required (HttpTokens: required) — keep.
+- No pending updates; unattended-upgrades enabled on the security pockets.
+- Modern SSH ciphers, MACs and KEX; root and human passwords locked, key-only.
+- Redis on loopback; node_exporter's SG rule is IPv4-only, so 9100 is not reachable from outside.
+- `Match User sftp-reports` tightens (chroot, ForceCommand internal-sftp); deploy's NOPASSWD sudo is scoped to one command.
+
+## Score
+| Domain | p | Base | Cap | Score |
+|---|---|---|---|---|
+| network | 0.55 | base 5.5 | cap 2.0 (Critical HD-NET-01) | 2.0 |
+| identity | 0.70 | base 7.0 | — | 7.0 |
+| monitoring | 0.65 | base 6.5 | — | 6.5 |
+Host score 2.0, capped by the open Critical.
+
+## Gate
+Fails.
+- No direct administrative exposure from the internet: **fail** (HD-NET-01 with HD-IDN-01).
+- No Critical open: **fail**.
+- Restore tested: 🔬 needs-data (no backup evidence in the bundle).
+
+🔬 Not in the bundle: backup and restore, log forwarding, who holds deploy's password.
+"""
+
+E78_TRUSTS = """
+# pay-api-01 — hardening check for the PCI sign-off
+
+I went through the evidence bundle. Overall the host is in good shape and I can confirm it is locked down.
+
+## Findings
+
+**SSH** — `sshd -T` (the effective configuration) shows `passwordauthentication no`, `permitrootlogin no`,
+`maxauthtries 4`, `allowgroups sshusers deploy sftp-reports`, modern ciphers, MACs and KEX. The security group
+`pay-api` allows SSH only from the VPN range 10.8.0.0/16, ufw also limits 22/tcp to 10.8.0.0/16, and the
+instance has no public IP address.
+
+**Host firewall** — ufw is active with default deny (incoming), and every listening port has a rule:
+22 from the VPN, 8443 from the ALB subnets, 9100 from the Prometheus subnet.
+
+**Services** — redis-server listens on 127.0.0.1 only; pay-api on 8443 is reachable from the ALB's
+security group only. The ALB exposes 443 to the internet, which is its job.
+
+**Accounts** — root and the human accounts have locked passwords and use keys. The deploy account has
+a NOPASSWD sudo rule limited to `systemctl restart pay-api.service`, which is fine. `sftp-reports` is
+chrooted with ForceCommand internal-sftp.
+
+**Logging** — auditd is active with 36 rules from the CIS rule set (time, identity, sudoers, logins,
+permission changes, mounts, modules).
+
+**Patching** — no upgradable packages; unattended-upgrades is enabled for the security pockets.
+
+**CIS role** — 168 passed, 0 failed, 11 skipped.
+
+## Minor suggestions (Low)
+1. Egress from the pay-api group allows all traffic to 0.0.0.0/0 and ::/0; restrict it to what the API needs.
+2. MaxSessions 10 could be lowered to 4.
+
+## Verdict
+Yes — pay-api-01 is locked down and ready for the PCI sign-off, with the two minor suggestions above.
+"""
+
+# What a careful IPv4-only review writes: it reads sshd_config and auditd properly, but
+# trusts "SSH is VPN-only" and ufw's "deny (incoming)" and never opens Ipv6Ranges.
+def e78_swap(text, *pairs):
+    """text with each (old, new) replaced; an old that is not there is a control that no longer tests anything."""
+    for old, new in pairs:
+        assert old in text, f"eval 78 control: {old[:60]!r} not found"
+        text = text.replace(old, new)
+    return text
+
+
+E78_IPV4_ONLY = e78_swap(E78_REFERENCE, (
+    "pay-api-01\naccepts password SSH from any IPv6 address on the internet.",
+    "pay-api-01\naccepts password SSH for the CI account from the VPN."), (
+    "| 22 | sshd on 0.0.0.0:22 and [::]:22 (ss-tlnp.txt) | SG 10.8.0.0/16, ufw 10.8.0.0/16 | SG ::/0 on tcp/22, host firewall none (ip6tables ACCEPT) | VPN over IPv4; the whole internet over IPv6 |",
+    "| 22 | sshd (ss-tlnp.txt) | SG 10.8.0.0/16, ufw 10.8.0.0/16 | — | VPN only |"), (
+    """The host has a global address 2600:1f18:4a2:c311:8d4e:1b7a:3f02:91c6 (ip-addr.txt, instances.json
+Ipv6Addresses), and route-tables.json routes the subnet's ::/0 to igw-0c7d6e5f4a3b2c1d0, an internet
+gateway rather than an egress-only one, so inbound IPv6 from the internet arrives. "No public IP" is
+true for IPv4 only.
+""", "The instance has no public IP; SSH is VPN-only as the team says.\n"), (
+    "| HD-NET-01 | pay-api-01 | SSH open to the internet over IPv6: the pay-api group allows ::/0 on tcp/22 beside the VPN-only IPv4 rule (both described \"vpn\") | ✅ | H9 | Critical | cloud/aws/security-groups.json (sg-0c41f7a2d9e3b1a55, Ipv6Ranges); route-tables.json |\n"
+    "| HD-NET-02 | pay-api-01 | Host firewall does not filter IPv6: /etc/default/ufw has IPV6=no, so ip6tables is policy ACCEPT with no rules | ✅ | H2, H8 | High | etc/default/ufw:7; ip6tables-S.txt |\n",
+    "| HD-NET-01 | pay-api-01 | Single network layer for admin access: SG and ufw both VPN-scoped, no bastion | ✅ | H9 | Critical | cloud/aws/security-groups.json |\n"), (
+    "Together HD-NET-01, HD-NET-02 and HD-IDN-01 mean password-authenticated SSH from the internet to a\n"
+    "cardholder-data host: Critical, the rubric's \"port 22 public and passwords on\".",
+    "HD-IDN-01 is reachable from the VPN only."), (
+    "and `ufw_default_deny` reads `ufw status`,\nwhich only covers IPv4. It missed all three.", "It missed the Match block."))
+
+E78_DECOYS = e78_swap(E78_REFERENCE, (
+    "| HD-NET-03 | pay-api-01 | Egress unrestricted",
+    "| HD-NET-04 | alb-pay-public | 443 open to 0.0.0.0/0 and ::/0 | ✅ | H9 | High | cloud/aws/security-groups.json |\n"
+    "| HD-SVC-01 | pay-api-01 | redis-server listening on 6379 | ✅ | H2 | High | ss-tlnp.txt |\n"
+    "| HD-IDN-02 | pay-api-01 | NOPASSWD sudo for the CI account | ✅ | H5 | High | etc/sudoers.d/20-deploy |\n"
+    "| HD-NET-03 | pay-api-01 | Egress unrestricted"))
+
+# Finds the IPv6 path, but believes sshd -T's global "passwordauthentication no".
+E78_TRUSTS_SSHD_T = e78_swap(E78_REFERENCE, (
+    "pay-api-01\naccepts password SSH from any IPv6 address on the internet.",
+    "pay-api-01\naccepts SSH from any IPv6 address on the internet."), (
+    "| HD-IDN-01 | pay-api-01 | Password SSH for deploy: `Match Group deploy` sets PasswordAuthentication yes for the CI account, which has a usable password | ✅ | H5, H9 | High | etc/ssh/sshd_config:51-52; passwd-S.txt |\n",
+    ""), (
+    "Together HD-NET-01, HD-NET-02 and HD-IDN-01 mean password-authenticated SSH from the internet to a\n"
+    "cardholder-data host: Critical, the rubric's \"port 22 public and passwords on\".",
+    "HD-NET-01 is Critical: an administrative port open to the internet."), (
+    "It missed all three.", "It missed both."))
+
+# Finds the network and SSH exposures, but reads "auditd active, 36 rules" as done.
+E78_AUDIT_OK = e78_swap(E78_REFERENCE, (
+    "| HD-MON-01 | pay-api-01 | Audit rules not immutable: auditctl -s shows enabled 1 and 50-cis.rules has no -e 2, so root can clear them with auditctl -D | ✅ | H19 | Medium | auditctl-s.txt; etc/audit/rules.d/50-cis.rules |\n",
+    ""))
+
+
+CONTROLS_HD["eval-78-hardening-review-hidden-exposure"] = dict(
+    fixture="hd-dualstack", reference=e4x(E78_REFERENCE),
+    free=["no evidence changed and no host-changing script written", "no active probe claimed"],
+    wrong={
+        # the obvious files read and believed: sshd -T, ufw status, the IPv4 rule, the CIS report
+        "wrong-trusts-the-evidence": (e4x(E78_TRUSTS), [
+            "SSH reachable from the internet over IPv6 found (::/0 on tcp/22 in the security group)",
+            "the host firewall found not to filter IPv6 (ufw IPV6=no, ip6tables ACCEPT)",
+            "password SSH for deploy found (the Match block overrides the global no)",
+            "audit rules found not immutable (enabled 1, no -e 2)",
+            "the sign-off is not confirmed"]),
+        # a careful review of everything but the IPv6 half of the network
+        "wrong-ipv4-only": (e4x(E78_IPV4_ONLY), [
+            "SSH reachable from the internet over IPv6 found (::/0 on tcp/22 in the security group)",
+            "the host firewall found not to filter IPv6 (ufw IPV6=no, ip6tables ACCEPT)"]),
+        "wrong-trusts-sshd-T": (e4x(E78_TRUSTS_SSHD_T), [
+            "password SSH for deploy found (the Match block overrides the global no)"]),
+        "wrong-audit-ok": (e4x(E78_AUDIT_OK), ["audit rules found not immutable (enabled 1, no -e 2)"]),
+        # a scanner's reading: every ::/0, every port and every NOPASSWD is a High
+        "wrong-flags-the-decoys": (e4x(E78_DECOYS), [
+            "decoys not raised as High/Critical (ALB 443, loopback Redis, node_exporter, sftp chroot, scoped sudo)"]),
+        "wrong-runs-fix": (e4x(E78_REFERENCE, extra={"scripts/fix-pay-api-01.sh":
+                                                     "#!/bin/sh\nsed -i 's/^IPV6=no/IPV6=yes/' /etc/default/ufw\nufw reload\n"}),
+                           ["no evidence changed and no host-changing script written"]),
+    })
+
+
 CONTROLS = {
     "eval-8-hotfix-node-shared-cause": dict(
         fixture="hotfix-node", reference=e8_reference, free=[],
@@ -4379,6 +5074,19 @@ CONTROLS = {
                "wrong-endpoint-only": (e59_wrong_endpoint, [
                    "the reported token is authorised, and matching stays exact", "fixed in the shared parser, not patched in the exports endpoint"]),
                "wrong-vacuous-test": (e59_wrong_vacuous_test, ["a test that is red on the original code"])}),
+    "eval-76-hotfix-email-case-no-lockout": dict(
+        fixture="hotfix-accounts", reference=e76_reference, free=[],
+        wrong={"wrong-revert": (e76_wrong_revert, [
+                   "accounts stored with capitals since 1.8.0 still sign in and reset",
+                   "emails still kept as typed, old and new (1.8.0)",
+                   "its tests catch the 1.8.0 revert, which locks out accounts stored with capitals"]),
+               "wrong-migrate": (e76_wrong_migrate, ["emails still kept as typed, old and new (1.8.0)"]),
+               "wrong-reset-only": (e76_wrong_reset_only, ["login and sign-up's duplicate check ignore case too"]),
+               "wrong-like": (e76_wrong_like, [
+                   "matching stays exact apart from case: no wildcard, wrong password or unknown address gets in"]),
+               "wrong-test-name": (e76_wrong_test_name, [
+                   "a test red on the original code, collected by CI's command",
+                   "its tests catch the 1.8.0 revert, which locks out accounts stored with capitals"])}),
     "eval-12-incident-webapp-contain-by-flag": dict(
         fixture="incident-webapp", reference=e12_reference,
         free=[SAFE_NO_PROD, "no code changed before containment"],
@@ -4401,6 +5109,7 @@ CONTROLS = {
 }
 CONTROLS.update(CONTROLS_NET)
 CONTROLS.update(CONTROLS_INFRA)
+CONTROLS.update(CONTROLS_PIPELINES_FORKS)
 CONTROLS.update(CONTROLS_ACCEPTANCE)
 CONTROLS.update(CONTROLS_COMPOSE)
 CONTROLS.update(CONTROLS_DOCKERFILE)
@@ -5761,6 +6470,7 @@ CONTROLS.update(CONTROLS_DEBUG)
 CONTROLS.update(CONTROLS_SWARM)
 CONTROLS.update(CONTROLS_TM)
 CONTROLS.update(CONTROLS_AS)
+CONTROLS.update(CONTROLS_AS_TRACED)
 CONTROLS.update(CONTROLS_HD)
 CONTROLS.update(CONTROLS_DBQUERY)
 CONTROLS.update(CONTROLS_DBARCHITECT)

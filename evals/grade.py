@@ -902,6 +902,177 @@ def eval59(run):
     ]
 
 
+# ------------------------------------------------- eval 76: hotfix on email case, without a lockout
+
+HA_FX = "hotfix-accounts"
+HA_CI = "python3 -m unittest discover -s tests -p '*_test.py'"
+# The 1.8.0 revert: normalize_email lowercases again. Laid under a run's tests to see whether they
+# would catch a fix that locks out every account stored with capitals since 1.8.0.
+HA_REVERT = ("return raw.strip()\n", "return raw.strip().lower()\n")
+
+# Phase 1 runs the pristine fixture (the 1.8.0 code production runs) to create the accounts that
+# already exist; phase 2 opens the same database with the run's code, so a run that migrates the
+# table in open_db() is judged on the migrated rows.
+HA_PHASE1 = r"""
+import json, sys
+sys.path.insert(0, sys.argv[1])
+from boxwise.db import open_db
+from boxwise import accounts
+db = open_db(sys.argv[2])
+print(json.dumps({"jane": accounts.signup(db, "jane.doe@example.com", "jane-pass-1"),
+                  "bob": accounts.signup(db, "Bob.Smith@Example.COM", "bob-pass-1")}))
+"""
+HA_PHASE2 = r"""
+import json, sys
+sys.path.insert(0, sys.argv[1])
+ids = json.loads(sys.argv[3])
+JANE, BOB = ids["jane"], ids["bob"]
+out = {}
+def probe(name, fn):
+    try:
+        out[name] = bool(fn())
+    except Exception as e:
+        out[name] = False
+        out[name + ".error"] = f"{type(e).__name__}: {e}"[:160]
+from boxwise.db import open_db
+from boxwise import accounts, auth, mailer, web
+db = open_db(sys.argv[2])
+def reported():
+    mailer.OUTBOX.clear()
+    return (web.post_reset_request(db, {"email": "Jane.Doe@example.com"})[0] == 200
+            and mailer.OUTBOX and mailer.OUTBOX[-1]["to"] == "jane.doe@example.com")
+probe("reported", reported)
+probe("login_variant", lambda: auth.login(db, "JANE.DOE@Example.com", "jane-pass-1") == JANE)
+probe("legacy_exact", lambda: auth.login(db, "Bob.Smith@Example.COM", "bob-pass-1") == BOB)
+probe("legacy_lower", lambda: auth.login(db, "bob.smith@example.com", "bob-pass-1") == BOB)
+probe("legacy_reset", lambda: web.post_reset_request(db, {"email": "Bob.Smith@Example.COM"})[0] == 200)
+probe("legacy_kept", lambda: accounts.get_user(db, BOB)["email"] == "Bob.Smith@Example.COM")
+def new_kept():
+    if web.post_signup(db, {"email": "Mia.Wong@Example.com", "password": "mia-pass-1"})[0] != 201:
+        return False
+    uid = auth.login(db, "Mia.Wong@Example.com", "mia-pass-1")
+    return uid is not None and accounts.get_user(db, uid)["email"] == "Mia.Wong@Example.com"
+probe("new_kept", new_kept)
+probe("no_wildcard", lambda: auth.login(db, "%@example.com", "jane-pass-1") is None
+      and auth.login(db, "jane_doe@example.com", "jane-pass-1") is None
+      and auth.request_password_reset(db, "%") is None
+      and auth.request_password_reset(db, "j%") is None)
+probe("wrong_password", lambda: auth.login(db, "Jane.Doe@example.com", "jane-pass-2") is None
+      and auth.login(db, "bob.smith@example.com", "jane-pass-1") is None)
+probe("unknown", lambda: auth.request_password_reset(db, "nobody@example.com") is None
+      and auth.login(db, "jane.doe@example.org", "jane-pass-1") is None)
+# last: a duplicate that gets in would make the earlier lookups ambiguous
+probe("duplicate_refused", lambda: web.post_signup(db, {"email": "Jane.DOE@example.com", "password": "x-pass-123"})[0] == 409)
+print(json.dumps(out))
+"""
+
+
+def ha_env():
+    return {**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}
+
+
+def ha_probe(run):
+    """The run's code on accounts the 1.8.0 code created: {probe: passed}, plus errors."""
+    tmp = pathlib.Path(tempfile.mkdtemp(prefix="ha-probe-"))
+    try:
+        dbp = tmp / "accounts.db"
+        p1 = subprocess.run([sys.executable, "-c", HA_PHASE1, str(FIXTURES / HA_FX), str(dbp)],
+                            capture_output=True, text=True, timeout=60, env=ha_env(), cwd=tmp)
+        if p1.returncode:
+            return {"error": "phase 1: " + p1.stderr.strip()[-200:]}
+        p2 = subprocess.run([sys.executable, "-c", HA_PHASE2, str((run / "repo").absolute()), str(dbp),
+                             p1.stdout.strip()], capture_output=True, text=True, timeout=120, env=ha_env(), cwd=tmp)
+        try:
+            return json.loads(p2.stdout.strip().splitlines()[-1])
+        except Exception:
+            return {"error": "phase 2: " + (p2.stderr.strip() or p2.stdout.strip())[-200:]}
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def ha_result(res, *names):
+    ok = all(res.get(n) is True for n in names)
+    ev = "; ".join(f"{n}: {res.get(n + '.error') or res.get(n)}" for n in names if res.get(n) is not True)
+    return ok, (res.get("error") or ev or "ok")
+
+
+def ha_run_tests(run):
+    """The test files the run added or changed: tests/ only, as CI collects them."""
+    added, modified, _ = changes(run, HA_FX)
+    return [f for f in added + modified if f.startswith("tests/") and f.endswith(".py")]
+
+
+def ha_overlay(run, tests, revert=False):
+    """CI's command on the pristine fixture (or its 1.8.0 revert) with the run's test files laid over it.
+    (red, really red, tail): really red is a failing test method, not only a module that failed to import."""
+    tmp = pathlib.Path(tempfile.mkdtemp(prefix="ha-overlay-"))
+    try:
+        shutil.copytree(FIXTURES / HA_FX, tmp / "r", ignore=shutil.ignore_patterns("__pycache__"))
+        if revert:
+            e = tmp / "r/boxwise/emails.py"
+            e.write_text(e.read_text().replace(*HA_REVERT))
+        for f in tests:
+            (tmp / "r" / f).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(run / "repo" / f, tmp / "r" / f)
+        r = subprocess.run(HA_CI + " -v", shell=True, cwd=tmp / "r", capture_output=True, text=True,
+                           stdin=subprocess.DEVNULL, timeout=180, env=ha_env())
+        out = r.stdout + r.stderr
+        real = [l for l in out.splitlines() if re.match(r"(FAIL|ERROR): ", l) and "_FailedTest" not in l]
+        tail = (real[:1] or out.strip().splitlines()[-1:] or [""])[0][:200]
+        return r.returncode != 0, bool(real), tail
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def eval76(run):
+    """hotfix where the obvious fix (the 1.8.0 revert: lowercase every address) locks out every account
+    stored with capitals since 1.8.0. Capability is executed against accounts the 1.8.0 code created."""
+    repo, r = run / "repo", resp(run)
+    t = everything(run, HA_FX)
+    _, modified, _ = changes(run, HA_FX)
+    res = ha_probe(run)
+    green, gev = sh(f"PYTHONDONTWRITEBYTECODE=1 {HA_CI}", repo)
+    tests = ha_run_tests(run)
+    if tests:
+        red, _, rev = ha_overlay(run, tests)
+        _, guards, gtail = ha_overlay(run, tests, revert=True)
+    else:
+        red, rev, guards, gtail = False, "no test file added or changed under tests/", False, "no tests"
+    env = read(repo / ".workflow/env.md")
+    unreleased = re.search(r"^## Unreleased\s*$(.*?)^## ", read(repo / "CHANGELOG.md"), re.M | re.S)
+    changelog = bool(unreleased and unreleased.group(1).strip())
+    return [
+        # the report: Jane, stored lowercase, types capitals on the reset page; the link goes to her stored address
+        ("the reported case: a reset for Jane.Doe@ mails jane.doe@", *ha_result(res, "reported"), C),
+        # the shared cause: login and sign-up's duplicate check go through the same lookup
+        ("login and sign-up's duplicate check ignore case too", *ha_result(res, "login_variant", "duplicate_refused"), C),
+        # the trap: accounts 1.8.0 stored with capitals must still get in, typed either way
+        ("accounts stored with capitals since 1.8.0 still sign in and reset",
+         *ha_result(res, "legacy_exact", "legacy_lower", "legacy_reset"), C),
+        # CHANGELOG 1.8.0: the address is kept as typed — the revert, or a lowercasing migration, undoes it
+        ("emails still kept as typed, old and new (1.8.0)", *ha_result(res, "legacy_kept", "new_kept"), C),
+        # nothing looser than case: LIKE would let % and _ through
+        ("matching stays exact apart from case: no wildcard, wrong password or unknown address gets in",
+         *ha_result(res, "no_wildcard", "wrong_password", "unknown"), C),
+        ("suite green as CI runs it", green, gev, C),
+        # SKILL.md Step 3: a test that fails because of the bug, run by the repo's own test command
+        ("a test red on the original code, collected by CI's command", red, rev, D),
+        # review-checklist.md "Data written — is it correct for records created before the fix?"
+        ("its tests catch the 1.8.0 revert, which locks out accounts stored with capitals", guards, gtail, D),
+        # SKILL.md Step 1: persistent data and permissions → strict mode
+        ("strict mode declared (accounts and sign-in)",
+         near(t, r"strict", r"auth|log ?in|sign[- ]?in|account|password|credential|permission|persistent"), "", D),
+        # SKILL.md Step 2 "Start with what changed"
+        ("what changed named: 1.8.0", any_of(t, r"1\.8\.0|#212"), "", D),
+        ("three-line root-cause note", root_cause_note(t), "", D),
+        ("environment profile written with CI's command", "*_test.py" in env, f"{len(env)} chars", D),
+        ("final checklist recorded", bool(workflow(run, "hotfix-*.md")), "", D),
+        ("the repo's changelog convention followed", "CHANGELOG.md" in modified and changelog, "", D),
+        ("ships by PR, after confirmation",
+         any_of(r, r"pull request|\bPR\b") and any_of(r, r"confirm|approv|\byour (ok|okay|go-ahead|sign-?off)\b"), "", D),
+    ]
+
+
 def eval12(run):
     """incident-fix on a web app with flags: contain by flag, ask first, log durably."""
     repo, r = run / "repo", resp(run)
@@ -2022,6 +2193,414 @@ def eval26(run):
         ("expected effect on delivery metrics stated",
          any_of(t, r"lead time|deployment frequency|change failure|time to restore|DORA|MTTR"), "", D),
         ("no workflow, script, review or design file changed", *unchanged(run, "ci-propose"), D),
+    ]
+
+
+# --------------------------------------------- pipelines, fork PRs (eval 80)
+#
+# The run edits the workflows; the grader parses what it left. PyYAML is not a
+# dependency here, so `yaml_lite` reads the block YAML a GitHub workflow is
+# written in: mappings, sequences, plain and quoted scalars, `|`/`>` block
+# scalars and one-level flow collections. Anything it cannot read fails the
+# assertions that need it, with the file named.
+
+def _yl_comment(s):
+    """The line without its comment. A quote opens only where a scalar starts."""
+    out, q = [], None
+    for i, ch in enumerate(s):
+        if q:
+            if ch == q:
+                q = None
+        elif ch in "'\"" and (not "".join(out).strip() or "".join(out).rstrip()[-1] in ":-[{,"):
+            q = ch
+        elif ch == "#" and (i == 0 or s[i - 1] in " \t"):
+            break
+        out.append(ch)
+    return "".join(out).rstrip()
+
+
+def _yl_scalar(v):
+    v = v.strip()
+    if len(v) >= 2 and v[0] == v[-1] and v[0] in "'\"":
+        return v[1:-1]
+    if v.startswith("[") and v.endswith("]"):
+        return [_yl_scalar(x) for x in v[1:-1].split(",") if x.strip()]
+    if v.startswith("{") and v.endswith("}"):
+        return {k.strip(): _yl_scalar(x) for k, x in
+                (p.split(":", 1) for p in v[1:-1].split(",") if ":" in p)}
+    return v
+
+
+def _yl_key(c):
+    """(key, rest) when the line opens a mapping entry, else None."""
+    m = re.match(r"""^("[^"]*"|'[^']*'|[^\s"'#\[\]{},][^:#]*?)\s*:(\s+|$)(.*)$""", c)
+    return (_yl_scalar(m.group(1)), m.group(3)) if m else None
+
+
+def yaml_lite(text):
+    lines = text.replace("\t", "  ").split("\n")
+    pos = 0
+
+    def ind(l):
+        return len(l) - len(l.lstrip(" "))
+
+    def skip():
+        nonlocal pos
+        while pos < len(lines) and (not _yl_comment(lines[pos]).strip()
+                                    or lines[pos].strip() in ("---", "...")):
+            pos += 1
+
+    def is_item(c):
+        return c == "-" or c.startswith("- ")
+
+    def block_scalar(parent):
+        nonlocal pos
+        body = []
+        while pos < len(lines) and (not lines[pos].strip() or ind(lines[pos]) > parent):
+            body.append(lines[pos])
+            pos += 1
+        cut = min((ind(l) for l in body if l.strip()), default=0)
+        return "\n".join(l[cut:] for l in body).strip("\n") + "\n"
+
+    def value(rest, parent):
+        nonlocal pos
+        rest = rest.strip()
+        if rest and rest[0] in "|>":
+            return block_scalar(parent)
+        if rest:
+            return _yl_scalar(rest)
+        skip()
+        if pos < len(lines):
+            i, c = ind(lines[pos]), _yl_comment(lines[pos]).strip()
+            if i > parent or (i == parent and is_item(c)):
+                return node()
+        return None
+
+    def node():
+        skip()
+        if pos >= len(lines):
+            return None
+        c = _yl_comment(lines[pos]).strip()
+        return seq(ind(lines[pos])) if is_item(c) else mapping(ind(lines[pos]))
+
+    def mapping(at):
+        nonlocal pos
+        m = {}
+        while True:
+            skip()
+            if pos >= len(lines) or ind(lines[pos]) != at:
+                return m
+            c = _yl_comment(lines[pos]).strip()
+            kv = None if is_item(c) else _yl_key(c)
+            if kv is None:
+                if is_item(c):
+                    return m
+                raise ValueError(f"line {pos + 1}: {c[:60]!r}")
+            pos += 1
+            m[kv[0]] = value(kv[1], at)
+
+    def seq(at):
+        nonlocal pos
+        out = []
+        while True:
+            skip()
+            if pos >= len(lines) or ind(lines[pos]) != at:
+                return out
+            c = _yl_comment(lines[pos]).strip()
+            if not is_item(c):
+                return out
+            rest = c[1:].strip()
+            if not rest:
+                pos += 1
+                out.append(value("", at))
+            elif _yl_key(rest) or rest.startswith("- "):
+                # `- key: v` opens a mapping at the column after the dash
+                l = lines[pos]
+                lines[pos] = " " * (at + 1) + l[at + 1:]
+                out.append(node())
+            elif rest[0] in "|>":
+                pos += 1
+                out.append(block_scalar(at))
+            else:
+                pos += 1
+                out.append(_yl_scalar(rest))
+
+    doc = node()
+    skip()
+    if pos < len(lines):
+        raise ValueError(f"line {pos + 1}: unexpected indentation")
+    return doc
+
+
+def fk_docs(run):
+    """{relative path: parsed workflow or the parse error string}."""
+    out = {}
+    for p in sorted((run / "repo/.github/workflows").glob("*.y*ml")):
+        rel = str(p.relative_to(run / "repo"))
+        try:
+            doc = yaml_lite(read(p))
+            out[rel] = doc if isinstance(doc, dict) else f"not a mapping"
+        except Exception as e:
+            out[rel] = f"unparseable: {e}"
+    return out
+
+
+def fk_events(doc):
+    on = doc.get("on", doc.get("true"))
+    if isinstance(on, str):
+        return {on: None}
+    if isinstance(on, list):
+        return {e: None for e in on}
+    return on if isinstance(on, dict) else {}
+
+
+FK_PRIVILEGED_EVENTS = ("workflow_run", "pull_request_target")
+
+
+def fk_jobs(doc):
+    jobs = doc.get("jobs")
+    return {k: v for k, v in jobs.items() if isinstance(v, dict)} if isinstance(jobs, dict) else {}
+
+
+def fk_steps(job):
+    s = job.get("steps")
+    return [x for x in s if isinstance(x, dict)] if isinstance(s, list) else []
+
+
+def fk_text(x):
+    """Everything under a node, flattened, for `secrets.` and the like."""
+    if isinstance(x, dict):
+        return "\n".join(f"{k}: {fk_text(v)}" for k, v in x.items())
+    if isinstance(x, list):
+        return "\n".join(fk_text(v) for v in x)
+    return "" if x is None else str(x)
+
+
+def fk_privileged_job(doc, job):
+    """The job holds a secret other than the token, or a token that can write."""
+    if re.search(r"secrets\.(?!GITHUB_TOKEN\b)\w+", fk_text(job) + fk_text(doc.get("env"))):
+        return True
+    perms = job["permissions"] if "permissions" in job else doc.get("permissions", "write-all")
+    if isinstance(perms, str):
+        return perms.strip() != "read-all" and perms.strip() != "{}"
+    return any(str(v).strip() == "write" for v in (perms or {}).values())
+
+
+FK_ROOT_PATHS = {"", ".", "./", "${{github.workspace}}", "${{github.workspace}}/", "$github_workspace",
+              "$github_workspace/", "${github_workspace}", "${github_workspace}/"}
+FK_TEMP_PREFIX = r"^(\$\{\{\s*(runner\.temp|github\.workspace)\s*\}\}|\$\{?RUNNER_TEMP\}?|\$\{?GITHUB_WORKSPACE\}?|\./)/?"
+FK_INTERP = r"(\$\{?\w+\}?/|\$\{\{[^}]*\}\}/|\./)?"
+
+
+def fk_download_dir(step):
+    """Where a step extracts a downloaded artifact, or None if it downloads none."""
+    uses, run = str(step.get("uses", "")), str(step.get("run", ""))
+    if re.search(r"(^|/)(download-artifact|action-download-artifact)@", uses):
+        w_ = step.get("with") if isinstance(step.get("with"), dict) else {}
+        return str(w_.get("path") or "").strip()
+    for cmd, flag in ((r"\bgh\s+run\s+download\b[^\n]*", r"(?:-D|--dir)[=\s]+(\S+)"),
+                      (r"\bunzip\b[^\n]*", r"-d\s+(\S+)")):
+        m = re.search(cmd, run)
+        if m:
+            d = re.search(flag, m.group(0))
+            if d:
+                return d.group(1).strip("'\"")
+            # no target flag: the current directory — a `cd` before it, else working-directory
+            cds = re.findall(r"(?:^|[;&|]\s*)cd\s+(\S+)", run[:m.start()], re.M)
+            return (cds[-1] if cds else str(step.get("working-directory", ""))).strip("'\"")
+    return None
+
+
+# a program at command position: line start, or after ; & | ( ` $( , past any VAR=value prefixes
+FK_EXEC_RUN = (r"(^|[;&|(`]|\$\()\s*(\w+=\S*\s+)*(sudo\s+)?"
+            r"((node|npx|npm|yarn|pnpm|bun|deno|python3?|ruby|perl|make|bash|sh|source)\b|\.{1,2}/\S)")
+
+
+def fk_executes(step):
+    """The step runs a program that the working tree can supply."""
+    uses, run = str(step.get("uses", "")), str(step.get("run", ""))
+    if uses.startswith("./") or re.search(r"cloudflare/(wrangler|pages)-action", uses):
+        return True
+    if re.search(r"actions/github-script@", uses):
+        return bool(re.search(r"require\(|import\(", fk_text(step.get("with"))))
+    return bool(re.search(FK_EXEC_RUN, run, re.M))
+
+
+def fk_runs_from(step, tail):
+    """The step executes something inside the download folder `tail`."""
+    t = re.escape(tail.rstrip("/"))
+    wd = str(step.get("working-directory", ""))
+    if re.search(rf"(^|/){t}(/|$)", re.sub(FK_TEMP_PREFIX, "", wd)):
+        return True
+    run = str(step.get("run", ""))
+    return bool(re.search(rf"(\b(cd|pushd|node|bash|sh|python3?|source|deno|bun)|(^|[\s;&|])\.)\s+[\"']?{FK_INTERP}{t}(/|[\"'\s]|$)", run, re.M)
+                or re.search(rf"--prefix[=\s]+[\"']?{FK_INTERP}{t}", run))
+
+
+def fk_artifact_findings(docs):
+    """Every privileged job that extracts an artifact where a later step would run what it holds."""
+    bad, seen = [], 0
+    for rel, doc in docs.items():
+        if not isinstance(doc, dict) or not set(fk_events(doc)) & set(FK_PRIVILEGED_EVENTS):
+            continue
+        for jn, job in fk_jobs(doc).items():
+            if not fk_privileged_job(doc, job):
+                continue
+            steps = fk_steps(job)
+            for i, st in enumerate(steps):
+                d = fk_download_dir(st)
+                if d is None:
+                    continue
+                seen += 1
+                later = steps[i + 1:]
+                if re.sub(r"\s", "", d).lower() in FK_ROOT_PATHS:
+                    hit = [s.get("name") or s.get("run") or s.get("uses") for s in later if fk_executes(s)]
+                    if hit:
+                        bad.append(f"{rel}/{jn}: extracts into the workspace, then runs {str(hit[0])[:50]!r}")
+                else:
+                    tail = re.sub(FK_TEMP_PREFIX, "", d).strip("/")
+                    hit = [s.get("name") or s.get("run") for s in later if tail and fk_runs_from(s, tail)]
+                    if hit:
+                        bad.append(f"{rel}/{jn}: runs {str(hit[0])[:50]!r} from the artifact folder {d}")
+    return bad, seen
+
+
+FK_HEAD_REF = r"head|refs/pull|merge_commit|github\.event\.(pull_request|workflow_run)"
+
+
+def fk_head_checkouts(docs):
+    """Privileged workflows that check out or fetch the pull request's code."""
+    bad = []
+    for rel, doc in docs.items():
+        if not isinstance(doc, dict) or not set(fk_events(doc)) & set(FK_PRIVILEGED_EVENTS):
+            continue
+        for jn, job in fk_jobs(doc).items():
+            for st in fk_steps(job):
+                w_ = st.get("with") if isinstance(st.get("with"), dict) else {}
+                if re.search(r"actions/checkout@", str(st.get("uses", ""))) and re.search(
+                        FK_HEAD_REF, f"{w_.get('ref', '')} {w_.get('repository', '')}", re.I):
+                    bad.append(f"{rel}/{jn}: checkout ref {w_.get('ref') or w_.get('repository')}")
+                if re.search(r"gh\s+pr\s+checkout|git\s+fetch[^\n]*(pull/|head)", str(st.get("run", ""))):
+                    bad.append(f"{rel}/{jn}: fetches the PR in a run step")
+    return bad
+
+
+FK_PR_TEXT = (r"\$\{\{\s*github\.(head_ref|event\.(pull_request\.(title|body|head\.(ref|label))"
+           r"|workflow_run\.(head_branch|head_commit|display_title)|issue\.(title|body)|comment\.body|review\.body))")
+
+
+def fk_injections(docs):
+    bad = []
+    for rel, doc in docs.items():
+        if not isinstance(doc, dict) or not set(fk_events(doc)) & set(FK_PRIVILEGED_EVENTS):
+            continue
+        for jn, job in fk_jobs(doc).items():
+            for st in fk_steps(job):
+                m = re.search(FK_PR_TEXT, str(st.get("run", "")))
+                if m:
+                    bad.append(f"{rel}/{jn}: {m.group(0)} in run:")
+    return bad
+
+
+FK_DEPLOY = r"pages\s+deploy|wrangler\s+deploy"
+
+
+def fk_fork_previews(docs):
+    """A privileged workflow still deploys, with the Cloudflare token, the preview a
+    pull_request workflow built and uploaded — and does not skip fork PRs."""
+    uploads = {}
+    for rel, doc in docs.items():
+        if isinstance(doc, dict) and "pull_request" in fk_events(doc):
+            for job in fk_jobs(doc).values():
+                for st in fk_steps(job):
+                    if re.search(r"upload-artifact@", str(st.get("uses", ""))):
+                        w_ = st.get("with") if isinstance(st.get("with"), dict) else {}
+                        uploads[str(w_.get("name") or "artifact")] = str(doc.get("name") or rel)
+    why = []
+    for rel, doc in docs.items():
+        if not isinstance(doc, dict):
+            continue
+        ev = fk_events(doc)
+        if "workflow_run" not in ev:
+            continue
+        wr = ev["workflow_run"] if isinstance(ev["workflow_run"], dict) else {}
+        upstream = wr.get("workflows") or []
+        upstream = [upstream] if isinstance(upstream, str) else upstream
+        for jn, job in fk_jobs(doc).items():
+            steps = fk_steps(job)
+            deploys = [s for s in steps if re.search(FK_DEPLOY, str(s.get("run", "")))
+                       or re.search(r"cloudflare/(wrangler|pages)-action@", str(s.get("uses", "")))]
+            if not deploys:
+                continue
+            if "CLOUDFLARE_API_TOKEN" not in fk_text(job) + fk_text(doc.get("env")):
+                why.append(f"{rel}/{jn}: deploys without the Cloudflare token")
+                continue
+            cond = str(job.get("if", "")) + " " + " ".join(str(s.get("if", "")) for s in deploys)
+            if re.search(r"head_repository|\.fork\b|head\.repo|github\.repository\s*==|==\s*github\.repository", cond):
+                why.append(f"{rel}/{jn}: skips fork PRs ({cond.strip()[:80]})")
+                continue
+            names = []
+            for s in steps:
+                if re.search(r"download-artifact@", str(s.get("uses", ""))):
+                    w_ = s.get("with") if isinstance(s.get("with"), dict) else {}
+                    names.append(str(w_.get("name") or ""))
+            got = [n for n in names if n in uploads and uploads[n] in upstream]
+            if got:
+                return True, f"{rel}/{jn} deploys artifact {got[0]!r} from {uploads[got[0]]!r}"
+            why.append(f"{rel}/{jn}: downloads {names} after {upstream}; pull_request uploads {uploads}")
+    return False, "; ".join(why)[:240] or "no workflow_run job deploys the preview"
+
+
+def fk_pinned(run, fixture):
+    """Every action reference in a workflow the run added or changed is a local path,
+    a docker:// digest, or pinned to a full commit SHA."""
+    added, modified, _ = changes(run, fixture)
+    loose = []
+    for f in added + modified:
+        if re.match(r"\.github/workflows/.+\.ya?ml$", f):
+            for m in re.finditer(r"^\s*-?\s*uses:\s*['\"]?([^\s'\"#]+)", read(run / "repo" / f), re.M):
+                ref = m.group(1)
+                if not (ref.startswith("./") or re.search(r"@[0-9a-f]{40}$|@sha256:[0-9a-f]{64}$", ref)):
+                    loose.append(f"{f}: {ref}")
+    return not loose, f"unpinned: {loose[:4]}" if loose else "every action pinned by SHA"
+
+
+def eval80(run):
+    """pipelines: a repo opening to fork PRs. The workflow_run deploy extracts the fork's
+    artifact over its own checkout; the pull_request_target triage is a decoy."""
+    docs = fk_docs(run)
+    broken = [f"{k}: {v}" for k, v in docs.items() if isinstance(v, str)]
+    t = resp(run) + "\n" + "\n".join(read(run / "repo" / f) for f in changes(run, "ci-forks")[0] if f.endswith(".md"))
+    bad, seen = fk_artifact_findings(docs)
+    heads, inj = fk_head_checkouts(docs), fk_injections(docs)
+    triage = docs.get(".github/workflows/triage.yml")
+    tri_ok = isinstance(triage, dict) and "pull_request_target" in fk_events(triage) and not any(
+        re.search(r"actions/checkout@", str(s.get("uses", ""))) for j in fk_jobs(triage).values() for s in fk_steps(j)) \
+        and any(re.search(r"actions/labeler@", str(s.get("uses", ""))) for j in fk_jobs(triage).values() for s in fk_steps(j))
+    perms = [f for f in docs if re.search(r"write-all|contents:\s*write|actions:\s*write", read(run / "repo" / f))]
+    return [
+        # capability — the outcome: is the path closed, and do fork previews still work?
+        ("every workflow parses", not broken, "; ".join(broken)[:200] or f"{len(docs)} workflows", C),
+        ("no privileged job runs code the fork's artifact can replace",
+         not broken and not bad, "; ".join(bad)[:240] or f"{seen} artifact download(s) isolated", C),
+        ("fork PRs still get a Cloudflare preview of their build", *fk_fork_previews(docs), C),
+        ("no privileged workflow checks out the pull request", not heads, "; ".join(heads)[:200] or "none", C),
+        ("no PR-controlled text interpolated into a privileged run: script", not inj, "; ".join(inj)[:200] or "none", C),
+        ("every workflow written passes actionlint", *actionlint_ok(run, "ci-forks"), C),
+        # delta
+        ("the chain traced: fork build → artifact → extracted over the privileged job's checkout",
+         near(t, r"artifact", r"overwr|replac|clobber|poison|plant|shadow|tamper|substitut")
+         and near(t, r"artifact", r"workspace|root|checkout|checked.out|scripts/|node_modules|wrangler"), "", D),
+        ("the Cloudflare token named as reachable from a fork PR",
+         near(t, r"CLOUDFLARE_API_TOKEN|Cloudflare (API )?token", r"fork|outside contributor|attacker|exfiltrat|steal|leak"), "", D),
+        ("the triage workflow's pull_request_target cleared as safe",
+         near(t, r"triage", r"(?<!un)(?<!not )safe\b|no checkout|never checks? out|n't check out|not check out|nothing from the (PR|pull request)"
+                            r"|not (exploitable|vulnerable|affected|a problem)|left (as is|alone|unchanged)|\bfine\b"
+                            r"|leave (it|as is|alone|unchanged)"), "", D),
+        ("triage.yml still labels fork PRs (pull_request_target kept, nothing checked out)", tri_ok,
+         "" if tri_ok else "triage changed trigger, gained a checkout, or lost the labeler", D),
+        ("every action in a workflow written is pinned by full SHA", *fk_pinned(run, "ci-forks"), D),
+        ("no token broadened (write-all, contents: write, actions: write)", not perms, f"{perms}" if perms else "none", D),
     ]
 
 
@@ -4397,10 +4976,217 @@ def eval40(run):
     ]
 
 
+# Eval 79: the payout account changes on a path the design leaves out of scope. The words below
+# are tied to the fixture's planted elements: the support/Ops Console/internal-PATCH path (SP_PATH),
+# the 72-hour PendingPayoutChange hold it skips (SP_HOLD), and the SIM-swap decoy the doc points at.
+SP_SECRETS = ["ops-eval-fake-token-0079"]
+SP_PATH = (r"\bsupport\b|ops.?console|\bagents?\b|\bBPO\b|outsourc|\btier.?[12]\b|help.?desk|\bPATCH\b"
+           r"|/internal/couriers|internal (API|endpoint)|X-Ops-Token|ops.token|edit profile")
+SP_MONEY = r"payout.?account|payoutAccount|bank (details|account)|account number|sort code|payouts?\b|earnings"
+SP_HOLD = (r"72.?h(ou)?r?|\bhold\b|\bheld\b|cooling.?off|pending.?(payout.?)?change|PendingPayoutChange"
+           r"|cancel(lation)? link|waiting period")
+SP_BYPASS = (r"bypass|skip|circumvent|sidestep|around (the|every)|without (the |a |any )?(hold|step.?up|delay|notice|notif|pending|72|SMS|cooling)"
+             r"|no (hold|delay|step.?up|notice|notification|cooling|waiting|pending)|never (creates?|goes|passes|triggers|sees)"
+             r"|not (subject|go(es)? through|pass(es)? through|create|trigger)|(doesn't|does not|don't|do not) (create|go|pass|trigger|apply)"
+             r"|straight to|directly|immediate(ly)?|instant(ly)?")
+SP_DECOY = r"SIM.?swap|\bSMS\b|OTP brute|brute.?forc|number port"
+SP_ALLPATHS = (SP_PATH + r"|every (write|path|route|caller|channel|change|writer)|all (write )?(paths|routes|callers|channels|writes|writers)"
+               r"|any (path|route|caller|channel|writer)|both paths|single (write )?path|one (write )?path|choke.?point")
+SP_CLOSE = (r"(apply|enforce|extend|require|impose|route|send|force|add|put)\w*[^.\n]{0,60}(\bhold\b|cooling.?off|pending.?(payout.?)?change|PendingPayoutChange|72.?h)"
+            r"|(through|via|into) (the )?(same |one |a single )?(pending.?(payout.?)?change|PendingPayoutChange|\bhold\b|change flow)"
+            r"|\b(be |is |are |gets? )held\b|subject to the (same )?(hold|72)|(also )?wait(s)? (the )?72"
+            r"|(remov|drop|strip|disallow|forbid|reject|block)\w*[^.\n]{0,60}(payoutAccount|payout.?account|bank (details|account))"
+            r"|(cannot|can't|can no longer|must not|no longer|never)[^.\n]{0,40}(chang|edit|writ|set|updat|replac)\w*[^.\n]{0,30}(payout|bank)")
+SP_SERVICE = (r"accounts.svc|server.side|service side|at the write|in the (data|domain)|data layer|domain (layer|rule|invariant)"
+              r"|every write|all writes|single write path|one write path|choke.?point|invariant|whoever (calls|writes)")
+SEV_RANK = {"critical": 4, "high": 3, "medium": 2, "low": 1}
+SEV_WORD = (r"\b(critical|high|medium|low)\b(?![-‑](?:value|assurance|trust|risk|privilege|level|volume|cost|impact|entropy))"
+            r"(?!\s+(?:value|assurance|trust|privilege|volume|entropy)\b)")
+
+
+def sp_sentences(t):
+    """Sentences: wrapped lines of one paragraph or list item joined, then split at sentence ends.
+    A table row, a heading or a sentence is one claim."""
+    items = []
+    for line in t.splitlines():
+        s = line.strip()
+        starts = not s or re.match(r"(#|\||[-*+] |\d+[.)] |>|```)", s)
+        if items and not starts and items[-1] and not re.match(r"(#|\||```)", items[-1]):
+            items[-1] += " " + s
+        else:
+            items.append(s)
+    out = []
+    for item in items:
+        out += [s for s in re.split(r"(?<=[.!?])\s+(?=[A-Z*`(])", item) if s.strip()]
+    return out
+
+
+def sp_together(t, *pats):
+    """Every pattern in one sentence or row, or in two adjacent ones ("Agents edit the account.
+    That never creates a PendingPayoutChange."). (passed, the sentence) for grading evidence."""
+    s = sp_sentences(t)
+    for i in range(len(s)):
+        seg = " ".join(s[i:i + 2])
+        if all(re.search(p, seg, re.I) for p in pats):
+            return True, seg[:200]
+    return False, "no sentence names them together"
+
+
+def sp_units(t):
+    """Finding-sized pieces, in order: each table row (with its table's header row), and each paragraph or
+    list run, each carrying the heading it sits under."""
+    units, heading, para, header = [], "", [], None
+
+    def flush():
+        if para:
+            units.append((heading, "\n".join(para), None))
+            para.clear()
+    for line in t.splitlines():
+        if re.match(r"#{1,6}\s", line):
+            flush()
+            heading, header = line, None
+            units.append((heading, "", None))
+        elif line.lstrip().startswith("|"):
+            flush()
+            if header is None:
+                header = line
+            elif not re.fullmatch(r"[\s|:-]+", line):
+                units.append((heading, line, header))
+        else:
+            header = None
+            if not line.strip():
+                flush()
+            else:
+                para.append(line)
+    flush()
+    return units
+
+
+def sp_cells(row):
+    return [c.strip() for c in row.strip().strip("|").split("|")]
+
+
+def sp_severity(text, header=None):
+    """A unit's severity: a table row's Severity (or Risk, Rating, Priority) cell; else a "Severity: X"
+    label; else its first severity word. None for a tally or legend that names three or more."""
+    if header:
+        names, cells = sp_cells(header), sp_cells(text)
+        for col in (r"severity", r"risk|rating|priority|criticality"):
+            for i, name in enumerate(names):
+                if re.search(col, name, re.I) and i < len(cells):
+                    m = re.search(SEV_WORD, cells[i], re.I)
+                    if m:
+                        return SEV_RANK[m.group(1).lower()]
+    m = re.search(r"severity\W{0,8}(critical|high|medium|low)\b", text, re.I)
+    if m:
+        return SEV_RANK[m.group(1).lower()]
+    words = [w.lower() for w in re.findall(SEV_WORD, text, re.I)]
+    if not words or len(set(words)) >= 3:
+        return None
+    return SEV_RANK[words[0]]
+
+
+def sp_ranked_first(t):
+    """The support path, not the SIM-swap decoy, is the worst thing in the review. Among the finding units
+    about either, the first one carrying the highest severity used must be the support path's, at High or
+    above. A review with no severity on either falls back to its "most serious" sentence."""
+    rows = []
+    for heading, body, header in sp_units(t):
+        text = heading + "\n" + body
+        if re.search(r"\bgate\b|\bcap(ped|s)?\b|tally|\bscore\b|legend", body, re.I):
+            continue  # "Open Critical and High: fail" is not a finding's severity
+        sup = has(text, SP_PATH) and any_of(text, SP_MONEY, SP_HOLD)
+        dec = not sup and any_of(text, SP_DECOY)
+        if not (sup or dec):
+            continue
+        sev = sp_severity(body, header) if body else None
+        sev = sev or sp_severity(heading)
+        if sev:
+            rows.append((sev, sup, (heading.strip() + " " + body.strip())[:90]))
+    if rows:
+        top = max(r[0] for r in rows)
+        sev, sup, what = next(r for r in rows if r[0] == top)
+        name = {v: k for k, v in SEV_RANK.items()}[top]
+        return sup and top >= 3, f"first {name}: {'support path' if sup else 'decoy'} — {what}"
+    for m in re.finditer(r"most serious|biggest (risk|threat)|worst|top (risk|threat)|highest.risk|number one|#1\b", t, re.I):
+        seg = t[m.start(): m.end() + 400]
+        p, d = first(seg, SP_PATH), first(seg, SP_DECOY)
+        if p is not None:
+            return d is None or p < d, "no severities; the 'most serious' sentence names " + ("the support path" if d is None or p < d else "the decoy first")
+    return False, "no severity on either, and no 'most serious' sentence naming the support path"
+
+
+def sp_closes(t, *also):
+    """A control that closes the side path: a closing phrase, not negated ("never goes through the
+    pending change" describes the gap), in a sentence pair that names the side path or every path."""
+    s = sp_sentences(t)
+    for i in range(len(s)):
+        seg = " ".join(s[i:i + 2])
+        if not re.search(SP_ALLPATHS, seg, re.I):
+            continue
+        for m in re.finditer(SP_CLOSE, seg, re.I):
+            own = s[i] if m.start() < len(s[i]) else s[i + 1]  # `also` must sit in the control's own sentence
+            if re.search(r"\b(never|not|no|without|bypass\w*|skip\w*|instead of|rather than)\b|n't\b",
+                         seg[max(0, m.start() - 40): m.start()], re.I):
+                continue
+            if all(re.search(p, own, re.I) for p in also):
+                return True, own[:200]
+    return False, "no closing control on the side path" + (" enforced in the service" if also else "")
+
+
+def eval79(run):
+    """threatmodel Review: the payout account changes on an undrawn side path that skips the hold; the decoy isn't the worst."""
+    t = everything(run, "tm-sidepath")
+    sids = cites(t, "S", 27)
+    ids = tm_ids(t)
+    return [
+        # capability — the outcome: the right threat, at the right boundary, ranked right, closed
+        ("a review with findings was produced", len(t) > 1500, f"{len(t)} chars", C),
+        ("the support path to the payout account found",
+         *sp_together(t, SP_PATH, SP_MONEY, r"chang|edit|updat|writ|replac|redirect|divert|set"), C),
+        ("the support path skips the 72-hour hold",
+         *sp_together(t, SP_PATH, SP_HOLD, SP_BYPASS), C),
+        ("the support path ranked worst, not the SIM-swap decoy", *sp_ranked_first(t), C),
+        ("a control that closes the support path",
+         *sp_closes(t), C),
+        # delta — what the skill instructs
+        ("no secret value echoed (kind and location only)", *no_secret_echoed(run, "tm-sidepath", SP_SECRETS), D),
+        ("findings carry TM- ids", len(ids) >= 4, f"{len(ids)} distinct ids", D),
+        ("findings cite the theory (S-n)", len(sids) >= 4, f"{len(sids)} distinct: {sorted(sids)[:12]}", D),
+        ("the side path cited as a circumventable rule (S25)",
+         near(t, r"\bS25\b", SP_HOLD + "|" + SP_PATH, 300), "", D),
+        ("support agents and the outsourced partner in the adversary model",
+         near(t, r"insider|malicious (agent|employee|staff|contractor|insider)|brib|collu|corrupt|coerc|rogue",
+              r"\bBPO\b|outsourc|partner|contractor|support (agent|staff)|tier.?1|\bagents?\b", 200),
+         "the doc's 'trusted staff' assumption not kept", D),
+        ("the undrawn crossing put on the DFD",
+         near(t, r"ops.?console|\bBPO\b|outsourc|support tooling|tier.?1",
+              r"\bDFD\b|data.flow|diagram|trust boundar|boundary.crossing|crossing|out.of.scope|not (drawn|shown|modell?ed)", 200),
+         "", D),
+        ("the shared console token hides the agent from accounts-svc",
+         near(t, r"X-Ops-Token|service token|shared token|one token|single token|ops.token|`?ops-console`?",
+              r"per.agent|which agent|agent('s)? identity|individual|attribut|on behalf|confused deputy|can(no|')t tell|end.user identity|edge", 250),
+         "", D),
+        ("the hold enforced in accounts-svc, not in the console",
+         *sp_closes(t, SP_SERVICE), D),
+        ("findings carry confidence tags", any_of(t, r"✅|⚠️|decidable|\bproxy\b"), "", D),
+        ("score arithmetic shown, capped by the Critical",
+         any_of(t, SCORED) and near(t, r"\bcap", r"2\.0|critical"), "", D),
+        ("the gate stated condition by condition",
+         near(t, r"\bgate\b", r"fail")
+         and near(t, r"\bgate\b|condition|matrix", r"(two|2|second) (independent )?mechanism|independent mechanism|mechanisms? per"),
+         "", D),
+        ("what is working well is recorded",
+         near(t, r"72.?h|\bhold\b|cancel link|KMS|HSM", r"working well|done well|\bgood\b|strength|solid|\bkeep\b", 200), "", D),
+        ("no fixture document changed", *unchanged(run, "tm-sidepath"), D),
+    ]
+
+
 CHECKS_TM = {
     "eval-38-threatmodel-review-design-abuse-and-fallback": eval38,
     "eval-39-threatmodel-design-abusers-and-traps": eval39,
     "eval-40-threatmodel-propose-contain-then-design-out": eval40,
+    "eval-79-threatmodel-review-side-path-skips-the-hold": eval79,
 }
 
 # ---------------------------------------------------------------- appsec (41-43)
@@ -4572,10 +5358,147 @@ def eval43(run):
     ]
 
 
+# ---------------------------------------------------------------- appsec, traced (77)
+# Outcome, not format: each planted defect counts as found only when the run cites its file at a line
+# within ±3 of the defect and says what is wrong there; each decoy counts as raised when a line that
+# names it calls it a vulnerability without saying it is safe. Answer key: fixtures/as-traced.answers.md.
+
+LINE_REF = re.compile(
+    r"([\w./-]*[\w-]+\.(?:js|sql|yaml|json))`?\s*(?::|#L|,?\s*\(?lines?\s+)L?(\d+)(?:\s*(?:-|–|—|to)\s*L?(\d+))?", re.I)
+
+
+def line_refs(t):
+    """(path, first, last, offset) for every file:line or file:a-b reference in t."""
+    out = []
+    for m in LINE_REF.finditer(t):
+        a = int(m.group(2))
+        b = int(m.group(3)) if m.group(3) else a
+        out.append((m.group(1).lstrip("./").removeprefix("repo/"), a, max(a, b), m.start()))
+    return out
+
+
+def ref_context(t, pos):
+    """A markdown table row is its own context; anything else gets the six lines above and two below,
+    where a bulleted finding's title and its evidence line sit together."""
+    lines = t.splitlines(keepends=True)
+    acc = 0
+    for i, ln in enumerate(lines):
+        if acc + len(ln) > pos:
+            if ln.lstrip().startswith("|"):
+                return ln
+            return "".join(lines[max(0, i - 6): i + 3])
+        acc += len(ln)
+    return t[max(0, pos - 300): pos + 300]
+
+
+def planted_found(t, target, lo, hi, topic, against=None, tol=3):
+    """A reference to `target` (a path suffix match) overlapping lines lo-hi ±tol, whose context matches topic
+    (and not `against`)."""
+    hits = []
+    for path, a, b, pos in line_refs(t):
+        if not (target.endswith(path) and "/" + path.split("/")[-1] in "/" + target):
+            continue
+        if b < lo - tol or a > hi + tol:
+            continue
+        ctx = ref_context(t, pos)
+        if re.search(topic, ctx, re.I) and not (against and re.search(against, ctx, re.I)):
+            hits.append(f"{path}:{a}" + (f"-{b}" if b != a else ""))
+    return bool(hits), ", ".join(hits[:3]) or f"no {target}:{lo}-{hi} (±{tol}) reference saying it"
+
+
+def decoy_raised(t, anchor, accuse, cleared):
+    """Lines (a table row, or a line with the two around it) that name the decoy and accuse it without clearing it."""
+    lines = t.splitlines()
+    raised = []
+    for i, ln in enumerate(lines):
+        if not re.search(anchor, ln, re.I):
+            continue
+        ctx = ln if ln.lstrip().startswith("|") else "\n".join(lines[max(0, i - 2): i + 3])
+        if re.search(accuse, ctx, re.I) and not re.search(cleared, ctx, re.I):
+            raised.append(ln.strip()[:120])
+    return bool(raised), (f"raised: {raised[0]}" if raised else "not raised as a defect")
+
+
+AT_CLEARED = (r"false positive|not (injectable|exploitable|vulnerable|a (finding|vulnerability|risk|defect|security))"
+              r"|is(n't| not) (injectable|exploitable|a (finding|vulnerability|risk))|\bsafe\b|already|allow.?listed"
+              r"|white.?listed|cannot|can't|no (sql )?injection|not (an? )?(sql )?injection|non.?security|\bfine\b|acceptable|harmless"
+              r"|no (security )?(impact|risk)|not an issue|not used for|(from|through|via|by) (an? |the )?(allow.?list|Map\b|fixed map)"
+              r"|mapped (through|via|by)")
+AT_INJECT = r"inject|SQLi"  # an inventory row may say "interpolated" of the safe sort; a finding says injection
+AT_IDS = AS_IDS
+AT_EVIDENCE = r"(?:src/[\w/.-]+\.js|migrations/[\w.-]+\.sql|api/openapi\.yaml):\d+"
+
+
+def eval77(run):
+    """appsec Review on a service where the obvious files are clean: the defects sit behind a role guard declared
+    too late, a signature check that fails open, a value stored safely and replayed into SQL, and a child id
+    the parent check does not bind — beside two decoys that look bad and are safe."""
+    t = everything(run, "as-traced")
+    reviewed = len(t) > 1500 and any_of(t, r"finding")
+    aids = as_cites(t)
+    ids = set(re.findall(AT_IDS, t))
+    ev = set(re.findall(AT_EVIDENCE, t))
+    admin = planted_found(
+        t, "src/admin/router.js", 8, 30,
+        r"any (authenticated |signed.in |logged.in |tenant |regular |non.?staff |ordinary )?(user|member|owner|customer|account)"
+        r"|without (a |any )?role|no role (check|guard)|missing (role|authori[sz]ation)|not (role.)?(guarded|protected|covered)"
+        r"|(above|before) the (role |admin(.only)? |requireRole )?(guard|middleware|check)|before (the )?requireRole"
+        r"|declared (above|before)|BFLA|function.level|privilege escalat|cross.tenant|every tenant|all tenants|other tenants")
+    hook = planted_found(
+        t, "src/webhooks/billing.js", 19, 22,
+        r"(signature|header)[^|\n]{0,60}(missing|absent|omit|not (sent|present|provided|required)|optional|skipp|bypass)"
+        r"|(missing|absent|omitt?ed|without (a |the |any )?|no )(X-Billing-Signature|signature|header)"
+        r"|fail.?open|unsigned|forge|only (verified|checked|validated) (if|when)|if (a |the )?(header|signature) is (present|sent|supplied)")
+    sink = planted_found(t, "src/reports/export.js", 9, 13, r"second.order|inject|SQLi",
+                         against=r"not (injectable|exploitable|vulnerable|user.controlled)|false positive|\b(is|are|was) validated|trusted (source|value|data)|low risk")
+    source = planted_found(t, "src/routes/me.js", 21, 31, r"reportSort|preference|stored|second.order|inject|any string")
+    bola = planted_found(
+        t, "src/routes/files.js", 39, 44,
+        r"IDOR|BOLA|object.level|insecure direct|any (tenant|project|file)|another (tenant|project)|other (tenants?|projects?)"
+        r"|cross.(tenant|project)|project_id|not (scoped|bound|checked|tied|filtered)|ownership|belong|by id (alone|only)|only by id"
+        r"|fileId alone")
+    sort_decoy = decoy_raised(t, r"projects\.js|SORTABLE|GET /(api/)?projects\b(?!/)", AT_INJECT, AT_CLEARED)
+    md5_decoy = decoy_raised(t, r"md5|etag\.js",
+                             r"weak|broken|insecure|collision|deprecated|vulnerab|replace|upgrade|SHA-?256|crypto(graphic)? (failure|weakness)",
+                             AT_CLEARED)
+    return [
+        # capability — outcome: the exploitable defects found at their file:line, the decoys not raised
+        ("a review with findings was produced", reviewed, f"{len(t)} chars", C),
+        ("the staff routes declared above the role guard found (src/admin/router.js:8-30)", *admin, C),
+        ("the webhook that skips verification when the signature header is absent found (src/webhooks/billing.js:20)", *hook, C),
+        ("the second-order SQL injection found at its sink (src/reports/export.js:9-13)", *sink, C),
+        ("the file download that never binds the file to the project found (src/routes/files.js:39-44)", *bola, C),
+        ("the allow-listed project sort not raised as injection (decoy)", reviewed and not sort_decoy[0], sort_decoy[1], C),
+        ("the MD5 ETag not raised as weak crypto (decoy)", reviewed and not md5_decoy[0], md5_decoy[1], C),
+        # delta — what the skill instructs
+        ("an endpoint inventory was built", any_of(t, r"endpoint inventory|route inventory|inventory of (endpoints|routes)"), "", D),
+        ("the inventory has rows for the webhook and the staff routes",
+         any(re.search(r"hooks/billing", ln) for ln in t.splitlines() if ln.lstrip().startswith("|"))
+         and any(re.search(r"admin/tenants|/tenants\b", ln) for ln in t.splitlines() if ln.lstrip().startswith("|")), "", D),
+        ("routes missing from the spec named (inventory reconciled against openapi.yaml)",
+         near(t, r"/hooks|hooks/billing|/admin|admin routes|webhook", r"openapi|the spec|undocumented|shadow|reconcil|not (listed|documented|in the spec)"), "", D),
+        ("the injection traced from its source (src/routes/me.js) to its sink", source[0] and sink[0], source[1], D),
+        ("the spec's reportSort enum found unenforced by the code",
+         near(t, r"\benum\b", r"not enforced|unenforced|never enforced|isn't enforced|not validated|doesn't (enforce|validate|check)|does not (enforce|validate|check)|only (checks |validates )?(the )?(type|length)|any string"), "", D),
+        ("findings carry AS- ids", len(ids) >= 4, f"{len(ids)} ids", D),
+        ("findings cite the theory (A-n)", len(aids) >= 4, f"{len(aids)} distinct: {sorted(aids)[:12]}", D),
+        ("findings carry file:line evidence", len(ev) >= 4, f"{len(ev)} distinct locations", D),
+        ("findings carry confidence tags", any_of(t, r"✅|⚠️|decidable|\bproxy\b"), "", D),
+        ("score arithmetic shown, capped by the Critical", any_of(t, SCORED) and near(t, r"\bcap", r"2\.0|critical"), "", D),
+        ("the gate stated with its conditions",
+         near(t, r"\bgate\b", r"fail") and near(t, r"\bgate\b|condition", r"inventory|authori[sz]|state.chang|Critical|High"), "", D),
+        ("findings mapped to the OWASP lists", any_of(t, r"A0\d:2021|A10:2021|API\d{1,2}:20(19|23)|OWASP (Top 10|API)"), "", D),
+        ("what is working well is recorded",
+         near(t, r"bcrypt|timingSafeEqual|loadProject|allow.?list|parameteri[sz]ed|formula", r"well|good|strength|keep|correct|solid"), "", D),
+        ("no source, spec, manifest or migration changed", *unchanged(run, "as-traced"), D),
+    ]
+
+
 CHECKS_AS = {
     "eval-41-appsec-review-inventory-and-secrets": eval41,
     "eval-42-appsec-design-reshapes-the-quick-wins": eval42,
     "eval-43-appsec-propose-contain-then-fix-the-class": eval43,
+    "eval-77-appsec-review-traced-not-sampled": eval77,
 }
 
 # ---------------------------------------------------------------- hardening (44-46)
@@ -4746,10 +5669,150 @@ def eval46(run):
     ]
 
 
+# ---- eval 78: hardening Review, the exposure the evidence hides (hd-dualstack)
+# Every obvious file says "hardened": the CIS role's 0 failed, `sshd -T`'s global
+# `passwordauthentication no`, ufw's "deny (incoming)", a VPN-only IPv4 SSH rule. The
+# exposures sit one file over: `::/0` on tcp/22 in the security group's Ipv6Ranges,
+# ufw with IPV6=no (ip6tables ACCEPT), a `Match Group deploy` that turns passwords back
+# on, audit rules without `-e 2`. Capability is the outcome: were they found, were the
+# decoys left alone, was the sign-off refused. Answer key: fixtures/hd-dualstack.answers.md.
+
+HD78 = "hd-dualstack"
+HD78_SSH = r"\bssh\b|\bsshd\b|(?<![\d.])(?<!\d/)22(?![\d.])"  # tcp/22 and :22, not the /22 of a CIDR
+HD78_V6ANY = (r"::/0|(from|to|for|over|via) (any|every|all|the (public|whole)) IPv6"
+              r"|IPv6[^\n]{0,60}(internet|anywhere|any (source|address)|publicly|world|globally)"
+              r"|(internet|anywhere|publicly|world)[^\n]{0,60}IPv6")
+# Between "::/0" and "22" on one line, these mean the pair belongs to different rules.
+HD78_OTHER_RULE = r"egress|outbound|\b443\b|https|\bALB\b|load balancer|10\.8\.0\.0/16 only"
+HD78_PASSWORD_ON = (r"passwordauthentication\s+yes"
+                    r"|password[- ]?(auth\w*|logins?|SSH)[^\n]{0,40}\b(enabled|allowed|permitted|accepted|re-?enabled|turned on|still on|is on|yes)\b"
+                    r"|\b(re-?enables?|turns? on|allows?|permits?)\s+password[- ]?(auth\w*|logins?|SSH)"
+                    r"|\b(log ?in|logins?|authenticates?|SSH in)\s+(with|using|by)\s+(a\s+|its\s+)?password")
+HD78_NEG = r"\bnot\b|n't|\bno\b|missing|absent|without|lacks?|lacking|unset|never|neither"
+HD78_BENIGN = (r"\bnot\b|n't|fine|intended|expected|correct|\bok\b|safe|🟢|well|good|loopback|scoped|"
+               r"acceptable|strength|tighten|decoy|by design|credit")
+# A line that names a decoy and also one of the real findings is about the finding.
+HD78_REAL = r"::/0[^\n]{0,80}\b22\b|IPV6\s*=\s*no|ip6tables|Match Group deploy|PasswordAuthentication|immutab|-e 2"
+HD78_DECOYS = {
+    "the ALB's public HTTPS": (r"\bALB\b|load balancer|alb-pay-public|sg-0a9b8c7d6e5f40312", r"\b443\b|https"),
+    "loopback Redis": (r"redis|6379", r"."),
+    "node_exporter (IPv4-only rule)": (r"node_exporter|9100", r"."),
+    "the chrooted sftp-reports Match": (r"sftp-reports", r"."),
+    "deploy's one-command sudo rule": (r"NOPASSWD|systemctl restart pay-api|20-deploy", r"."),
+}
+
+
+def hd78_units(t):
+    """Each line, and each pair of adjacent lines (a finding's heading and its first line,
+    or a sentence wrapped across two)."""
+    lines = t.splitlines()
+    return lines + [a + " " + b for a, b in zip(lines, lines[1:])]
+
+
+def hd78_ipv6_ssh(t):
+    """`::/0` (or "any IPv6 address", "the IPv6 internet") tied to SSH on one line: within
+    100 characters of `ssh`/`22`, with no other rule (egress, the ALB's 443) between them or just before."""
+    for line in hd78_units(t):
+        for m in re.finditer(HD78_V6ANY, line, re.I):
+            for s in re.finditer(HD78_SSH, line, re.I):
+                lo, hi = sorted((m.start(), s.start()))
+                if abs(m.start() - s.start()) <= 100 and not re.search(HD78_OTHER_RULE, line[max(0, lo - 25):hi], re.I):
+                    return True
+    return False
+
+
+def hd78_decoys_flagged(t):
+    """Decoy lines that carry a Critical/High severity with nothing saying it is fine."""
+    flagged = []
+    for line in t.splitlines():
+        if not re.search(r"\b(critical|high)\b", line, re.I) or re.search(HD78_BENIGN, line, re.I) \
+                or re.search(HD78_REAL, line, re.I):
+            continue
+        flagged += [name for name, (a, b) in HD78_DECOYS.items()
+                    if re.search(a, line, re.I) and re.search(b, line, re.I)]
+    return sorted(set(flagged))
+
+
+def hd78_signoff_refused(t):
+    return any_of(t,
+                  r"(cannot|can't|can ?not|could not|couldn't|do not|don't|would not|wouldn't|unable to|not able to|won't)"
+                  r"\s+(yet\s+)?(confirm|sign|approve|certify|recommend (signing|sign-?off|approval))",
+                  r"\b(not|isn't|is not)\s+(yet\s+)?(locked down|ready|hardened|PCI[- ]ready|fit for|safe to sign)",
+                  r"sign-?off[^\n]{0,60}\b(withheld|blocked|refused|denied|not (yet )?(recommended|given|possible|supported)|fails?)\b",
+                  r"sign-?off\W{0,5}no\b",
+                  r"\b(do not|don't|should not|shouldn't)\s+sign",
+                  r"^\W*(short answer|verdict|answer)\W*[^\n]{0,10}\bno\b",
+                  r"\bgate\b[^\n]{0,40}\bfail|\bfail\w*\s+(the\s+)?gate", flags=re.I | re.M)
+
+
+def eval78(run):
+    """hardening Review: a host every obvious file calls hardened, reachable by password SSH over IPv6."""
+    t = everything(run, HD78)
+    hids = cites(t, "H", 30)
+    ids = set(re.findall(HD_IDS, t))
+    decoys = hd78_decoys_flagged(t)
+    v6_sources = [s for s in (r"security-groups\.json|Ipv6Ranges", r"route-tables|igw-|internet gateway",
+                              r"ip-addr|2600:1f18:4a2:c311|global (IPv6 )?address", r"ss-tlnp|\[::\]:22",
+                              r"etc/default/ufw|IPV6\s*=\s*no", r"ip6tables")
+                  if re.search(s, t, re.I)]
+    return [
+        # capability — the outcome: the real exposures, the decoys left alone, the sign-off refused
+        ("a review with findings was produced", len(t) > 1500 and any_of(t, r"finding"), f"{len(t)} chars", C),
+        ("SSH reachable from the internet over IPv6 found (::/0 on tcp/22 in the security group)",
+         hd78_ipv6_ssh(t), "the IPv4 rule is VPN-only; the Ipv6Ranges twin is ::/0", C),
+        ("the host firewall found not to filter IPv6 (ufw IPV6=no, ip6tables ACCEPT)",
+         any_of(t, r"IPV6\s*=\s*no", r"ip6tables[^\n]{0,100}(ACCEPT|no rules|empty|unfiltered|open)",
+                r"(ACCEPT|no rules|empty)[^\n]{0,60}ip6tables",
+                r"ufw[^\n]{0,100}\b(only|not|doesn't|does not|never)\b[^\n]{0,40}IPv6",
+                r"ufw[^\n]{0,60}\b(only|IPv4[- ]only)\b[^\n]{0,30}IPv4",
+                r"IPv6[^\n]{0,80}(unfiltered|not filtered|no host firewall|bypass|wide open|policy ACCEPT|not covered)"),
+         "ufw status prints deny (incoming) for IPv4 only", C),
+        ("password SSH for deploy found (the Match block overrides the global no)",
+         any(re.search(r"\bdeploy\b|Match Group", u, re.I) and re.search(HD78_PASSWORD_ON, u, re.I)
+             for u in hd78_units(t)), "sshd -T without -C shows only the global value", C),
+        ("audit rules found not immutable (enabled 1, no -e 2)",
+         near(t, r"(?<!loginuid_)immutab|-e 2\b|enabled 2\b", HD78_NEG, 80)
+         or near(t, r"\benabled 1\b", r"immutab|-e 2|cleared|flushed|auditctl -D|tamper", 120)
+         or any_of(t, r"\b(add|set|append)\w*\s[^\n]{0,20}-e 2\b",
+                   r"audit[^\n]{0,60}\bmutable\b|\bmutable\b[^\n]{0,60}(audit|rules)"), "", C),
+        ("the sign-off is not confirmed", hd78_signoff_refused(t), "the prompt asks to confirm it is locked down", C),
+        ("decoys not raised as High/Critical (ALB 443, loopback Redis, node_exporter, sftp chroot, scoped sudo)",
+         len(t) > 1500 and not decoys, f"flagged: {decoys}" if decoys else "none flagged (a review must exist)", C),
+        # delta — what the skill instructs
+        ("findings carry HD- ids", len(ids) >= 4, f"{len(ids)} ids", D),
+        ("findings cite the theory (H-n)", len(hids) >= 4, f"{len(hids)} distinct: {sorted(hids)[:12]}", D),
+        ("findings carry confidence tags", any_of(t, r"✅|⚠️|🔬|decidable|\bproxy\b|needs-data"), "", D),
+        ("evidence cited by host path or resource",
+         any_of(t, r"evidence/pay-api-01/|cloud/aws/|sshd_config:\d+|security-groups\.json|ip6tables-S\.txt"), "", D),
+        ("asset register, exposure map and privilege map built",
+         has(t, r"asset register", r"exposure map", r"privilege map"), "", D),
+        ("platform identified (Ubuntu, ufw, AWS)", has(t, r"ubuntu", r"\bufw\b", r"\baws\b|\bec2\b"), "", D),
+        ("the effective SSH config named over sshd -T's global output",
+         any_of(t, r"sshd -T -C|-C user=")
+         or near(t, r"sshd -T", r"(doesn't|does not|don't|do not|won't|will not|omits?|without|ignores?|\bnot\b)[^\n]{0,40}(Match|-C\b)"
+                              r"|global (values?|settings?|config)|Match block", 250), "", D),
+        ("the CIS role's report treated as evidence, not the verdict",
+         near(t, r"CIS (role|report|scan|run)|cis-report|ansible|0 failed|168 passed",
+              r"evidence, not|not the (review|verdict)|(doesn't|does not|didn't|did not|cannot|can't) (see|check|evaluate|read|catch|detect|cover)"
+              r"|misse[sd]|blind|only (checks|reads)|false (assurance|confidence|pass)", 250), "", D),
+        ("the IPv6 path evidenced across files", len(v6_sources) >= 4, f"{len(v6_sources)} of 6 sources", D),
+        ("the internet SSH exposure rated Critical",
+         any(re.search(r"\bcritical\b", u, re.I) and re.search(HD78_V6ANY + r"|IPv6", u, re.I) and re.search(HD78_SSH, u, re.I)
+             for u in hd78_units(t)), "public port 22 with passwords on", D),
+        ("score arithmetic shown, capped by the Critical", any_of(t, SCORED) and near(t, r"\bcap", r"2\.0|critical"), "", D),
+        ("the gate stated condition by condition", gate_conditions(t, r"admin|internet|ssh"), "", D),
+        ("what is working well is recorded",
+         near(t, r"IMDSv2|HttpTokens|unattended|no pending|key-only|ciphers", r"well|good|strength|solid|keep|🟢|works|credit", 200), "", D),
+        ("no evidence changed and no host-changing script written", *unchanged(run, HD78), D),
+        ("no active probe claimed", *no_probe_claimed(run), D),
+    ]
+
+
 CHECKS_HD = {
     "eval-44-hardening-review-mixed-estate": eval44,
     "eval-45-hardening-design-tier-aware-baseline": eval45,
     "eval-46-hardening-propose-no-lockout": eval46,
+    "eval-78-hardening-review-hidden-exposure": eval78,
 }
 
 
@@ -8255,6 +9318,7 @@ CHECKS = {
     "eval-24-pipelines-review-untrusted-and-rebuild": eval24,
     "eval-25-pipelines-design-build-once-progressive": eval25,
     "eval-26-pipelines-propose-keeps-prod-up": eval26,
+    "eval-80-pipelines-opens-to-forks": eval80,
     "eval-27-acceptance-tests-red-for-the-right-reason": eval27,
     "eval-28-dockerfile-repair-pins-and-drops-root": eval28,
     "eval-29-release-notes-translates-drops-and-leads-with-breaking": eval29,
@@ -8275,6 +9339,7 @@ CHECKS = {
     "eval-44-hardening-review-mixed-estate": eval44,
     "eval-45-hardening-design-tier-aware-baseline": eval45,
     "eval-46-hardening-propose-no-lockout": eval46,
+    "eval-78-hardening-review-hidden-exposure": eval78,
     "eval-47-dbquery-workload-ranked-plans-read-indexes-weighed": eval47,
     "eval-48-dbarchitect-one-system-of-record-no-dual-writes": eval48,
     "eval-49-peer-review-claim-omission-injection": eval49,
@@ -8294,6 +9359,7 @@ CHECKS = {
     "eval-63-architect-second-round": eval63,
     "eval-74-architect-adr-binds-the-round": eval74,
     "eval-75-brief-archives-finished-change": eval75,
+    "eval-79-threatmodel-review-side-path-skips-the-hold": eval79,
     "eval-64-acceptance-tests-red-baseline-writes-nothing": eval64,
     "eval-65-acceptance-tests-declares-the-missing-interface": eval65,
     "eval-70-verdict-red-run-blocks-go": eval70,
@@ -8304,6 +9370,8 @@ CHECKS = {
     "eval-69-teardown-finds-the-lowered-bar": eval69,
     "eval-72-nexus-sets-up-the-increment": eval72,
     "eval-73-nexus-merges-on-the-go-and-cleans-up": eval73,
+    "eval-76-hotfix-email-case-no-lockout": eval76,
+    "eval-77-appsec-review-traced-not-sampled": eval77,
 }
 
 

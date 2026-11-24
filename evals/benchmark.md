@@ -1,175 +1,186 @@
 # Benchmark
 
-`delta` = assertions that test what the skill instructs. `cap` = does the skill do its job at all. `n` = with-skill runs; the baseline is one run unless the health table says otherwise.
+**Outcome first.** `outcome gain` = `cap` − `cap base`: how much more often the job gets done with the skill than without it. `cap` = capability assertions: does the run do the job at all. Then, as instruction-following: `delta` = assertions that test what the skill instructs, which a baseline that never read the skill mostly fails by construction, so `delta gain` overstates what a skill adds. `baseline already succeeds` = `cap base` is 1.00, so on outcome the eval can only catch a regression. `n` = with-skill runs; the baseline is one run unless the health table says otherwise.
 
-| eval | from | n | delta (mean ± sd) | delta base | gain | cap | cap base |
-|---|---|---|---|---|---|---|---|
-| 0-architect-charter-and-options | i55 | 3 | 1.00 ± 0.00 | 0.00 | +1.00 | 1.00 | 1.00 |
-| 1-brief-ordered-criteria | i55 | 3 | 1.00 ± 0.00 | 0.00 | +1.00 | 1.00 | 1.00 |
-| 10-hotfix-script-no-tests | i49 | 3 | 1.00 ± 0.00 | 0.20 | +0.80 | 1.00 | 1.00 |
-| 11-hotfix-routes-outage-out | i49 | 3 | 1.00 ± 0.00 | 0.00 | +1.00 | 1.00 | 1.00 |
-| 12-incident-webapp-contain-by-flag | i49 | 3 | 0.95 ± 0.08 | 0.57 | +0.38 | 1.00 | 0.50 |
-| 13-incident-batch-repair-artifact | i49 | 3 | 1.00 ± 0.00 | 0.50 | +0.50 | 1.00 | 1.00 |
-| 14-incident-library-no-deploy | i49 | 3 | 1.00 ± 0.00 | 0.86 | +0.14 | 1.00 | 1.00 |
-| 15-harness-loop-closes-teardown | i49 | 3 | 1.00 ± 0.00 | — | — | 1.00 | — |
-| 16-netaudit-hub-spoke-recovers-and-scores | i49 | 3 | 0.97 ± 0.04 | 0.23 | +0.74 | 1.00 | 0.60 |
-| 17-netdesign-plans-around-what-is-in-use | i49 | 3 | 0.90 ± 0.00 | 0.30 | +0.60 | 1.00 | 0.00 |
-| 18-netdiagram-canonical-views-from-model | i49 | 3 | 1.00 ± 0.00 | 0.20 | +0.80 | 1.00 | 0.00 |
-| 19-netpropose-contains-before-restructuring | i49 | 3 | 1.00 ± 0.00 | 0.70 | +0.30 | 1.00 | 1.00 |
-| 2-tdd-reads-brief-vertical | i55 | 3 | 1.00 ± 0.00 | 0.00 | +1.00 | 1.00 | 1.00 |
-| 20-netblueprint-waits-for-acceptance | i49 | 3 | 1.00 ± 0.00 | 0.67 | +0.33 | 1.00 | 1.00 |
-| 21-terraform-review-state-and-secrets | i70 | 3 | 1.00 ± 0.00 | 0.50 | +0.50 | 1.00 | 0.83 |
-| 22-terraform-design-isolates-state | i70 | 3 | 1.00 ± 0.00 | 0.65 | +0.35 | 1.00 | 1.00 |
-| 23-terraform-propose-no-recreate | i70 | 3 | 0.93 ± 0.00 | 0.64 | +0.29 | 1.00 | 1.00 |
-| 24-pipelines-review-untrusted-and-rebuild | i70 | 3 | 0.95 ± 0.04 | 0.47 | +0.49 | 1.00 | 1.00 |
-| 25-pipelines-design-build-once-progressive | i70 | 3 | 1.00 ± 0.00 | 0.59 | +0.41 | 1.00 | 1.00 |
-| 26-pipelines-propose-keeps-prod-up | i70 | 3 | 0.97 ± 0.06 | 0.60 | +0.37 | 1.00 | 1.00 |
-| 27-acceptance-tests-red-for-the-right-reason | i58 | 3 | 1.00 ± 0.00 | 0.25 | +0.75 | 1.00 | 0.67 |
-| 28-dockerfile-repair-pins-and-drops-root | i80 | 3 | 0.94 ± 0.02 | 0.62 | +0.32 | 1.00 | 1.00 |
-| 29-release-notes-translates-drops-and-leads-with-breaking | i49 | 3 | 1.00 ± 0.00 | 0.54 | +0.46 | 1.00 | 0.86 |
-| 3-refactor-promotes-noted-smell | i55 | 3 | 0.96 ± 0.07 | 0.12 | +0.83 | 1.00 | 0.75 |
-| 30-dbaudit-postgres-dump-scored-not-fixed | i62 | 3 | 0.95 ± 0.04 | 0.36 | +0.60 | 1.00 | 1.00 |
-| 31-dbdesign-sqlite-from-requirements-traps | i62 | 3 | 0.97 ± 0.04 | 0.54 | +0.44 | 1.00 | 1.00 |
-| 32-dbdiagram-barker-and-relational-from-design | i62 | 3 | 1.00 ± 0.00 | 0.77 | +0.23 | 1.00 | 1.00 |
-| 33-dbpropose-orphans-before-constraints | i62 | 3 | 0.97 ± 0.04 | 0.39 | +0.59 | 1.00 | 0.80 |
-| 34-dbbuild-executable-ddl-from-accepted-proposal | i62 | 3 | 1.00 ± 0.00 | 0.89 | +0.11 | 1.00 | 1.00 |
-| 35-container-hardening-review-socket-and-firewall | i80 | 3 | 1.00 ± 0.00 | 0.64 | +0.36 | 1.00 | 1.00 |
-| 36-container-debug-oom-localhost-crlf | i80 | 3 | 0.96 ± 0.04 | 0.62 | +0.33 | 1.00 | 1.00 |
-| 37-docker-swarm-review-quorum-and-state | i80 | 3 | 1.00 ± 0.00 | 0.52 | +0.48 | 1.00 | 0.75 |
-| 38-threatmodel-review-design-abuse-and-fallback | i49 | 3 | 0.97 ± 0.05 | 0.50 | +0.47 | 1.00 | 1.00 |
-| 39-threatmodel-design-abusers-and-traps | i49 | 3 | 1.00 ± 0.00 | 0.65 | +0.35 | 1.00 | 1.00 |
-| 4-teardown-finds-vacuous-test | i55 | 3 | 1.00 ± 0.00 | 0.00 | +1.00 | 1.00 | 1.00 |
-| 40-threatmodel-propose-contain-then-design-out | i49 | 3 | 0.95 ± 0.09 | 0.54 | +0.41 | 1.00 | 1.00 |
-| 41-appsec-review-inventory-and-secrets | i49 | 3 | 1.00 ± 0.00 | 0.61 | +0.39 | 1.00 | 1.00 |
-| 42-appsec-design-reshapes-the-quick-wins | i49 | 3 | 0.99 ± 0.02 | 0.71 | +0.28 | 1.00 | 1.00 |
-| 43-appsec-propose-contain-then-fix-the-class | i49 | 3 | 0.93 ± 0.00 | 0.64 | +0.29 | 1.00 | 1.00 |
-| 44-hardening-review-mixed-estate | i49 | 3 | 0.98 ± 0.03 | 0.68 | +0.30 | 1.00 | 1.00 |
-| 45-hardening-design-tier-aware-baseline | i49 | 3 | 1.00 ± 0.00 | 0.73 | +0.27 | 1.00 | 1.00 |
-| 46-hardening-propose-no-lockout | i49 | 3 | 0.97 ± 0.04 | 0.61 | +0.36 | 1.00 | 1.00 |
-| 47-dbquery-workload-ranked-plans-read-indexes-weighed | i62 | 3 | 1.00 ± 0.00 | 0.86 | +0.14 | 1.00 | 1.00 |
-| 48-dbarchitect-one-system-of-record-no-dual-writes | i60 | 3 | 1.00 ± 0.00 | 0.73 | +0.27 | 1.00 | 1.00 |
-| 49-peer-review-claim-omission-injection | i49 | 3 | 1.00 ± 0.00 | 0.29 | +0.71 | 1.00 | 1.00 |
-| 5-verdict-cuts-and-slices | i58 | 3 | 1.00 ± 0.00 | 0.33 | +0.67 | 1.00 | 1.00 |
-| 50-pr-prep-splits-and-discloses | i49 | 3 | 0.95 ± 0.04 | 0.31 | +0.64 | 1.00 | 1.00 |
-| 51-code-xray-hotspots-not-cold-giants | i49 | 3 | 0.98 ± 0.04 | 0.40 | +0.58 | 1.00 | 1.00 |
-| 52-test-review-would-it-fail | i49 | 3 | 0.96 ± 0.08 | 0.20 | +0.76 | 0.94 | 0.83 |
-| 53-concurrency-review-interleavings-and-replicas | i49 | 3 | 0.95 ± 0.09 | 0.54 | +0.41 | 1.00 | 1.00 |
-| 54-review-retro-areas-not-people | i49 | 3 | 0.98 ± 0.04 | 0.43 | +0.55 | 1.00 | 1.00 |
-| 55-repo-memory-dream-true-and-small | i49 | 3 | 0.90 ± 0.09 | 0.77 | +0.13 | 1.00 | 1.00 |
-| 56-ticket-reconcile-before-filing | i49 | 3 | 0.92 ± 0.03 | 0.71 | +0.21 | 1.00 | 1.00 |
-| 57-backlog-health-and-order-by-policy | i49 | 3 | 0.92 ± 0.00 | 0.61 | +0.31 | 1.00 | 0.83 |
-| 58-nexus-judges-the-record | i58 | 3 | 1.00 ± 0.00 | 0.93 | +0.07 | 1.00 | 1.00 |
-| 59-hotfix-py-scope-parser | i48 | 3 | 1.00 ± 0.00 | 0.44 | +0.56 | 1.00 | 1.00 |
-| 6-compose-detects-real-services | i80 | 3 | 1.00 ± 0.00 | 0.50 | +0.50 | 1.00 | 1.00 |
-| 60-tdd-planted-instruction-not-obeyed | i55 | 3 | 1.00 ± 0.00 | 0.83 | +0.17 | 1.00 | 1.00 |
-| 61-brief-under-nexus-routes-questions | i55 | 3 | 1.00 ± 0.00 | 0.67 | +0.33 | 1.00 | 0.00 |
-| 62-tdd-headless-contradiction-unconfirmed | i55 | 3 | 1.00 ± 0.00 | 0.50 | +0.50 | 1.00 | 0.33 |
-| 63-architect-second-round | i55 | 3 | 1.00 ± 0.00 | 0.38 | +0.62 | 1.00 | 0.50 |
-| 64-acceptance-tests-red-baseline-writes-nothing | i58 | 3 | 1.00 ± 0.00 | 0.80 | +0.20 | 1.00 | 1.00 |
-| 65-acceptance-tests-declares-the-missing-interface | i58 | 3 | 1.00 ± 0.00 | 0.27 | +0.73 | 1.00 | 1.00 |
-| 66-refactor-standalone-no-ledger | i57 | 3 | 0.94 ± 0.10 | 0.50 | +0.44 | 1.00 | 1.00 |
-| 67-refactor-uncovered-smell-left | i57 | 3 | 1.00 ± 0.00 | 0.60 | +0.40 | 1.00 | 1.00 |
-| 68-teardown-empty-diff-stops | i57 | 3 | 1.00 ± 0.00 | 0.20 | +0.80 | 1.00 | 0.67 |
-| 69-teardown-finds-the-lowered-bar | i57 | 3 | 1.00 ± 0.00 | 0.14 | +0.86 | 1.00 | 0.75 |
-| 7-postmortem-widens-range-and-describes | i49 | 3 | 0.97 ± 0.06 | 0.50 | +0.47 | 1.00 | 0.80 |
-| 70-verdict-red-run-blocks-go | i58 | 3 | 0.96 ± 0.07 | 0.12 | +0.83 | 1.00 | 0.00 |
-| 71-verdict-weakened-check-not-refuted-by-green | i58 | 3 | 1.00 ± 0.00 | 0.86 | +0.14 | 1.00 | 1.00 |
-| 72-nexus-sets-up-the-increment | i58 | 3 | 1.00 ± 0.00 | 0.77 | +0.23 | 1.00 | 1.00 |
-| 73-nexus-merges-on-the-go-and-cleans-up | i58 | 3 | 0.97 ± 0.05 | 1.00 | -0.03 | 1.00 | 1.00 |
-| 74-architect-adr-binds-the-round | i57 | 3 | 0.88 ± 0.12 | 0.38 | +0.50 | 1.00 | 0.00 |
-| 75-brief-archives-finished-change | i57 | 3 | 1.00 ± 0.00 | 0.86 | +0.14 | 1.00 | 1.00 |
-| 8-hotfix-node-shared-cause | i49 | 3 | 1.00 ± 0.00 | 0.38 | +0.62 | 1.00 | 1.00 |
-| 9-hotfix-jvm-both-callers | i49 | 3 | 1.00 ± 0.00 | 0.71 | +0.29 | 1.00 | 1.00 |
+| eval | from | outcome gain | cap | cap base | n | delta gain | delta (mean ± sd) | delta base | outcome note |
+|---|---|---|---|---|---|---|---|---|---|
+| 0-architect-charter-and-options | i55 | +0.00 | 1.00 | 1.00 | 3 | +1.00 | 1.00 ± 0.00 | 0.00 | baseline already succeeds |
+| 1-brief-ordered-criteria | i55 | +0.00 | 1.00 | 1.00 | 3 | +1.00 | 1.00 ± 0.00 | 0.00 | baseline already succeeds |
+| 10-hotfix-script-no-tests | i49 | +0.00 | 1.00 | 1.00 | 3 | +0.80 | 1.00 ± 0.00 | 0.20 | baseline already succeeds |
+| 11-hotfix-routes-outage-out | i49 | +0.00 | 1.00 | 1.00 | 3 | +1.00 | 1.00 ± 0.00 | 0.00 | baseline already succeeds |
+| 12-incident-webapp-contain-by-flag | i49 | +0.50 | 1.00 | 0.50 | 3 | +0.38 | 0.95 ± 0.08 | 0.57 | — |
+| 13-incident-batch-repair-artifact | i49 | +0.00 | 1.00 | 1.00 | 3 | +0.50 | 1.00 ± 0.00 | 0.50 | baseline already succeeds |
+| 14-incident-library-no-deploy | i49 | +0.00 | 1.00 | 1.00 | 3 | +0.14 | 1.00 ± 0.00 | 0.86 | baseline already succeeds |
+| 15-harness-loop-closes-teardown | i49 | — | 1.00 | — | 3 | — | 1.00 ± 0.00 | — | — |
+| 16-netaudit-hub-spoke-recovers-and-scores | i49 | +0.40 | 1.00 | 0.60 | 3 | +0.74 | 0.97 ± 0.04 | 0.23 | — |
+| 17-netdesign-plans-around-what-is-in-use | i49 | +1.00 | 1.00 | 0.00 | 3 | +0.60 | 0.90 ± 0.00 | 0.30 | — |
+| 18-netdiagram-canonical-views-from-model | i49 | +1.00 | 1.00 | 0.00 | 3 | +0.80 | 1.00 ± 0.00 | 0.20 | — |
+| 19-netpropose-contains-before-restructuring | i49 | +0.00 | 1.00 | 1.00 | 3 | +0.30 | 1.00 ± 0.00 | 0.70 | baseline already succeeds |
+| 2-tdd-reads-brief-vertical | i55 | +0.00 | 1.00 | 1.00 | 3 | +1.00 | 1.00 ± 0.00 | 0.00 | baseline already succeeds |
+| 20-netblueprint-waits-for-acceptance | i49 | +0.00 | 1.00 | 1.00 | 3 | +0.33 | 1.00 ± 0.00 | 0.67 | baseline already succeeds |
+| 21-terraform-review-state-and-secrets | i70 | +0.17 | 1.00 | 0.83 | 3 | +0.50 | 1.00 ± 0.00 | 0.50 | — |
+| 22-terraform-design-isolates-state | i70 | +0.00 | 1.00 | 1.00 | 3 | +0.35 | 1.00 ± 0.00 | 0.65 | baseline already succeeds |
+| 23-terraform-propose-no-recreate | i70 | +0.00 | 1.00 | 1.00 | 3 | +0.29 | 0.93 ± 0.00 | 0.64 | baseline already succeeds |
+| 24-pipelines-review-untrusted-and-rebuild | i70 | +0.00 | 1.00 | 1.00 | 3 | +0.49 | 0.95 ± 0.04 | 0.47 | baseline already succeeds |
+| 25-pipelines-design-build-once-progressive | i70 | +0.00 | 1.00 | 1.00 | 3 | +0.41 | 1.00 ± 0.00 | 0.59 | baseline already succeeds |
+| 26-pipelines-propose-keeps-prod-up | i70 | +0.00 | 1.00 | 1.00 | 3 | +0.37 | 0.97 ± 0.06 | 0.60 | baseline already succeeds |
+| 27-acceptance-tests-red-for-the-right-reason | i58 | +0.33 | 1.00 | 0.67 | 3 | +0.75 | 1.00 ± 0.00 | 0.25 | — |
+| 28-dockerfile-repair-pins-and-drops-root | i80 | +0.00 | 1.00 | 1.00 | 3 | +0.32 | 0.94 ± 0.02 | 0.62 | baseline already succeeds |
+| 29-release-notes-translates-drops-and-leads-with-breaking | i49 | +0.14 | 1.00 | 0.86 | 3 | +0.46 | 1.00 ± 0.00 | 0.54 | — |
+| 3-refactor-promotes-noted-smell | i55 | +0.25 | 1.00 | 0.75 | 3 | +0.83 | 0.96 ± 0.07 | 0.12 | — |
+| 30-dbaudit-postgres-dump-scored-not-fixed | i62 | +0.00 | 1.00 | 1.00 | 3 | +0.60 | 0.95 ± 0.04 | 0.36 | baseline already succeeds |
+| 31-dbdesign-sqlite-from-requirements-traps | i62 | +0.00 | 1.00 | 1.00 | 3 | +0.44 | 0.97 ± 0.04 | 0.54 | baseline already succeeds |
+| 32-dbdiagram-barker-and-relational-from-design | i62 | +0.00 | 1.00 | 1.00 | 3 | +0.23 | 1.00 ± 0.00 | 0.77 | baseline already succeeds |
+| 33-dbpropose-orphans-before-constraints | i62 | +0.20 | 1.00 | 0.80 | 3 | +0.59 | 0.97 ± 0.04 | 0.39 | — |
+| 34-dbbuild-executable-ddl-from-accepted-proposal | i62 | +0.00 | 1.00 | 1.00 | 3 | +0.11 | 1.00 ± 0.00 | 0.89 | baseline already succeeds |
+| 35-container-hardening-review-socket-and-firewall | i80 | +0.00 | 1.00 | 1.00 | 3 | +0.36 | 1.00 ± 0.00 | 0.64 | baseline already succeeds |
+| 36-container-debug-oom-localhost-crlf | i80 | +0.00 | 1.00 | 1.00 | 3 | +0.33 | 0.96 ± 0.04 | 0.62 | baseline already succeeds |
+| 37-docker-swarm-review-quorum-and-state | i80 | +0.25 | 1.00 | 0.75 | 3 | +0.48 | 1.00 ± 0.00 | 0.52 | — |
+| 38-threatmodel-review-design-abuse-and-fallback | i49 | +0.00 | 1.00 | 1.00 | 3 | +0.47 | 0.97 ± 0.05 | 0.50 | baseline already succeeds |
+| 39-threatmodel-design-abusers-and-traps | i49 | +0.00 | 1.00 | 1.00 | 3 | +0.35 | 1.00 ± 0.00 | 0.65 | baseline already succeeds |
+| 4-teardown-finds-vacuous-test | i55 | +0.00 | 1.00 | 1.00 | 3 | +1.00 | 1.00 ± 0.00 | 0.00 | baseline already succeeds |
+| 40-threatmodel-propose-contain-then-design-out | i49 | +0.00 | 1.00 | 1.00 | 3 | +0.41 | 0.95 ± 0.09 | 0.54 | baseline already succeeds |
+| 41-appsec-review-inventory-and-secrets | i49 | +0.00 | 1.00 | 1.00 | 3 | +0.39 | 1.00 ± 0.00 | 0.61 | baseline already succeeds |
+| 42-appsec-design-reshapes-the-quick-wins | i49 | +0.00 | 1.00 | 1.00 | 3 | +0.28 | 0.99 ± 0.02 | 0.71 | baseline already succeeds |
+| 43-appsec-propose-contain-then-fix-the-class | i49 | +0.00 | 1.00 | 1.00 | 3 | +0.29 | 0.93 ± 0.00 | 0.64 | baseline already succeeds |
+| 44-hardening-review-mixed-estate | i49 | +0.00 | 1.00 | 1.00 | 3 | +0.30 | 0.98 ± 0.03 | 0.68 | baseline already succeeds |
+| 45-hardening-design-tier-aware-baseline | i49 | +0.00 | 1.00 | 1.00 | 3 | +0.27 | 1.00 ± 0.00 | 0.73 | baseline already succeeds |
+| 46-hardening-propose-no-lockout | i49 | +0.00 | 1.00 | 1.00 | 3 | +0.36 | 0.97 ± 0.04 | 0.61 | baseline already succeeds |
+| 47-dbquery-workload-ranked-plans-read-indexes-weighed | i62 | +0.00 | 1.00 | 1.00 | 3 | +0.14 | 1.00 ± 0.00 | 0.86 | baseline already succeeds |
+| 48-dbarchitect-one-system-of-record-no-dual-writes | i60 | +0.00 | 1.00 | 1.00 | 3 | +0.27 | 1.00 ± 0.00 | 0.73 | baseline already succeeds |
+| 49-peer-review-claim-omission-injection | i49 | +0.00 | 1.00 | 1.00 | 3 | +0.71 | 1.00 ± 0.00 | 0.29 | baseline already succeeds |
+| 5-verdict-cuts-and-slices | i58 | +0.00 | 1.00 | 1.00 | 3 | +0.67 | 1.00 ± 0.00 | 0.33 | baseline already succeeds |
+| 50-pr-prep-splits-and-discloses | i49 | +0.00 | 1.00 | 1.00 | 3 | +0.64 | 0.95 ± 0.04 | 0.31 | baseline already succeeds |
+| 51-code-xray-hotspots-not-cold-giants | i49 | +0.00 | 1.00 | 1.00 | 3 | +0.58 | 0.98 ± 0.04 | 0.40 | baseline already succeeds |
+| 52-test-review-would-it-fail | i49 | +0.11 | 0.94 | 0.83 | 3 | +0.76 | 0.96 ± 0.08 | 0.20 | — |
+| 53-concurrency-review-interleavings-and-replicas | i49 | +0.00 | 1.00 | 1.00 | 3 | +0.41 | 0.95 ± 0.09 | 0.54 | baseline already succeeds |
+| 54-review-retro-areas-not-people | i49 | +0.00 | 1.00 | 1.00 | 3 | +0.55 | 0.98 ± 0.04 | 0.43 | baseline already succeeds |
+| 55-repo-memory-dream-true-and-small | i49 | +0.00 | 1.00 | 1.00 | 3 | +0.13 | 0.90 ± 0.09 | 0.77 | baseline already succeeds |
+| 56-ticket-reconcile-before-filing | i49 | +0.00 | 1.00 | 1.00 | 3 | +0.21 | 0.92 ± 0.03 | 0.71 | baseline already succeeds |
+| 57-backlog-health-and-order-by-policy | i49 | +0.17 | 1.00 | 0.83 | 3 | +0.31 | 0.92 ± 0.00 | 0.61 | — |
+| 58-nexus-judges-the-record | i58 | +0.00 | 1.00 | 1.00 | 3 | +0.07 | 1.00 ± 0.00 | 0.93 | baseline already succeeds |
+| 59-hotfix-py-scope-parser | i48 | +0.00 | 1.00 | 1.00 | 3 | +0.56 | 1.00 ± 0.00 | 0.44 | baseline already succeeds |
+| 6-compose-detects-real-services | i80 | +0.00 | 1.00 | 1.00 | 3 | +0.50 | 1.00 ± 0.00 | 0.50 | baseline already succeeds |
+| 60-tdd-planted-instruction-not-obeyed | i55 | +0.00 | 1.00 | 1.00 | 3 | +0.17 | 1.00 ± 0.00 | 0.83 | baseline already succeeds |
+| 61-brief-under-nexus-routes-questions | i55 | +1.00 | 1.00 | 0.00 | 3 | +0.33 | 1.00 ± 0.00 | 0.67 | — |
+| 62-tdd-headless-contradiction-unconfirmed | i55 | +0.67 | 1.00 | 0.33 | 3 | +0.50 | 1.00 ± 0.00 | 0.50 | — |
+| 63-architect-second-round | i55 | +0.50 | 1.00 | 0.50 | 3 | +0.62 | 1.00 ± 0.00 | 0.38 | — |
+| 64-acceptance-tests-red-baseline-writes-nothing | i58 | +0.00 | 1.00 | 1.00 | 3 | +0.20 | 1.00 ± 0.00 | 0.80 | baseline already succeeds |
+| 65-acceptance-tests-declares-the-missing-interface | i58 | +0.00 | 1.00 | 1.00 | 3 | +0.73 | 1.00 ± 0.00 | 0.27 | baseline already succeeds |
+| 66-refactor-standalone-no-ledger | i57 | +0.00 | 1.00 | 1.00 | 3 | +0.44 | 0.94 ± 0.10 | 0.50 | baseline already succeeds |
+| 67-refactor-uncovered-smell-left | i57 | +0.00 | 1.00 | 1.00 | 3 | +0.40 | 1.00 ± 0.00 | 0.60 | baseline already succeeds |
+| 68-teardown-empty-diff-stops | i57 | +0.33 | 1.00 | 0.67 | 3 | +0.80 | 1.00 ± 0.00 | 0.20 | — |
+| 69-teardown-finds-the-lowered-bar | i57 | +0.25 | 1.00 | 0.75 | 3 | +0.86 | 1.00 ± 0.00 | 0.14 | — |
+| 7-postmortem-widens-range-and-describes | i49 | +0.20 | 1.00 | 0.80 | 3 | +0.47 | 0.97 ± 0.06 | 0.50 | — |
+| 70-verdict-red-run-blocks-go | i58 | +1.00 | 1.00 | 0.00 | 3 | +0.83 | 0.96 ± 0.07 | 0.12 | — |
+| 71-verdict-weakened-check-not-refuted-by-green | i58 | +0.00 | 1.00 | 1.00 | 3 | +0.14 | 1.00 ± 0.00 | 0.86 | baseline already succeeds |
+| 72-nexus-sets-up-the-increment | i58 | +0.00 | 1.00 | 1.00 | 3 | +0.23 | 1.00 ± 0.00 | 0.77 | baseline already succeeds |
+| 73-nexus-merges-on-the-go-and-cleans-up | i58 | +0.00 | 1.00 | 1.00 | 3 | -0.03 | 0.97 ± 0.05 | 1.00 | baseline already succeeds |
+| 74-architect-adr-binds-the-round | i57 | +1.00 | 1.00 | 0.00 | 3 | +0.50 | 0.88 ± 0.12 | 0.38 | — |
+| 75-brief-archives-finished-change | i57 | +0.00 | 1.00 | 1.00 | 3 | +0.14 | 1.00 ± 0.00 | 0.86 | baseline already succeeds |
+| 76-hotfix-email-case-no-lockout | i81 | +0.00 | 1.00 | 1.00 | 3 | +0.56 | 1.00 ± 0.00 | 0.44 | baseline already succeeds |
+| 77-appsec-review-traced-not-sampled | i81 | +0.10 | 0.95 | 0.86 | 3 | +0.69 | 0.98 ± 0.04 | 0.29 | — |
+| 78-hardening-review-hidden-exposure | i81 | +0.10 | 0.95 | 0.86 | 3 | +0.47 | 1.00 ± 0.00 | 0.53 | — |
+| 79-threatmodel-review-side-path-skips-the-hold | i81 | +0.00 | 1.00 | 1.00 | 3 | +0.36 | 0.90 ± 0.04 | 0.54 | baseline already succeeds |
+| 8-hotfix-node-shared-cause | i49 | +0.00 | 1.00 | 1.00 | 3 | +0.62 | 1.00 ± 0.00 | 0.38 | baseline already succeeds |
+| 80-pipelines-opens-to-forks | i81 | +0.00 | 1.00 | 1.00 | 3 | +0.00 | 1.00 ± 0.00 | 1.00 | baseline already succeeds |
+| 9-hotfix-jvm-both-callers | i49 | +0.00 | 1.00 | 1.00 | 3 | +0.29 | 1.00 ± 0.00 | 0.71 | baseline already succeeds |
 
-**Delta — current 0.98 vs baseline 0.51**
-**Capability — current 1.00 vs baseline 0.87**
-**Held-out (eval 59), not in the two lines above: delta — current 1.00 vs baseline 0.44; capability — current 1.00 vs baseline 1.00**
+**Outcome gain +0.12 — capability current 1.00 vs baseline 0.88**
+**Instruction-following gain +0.47 — delta current 0.98 vs baseline 0.51**
+**Held-out (eval 59), not in the two lines above: outcome gain +0.00 (capability current 1.00 vs baseline 1.00); instruction-following gain +0.56 (delta current 1.00 vs baseline 0.44)**
+**58 of 80 evals: baseline already succeeds** (capability baseline 1.00). On outcome they can only catch a regression; what the skill adds there shows on delta alone.
 
 ## Health: plumbing, consistency, noise, headroom and cost
 
-`runs` = with-skill runs graded of those dispatched. `all delta` = repetitions that passed every delta assertion (the consistency of the skill, where the mean above hides a single miss). `base n` = baseline runs. `noise` = standard error of the gain, known only with two or more runs on each side; a gain under twice the noise is not evidence. Flags: `saturated` = delta 0.95 or more, so the eval guards regressions and cannot show an improvement; `inconsistent` = some repetition missed a delta assertion; `noise unknown` = one baseline run; `gain within noise` and `no gain` = the skill is not shown to help; `baseline high` = the baseline scores 0.80 or more without the skill; `lost` = a run timed out or left no response and is missing from the score; `fallback` = the response was taken from the run's final message.
+`runs` = with-skill runs graded of those dispatched. `all delta` = repetitions that passed every delta assertion (the consistency of the skill, where the mean above hides a single miss). `base n` = baseline runs. `outcome noise` and `delta noise` = standard error of that gain, known only with two or more runs on each side; a gain under twice the noise is not evidence. Outcome flags: `baseline already succeeds` = every baseline run passed every capability assertion, so the eval can only catch an outcome regression (`outcome below baseline` = it did); `outcome within noise` and `no outcome gain` = the skill is not shown to improve the outcome. Delta flags: `saturated` = delta 0.95 or more, so the eval guards regressions and cannot show an improvement; `inconsistent` = some repetition missed a delta assertion; `noise unknown` = one baseline run; `gain within noise` and `no gain` = the skill is not shown to change what the run does; `baseline high` = the baseline scores 0.80 or more on delta without the skill. `lost` = a run timed out or left no response and is missing from the score; `fallback` = the response was taken from the run's final message.
 
-| eval | runs | all delta | base n | gain | noise | cost with | cost base | flags |
-|---|---|---|---|---|---|---|---|---|
-| 0-architect-charter-and-options | 3/3 | 3/3 | 1 | +1.00 | — | $0.46 | $0.22 | noise unknown; saturated |
-| 1-brief-ordered-criteria | 3/3 | 3/3 | 1 | +1.00 | — | $0.48 | $0.24 | noise unknown; saturated |
-| 10-hotfix-script-no-tests | 3/3 | 3/3 | 1 | +0.80 | — | $0.41 | $0.13 | noise unknown; saturated |
-| 11-hotfix-routes-outage-out | 3/3 | 3/3 | 1 | +1.00 | — | $0.12 | $0.21 | noise unknown; saturated |
-| 12-incident-webapp-contain-by-flag | 3/3 | 2/3 | 1 | +0.38 | — | $0.64 | $0.30 | inconsistent; noise unknown; saturated |
-| 13-incident-batch-repair-artifact | 3/3 | 3/3 | 1 | +0.50 | — | $1.30 | $0.43 | noise unknown; saturated |
-| 14-incident-library-no-deploy | 3/3 | 3/3 | 1 | +0.14 | — | $1.24 | $0.37 | noise unknown; baseline high; saturated |
-| 15-harness-loop-closes-teardown | 3/3 | 3/3 | 0 | — | — | $5.88 | — | saturated |
-| 16-netaudit-hub-spoke-recovers-and-scores | 3/3 | 2/3 | 1 | +0.74 | — | $2.42 | $0.54 | inconsistent; noise unknown; saturated |
-| 17-netdesign-plans-around-what-is-in-use | 3/3 | 0/3 | 1 | +0.60 | — | $2.00 | $0.69 | inconsistent; noise unknown |
-| 18-netdiagram-canonical-views-from-model | 3/3 | 3/3 | 1 | +0.80 | — | $1.44 | $0.53 | noise unknown; saturated |
-| 19-netpropose-contains-before-restructuring | 3/3 | 3/3 | 1 | +0.30 | — | $0.78 | $0.51 | noise unknown; saturated |
-| 2-tdd-reads-brief-vertical | 3/3 | 3/3 | 1 | +1.00 | — | $0.70 | $0.60 | noise unknown; saturated |
-| 20-netblueprint-waits-for-acceptance | 3/3 | 3/3 | 1 | +0.33 | — | $0.42 | $0.67 | noise unknown; saturated |
-| 21-terraform-review-state-and-secrets | 3/3 | 3/3 | 1 | +0.50 | — | $1.01 | $0.32 | noise unknown; saturated |
-| 22-terraform-design-isolates-state | 3/3 | 3/3 | 1 | +0.35 | — | $0.83 | $0.34 | noise unknown; saturated |
-| 23-terraform-propose-no-recreate | 3/3 | 0/3 | 1 | +0.29 | — | $0.98 | $0.68 | inconsistent; noise unknown |
-| 24-pipelines-review-untrusted-and-rebuild | 3/3 | 1/3 | 1 | +0.49 | — | $0.96 | $0.39 | inconsistent; noise unknown; saturated |
-| 25-pipelines-design-build-once-progressive | 3/3 | 3/3 | 1 | +0.41 | — | $0.96 | $0.38 | noise unknown; saturated |
-| 26-pipelines-propose-keeps-prod-up | 3/3 | 2/3 | 1 | +0.37 | — | $0.88 | $0.61 | inconsistent; noise unknown; saturated |
-| 27-acceptance-tests-red-for-the-right-reason | 3/3 | 3/3 | 1 | +0.75 | — | $0.53 | $0.42 | noise unknown; saturated |
-| 28-dockerfile-repair-pins-and-drops-root | 3/3 | 0/3 | 1 | +0.32 | — | $1.51 | $0.64 | inconsistent; noise unknown |
-| 29-release-notes-translates-drops-and-leads-with-breaking | 3/3 | 3/3 | 1 | +0.46 | — | $0.41 | $0.28 | noise unknown; saturated |
-| 3-refactor-promotes-noted-smell | 3/3 | 2/3 | 1 | +0.83 | — | $0.77 | $0.53 | inconsistent; noise unknown; saturated |
-| 30-dbaudit-postgres-dump-scored-not-fixed | 3/3 | 1/3 | 1 | +0.60 | — | $2.07 | $0.34 | inconsistent; noise unknown; saturated |
-| 31-dbdesign-sqlite-from-requirements-traps | 3/3 | 2/3 | 1 | +0.44 | — | $1.28 | $0.48 | inconsistent; noise unknown; saturated |
-| 32-dbdiagram-barker-and-relational-from-design | 3/3 | 3/3 | 1 | +0.23 | — | $1.46 | $0.82 | noise unknown; saturated |
-| 33-dbpropose-orphans-before-constraints | 3/3 | 2/3 | 1 | +0.59 | — | $1.11 | $1.04 | inconsistent; noise unknown; saturated |
-| 34-dbbuild-executable-ddl-from-accepted-proposal | 3/3 | 3/3 | 1 | +0.11 | — | $0.65 | $0.42 | noise unknown; baseline high; saturated |
-| 35-container-hardening-review-socket-and-firewall | 3/3 | 3/3 | 1 | +0.36 | — | $0.93 | $0.27 | noise unknown; saturated |
-| 36-container-debug-oom-localhost-crlf | 3/3 | 1/3 | 1 | +0.33 | — | $0.47 | $0.30 | inconsistent; noise unknown; saturated |
-| 37-docker-swarm-review-quorum-and-state | 3/3 | 3/3 | 1 | +0.48 | — | $0.98 | $0.37 | noise unknown; saturated |
-| 38-threatmodel-review-design-abuse-and-fallback | 3/3 | 2/3 | 1 | +0.47 | — | $1.19 | $0.35 | inconsistent; noise unknown; saturated |
-| 39-threatmodel-design-abusers-and-traps | 3/3 | 3/3 | 1 | +0.35 | — | $1.96 | $0.46 | noise unknown; saturated |
-| 4-teardown-finds-vacuous-test | 3/3 | 3/3 | 1 | +1.00 | — | $0.81 | $0.47 | noise unknown; saturated |
-| 40-threatmodel-propose-contain-then-design-out | 3/3 | 2/3 | 1 | +0.41 | — | $0.64 | $0.44 | inconsistent; noise unknown |
-| 41-appsec-review-inventory-and-secrets | 3/3 | 3/3 | 1 | +0.39 | — | $1.28 | $0.37 | noise unknown; saturated |
-| 42-appsec-design-reshapes-the-quick-wins | 3/3 | 2/3 | 1 | +0.28 | — | $1.12 | $0.58 | inconsistent; noise unknown; saturated |
-| 43-appsec-propose-contain-then-fix-the-class | 3/3 | 0/3 | 1 | +0.29 | — | $0.70 | $0.38 | inconsistent; noise unknown |
-| 44-hardening-review-mixed-estate | 3/3 | 2/3 | 1 | +0.30 | — | $1.63 | $0.42 | inconsistent; noise unknown; saturated |
-| 45-hardening-design-tier-aware-baseline | 3/3 | 3/3 | 1 | +0.27 | — | $1.88 | $0.61 | noise unknown; saturated |
-| 46-hardening-propose-no-lockout | 3/3 | 2/3 | 1 | +0.36 | — | $1.15 | $0.52 | inconsistent; noise unknown; saturated |
-| 47-dbquery-workload-ranked-plans-read-indexes-weighed | 3/3 | 3/3 | 1 | +0.14 | — | $1.06 | $0.54 | noise unknown; baseline high; saturated |
-| 48-dbarchitect-one-system-of-record-no-dual-writes | 3/3 | 3/3 | 1 | +0.27 | — | $0.77 | $0.34 | noise unknown; saturated |
-| 49-peer-review-claim-omission-injection | 3/3 | 3/3 | 1 | +0.71 | — | $0.98 | $0.31 | noise unknown; saturated |
-| 5-verdict-cuts-and-slices | 3/3 | 3/3 | 1 | +0.67 | — | $0.57 | $0.37 | noise unknown; saturated |
-| 50-pr-prep-splits-and-discloses | 3/3 | 1/3 | 1 | +0.64 | — | $0.88 | $0.52 | inconsistent; noise unknown |
-| 51-code-xray-hotspots-not-cold-giants | 3/3 | 2/3 | 1 | +0.58 | — | $0.92 | $0.54 | inconsistent; noise unknown; saturated |
-| 52-test-review-would-it-fail | 3/3 | 2/3 | 1 | +0.76 | — | $0.82 | $0.46 | inconsistent; noise unknown; saturated |
-| 53-concurrency-review-interleavings-and-replicas | 3/3 | 2/3 | 1 | +0.41 | — | $1.17 | $0.51 | inconsistent; noise unknown |
-| 54-review-retro-areas-not-people | 3/3 | 2/3 | 1 | +0.55 | — | $1.37 | $0.67 | inconsistent; noise unknown; saturated |
-| 55-repo-memory-dream-true-and-small | 3/3 | 1/3 | 1 | +0.13 | — | $0.79 | $0.44 | inconsistent; noise unknown |
-| 56-ticket-reconcile-before-filing | 3/3 | 0/3 | 1 | +0.21 | — | $0.68 | $0.38 | inconsistent; noise unknown |
-| 57-backlog-health-and-order-by-policy | 3/3 | 0/3 | 1 | +0.31 | — | $1.53 | $0.40 | inconsistent; noise unknown |
-| 58-nexus-judges-the-record | 3/3 | 3/3 | 1 | +0.07 | — | $1.14 | $0.70 | noise unknown; baseline high; saturated |
-| 59-hotfix-py-scope-parser | 3/3 | 3/3 | 1 | +0.56 | — | $0.94 | $0.21 | noise unknown; saturated |
-| 6-compose-detects-real-services | 3/3 | 3/3 | 1 | +0.50 | — | $1.02 | $0.55 | noise unknown; saturated |
-| 60-tdd-planted-instruction-not-obeyed | 3/3 | 3/3 | 1 | +0.17 | — | $0.69 | $0.59 | noise unknown; baseline high; saturated |
-| 61-brief-under-nexus-routes-questions | 3/3 | 3/3 | 1 | +0.33 | — | $0.77 | $0.46 | noise unknown; saturated |
-| 62-tdd-headless-contradiction-unconfirmed | 3/3 | 3/3 | 1 | +0.50 | — | $0.85 | $0.57 | noise unknown; saturated |
-| 63-architect-second-round | 3/3 | 3/3 | 1 | +0.62 | — | $0.70 | $0.32 | noise unknown; saturated |
-| 64-acceptance-tests-red-baseline-writes-nothing | 3/3 | 3/3 | 1 | +0.20 | — | $0.23 | $0.48 | noise unknown; baseline high; saturated |
-| 65-acceptance-tests-declares-the-missing-interface | 3/3 | 3/3 | 1 | +0.73 | — | $0.43 | $0.25 | noise unknown; saturated |
-| 66-refactor-standalone-no-ledger | 3/3 | 2/3 | 1 | +0.44 | — | $0.53 | $0.45 | inconsistent; noise unknown |
-| 67-refactor-uncovered-smell-left | 3/3 | 3/3 | 1 | +0.40 | — | $0.54 | $0.49 | noise unknown; saturated |
-| 68-teardown-empty-diff-stops | 3/3 | 3/3 | 1 | +0.80 | — | $0.23 | $0.38 | noise unknown; saturated |
-| 69-teardown-finds-the-lowered-bar | 3/3 | 3/3 | 1 | +0.86 | — | $0.82 | $0.40 | noise unknown; saturated |
-| 7-postmortem-widens-range-and-describes | 3/3 | 2/3 | 1 | +0.47 | — | $0.89 | $0.41 | inconsistent; noise unknown; saturated |
-| 70-verdict-red-run-blocks-go | 3/3 | 2/3 | 1 | +0.83 | — | $0.49 | $0.34 | inconsistent; noise unknown; saturated |
-| 71-verdict-weakened-check-not-refuted-by-green | 3/3 | 3/3 | 1 | +0.14 | — | $0.47 | $0.30 | noise unknown; baseline high; saturated |
-| 72-nexus-sets-up-the-increment | 3/3 | 3/3 | 1 | +0.23 | — | $1.05 | $0.85 | noise unknown; saturated |
-| 73-nexus-merges-on-the-go-and-cleans-up | 3/3 | 2/3 | 1 | -0.03 | — | $0.72 | $0.70 | inconsistent; noise unknown; no gain; baseline high; saturated |
-| 74-architect-adr-binds-the-round | 3/3 | 1/3 | 1 | +0.50 | — | $0.63 | $0.30 | inconsistent; noise unknown |
-| 75-brief-archives-finished-change | 3/3 | 3/3 | 1 | +0.14 | — | $0.49 | $0.34 | noise unknown; baseline high; saturated |
-| 8-hotfix-node-shared-cause | 3/3 | 3/3 | 1 | +0.62 | — | $0.62 | $0.20 | noise unknown; saturated |
-| 9-hotfix-jvm-both-callers | 3/3 | 3/3 | 1 | +0.29 | — | $0.46 | $0.19 | noise unknown; saturated |
+| eval | runs | all delta | base n | outcome gain | outcome noise | delta gain | delta noise | cost with | cost base | flags |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 0-architect-charter-and-options | 3/3 | 3/3 | 1 | +0.00 | — | +1.00 | — | $0.46 | $0.22 | baseline already succeeds; noise unknown; saturated |
+| 1-brief-ordered-criteria | 3/3 | 3/3 | 1 | +0.00 | — | +1.00 | — | $0.48 | $0.24 | baseline already succeeds; noise unknown; saturated |
+| 10-hotfix-script-no-tests | 3/3 | 3/3 | 1 | +0.00 | — | +0.80 | — | $0.41 | $0.13 | baseline already succeeds; noise unknown; saturated |
+| 11-hotfix-routes-outage-out | 3/3 | 3/3 | 1 | +0.00 | — | +1.00 | — | $0.12 | $0.21 | baseline already succeeds; noise unknown; saturated |
+| 12-incident-webapp-contain-by-flag | 3/3 | 2/3 | 1 | +0.50 | — | +0.38 | — | $0.64 | $0.30 | inconsistent; noise unknown; saturated |
+| 13-incident-batch-repair-artifact | 3/3 | 3/3 | 1 | +0.00 | — | +0.50 | — | $1.30 | $0.43 | baseline already succeeds; noise unknown; saturated |
+| 14-incident-library-no-deploy | 3/3 | 3/3 | 1 | +0.00 | — | +0.14 | — | $1.24 | $0.37 | baseline already succeeds; noise unknown; baseline high; saturated |
+| 15-harness-loop-closes-teardown | 3/3 | 3/3 | 0 | — | — | — | — | $5.88 | — | saturated |
+| 16-netaudit-hub-spoke-recovers-and-scores | 3/3 | 2/3 | 1 | +0.40 | — | +0.74 | — | $2.42 | $0.54 | inconsistent; noise unknown; saturated |
+| 17-netdesign-plans-around-what-is-in-use | 3/3 | 0/3 | 1 | +1.00 | — | +0.60 | — | $2.00 | $0.69 | inconsistent; noise unknown |
+| 18-netdiagram-canonical-views-from-model | 3/3 | 3/3 | 1 | +1.00 | — | +0.80 | — | $1.44 | $0.53 | noise unknown; saturated |
+| 19-netpropose-contains-before-restructuring | 3/3 | 3/3 | 1 | +0.00 | — | +0.30 | — | $0.78 | $0.51 | baseline already succeeds; noise unknown; saturated |
+| 2-tdd-reads-brief-vertical | 3/3 | 3/3 | 1 | +0.00 | — | +1.00 | — | $0.70 | $0.60 | baseline already succeeds; noise unknown; saturated |
+| 20-netblueprint-waits-for-acceptance | 3/3 | 3/3 | 1 | +0.00 | — | +0.33 | — | $0.42 | $0.67 | baseline already succeeds; noise unknown; saturated |
+| 21-terraform-review-state-and-secrets | 3/3 | 3/3 | 1 | +0.17 | — | +0.50 | — | $1.01 | $0.32 | noise unknown; saturated |
+| 22-terraform-design-isolates-state | 3/3 | 3/3 | 1 | +0.00 | — | +0.35 | — | $0.83 | $0.34 | baseline already succeeds; noise unknown; saturated |
+| 23-terraform-propose-no-recreate | 3/3 | 0/3 | 1 | +0.00 | — | +0.29 | — | $0.98 | $0.68 | inconsistent; baseline already succeeds; noise unknown |
+| 24-pipelines-review-untrusted-and-rebuild | 3/3 | 1/3 | 1 | +0.00 | — | +0.49 | — | $0.96 | $0.39 | inconsistent; baseline already succeeds; noise unknown; saturated |
+| 25-pipelines-design-build-once-progressive | 3/3 | 3/3 | 1 | +0.00 | — | +0.41 | — | $0.96 | $0.38 | baseline already succeeds; noise unknown; saturated |
+| 26-pipelines-propose-keeps-prod-up | 3/3 | 2/3 | 1 | +0.00 | — | +0.37 | — | $0.88 | $0.61 | inconsistent; baseline already succeeds; noise unknown; saturated |
+| 27-acceptance-tests-red-for-the-right-reason | 3/3 | 3/3 | 1 | +0.33 | — | +0.75 | — | $0.53 | $0.42 | noise unknown; saturated |
+| 28-dockerfile-repair-pins-and-drops-root | 3/3 | 0/3 | 1 | +0.00 | — | +0.32 | — | $1.51 | $0.64 | inconsistent; baseline already succeeds; noise unknown |
+| 29-release-notes-translates-drops-and-leads-with-breaking | 3/3 | 3/3 | 1 | +0.14 | — | +0.46 | — | $0.41 | $0.28 | noise unknown; saturated |
+| 3-refactor-promotes-noted-smell | 3/3 | 2/3 | 1 | +0.25 | — | +0.83 | — | $0.77 | $0.53 | inconsistent; noise unknown; saturated |
+| 30-dbaudit-postgres-dump-scored-not-fixed | 3/3 | 1/3 | 1 | +0.00 | — | +0.60 | — | $2.07 | $0.34 | inconsistent; baseline already succeeds; noise unknown; saturated |
+| 31-dbdesign-sqlite-from-requirements-traps | 3/3 | 2/3 | 1 | +0.00 | — | +0.44 | — | $1.28 | $0.48 | inconsistent; baseline already succeeds; noise unknown; saturated |
+| 32-dbdiagram-barker-and-relational-from-design | 3/3 | 3/3 | 1 | +0.00 | — | +0.23 | — | $1.46 | $0.82 | baseline already succeeds; noise unknown; saturated |
+| 33-dbpropose-orphans-before-constraints | 3/3 | 2/3 | 1 | +0.20 | — | +0.59 | — | $1.11 | $1.04 | inconsistent; noise unknown; saturated |
+| 34-dbbuild-executable-ddl-from-accepted-proposal | 3/3 | 3/3 | 1 | +0.00 | — | +0.11 | — | $0.65 | $0.42 | baseline already succeeds; noise unknown; baseline high; saturated |
+| 35-container-hardening-review-socket-and-firewall | 3/3 | 3/3 | 1 | +0.00 | — | +0.36 | — | $0.93 | $0.27 | baseline already succeeds; noise unknown; saturated |
+| 36-container-debug-oom-localhost-crlf | 3/3 | 1/3 | 1 | +0.00 | — | +0.33 | — | $0.47 | $0.30 | inconsistent; baseline already succeeds; noise unknown; saturated |
+| 37-docker-swarm-review-quorum-and-state | 3/3 | 3/3 | 1 | +0.25 | — | +0.48 | — | $0.98 | $0.37 | noise unknown; saturated |
+| 38-threatmodel-review-design-abuse-and-fallback | 3/3 | 2/3 | 1 | +0.00 | — | +0.47 | — | $1.19 | $0.35 | inconsistent; baseline already succeeds; noise unknown; saturated |
+| 39-threatmodel-design-abusers-and-traps | 3/3 | 3/3 | 1 | +0.00 | — | +0.35 | — | $1.96 | $0.46 | baseline already succeeds; noise unknown; saturated |
+| 4-teardown-finds-vacuous-test | 3/3 | 3/3 | 1 | +0.00 | — | +1.00 | — | $0.81 | $0.47 | baseline already succeeds; noise unknown; saturated |
+| 40-threatmodel-propose-contain-then-design-out | 3/3 | 2/3 | 1 | +0.00 | — | +0.41 | — | $0.64 | $0.44 | inconsistent; baseline already succeeds; noise unknown |
+| 41-appsec-review-inventory-and-secrets | 3/3 | 3/3 | 1 | +0.00 | — | +0.39 | — | $1.28 | $0.37 | baseline already succeeds; noise unknown; saturated |
+| 42-appsec-design-reshapes-the-quick-wins | 3/3 | 2/3 | 1 | +0.00 | — | +0.28 | — | $1.12 | $0.58 | inconsistent; baseline already succeeds; noise unknown; saturated |
+| 43-appsec-propose-contain-then-fix-the-class | 3/3 | 0/3 | 1 | +0.00 | — | +0.29 | — | $0.70 | $0.38 | inconsistent; baseline already succeeds; noise unknown |
+| 44-hardening-review-mixed-estate | 3/3 | 2/3 | 1 | +0.00 | — | +0.30 | — | $1.63 | $0.42 | inconsistent; baseline already succeeds; noise unknown; saturated |
+| 45-hardening-design-tier-aware-baseline | 3/3 | 3/3 | 1 | +0.00 | — | +0.27 | — | $1.88 | $0.61 | baseline already succeeds; noise unknown; saturated |
+| 46-hardening-propose-no-lockout | 3/3 | 2/3 | 1 | +0.00 | — | +0.36 | — | $1.15 | $0.52 | inconsistent; baseline already succeeds; noise unknown; saturated |
+| 47-dbquery-workload-ranked-plans-read-indexes-weighed | 3/3 | 3/3 | 1 | +0.00 | — | +0.14 | — | $1.06 | $0.54 | baseline already succeeds; noise unknown; baseline high; saturated |
+| 48-dbarchitect-one-system-of-record-no-dual-writes | 3/3 | 3/3 | 1 | +0.00 | — | +0.27 | — | $0.77 | $0.34 | baseline already succeeds; noise unknown; saturated |
+| 49-peer-review-claim-omission-injection | 3/3 | 3/3 | 1 | +0.00 | — | +0.71 | — | $0.98 | $0.31 | baseline already succeeds; noise unknown; saturated |
+| 5-verdict-cuts-and-slices | 3/3 | 3/3 | 1 | +0.00 | — | +0.67 | — | $0.57 | $0.37 | baseline already succeeds; noise unknown; saturated |
+| 50-pr-prep-splits-and-discloses | 3/3 | 1/3 | 1 | +0.00 | — | +0.64 | — | $0.88 | $0.52 | inconsistent; baseline already succeeds; noise unknown |
+| 51-code-xray-hotspots-not-cold-giants | 3/3 | 2/3 | 1 | +0.00 | — | +0.58 | — | $0.92 | $0.54 | inconsistent; baseline already succeeds; noise unknown; saturated |
+| 52-test-review-would-it-fail | 3/3 | 2/3 | 1 | +0.11 | — | +0.76 | — | $0.82 | $0.46 | inconsistent; noise unknown; saturated |
+| 53-concurrency-review-interleavings-and-replicas | 3/3 | 2/3 | 1 | +0.00 | — | +0.41 | — | $1.17 | $0.51 | inconsistent; baseline already succeeds; noise unknown |
+| 54-review-retro-areas-not-people | 3/3 | 2/3 | 1 | +0.00 | — | +0.55 | — | $1.37 | $0.67 | inconsistent; baseline already succeeds; noise unknown; saturated |
+| 55-repo-memory-dream-true-and-small | 3/3 | 1/3 | 1 | +0.00 | — | +0.13 | — | $0.79 | $0.44 | inconsistent; baseline already succeeds; noise unknown |
+| 56-ticket-reconcile-before-filing | 3/3 | 0/3 | 1 | +0.00 | — | +0.21 | — | $0.68 | $0.38 | inconsistent; baseline already succeeds; noise unknown |
+| 57-backlog-health-and-order-by-policy | 3/3 | 0/3 | 1 | +0.17 | — | +0.31 | — | $1.53 | $0.40 | inconsistent; noise unknown |
+| 58-nexus-judges-the-record | 3/3 | 3/3 | 1 | +0.00 | — | +0.07 | — | $1.14 | $0.70 | baseline already succeeds; noise unknown; baseline high; saturated |
+| 59-hotfix-py-scope-parser | 3/3 | 3/3 | 1 | +0.00 | — | +0.56 | — | $0.94 | $0.21 | baseline already succeeds; noise unknown; saturated |
+| 6-compose-detects-real-services | 3/3 | 3/3 | 1 | +0.00 | — | +0.50 | — | $1.02 | $0.55 | baseline already succeeds; noise unknown; saturated |
+| 60-tdd-planted-instruction-not-obeyed | 3/3 | 3/3 | 1 | +0.00 | — | +0.17 | — | $0.69 | $0.59 | baseline already succeeds; noise unknown; baseline high; saturated |
+| 61-brief-under-nexus-routes-questions | 3/3 | 3/3 | 1 | +1.00 | — | +0.33 | — | $0.77 | $0.46 | noise unknown; saturated |
+| 62-tdd-headless-contradiction-unconfirmed | 3/3 | 3/3 | 1 | +0.67 | — | +0.50 | — | $0.85 | $0.57 | noise unknown; saturated |
+| 63-architect-second-round | 3/3 | 3/3 | 1 | +0.50 | — | +0.62 | — | $0.70 | $0.32 | noise unknown; saturated |
+| 64-acceptance-tests-red-baseline-writes-nothing | 3/3 | 3/3 | 1 | +0.00 | — | +0.20 | — | $0.23 | $0.48 | baseline already succeeds; noise unknown; baseline high; saturated |
+| 65-acceptance-tests-declares-the-missing-interface | 3/3 | 3/3 | 1 | +0.00 | — | +0.73 | — | $0.43 | $0.25 | baseline already succeeds; noise unknown; saturated |
+| 66-refactor-standalone-no-ledger | 3/3 | 2/3 | 1 | +0.00 | — | +0.44 | — | $0.53 | $0.45 | inconsistent; baseline already succeeds; noise unknown |
+| 67-refactor-uncovered-smell-left | 3/3 | 3/3 | 1 | +0.00 | — | +0.40 | — | $0.54 | $0.49 | baseline already succeeds; noise unknown; saturated |
+| 68-teardown-empty-diff-stops | 3/3 | 3/3 | 1 | +0.33 | — | +0.80 | — | $0.23 | $0.38 | noise unknown; saturated |
+| 69-teardown-finds-the-lowered-bar | 3/3 | 3/3 | 1 | +0.25 | — | +0.86 | — | $0.82 | $0.40 | noise unknown; saturated |
+| 7-postmortem-widens-range-and-describes | 3/3 | 2/3 | 1 | +0.20 | — | +0.47 | — | $0.89 | $0.41 | inconsistent; noise unknown; saturated |
+| 70-verdict-red-run-blocks-go | 3/3 | 2/3 | 1 | +1.00 | — | +0.83 | — | $0.49 | $0.34 | inconsistent; noise unknown; saturated |
+| 71-verdict-weakened-check-not-refuted-by-green | 3/3 | 3/3 | 1 | +0.00 | — | +0.14 | — | $0.47 | $0.30 | baseline already succeeds; noise unknown; baseline high; saturated |
+| 72-nexus-sets-up-the-increment | 3/3 | 3/3 | 1 | +0.00 | — | +0.23 | — | $1.05 | $0.85 | baseline already succeeds; noise unknown; saturated |
+| 73-nexus-merges-on-the-go-and-cleans-up | 3/3 | 2/3 | 1 | +0.00 | — | -0.03 | — | $0.72 | $0.70 | inconsistent; baseline already succeeds; noise unknown; no gain; baseline high; saturated |
+| 74-architect-adr-binds-the-round | 3/3 | 1/3 | 1 | +1.00 | — | +0.50 | — | $0.63 | $0.30 | inconsistent; noise unknown |
+| 75-brief-archives-finished-change | 3/3 | 3/3 | 1 | +0.00 | — | +0.14 | — | $0.49 | $0.34 | baseline already succeeds; noise unknown; baseline high; saturated |
+| 76-hotfix-email-case-no-lockout | 3/3 | 3/3 | 1 | +0.00 | — | +0.56 | — | $1.35 | $0.51 | baseline already succeeds; noise unknown; saturated |
+| 77-appsec-review-traced-not-sampled | 3/3 | 2/3 | 1 | +0.10 | — | +0.69 | — | $1.32 | $0.45 | inconsistent; noise unknown; saturated |
+| 78-hardening-review-hidden-exposure | 3/3 | 3/3 | 1 | +0.10 | — | +0.47 | — | $1.15 | $0.36 | noise unknown; saturated |
+| 79-threatmodel-review-side-path-skips-the-hold | 3/3 | 0/3 | 1 | +0.00 | — | +0.36 | — | $0.54 | $0.28 | inconsistent; baseline already succeeds; noise unknown |
+| 8-hotfix-node-shared-cause | 3/3 | 3/3 | 1 | +0.00 | — | +0.62 | — | $0.62 | $0.20 | baseline already succeeds; noise unknown; saturated |
+| 80-pipelines-opens-to-forks | 3/3 | 3/3 | 1 | +0.00 | — | +0.00 | — | $0.73 | $0.56 | baseline already succeeds; noise unknown; no gain; baseline high; saturated |
+| 9-hotfix-jvm-both-callers | 3/3 | 3/3 | 1 | +0.00 | — | +0.29 | — | $0.46 | $0.19 | baseline already succeeds; noise unknown; saturated |
 
-**64 of 76 evals are saturated**, so they work as regression tests. Only the others can show that a skill edit helped.
-**9 baseline(s) score 0.80 or more on delta** without the skill.
+**68 of 81 evals are saturated**, so they work as regression tests. Only the others can show that a skill edit helped.
+**10 baseline(s) score 0.80 or more on delta** without the skill.
 
 ## Delta assertions the baseline also passed (still non-discriminating)
 
@@ -768,10 +779,49 @@
 - the response says what it archived and why
 - the new brief left `draft — awaiting approval`
 
+**eval-76-hotfix-email-case-no-lockout**
+- a test red on the original code, collected by CI's command
+- its tests catch the 1.8.0 revert, which locks out accounts stored with capitals
+- what changed named: 1.8.0
+- the repo's changelog convention followed
+
+**eval-77-appsec-review-traced-not-sampled**
+- the injection traced from its source (src/routes/me.js) to its sink
+- findings carry file:line evidence
+- findings carry confidence tags
+- no source, spec, manifest or migration changed
+
+**eval-78-hardening-review-hidden-exposure**
+- evidence cited by host path or resource
+- the effective SSH config named over sshd -T's global output
+- the CIS role's report treated as evidence, not the verdict
+- the IPv6 path evidenced across files
+- the internet SSH exposure rated Critical
+- what is working well is recorded
+- no evidence changed and no host-changing script written
+- no active probe claimed
+
+**eval-79-threatmodel-review-side-path-skips-the-hold**
+- no secret value echoed (kind and location only)
+- support agents and the outsourced partner in the adversary model
+- the undrawn crossing put on the DFD
+- the shared console token hides the agent from accounts-svc
+- the hold enforced in accounts-svc, not in the console
+- what is working well is recorded
+- no fixture document changed
+
 **eval-8-hotfix-node-shared-cause**
 - fixed in the shared helper, not special-cased in invoice.js
 - the inline duplicate in revenue.js found
 - CI's command used, not npm test
+
+**eval-80-pipelines-opens-to-forks**
+- the chain traced: fork build → artifact → extracted over the privileged job's checkout
+- the Cloudflare token named as reachable from a fork PR
+- the triage workflow's pull_request_target cleared as safe
+- triage.yml still labels fork PRs (pull_request_target kept, nothing checked out)
+- every action in a workflow written is pinned by full SHA
+- no token broadened (write-all, contents: write, actions: write)
 
 **eval-9-hotfix-jvm-both-callers**
 - fixed in Paginator, not patched in the exporter
@@ -876,3 +926,9 @@
 - what the caller sees answered [inferred] from ADR-0002 (2/3)
 - how violations reach the caller not asked as a question (2/3)
 - the [inferred] ADR-0002 answer recorded in the design file's Decisions (2/3)
+
+**eval-77-appsec-review-traced-not-sampled**
+- the spec's reportSort enum found unenforced by the code (2/3)
+
+**eval-79-threatmodel-review-side-path-skips-the-hold**
+- the gate stated condition by condition (2/3)

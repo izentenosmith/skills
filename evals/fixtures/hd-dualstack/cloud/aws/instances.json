@@ -1,0 +1,55 @@
+{
+    "Reservations": [
+        {
+            "Instances": [
+                {
+                    "InstanceId": "i-0b7c4e19a2d3f5608",
+                    "ImageId": "ami-0c1f2e3d4b5a69788",
+                    "InstanceType": "m6i.large",
+                    "LaunchTime": "2026-08-20T09:14:02+00:00",
+                    "Placement": { "AvailabilityZone": "eu-west-1a" },
+                    "PrivateIpAddress": "10.20.11.37",
+                    "SubnetId": "subnet-04aa1b2c3d4e5f601",
+                    "VpcId": "vpc-0e2d1c9b7a6f54321",
+                    "IamInstanceProfile": {
+                        "Arn": "arn:aws:iam::111122223333:instance-profile/pay-api-runtime"
+                    },
+                    "MetadataOptions": {
+                        "HttpTokens": "required",
+                        "HttpPutResponseHopLimit": 1,
+                        "HttpEndpoint": "enabled",
+                        "HttpProtocolIpv6": "disabled"
+                    },
+                    "BlockDeviceMappings": [
+                        {
+                            "DeviceName": "/dev/sda1",
+                            "Ebs": { "VolumeId": "vol-0d9e8f7a6b5c43210", "DeleteOnTermination": true }
+                        }
+                    ],
+                    "NetworkInterfaces": [
+                        {
+                            "NetworkInterfaceId": "eni-07f6e5d4c3b2a1908",
+                            "PrivateIpAddress": "10.20.11.37",
+                            "Ipv6Addresses": [
+                                { "Ipv6Address": "2600:1f18:4a2:c311:8d4e:1b7a:3f02:91c6" }
+                            ],
+                            "Groups": [
+                                { "GroupId": "sg-0c41f7a2d9e3b1a55", "GroupName": "pay-api" }
+                            ],
+                            "SubnetId": "subnet-04aa1b2c3d4e5f601"
+                        }
+                    ],
+                    "SecurityGroups": [
+                        { "GroupId": "sg-0c41f7a2d9e3b1a55", "GroupName": "pay-api" }
+                    ],
+                    "Tags": [
+                        { "Key": "Name", "Value": "pay-api-01" },
+                        { "Key": "environment", "Value": "prod" },
+                        { "Key": "owner", "Value": "platform" },
+                        { "Key": "pci-scope", "Value": "cde" }
+                    ]
+                }
+            ]
+        }
+    ]
+}

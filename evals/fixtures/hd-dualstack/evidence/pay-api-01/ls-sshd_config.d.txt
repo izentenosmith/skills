@@ -1,0 +1,4 @@
+$ sudo ls -la /etc/ssh/sshd_config.d/
+total 8
+drwxr-xr-x 2 root root 4096 Aug 14  2025 .
+drwxr-xr-x 4 root root 4096 Nov  3 21:47 ..

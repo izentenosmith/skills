@@ -1,0 +1,21 @@
+{
+    "RouteTables": [
+        {
+            "RouteTableId": "rtb-0318a7b6c5d4e3f21",
+            "VpcId": "vpc-0e2d1c9b7a6f54321",
+            "Associations": [
+                { "RouteTableAssociationId": "rtbassoc-0a1b2c3d4e5f60718", "SubnetId": "subnet-04aa1b2c3d4e5f601", "Main": false }
+            ],
+            "Routes": [
+                { "DestinationCidrBlock": "10.20.0.0/16", "GatewayId": "local", "State": "active" },
+                { "DestinationIpv6CidrBlock": "2600:1f18:4a2:c300::/56", "GatewayId": "local", "State": "active" },
+                { "DestinationCidrBlock": "10.8.0.0/16", "TransitGatewayId": "tgw-0f1e2d3c4b5a69788", "State": "active" },
+                { "DestinationCidrBlock": "0.0.0.0/0", "NatGatewayId": "nat-0b2a3c4d5e6f70819", "State": "active" },
+                { "DestinationIpv6CidrBlock": "::/0", "GatewayId": "igw-0c7d6e5f4a3b2c1d0", "State": "active" }
+            ],
+            "Tags": [
+                { "Key": "Name", "Value": "rt-app-1a" }
+            ]
+        }
+    ]
+}

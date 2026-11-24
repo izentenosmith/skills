@@ -1,0 +1,5 @@
+$ getent group sudo sshusers deploy sftp-reports
+sudo:x:27:mrojas,tkhan
+sshusers:x:1001:mrojas,tkhan
+deploy:x:1002:deploy
+sftp-reports:x:1003:sftp-reports

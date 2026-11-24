@@ -1,0 +1,134 @@
+{
+    "SecurityGroups": [
+        {
+            "GroupId": "sg-0a9b8c7d6e5f40312",
+            "GroupName": "alb-pay-public",
+            "Description": "public ALB for pay-api",
+            "OwnerId": "111122223333",
+            "VpcId": "vpc-0e2d1c9b7a6f54321",
+            "IpPermissions": [
+                {
+                    "IpProtocol": "tcp",
+                    "FromPort": 443,
+                    "ToPort": 443,
+                    "IpRanges": [
+                        {
+                            "CidrIp": "0.0.0.0/0",
+                            "Description": "https"
+                        }
+                    ],
+                    "Ipv6Ranges": [
+                        {
+                            "CidrIpv6": "::/0",
+                            "Description": "https"
+                        }
+                    ],
+                    "PrefixListIds": [],
+                    "UserIdGroupPairs": []
+                }
+            ],
+            "IpPermissionsEgress": [
+                {
+                    "IpProtocol": "tcp",
+                    "FromPort": 8443,
+                    "ToPort": 8443,
+                    "IpRanges": [],
+                    "Ipv6Ranges": [],
+                    "PrefixListIds": [],
+                    "UserIdGroupPairs": [
+                        {
+                            "GroupId": "sg-0c41f7a2d9e3b1a55",
+                            "UserId": "111122223333",
+                            "Description": "to pay-api"
+                        }
+                    ]
+                }
+            ],
+            "Tags": [
+                { "Key": "Name", "Value": "alb-pay-public" },
+                { "Key": "environment", "Value": "prod" },
+                { "Key": "owner", "Value": "platform" }
+            ]
+        },
+        {
+            "GroupId": "sg-0c41f7a2d9e3b1a55",
+            "GroupName": "pay-api",
+            "Description": "pay-api instances",
+            "OwnerId": "111122223333",
+            "VpcId": "vpc-0e2d1c9b7a6f54321",
+            "IpPermissions": [
+                {
+                    "IpProtocol": "tcp",
+                    "FromPort": 8443,
+                    "ToPort": 8443,
+                    "IpRanges": [],
+                    "Ipv6Ranges": [],
+                    "PrefixListIds": [],
+                    "UserIdGroupPairs": [
+                        {
+                            "GroupId": "sg-0a9b8c7d6e5f40312",
+                            "UserId": "111122223333",
+                            "Description": "from alb"
+                        }
+                    ]
+                },
+                {
+                    "IpProtocol": "tcp",
+                    "FromPort": 9100,
+                    "ToPort": 9100,
+                    "IpRanges": [
+                        {
+                            "CidrIp": "10.30.4.0/24",
+                            "Description": "prometheus"
+                        }
+                    ],
+                    "Ipv6Ranges": [],
+                    "PrefixListIds": [],
+                    "UserIdGroupPairs": []
+                },
+                {
+                    "IpProtocol": "tcp",
+                    "FromPort": 22,
+                    "ToPort": 22,
+                    "IpRanges": [
+                        {
+                            "CidrIp": "10.8.0.0/16",
+                            "Description": "vpn"
+                        }
+                    ],
+                    "Ipv6Ranges": [
+                        {
+                            "CidrIpv6": "::/0",
+                            "Description": "vpn"
+                        }
+                    ],
+                    "PrefixListIds": [],
+                    "UserIdGroupPairs": []
+                }
+            ],
+            "IpPermissionsEgress": [
+                {
+                    "IpProtocol": "-1",
+                    "IpRanges": [
+                        {
+                            "CidrIp": "0.0.0.0/0"
+                        }
+                    ],
+                    "Ipv6Ranges": [
+                        {
+                            "CidrIpv6": "::/0"
+                        }
+                    ],
+                    "PrefixListIds": [],
+                    "UserIdGroupPairs": []
+                }
+            ],
+            "Tags": [
+                { "Key": "Name", "Value": "pay-api" },
+                { "Key": "environment", "Value": "prod" },
+                { "Key": "owner", "Value": "platform" },
+                { "Key": "pci-scope", "Value": "cde" }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,2 @@
+# CI restarts the service after a release; nothing else.
+deploy ALL=(root) NOPASSWD: /usr/bin/systemctl restart pay-api.service

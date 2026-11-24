@@ -135,19 +135,24 @@ class Health(Tmp):
 
 
 class Overall(unittest.TestCase):
-    ROWS = [{"eval": "eval-8-a", "delta_mean": 1.0, "delta_base": 0.4, "cap_mean": 1.0, "cap_base": 1.0},
-            {"eval": "eval-59-b", "delta_mean": 0.5, "delta_base": 0.0, "cap_mean": 1.0, "cap_base": None}]
+    ROWS = [{"eval": "eval-8-a", "delta_mean": 1.0, "delta_base": 0.4, "delta_gain": 0.6,
+             "cap_mean": 1.0, "cap_base": 1.0, "outcome_gain": 0.0},
+            {"eval": "eval-59-b", "delta_mean": 0.5, "delta_base": 0.0, "delta_gain": 0.5,
+             "cap_mean": 1.0, "cap_base": None, "outcome_gain": None}]
 
     def test_a_held_out_eval_stays_out_of_the_suite_averages(self):
         lines = aggregate.overall(self.ROWS, {"eval-59-b"})
-        self.assertIn("**Delta — current 1.00 vs baseline 0.40**", lines)
-        self.assertTrue(any(l.startswith("**Held-out (eval 59)") and "current 0.50 vs baseline 0.00" in l
+        self.assertIn("**Instruction-following gain +0.60 — delta current 1.00 vs baseline 0.40**", lines)
+        self.assertTrue(any(l.startswith("**Held-out (eval 59)") and "delta current 0.50 vs baseline 0.00" in l
                             for l in lines))
 
-    def test_without_held_out_evals_the_lines_are_as_before(self):
+    def test_the_outcome_line_comes_first_and_the_baseline_count_last(self):
         self.assertEqual(aggregate.overall(self.ROWS, set()),
-                         ["", "**Delta — current 0.75 vs baseline 0.20**",
-                          "**Capability — current 1.00 vs baseline 1.00**", ""])
+                         ["", "**Outcome gain +0.00 — capability current 1.00 vs baseline 1.00**",
+                          "**Instruction-following gain +0.55 — delta current 0.75 vs baseline 0.20**",
+                          "**1 of 1 evals: baseline already succeeds** (capability baseline 1.00). On "
+                          "outcome they can only catch a regression; what the skill adds there shows on "
+                          "delta alone.", ""])
 
 
 if __name__ == "__main__":

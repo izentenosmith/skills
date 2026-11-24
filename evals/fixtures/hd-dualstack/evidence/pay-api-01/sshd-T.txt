@@ -1,0 +1,41 @@
+$ sudo sshd -T | sort
+acceptenv LANG
+acceptenv LC_*
+addressfamily any
+allowagentforwarding no
+allowgroups sshusers
+allowgroups deploy
+allowgroups sftp-reports
+allowtcpforwarding no
+allowusers
+authenticationmethods any
+authorizedkeysfile .ssh/authorized_keys
+banner /etc/issue.net
+chrootdirectory none
+ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr
+clientalivecountmax 3
+clientaliveinterval 300
+forcecommand none
+gatewayports no
+hostbasedauthentication no
+ignorerhosts yes
+kbdinteractiveauthentication no
+kexalgorithms curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512
+listenaddress 0.0.0.0:22
+listenaddress [::]:22
+logingracetime 60
+loglevel VERBOSE
+macs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,hmac-sha2-512,hmac-sha2-256
+maxauthtries 4
+maxsessions 10
+maxstartups 10:30:60
+passwordauthentication no
+permitemptypasswords no
+permitrootlogin no
+permittty yes
+permituserenvironment no
+port 22
+pubkeyauthentication yes
+subsystem sftp internal-sftp
+usepam yes
+x11forwarding no

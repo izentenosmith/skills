@@ -4,19 +4,25 @@
 Usage: python3 aggregate.py [--record] <iter-dir> [<iter-dir> ...]
 
 Later directories win: an eval present in iteration-2 supersedes iteration-1.
-Reports capability and delta pass rates separately — only the delta column is
-evidence that this session's edits helped.
+Reports capability and delta pass rates separately. The headline is the
+outcome gain, capability with the skill minus capability without it: what the
+skill adds to whether the job gets done. Delta (did the run follow the skill's
+own instructions) and its gain stay as secondary, instruction-following
+columns; a baseline that never read the skill scores near zero on delta by
+construction, so the delta gain overstates what a skill adds. An eval whose
+baseline already passes every capability assertion is flagged "baseline
+already succeeds": on outcome it can only guard against a regression.
 
 Writes benchmark.md, benchmark.json and scores.json next to the iteration
 directories. scores.json says, per eval, which iteration its score comes from,
 the day its latest scored run ended, its with-skill delta and capability means,
-and the skill_hash and staging run.py recorded for it; check_repo.py compares
+the baseline capability mean and the outcome gain, and the skill_hash and staging run.py recorded for it; check_repo.py compares
 that hash with the skill as it is now. --record also writes benchmark.md and
 scores.json into evals/, the copies this repo commits.
 
 After the score table comes a health table: for each eval, whether its runs
 all finished, how many repetitions passed every delta assertion, whether the
-gain is larger than the run-to-run noise, whether the eval still has room to
+outcome and delta gains are larger than the run-to-run noise, whether the eval still has room to
 show an improvement, and what a run costs with and without the skill.
 """
 import argparse
@@ -87,6 +93,24 @@ def baseline_dirs(ed):
 SATURATED = 0.95
 # A baseline at or above this passes most of what the eval checks without the skill.
 BASE_HIGH = 0.80
+# A baseline capability mean at this passed every capability assertion in every
+# baseline run: the outcome gain can only be zero or a regression.
+BASE_SUCCEEDS = 1.0
+BASELINE_SUCCEEDS = "baseline already succeeds"
+
+
+def baseline_succeeds(row):
+    return row.get("cap_base") is not None and row["cap_base"] >= BASE_SUCCEEDS
+
+
+def gain_noise(reps, base, key):
+    """Standard error of the difference between the with-skill and baseline
+    means of `key`, or None unless both sides have two or more runs."""
+    w = [r[key] for r in reps if r.get(key) is not None]
+    b = [g[key] for g in base if g.get(key) is not None]
+    if len(w) < 2 or len(b) < 2:
+        return None
+    return round(math.sqrt(st.variance(w) / len(w) + st.variance(b) / len(b)), 3)
 
 
 def mean(v):
@@ -109,7 +133,7 @@ def health(row, reps, base, runs):
          "cost_base": mean(r.get("cost_usd") for r in runs["base"]),
          "turns_with": mean(r.get("num_turns") for r in runs["with"]),
          "seconds_with": mean(r.get("seconds") for r in runs["with"]),
-         "noise": None}
+         "noise": None, "outcome_noise": None}
     flags = []
     if h["lost_runs"]:
         flags.append(f"{h['lost_runs']} run(s) lost")
@@ -117,6 +141,19 @@ def health(row, reps, base, runs):
         flags.append(f"{h['fallback_responses']} fallback response(s)")
     if reps and perfect < len(reps):
         flags.append("inconsistent")
+    # Outcome first, with the same noise rule as the delta gain below.
+    og = row.get("outcome_gain")
+    if og is not None:
+        h["outcome_noise"] = gain_noise(reps, base, "capability_rate")
+        if baseline_succeeds(row):
+            flags.append(BASELINE_SUCCEEDS)
+            if og < 0:
+                flags.append("outcome below baseline")
+        elif h["outcome_noise"] is not None:
+            if og <= 0 or abs(og) < 2 * h["outcome_noise"]:
+                flags.append("outcome within noise")
+        elif og <= 0:
+            flags.append("no outcome gain")
     gain, dm, db = row["delta_gain"], row["delta_mean"], row["delta_base"]
     if gain is not None:
         if len(base) > 1 and len(reps) > 1:
@@ -154,22 +191,35 @@ def rate(rows, key):
 
 
 def overall(out, heldout):
-    """The overall lines. A held-out eval is a test set, so it gets a line of
-    its own and stays out of the averages of the evals the skills were edited
-    against."""
-    m = lambda rows, key: (lambda v: f"{st.mean(v):.2f}" if v else "—")(
-        [r[key] for r in rows if r[key] is not None])
+    """The overall lines, outcome first. Each gain is the mean of the per-eval
+    gains, over the evals that have a baseline; the current and baseline means
+    beside it are over every eval that has that number. A held-out eval is a
+    test set, so it gets a line of its own and stays out of the averages of the
+    evals the skills were edited against. Last, how many evals' baselines
+    already succeed on outcome."""
+    vals = lambda rows, key: [r[key] for r in rows if r.get(key) is not None]
+    m = lambda rows, key: (lambda v: f"{st.mean(v):.2f}" if v else "—")(vals(rows, key))
+    g = lambda rows, key: (lambda v: f"{st.mean(v):+.2f}" if v else "—")(vals(rows, key))
     train = [r for r in out if r["eval"] not in heldout]
     held = [r for r in out if r["eval"] in heldout]
     L = [""]
     if train or not held:
-        L += [f"**Delta — current {m(train, 'delta_mean')} vs baseline {m(train, 'delta_base')}**",
-              f"**Capability — current {m(train, 'cap_mean')} vs baseline {m(train, 'cap_base')}**"]
+        L += [f"**Outcome gain {g(train, 'outcome_gain')} — capability current "
+              f"{m(train, 'cap_mean')} vs baseline {m(train, 'cap_base')}**",
+              f"**Instruction-following gain {g(train, 'delta_gain')} — delta current "
+              f"{m(train, 'delta_mean')} vs baseline {m(train, 'delta_base')}**"]
     if held:
         ids = ", ".join(r["eval"].split("-")[1] for r in held)
-        L.append(f"**Held-out (eval {ids}), not in the two lines above: delta — current "
-                 f"{m(held, 'delta_mean')} vs baseline {m(held, 'delta_base')}; capability — current "
-                 f"{m(held, 'cap_mean')} vs baseline {m(held, 'cap_base')}**")
+        L.append(f"**Held-out (eval {ids}), not in the two lines above: outcome gain "
+                 f"{g(held, 'outcome_gain')} (capability current {m(held, 'cap_mean')} vs baseline "
+                 f"{m(held, 'cap_base')}); instruction-following gain {g(held, 'delta_gain')} (delta "
+                 f"current {m(held, 'delta_mean')} vs baseline {m(held, 'delta_base')})**")
+    with_base = [r for r in out if r.get("cap_base") is not None]
+    if with_base:
+        ok = [r for r in with_base if baseline_succeeds(r)]
+        L.append(f"**{len(ok)} of {len(with_base)} evals: {BASELINE_SUCCEEDS}** (capability "
+                 f"baseline {BASE_SUCCEEDS:.2f}). On outcome they can only catch a regression; "
+                 "what the skill adds there shows on delta alone.")
     return L + [""]
 
 
@@ -179,22 +229,29 @@ def health_section(out):
     L = ["## Health: plumbing, consistency, noise, headroom and cost", "",
          "`runs` = with-skill runs graded of those dispatched. `all delta` = repetitions that passed "
          "every delta assertion (the consistency of the skill, where the mean above hides a single "
-         "miss). `base n` = baseline runs. `noise` = standard error of the gain, known only with two "
-         "or more runs on each side; a gain under twice the noise is not evidence. "
-         f"Flags: `saturated` = delta {SATURATED:.2f} or more, so the eval guards regressions and cannot "
-         "show an improvement; `inconsistent` = some repetition missed a delta assertion; "
-         "`noise unknown` = one baseline run; `gain within noise` and `no gain` = the skill is not shown "
-         f"to help; `baseline high` = the baseline scores {BASE_HIGH:.2f} or more without the skill; "
+         "miss). `base n` = baseline runs. `outcome noise` and `delta noise` = standard error of that "
+         "gain, known only with two or more runs on each side; a gain under twice the noise is not "
+         f"evidence. Outcome flags: `{BASELINE_SUCCEEDS}` = every baseline run passed every capability "
+         "assertion, so the eval can only catch an outcome regression (`outcome below baseline` = it "
+         "did); `outcome within noise` and `no outcome gain` = the skill is not shown to improve the "
+         f"outcome. Delta flags: `saturated` = delta {SATURATED:.2f} or more, so the eval guards "
+         "regressions and cannot show an improvement; `inconsistent` = some repetition missed a delta "
+         "assertion; `noise unknown` = one baseline run; `gain within noise` and `no gain` = the skill "
+         "is not shown to change what the run does; `baseline high` = the baseline scores "
+         f"{BASE_HIGH:.2f} or more on delta without the skill. "
          "`lost` = a run timed out or left no response and is missing from the score; `fallback` = "
          "the response was taken from the run's final message.", "",
-         "| eval | runs | all delta | base n | gain | noise | cost with | cost base | flags |",
-         "|---|---|---|---|---|---|---|---|---|"]
+         "| eval | runs | all delta | base n | outcome gain | outcome noise | delta gain | delta noise "
+         "| cost with | cost base | flags |",
+         "|---|---|---|---|---|---|---|---|---|---|---|"]
+    sign = lambda v: "—" if v is None else f"{v:+.2f}"
+    plain = lambda v: "—" if v is None else f"{v:.2f}"
     for r in out:
-        h, g = r["health"], r["delta_gain"]
+        h = r["health"]
         L.append(f"| {r['eval'].replace('eval-', '')} | {h['graded']}/{h['dispatched']} "
                  f"| {h['all_delta_passed']}/{h['graded']} | {h['base_n']} "
-                 f"| {'—' if g is None else f'{g:+.2f}'} "
-                 f"| {'—' if h['noise'] is None else f'{h['noise']:.2f}'} "
+                 f"| {sign(r.get('outcome_gain'))} | {plain(h['outcome_noise'])} "
+                 f"| {sign(r['delta_gain'])} | {plain(h['noise'])} "
                  f"| {usd(h['cost_with'])} | {usd(h['cost_base'])} | {'; '.join(h['flags']) or '—'} |")
     scored = [r for r in out if r["delta_mean"] is not None]
     sat = [r for r in scored if r["delta_mean"] >= SATURATED]
@@ -234,6 +291,11 @@ def main():
         row["delta_gain"] = (round(row["delta_mean"] - row["delta_base"], 3)
                              if row["delta_mean"] is not None
                              and row["delta_base"] is not None else None)
+        # The headline: what the skill adds to whether the job gets done.
+        row["outcome_gain"] = (round(row["cap_mean"] - row["cap_base"], 3)
+                               if row["cap_mean"] is not None
+                               and row["cap_base"] is not None else None)
+        row["baseline_succeeds"] = baseline_succeeds(row)
         # which delta assertions the baseline also passed = still non-discriminating
         nd, flaky = [], []
         if reps and base:
@@ -252,7 +314,7 @@ def main():
         row["health"] = health(row, reps, base, dispatched)
         out.append(row)
 
-    bench = {"skill_name": "six-stage-pipeline", "evals": out}
+    bench = {"skill_name": "six-stage-pipeline", "headline": "outcome_gain", "evals": out}
     ws = pathlib.Path(args.dirs[0]).parent
     (ws / "benchmark.json").write_text(json.dumps(bench, indent=2))
     scores = {"note": "Written by evals/aggregate.py. skill_hash is the content hash of the skill "
@@ -261,25 +323,35 @@ def main():
                       "date is the UTC day the latest scored with-skill run ended, read from "
                       "run.json's `finished` or, for runs from before run.py recorded it, from "
                       "run.json's mtime (date_from says which). delta_mean and cap_mean are the "
-                      "with-skill means benchmark.md shows.",
+                      "with-skill means benchmark.md shows; cap_base is the baseline capability "
+                      "mean, and outcome_gain (cap_mean - cap_base, null without a baseline) is "
+                      "the headline gain.",
               "evals": {r["eval"]: {"skill": r["skill"], "iteration": r["source"], "n": r["n"],
                                     "staging": r["staging"], "skill_hash": r["skill_hash"],
                                     "date": r["date"], "date_from": r["date_from"],
-                                    "delta_mean": r["delta_mean"], "cap_mean": r["cap_mean"]}
+                                    "delta_mean": r["delta_mean"], "cap_mean": r["cap_mean"],
+                                    "cap_base": r["cap_base"], "outcome_gain": r["outcome_gain"]}
                         for r in out if r["skill"]}}
 
     L = ["# Benchmark", "",
-         "`delta` = assertions that test what the skill instructs. `cap` = does the skill do its job at all. `n` = with-skill runs; the baseline is one run unless the health table says otherwise.", "",
-         "| eval | from | n | delta (mean ± sd) | delta base | gain | cap | cap base |",
-         "|---|---|---|---|---|---|---|---|"]
+         "**Outcome first.** `outcome gain` = `cap` − `cap base`: how much more often the job gets "
+         "done with the skill than without it. `cap` = capability assertions: does the run do the job "
+         "at all. Then, as instruction-following: `delta` = assertions that test what the skill "
+         "instructs, which a baseline that never read the skill mostly fails by construction, so "
+         f"`delta gain` overstates what a skill adds. `{BASELINE_SUCCEEDS}` = `cap base` is "
+         f"{BASE_SUCCEEDS:.2f}, so on outcome the eval can only catch a regression. `n` = with-skill "
+         "runs; the baseline is one run unless the health table says otherwise.", "",
+         "| eval | from | outcome gain | cap | cap base | n | delta gain | delta (mean ± sd) "
+         "| delta base | outcome note |",
+         "|---|---|---|---|---|---|---|---|---|---|"]
     for r in out:
         f = lambda v: "—" if v is None else f"{v:.2f}"
-        g = r["delta_gain"]
-        gain = "—" if g is None else f"{g:+.2f}"
+        s = lambda v: "—" if v is None else f"{v:+.2f}"
         L.append(f"| {r['eval'].replace('eval-','')} | {r['source'].replace('iteration-','i')} "
-                 f"| {r['n']} | {f(r['delta_mean'])} ± {r['delta_sd']:.2f} | {f(r['delta_base'])} "
-                 f"| {gain} "
-                 f"| {f(r['cap_mean'])} | {f(r['cap_base'])} |")
+                 f"| {s(r['outcome_gain'])} | {f(r['cap_mean'])} | {f(r['cap_base'])} "
+                 f"| {r['n']} | {s(r['delta_gain'])} "
+                 f"| {f(r['delta_mean'])} ± {r['delta_sd']:.2f} | {f(r['delta_base'])} "
+                 f"| {BASELINE_SUCCEEDS if r['baseline_succeeds'] else '—'} |")
 
     L += overall(out, heldout)
 
