@@ -32,6 +32,13 @@ One version covers the whole repository: every skill, the harness and the evals.
 - **[SCOPE.md](SCOPE.md)** sets what gets in: a failure seen in a real session, and no new skill
   where existing ones compose. **[.out-of-scope/](.out-of-scope/README.md)** records the ideas
   taken out and why.
+- **A deterministic routing check in CI** (`.github/scripts/routing.py`, stdlib BM25 with a Porter
+  stemmer, no model): every should-trigger case in `evals/trigger/cases.json` must rank its skill
+  within the top 6 of 43, no near-miss may rank the skill under test first, and no two descriptions
+  may pass TF-IDF cosine 0.40. Twelve current misses are listed as known failures that may only
+  shrink. `--report` prints the distributions the thresholds come from.
+- **Trigger cases for the 18 skills that had none**, three should-trigger and three near-miss each,
+  so all 43 skills are covered: 258 cases, 172 train and 86 held out (seed 20261124).
 
 ### Changed
 

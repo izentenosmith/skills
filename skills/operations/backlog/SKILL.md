@@ -1,6 +1,6 @@
 ---
 name: backlog
-description: Shapes and health-checks a backlog in Linear, Azure DevOps, Jira or a markdown file. Map mode builds a story map with release slices and a walking skeleton; refine mode splits an epic into thin stories with acceptance criteria; health mode audits the board (stale work, WIP, dependencies) with a 0–10 score; order mode ranks by cost of delay. Use for story mapping, splitting an epic, prioritizing, backlog health or why work is stuck. Not for creating or updating a single item — that is ticket.
+description: Shapes and health-checks a backlog in Linear, Azure DevOps, Jira or a markdown file. Map mode lays out an initiative's user journey as a story map with release slices; refine mode splits an epic into thin stories with acceptance criteria; health mode audits the board with a 0–10 score; order mode ranks by cost of delay. Use for story mapping, splitting an epic, prioritizing, backlog health or why work is stuck. Not for creating or updating a single item — that is ticket.
 ---
 
 # 🗺️ Backlog

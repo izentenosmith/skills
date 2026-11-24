@@ -1,6 +1,6 @@
 ---
 name: pipelines
-description: Reviews CI/CD pipelines, or designs or proposes changes to them — GitHub Actions, GitLab CI, Azure Pipelines, Jenkins — for flow, release safety and supply-chain security. Review mode audits with findings and a 0–10 score; Design mode lays out a deployment pipeline; Propose mode sequences the migration without taking production down. Use for pipeline review, "why is our CI slow/flaky/unsafe", release strategies, or IaC delivery. It never triggers, approves or reconfigures a real CI system.
+description: Reviews CI/CD pipelines, or designs or proposes changes to them — GitHub Actions, GitLab CI, Azure DevOps, Jenkins — for flow, release safety and supply-chain security. Review mode audits with findings and a 0–10 score; Design mode lays out a deployment pipeline; Propose mode sequences the migration. Use for pipeline review, "why is our CI slow/flaky/unsafe", build-once artifact promotion and rollback, or IaC delivery. It never triggers, approves or reconfigures a real CI system.
 ---
 
 # 🚀 pipelines

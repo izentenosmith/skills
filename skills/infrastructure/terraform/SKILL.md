@@ -1,6 +1,6 @@
 ---
 name: terraform
-description: Reviews Terraform/OpenTofu infrastructure code, or designs or proposes changes to it — module structure, state and backends, pinning, security and change safety (destructive changes, drift). Review mode audits with findings and a 0–10 score; Design mode lays out a new codebase or a redesign; Propose mode sequences a no-recreate migration. Use for Terraform code review, IaC audits, state splitting, module design, or provider upgrades. It never runs apply, destroy, import or state commands.
+description: Reviews Terraform/OpenTofu (HCL) infrastructure code, or designs or proposes changes to it — module structure, state and backends, pinning, security and change safety (destructive changes, drift). Review mode audits with findings and a 0–10 score; Design mode lays out a new codebase or a redesign; Propose mode sequences a no-recreate migration. Use for Terraform code review, IaC audits, state splitting, module design, or provider upgrades. It never runs apply, destroy, import or state commands.
 ---
 
 # 🏗️ terraform

@@ -6,7 +6,7 @@
       "name": "container-debug",
       "family": "containers",
       "path": "skills/containers/container-debug/SKILL.md",
-      "purpose": "Diagnoses a container that won't start, won't stay up, can't reach another service, gets killed, or behaves differently than outside a container \u2014 Docker, Compose, Swarm or Kubernetes \u2014 from captured evidence and runtime state, one read-only hypothesis at a time.",
+      "purpose": "Diagnoses a container that won't start, won't stay up, can't reach another service, gets killed, or behaves differently than outside a container \u2014 Docker, Compose, Swarm or Kubernetes \u2014 one read-only hypothesis at a time.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {},
@@ -730,7 +730,7 @@
       "name": "pipelines",
       "family": "infrastructure",
       "path": "skills/infrastructure/pipelines/SKILL.md",
-      "purpose": "Reviews CI/CD pipelines, or designs or proposes changes to them \u2014 GitHub Actions, GitLab CI, Azure Pipelines, Jenkins \u2014 for flow, release safety and supply-chain security.",
+      "purpose": "Reviews CI/CD pipelines, or designs or proposes changes to them \u2014 GitHub Actions, GitLab CI, Azure DevOps, Jenkins \u2014 for flow, release safety and supply-chain security.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {},
@@ -772,7 +772,7 @@
       "name": "terraform",
       "family": "infrastructure",
       "path": "skills/infrastructure/terraform/SKILL.md",
-      "purpose": "Reviews Terraform/OpenTofu infrastructure code, or designs or proposes changes to it \u2014 module structure, state and backends, pinning, security and change safety (destructive changes, drift).",
+      "purpose": "Reviews Terraform/OpenTofu (HCL) infrastructure code, or designs or proposes changes to it \u2014 module structure, state and backends, pinning, security and change safety (destructive changes, drift).",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {},
@@ -931,7 +931,7 @@
       "name": "netdiagram",
       "family": "networking",
       "path": "skills/networking/netdiagram/SKILL.md",
-      "purpose": "Draws editable draw.io network topology diagrams \u2014 logical L3, segmentation (zones and flows), and physical L1/L2 when on-prem evidence exists \u2014 from a network design, an audit's topology.json or other network structure, with stable IDs.",
+      "purpose": "Draws editable draw.io network topology diagrams \u2014 logical L3, segmentation (zones, VLANs, firewalls and flows), and physical L1/L2 when on-prem evidence exists \u2014 from a network design, an audit's topology.json or other network structure, with stable IDs.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {
@@ -1249,7 +1249,7 @@
       "name": "peer-review",
       "family": "review",
       "path": "skills/review/peer-review/SKILL.md",
-      "purpose": "Reviews a diff, branch or pull request the way a senior peer would, adding to /code-review what reviewers usually miss: the change against its ticket, omissions (error paths, tests, co-changes), risk-ranked attention and a verify pass.",
+      "purpose": "Reviews a diff, branch or pull request, adding to /code-review what reviewers usually miss: the change against its ticket, omissions (error paths, tests, co-changes), risk-ranked attention and a verify pass.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {},

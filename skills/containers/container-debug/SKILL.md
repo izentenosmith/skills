@@ -1,6 +1,6 @@
 ---
 name: container-debug
-description: Diagnoses a container that won't start, won't stay up, can't reach another service, gets killed, or behaves differently than outside a container — Docker, Compose, Swarm or Kubernetes — from captured evidence and runtime state, one read-only hypothesis at a time. Use for "my container keeps restarting", "exited with code 137", "connection refused between containers", "works locally but not in Docker", or CrashLoopBackOff. In production it never restarts, removes or execs without permission.
+description: Diagnoses a container that won't start, won't stay up, can't reach another service, gets killed, or behaves differently than outside a container — Docker, Compose, Swarm or Kubernetes — one read-only hypothesis at a time. Use for "my container keeps restarting", "exited with code 137", "connection refused between containers", "works locally but not in Docker", "not found" for a script that is there, or CrashLoopBackOff. In production it never restarts, removes or execs without permission.
 ---
 
 # 🩺 Container debug

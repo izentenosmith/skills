@@ -3,11 +3,12 @@
  "split": {
   "method": "random, stratified: one of every three cases per (skill, should_trigger) held out",
   "seed": 20261118,
-  "train": 100,
-  "heldout": 50,
+  "train": 172,
+  "heldout": 86,
   "added": "2026-11-20: 36 cases for six development skills whose descriptions changed (agent-brief, architect-deep-dive, devils-advocate, tyr-verdict, refactor-review, nexus), split the same way with seed 20261120; no earlier case moved",
   "added_2026_11_21": "36 cases for the platform, network and security bundles (dockerfile, docker-compose, netaudit, netdesign, threatmodel, appsec), split the same way with seed 20261121; no earlier case moved",
-  "added_2026_11_21_database": "30 cases for the five database skills that had none (dbquery, dbpropose, dbbuild, dbdiagram, dbarchitect), split the same way with seed 20261121; no earlier case moved"
+  "added_2026_11_21_database": "30 cases for the five database skills that had none (dbquery, dbpropose, dbbuild, dbdiagram, dbarchitect), split the same way with seed 20261121; no earlier case moved",
+  "added_2026_11_24": "108 cases for the eighteen skills that had none (acceptance-tests, code-xray, concurrency-review, container-debug, container-hardening, docker-swarm, hardening, netblueprint, netdiagram, netpropose, pipelines, post-mortem, release-notes, repo-memory, review-retro, tdd, terraform, test-review), split the same way with seed 20261124 (random.Random(seed).randrange(3) picks the held-out case of each (skill, should_trigger) group, skills in alphabetical order, should-trigger first); no earlier case moved"
  },
  "cases": [
   {
@@ -1209,6 +1210,870 @@
    "expected": "docker-compose",
    "split": "train",
    "prompt": "Give me a compose file that runs our API with Postgres and Redis locally, with health checks so the API waits for both."
+  },
+  {
+   "id": "acceptance-tests-yes-1",
+   "skill": "acceptance-tests",
+   "should_trigger": true,
+   "expected": "acceptance-tests",
+   "split": "heldout",
+   "prompt": "The brief for the bulk-invite feature is approved in .workflow/brief.md with seven acceptance criteria. Before anyone writes the feature, I want those criteria as executable tests that hit the public HTTP API and fail right now, for the right reason."
+  },
+  {
+   "id": "acceptance-tests-yes-2",
+   "skill": "acceptance-tests",
+   "should_trigger": true,
+   "expected": "acceptance-tests",
+   "split": "train",
+   "prompt": "We keep shipping features that pass their unit tests but don't do what product asked. For the new refund-window rule, can you turn the spec's criteria into end-to-end tests from the outside, written first, with a table of which test proves which criterion?"
+  },
+  {
+   "id": "acceptance-tests-yes-3",
+   "skill": "acceptance-tests",
+   "should_trigger": true,
+   "expected": "acceptance-tests",
+   "split": "train",
+   "prompt": "spec for the CSV import is done (AC1-AC5 in docs/import-spec.md). write the executable specification against the CLI entrypoint. nothing is implemented yet"
+  },
+  {
+   "id": "acceptance-tests-no-1",
+   "skill": "acceptance-tests",
+   "should_trigger": false,
+   "expected": "tdd",
+   "split": "train",
+   "prompt": "The failing end-to-end tests for the bulk-invite endpoint are in place and red. Now build the feature in small slices, red-green-refactor, until they pass."
+  },
+  {
+   "id": "acceptance-tests-no-2",
+   "skill": "acceptance-tests",
+   "should_trigger": false,
+   "expected": "agent-brief",
+   "split": "train",
+   "prompt": "We settled the design for team-level billing in yesterday's review. Write up the build plan: ordered acceptance criteria, test seams, what's in and out of scope, so someone can build against it."
+  },
+  {
+   "id": "acceptance-tests-no-3",
+   "skill": "acceptance-tests",
+   "should_trigger": false,
+   "expected": "test-review",
+   "split": "heldout",
+   "prompt": "PR #412 adds tests that supposedly cover the three acceptance criteria for password expiry. Do they actually prove them, or would they still pass if the expiry logic broke?"
+  },
+  {
+   "id": "code-xray-yes-1",
+   "skill": "code-xray",
+   "should_trigger": true,
+   "expected": "code-xray",
+   "split": "heldout",
+   "prompt": "We have budget for one quarter of debt paydown on the monolith. Using the git history, where should we spend it? I want the files that change most and are the biggest, not just whatever the linter hates."
+  },
+  {
+   "id": "code-xray-yes-2",
+   "skill": "code-xray",
+   "should_trigger": true,
+   "expected": "code-xray",
+   "split": "train",
+   "prompt": "Our two senior devs on the billing module are leaving in March. Which parts of the code does only one of them really know, and who should start pairing on what?"
+  },
+  {
+   "id": "code-xray-yes-3",
+   "skill": "code-xray",
+   "should_trigger": true,
+   "expected": "code-xray",
+   "split": "train",
+   "prompt": "Every time someone touches OrderService.java they also end up changing PricingRules and the invoice templates. Can you check in the log how strongly those are coupled and whether anything else moves with them?"
+  },
+  {
+   "id": "code-xray-no-1",
+   "skill": "code-xray",
+   "should_trigger": false,
+   "expected": "peer-review",
+   "split": "heldout",
+   "prompt": "Please review PR 2281 (the new retry logic in the sync worker) and tell me if it's ok to merge."
+  },
+  {
+   "id": "code-xray-no-2",
+   "skill": "code-xray",
+   "should_trigger": false,
+   "expected": "refactor-review",
+   "split": "train",
+   "prompt": "Tests are green on the discount-engine change I just built test-first. Before merging, look for smells in what I wrote and clean it up without changing behaviour, running the tests between steps."
+  },
+  {
+   "id": "code-xray-no-3",
+   "skill": "code-xray",
+   "should_trigger": false,
+   "expected": null,
+   "split": "train",
+   "prompt": "How do I see who last changed line 120 of src/app.py, and in which commit?"
+  },
+  {
+   "id": "concurrency-review-yes-1",
+   "skill": "concurrency-review",
+   "should_trigger": true,
+   "expected": "concurrency-review",
+   "split": "train",
+   "prompt": "This PR changes how we reserve seats: it reads the remaining count, checks it's above zero, then saves the decremented value through the ORM. Two people got the last seat yesterday in testing. Can you check the diff for races?"
+  },
+  {
+   "id": "concurrency-review-yes-2",
+   "skill": "concurrency-review",
+   "should_trigger": true,
+   "expected": "concurrency-review",
+   "split": "train",
+   "prompt": "Branch feat/async-ingest moves the importer to asyncio, with a gather over every file and a shared dict for progress. Is this safe? I'm worried about blocking calls, cancellation and what happens when one task fails."
+  },
+  {
+   "id": "concurrency-review-yes-3",
+   "skill": "concurrency-review",
+   "should_trigger": true,
+   "expected": "concurrency-review",
+   "split": "heldout",
+   "prompt": "We run the nightly invoicing job from cron in each of our four pods, and the payment webhook handler retries on timeout. Go through the changes on this branch for double execution and idempotency problems."
+  },
+  {
+   "id": "concurrency-review-no-1",
+   "skill": "concurrency-review",
+   "should_trigger": false,
+   "expected": "peer-review",
+   "split": "train",
+   "prompt": "Can you do a general review of the profile-settings PR? It's mostly form validation and a new settings page, nothing fancy."
+  },
+  {
+   "id": "concurrency-review-no-2",
+   "skill": "concurrency-review",
+   "should_trigger": false,
+   "expected": "hotfix",
+   "split": "train",
+   "prompt": "Since this morning's deploy some users get two welcome emails when they sign up. Site's fine otherwise, it's just embarrassing. Find it and get a proper fix out today."
+  },
+  {
+   "id": "concurrency-review-no-3",
+   "skill": "concurrency-review",
+   "should_trigger": false,
+   "expected": null,
+   "split": "heldout",
+   "prompt": "What's the difference between a mutex and a semaphore? Short answer please."
+  },
+  {
+   "id": "container-debug-yes-1",
+   "skill": "container-debug",
+   "should_trigger": true,
+   "expected": "container-debug",
+   "split": "heldout",
+   "prompt": "Our api pod has been in CrashLoopBackOff since the last rollout. kubectl describe shows restart count 14, last state Terminated, reason Error. Help me figure out why without killing anything, this is prod."
+  },
+  {
+   "id": "container-debug-yes-2",
+   "skill": "container-debug",
+   "should_trigger": true,
+   "expected": "container-debug",
+   "split": "train",
+   "prompt": "The app works when I run it with python manage.py runserver, but inside Docker the healthcheck fails and it never becomes healthy. It listens on 127.0.0.1:8000, if that matters."
+  },
+  {
+   "id": "container-debug-yes-3",
+   "skill": "container-debug",
+   "should_trigger": true,
+   "expected": "container-debug",
+   "split": "train",
+   "prompt": "entrypoint.sh: not found. But the file is right there in the image, I checked with ls. Someone on Windows edited it last week. ???"
+  },
+  {
+   "id": "container-debug-no-1",
+   "skill": "container-debug",
+   "should_trigger": false,
+   "expected": "dockerfile",
+   "split": "train",
+   "prompt": "Our Go service image is 1.1 GB and runs as root. Can you rewrite the image build as multi-stage with a distroless runtime?"
+  },
+  {
+   "id": "container-debug-no-2",
+   "skill": "container-debug",
+   "should_trigger": false,
+   "expected": "container-hardening",
+   "split": "train",
+   "prompt": "Before we go live, check whether our Kubernetes manifests would pass Pod Security restricted. A couple of containers use hostPath mounts and one adds NET_ADMIN."
+  },
+  {
+   "id": "container-debug-no-3",
+   "skill": "container-debug",
+   "should_trigger": false,
+   "expected": "incident-fix",
+   "split": "heldout",
+   "prompt": "Checkout is down for every customer: all three web containers are failing and orders are being lost. I've just been paged. What do we do first?"
+  },
+  {
+   "id": "container-hardening-yes-1",
+   "skill": "container-hardening",
+   "should_trigger": true,
+   "expected": "container-hardening",
+   "split": "train",
+   "prompt": "Is this safe to run? Our compose file gives the backup agent privileged: true and mounts /var/run/docker.sock, and every service runs as root. Score it and tell me what to fix."
+  },
+  {
+   "id": "container-hardening-yes-2",
+   "skill": "container-hardening",
+   "should_trigger": true,
+   "expected": "container-hardening",
+   "split": "heldout",
+   "prompt": "Security asked us to lock down the workloads in deploy/k8s/: read-only root filesystem, drop all capabilities, no-new-privileges, seccomp RuntimeDefault. Apply that to our manifests and make sure the pods still start."
+  },
+  {
+   "id": "container-hardening-yes-3",
+   "skill": "container-hardening",
+   "should_trigger": true,
+   "expected": "container-hardening",
+   "split": "train",
+   "prompt": "The auditor wants proof that our images are scanned, have an SBOM and are signed, and that none of the running containers has more Linux capabilities than it needs. Where do we stand?"
+  },
+  {
+   "id": "container-hardening-no-1",
+   "skill": "container-hardening",
+   "should_trigger": false,
+   "expected": "hardening",
+   "split": "train",
+   "prompt": "Audit our Ubuntu 22.04 VMs. I've pasted sshd_config, the ufw rules, sudoers and the output of systemctl list-units. Are these hosts locked down?"
+  },
+  {
+   "id": "container-hardening-no-2",
+   "skill": "container-hardening",
+   "should_trigger": false,
+   "expected": "appsec",
+   "split": "heldout",
+   "prompt": "Review the Flask app in src/ for SQL injection, broken access control and how it stores session tokens. It's deployed in containers, but I only care about the code."
+  },
+  {
+   "id": "container-hardening-no-3",
+   "skill": "container-hardening",
+   "should_trigger": false,
+   "expected": "container-debug",
+   "split": "train",
+   "prompt": "After we set readOnlyRootFilesystem: true the nginx pod crashes with 'mkdir() \"/var/cache/nginx/client_temp\" failed (30: Read-only file system)'. Why, and what's the smallest change that gets it running again?"
+  },
+  {
+   "id": "docker-swarm-yes-1",
+   "skill": "docker-swarm",
+   "should_trigger": true,
+   "expected": "docker-swarm",
+   "split": "heldout",
+   "prompt": "We run 3 managers and 5 workers in Swarm mode and deploy with docker stack deploy. Can you review our stack.yml and the cluster setup before go-live: quorum, rollback settings, healthchecks, and where the Postgres volume lives?"
+  },
+  {
+   "id": "docker-swarm-yes-2",
+   "skill": "docker-swarm",
+   "should_trigger": true,
+   "expected": "docker-swarm",
+   "split": "train",
+   "prompt": "Our stack file uses depends_on, condition: service_healthy and a build: section, and I'm not sure stack deploy honours half of it. Also every update takes the service down for about a minute. Go through it."
+  },
+  {
+   "id": "docker-swarm-yes-3",
+   "skill": "docker-swarm",
+   "should_trigger": true,
+   "expected": "docker-swarm",
+   "split": "train",
+   "prompt": "Small team, 6 services, currently on one VM with compose. Design a Swarm setup across three nodes with rolling updates, secrets and an encrypted overlay network, and tell me honestly if we should be on Kubernetes instead."
+  },
+  {
+   "id": "docker-swarm-no-1",
+   "skill": "docker-swarm",
+   "should_trigger": false,
+   "expected": "docker-compose",
+   "split": "train",
+   "prompt": "I just need a local dev setup on my laptop: the API, Postgres and Redis, with health checks so it starts in order and the data survives a restart."
+  },
+  {
+   "id": "docker-swarm-no-2",
+   "skill": "docker-swarm",
+   "should_trigger": false,
+   "expected": "container-debug",
+   "split": "heldout",
+   "prompt": "One replica of our web service on node 3 keeps getting rescheduled with exit code 137. The other replicas are fine. What's killing it?"
+  },
+  {
+   "id": "docker-swarm-no-3",
+   "skill": "docker-swarm",
+   "should_trigger": false,
+   "expected": null,
+   "split": "train",
+   "prompt": "What does the --with-registry-auth flag do on docker stack deploy?"
+  },
+  {
+   "id": "hardening-yes-1",
+   "skill": "hardening",
+   "should_trigger": true,
+   "expected": "hardening",
+   "split": "train",
+   "prompt": "We're about to put three new RHEL 9 servers into production: a web server, a Postfix relay and a BIND resolver. The output of our collection script for each is attached. Are they ready? I'd like a score."
+  },
+  {
+   "id": "hardening-yes-2",
+   "skill": "hardening",
+   "should_trigger": true,
+   "expected": "hardening",
+   "split": "heldout",
+   "prompt": "Write us a baseline for our Azure subscriptions: identity, network exposure, logging, backups, tagging and locks, with a read-only check per control so we can prove it later. CIS-ish, but we don't need every item."
+  },
+  {
+   "id": "hardening-yes-3",
+   "skill": "hardening",
+   "should_trigger": true,
+   "expected": "hardening",
+   "split": "train",
+   "prompt": "is this box locked down? debian 12, public IP, runs a small postgres and an sftp drop. sshd -T and ss -tlnp output below"
+  },
+  {
+   "id": "hardening-no-1",
+   "skill": "hardening",
+   "should_trigger": false,
+   "expected": "container-hardening",
+   "split": "train",
+   "prompt": "Our compose stack runs the reverse proxy privileged and mounts the Docker socket into Portainer. How risky is that container config, and what should change?"
+  },
+  {
+   "id": "hardening-no-2",
+   "skill": "hardening",
+   "should_trigger": false,
+   "expected": "appsec",
+   "split": "train",
+   "prompt": "Check our Express API for broken object-level authorization: can user A fetch user B's invoices by changing the id in /invoices/:id? The routes are in src/routes."
+  },
+  {
+   "id": "hardening-no-3",
+   "skill": "hardening",
+   "should_trigger": false,
+   "expected": null,
+   "split": "heldout",
+   "prompt": "How do I generate an ed25519 SSH key and add it to a server?"
+  },
+  {
+   "id": "netblueprint-yes-1",
+   "skill": "netblueprint",
+   "should_trigger": true,
+   "expected": "netblueprint",
+   "split": "heldout",
+   "prompt": "The proposal for the Frankfurt data center network was accepted by the CTO yesterday; the decision is recorded in proposal/ACCEPTED.md. Now I need the final, accepted design that the infrastructure-as-code people will implement from."
+  },
+  {
+   "id": "netblueprint-yes-2",
+   "skill": "netblueprint",
+   "should_trigger": true,
+   "expected": "netblueprint",
+   "split": "train",
+   "prompt": "We have sign-off on network option B. Can you turn it into the handover set: canonical draw.io diagrams, a document that walks through the address plan, flow matrix and failure domains, and the topology file the IaC repo consumes?"
+  },
+  {
+   "id": "netblueprint-yes-3",
+   "skill": "netblueprint",
+   "should_trigger": true,
+   "expected": "netblueprint",
+   "split": "train",
+   "prompt": "Stakeholders approved the AWS network recommendation last week. Package the final topology so the platform team can start; they want exactly one source of truth."
+  },
+  {
+   "id": "netblueprint-no-1",
+   "skill": "netblueprint",
+   "should_trigger": false,
+   "expected": "netpropose",
+   "split": "heldout",
+   "prompt": "The audit and target design for the campus network are finished. Management hasn't decided anything yet; they want the options ranked, the cut-over order, and how we roll back if it goes wrong."
+  },
+  {
+   "id": "netblueprint-no-2",
+   "skill": "netblueprint",
+   "should_trigger": false,
+   "expected": "netdiagram",
+   "split": "train",
+   "prompt": "Just draw the current network from this topology.json as draw.io, the L3 view and the zones. Nothing has been decided, I only need pictures for Thursday's meeting."
+  },
+  {
+   "id": "netblueprint-no-3",
+   "skill": "netblueprint",
+   "should_trigger": false,
+   "expected": "terraform",
+   "split": "train",
+   "prompt": "The accepted topology.json for our VPC layout is in network/. Write the HCL modules that create it: VPCs, subnets, route tables and the transit gateway attachments."
+  },
+  {
+   "id": "netdiagram-yes-1",
+   "skill": "netdiagram",
+   "should_trigger": true,
+   "expected": "netdiagram",
+   "split": "train",
+   "prompt": "Here's our on-prem estate from the audit: topology.json plus the switch inventory. Draw it as editable draw.io: the logical L3 view, zones and flows, and the physical cabling view."
+  },
+  {
+   "id": "netdiagram-yes-2",
+   "skill": "netdiagram",
+   "should_trigger": true,
+   "expected": "netdiagram",
+   "split": "train",
+   "prompt": "Can you draw this Azure network? Hub VNet, three spokes, an Azure Firewall and ExpressRoute to the office. The Bicep files are in infra/network."
+  },
+  {
+   "id": "netdiagram-yes-3",
+   "skill": "netdiagram",
+   "should_trigger": true,
+   "expected": "netdiagram",
+   "split": "heldout",
+   "prompt": "The network design is done but nobody can follow it as text. I want a picture of the topology that shows which zones can talk to which, something I can edit later."
+  },
+  {
+   "id": "netdiagram-no-1",
+   "skill": "netdiagram",
+   "should_trigger": false,
+   "expected": "netaudit",
+   "split": "heldout",
+   "prompt": "Here are the running configs from our two core switches and the firewall. How well segmented is this network, and where are the single points of failure? Give it a score."
+  },
+  {
+   "id": "netdiagram-no-2",
+   "skill": "netdiagram",
+   "should_trigger": false,
+   "expected": "netblueprint",
+   "split": "train",
+   "prompt": "Leadership approved the network recommendation on Tuesday. We need the final accepted topology set, diagrams plus the document that explains them and the topology.json, to hand to the IaC team."
+  },
+  {
+   "id": "netdiagram-no-3",
+   "skill": "netdiagram",
+   "should_trigger": false,
+   "expected": "dbdiagram",
+   "split": "train",
+   "prompt": "Draw the ER model for our Postgres schema in db/schema.sql as draw.io, Barker notation, plus the relational view."
+  },
+  {
+   "id": "netpropose-yes-1",
+   "skill": "netpropose",
+   "should_trigger": true,
+   "expected": "netpropose",
+   "split": "train",
+   "prompt": "We have the audit of the warehouse network and a target design. Turn them into a recommendation for the steering committee: which decisions first, how we cut over site by site, the risks, and how we roll back."
+  },
+  {
+   "id": "netpropose-yes-2",
+   "skill": "netpropose",
+   "should_trigger": true,
+   "expected": "netpropose",
+   "split": "train",
+   "prompt": "Ops wants to know what to actually do with last month's network review findings and the new segmentation design. Priorities, sequencing, validation for each step. They'll sign off on it; nothing gets changed yet."
+  },
+  {
+   "id": "netpropose-yes-3",
+   "skill": "netpropose",
+   "should_trigger": true,
+   "expected": "netpropose",
+   "split": "heldout",
+   "prompt": "Can you turn the network audit + design in docs/net/ into something management can approve? They keep asking 'so what do we do, and what's the risk'."
+  },
+  {
+   "id": "netpropose-no-1",
+   "skill": "netpropose",
+   "should_trigger": false,
+   "expected": "netdesign",
+   "split": "train",
+   "prompt": "We're opening a second office and adding a GCP project. Design the address plan, the VPN topology and the security zones from scratch."
+  },
+  {
+   "id": "netpropose-no-2",
+   "skill": "netpropose",
+   "should_trigger": false,
+   "expected": "netblueprint",
+   "split": "train",
+   "prompt": "Our network proposal was formally accepted last week (signed decision in docs/decisions/). Produce the final design package for the IaC team."
+  },
+  {
+   "id": "netpropose-no-3",
+   "skill": "netpropose",
+   "should_trigger": false,
+   "expected": "dbpropose",
+   "split": "heldout",
+   "prompt": "The audit and target design for our orders database are done. Write the recommendation: prioritized decisions, migration steps with rollback, and the open questions."
+  },
+  {
+   "id": "pipelines-yes-1",
+   "skill": "pipelines",
+   "should_trigger": true,
+   "expected": "pipelines",
+   "split": "heldout",
+   "prompt": "Our GitHub Actions run takes 38 minutes and fails at random about one time in five, and every job rebuilds the Docker image from scratch. Why is CI so slow and flaky, and what would you change?"
+  },
+  {
+   "id": "pipelines-yes-2",
+   "skill": "pipelines",
+   "should_trigger": true,
+   "expected": "pipelines",
+   "split": "train",
+   "prompt": "Review our workflows in .github/workflows for supply-chain risk: long-lived AWS keys in secrets, third-party actions pinned to @main, and a pull_request_target job that checks out the PR's code."
+  },
+  {
+   "id": "pipelines-yes-3",
+   "skill": "pipelines",
+   "should_trigger": true,
+   "expected": "pipelines",
+   "split": "train",
+   "prompt": "We deploy by SSHing into the box and running a script. Design a proper path to production on Azure DevOps: build once, promote the same artifact through staging to prod, smoke checks and a rollback."
+  },
+  {
+   "id": "pipelines-no-1",
+   "skill": "pipelines",
+   "should_trigger": false,
+   "expected": "terraform",
+   "split": "heldout",
+   "prompt": "Review the infra code in infra/: module structure, state backends, provider version pinning, and whether the next plan would destroy anything. Is our IaC any good?"
+  },
+  {
+   "id": "pipelines-no-2",
+   "skill": "pipelines",
+   "should_trigger": false,
+   "expected": "dockerfile",
+   "split": "train",
+   "prompt": "CI is slow because our image build reinstalls every npm package on each commit. Fix the image build so the dependency layer caches properly."
+  },
+  {
+   "id": "pipelines-no-3",
+   "skill": "pipelines",
+   "should_trigger": false,
+   "expected": null,
+   "split": "train",
+   "prompt": "In GitHub Actions, how do I run a job only when files under docs/ change?"
+  },
+  {
+   "id": "post-mortem-yes-1",
+   "skill": "post-mortem",
+   "should_trigger": true,
+   "expected": "post-mortem",
+   "split": "train",
+   "prompt": "Tuesday's outage is over and fixed. Write the blameless write-up: timeline from the commits between the 3rd and the 5th, the logs in incident/, how many users were affected, and the contributing factors."
+  },
+  {
+   "id": "post-mortem-yes-2",
+   "skill": "post-mortem",
+   "should_trigger": true,
+   "expected": "post-mortem",
+   "split": "train",
+   "prompt": "The payment provider outage last week is resolved. The client wants a formal account of what happened. I have the Slack export as a PDF and the deploy log. No action plan, just what happened and why."
+  },
+  {
+   "id": "post-mortem-yes-3",
+   "skill": "post-mortem",
+   "should_trigger": true,
+   "expected": "post-mortem",
+   "split": "heldout",
+   "prompt": "Can you reconstruct what went wrong in the March 2 data sync incident? It's resolved; we need the record for the audit file."
+  },
+  {
+   "id": "post-mortem-no-1",
+   "skill": "post-mortem",
+   "should_trigger": false,
+   "expected": "incident-fix",
+   "split": "train",
+   "prompt": "Error rate on the checkout API just jumped to 40% and it's still climbing. What do we do right now?"
+  },
+  {
+   "id": "post-mortem-no-2",
+   "skill": "post-mortem",
+   "should_trigger": false,
+   "expected": "ticket",
+   "split": "heldout",
+   "prompt": "The incident review is finished. Create the follow-up items from its action list in Jira, linked to the incident, one per contributing factor."
+  },
+  {
+   "id": "post-mortem-no-3",
+   "skill": "post-mortem",
+   "should_trigger": false,
+   "expected": null,
+   "split": "train",
+   "prompt": "What sections should a good incident report template have? A bullet list is enough."
+  },
+  {
+   "id": "release-notes-yes-1",
+   "skill": "release-notes",
+   "should_trigger": true,
+   "expected": "release-notes",
+   "split": "train",
+   "prompt": "We tagged v3.2.0 this morning. Write the changelog entry for our public docs from what changed since v3.1.0, in terms our customers care about, not commit messages."
+  },
+  {
+   "id": "release-notes-yes-2",
+   "skill": "release-notes",
+   "should_trigger": true,
+   "expected": "release-notes",
+   "split": "heldout",
+   "prompt": "Prepare the in-app \"what's new\" for this release. The git log since the last tag is long and very internal ('refactor ledger svc', 'bump deps'); users need to know what they can now do."
+  },
+  {
+   "id": "release-notes-yes-3",
+   "skill": "release-notes",
+   "should_trigger": true,
+   "expected": "release-notes",
+   "split": "train",
+   "prompt": "need customer-facing notes for version 2026.11 of the mobile app, for the App Store listing and the blog"
+  },
+  {
+   "id": "release-notes-no-1",
+   "skill": "release-notes",
+   "should_trigger": false,
+   "expected": "pr-prep",
+   "split": "heldout",
+   "prompt": "Write the PR description for my branch: what it changes, how to verify it, the risks and the rollback."
+  },
+  {
+   "id": "release-notes-no-2",
+   "skill": "release-notes",
+   "should_trigger": false,
+   "expected": "post-mortem",
+   "split": "train",
+   "prompt": "Last week's outage is resolved. I need a written account for our customers: timeline, impact and contributing factors."
+  },
+  {
+   "id": "release-notes-no-3",
+   "skill": "release-notes",
+   "should_trigger": false,
+   "expected": null,
+   "split": "train",
+   "prompt": "Summarize the commits on my branch in three bullets for tomorrow's standup."
+  },
+  {
+   "id": "repo-memory-yes-1",
+   "skill": "repo-memory",
+   "should_trigger": true,
+   "expected": "repo-memory",
+   "split": "train",
+   "prompt": "Every new agent session in this repo rediscovers the same traps: the flaky integration test, and that migrations must run with --fake on staging. Set up a shared memory in the repo that agents read and that we can review in PRs."
+  },
+  {
+   "id": "repo-memory-yes-2",
+   "skill": "repo-memory",
+   "should_trigger": true,
+   "expected": "repo-memory",
+   "split": "train",
+   "prompt": "Our .memory/ notes are three months old and some contradict the code now. Do a consolidation pass: check them against the recent commits, fix or delete what's wrong, and leave the changes for me to review."
+  },
+  {
+   "id": "repo-memory-yes-3",
+   "skill": "repo-memory",
+   "should_trigger": true,
+   "expected": "repo-memory",
+   "split": "heldout",
+   "prompt": "Keep this for the next agent that works here: the payments sandbox rejects amounts with more than two decimals, which is why the adapter rounds."
+  },
+  {
+   "id": "repo-memory-no-1",
+   "skill": "repo-memory",
+   "should_trigger": false,
+   "expected": "code-xray",
+   "split": "train",
+   "prompt": "Who actually knows the scheduler code? Three people left this year, and I want to know which parts nobody still here has touched."
+  },
+  {
+   "id": "repo-memory-no-2",
+   "skill": "repo-memory",
+   "should_trigger": false,
+   "expected": "review-retro",
+   "split": "train",
+   "prompt": "We've merged about 40 PRs since September, each with a review report. Which kinds of defects keep coming back, and what should we add to the review checklist or CLAUDE.md?"
+  },
+  {
+   "id": "repo-memory-no-3",
+   "skill": "repo-memory",
+   "should_trigger": false,
+   "expected": null,
+   "split": "heldout",
+   "prompt": "Generate a CLAUDE.md for this repo with the build, lint and test commands."
+  },
+  {
+   "id": "review-retro-yes-1",
+   "skill": "review-retro",
+   "should_trigger": true,
+   "expected": "review-retro",
+   "split": "train",
+   "prompt": "PR #918 merged yesterday after three rounds of review. Write it up for the record: what was decided and why, which findings were fixed and verified, and what got deferred without an issue."
+  },
+  {
+   "id": "review-retro-yes-2",
+   "skill": "review-retro",
+   "should_trigger": true,
+   "expected": "review-retro",
+   "split": "heldout",
+   "prompt": "We've done about 60 reviews; the reports are in reviews/. Compute defects per review and density per kLOC, split by type and code area, and propose checklist changes for what keeps recurring. No per-person stats."
+  },
+  {
+   "id": "review-retro-yes-3",
+   "skill": "review-retro",
+   "should_trigger": true,
+   "expected": "review-retro",
+   "split": "train",
+   "prompt": "Looking back at this quarter's PR reviews: are they worth it? Time to merge, how many findings actually got fixed, which lenses never find anything."
+  },
+  {
+   "id": "review-retro-no-1",
+   "skill": "review-retro",
+   "should_trigger": false,
+   "expected": "peer-review",
+   "split": "train",
+   "prompt": "PR #931 is open. Review it and tell me whether it's ready to merge."
+  },
+  {
+   "id": "review-retro-no-2",
+   "skill": "review-retro",
+   "should_trigger": false,
+   "expected": "post-mortem",
+   "split": "train",
+   "prompt": "The outage on the 9th is resolved. Write the blameless account from the commits and the logs in ops/incident-09/."
+  },
+  {
+   "id": "review-retro-no-3",
+   "skill": "review-retro",
+   "should_trigger": false,
+   "expected": "code-xray",
+   "split": "heldout",
+   "prompt": "Which files in this repo change most often and are also the largest? I want refactoring priorities from the git history."
+  },
+  {
+   "id": "tdd-yes-1",
+   "skill": "tdd",
+   "should_trigger": true,
+   "expected": "tdd",
+   "split": "train",
+   "prompt": "Add a 'pause subscription' feature to the billing service. Do it test-first: one failing test at a time, small vertical slices, refactor when green."
+  },
+  {
+   "id": "tdd-yes-2",
+   "skill": "tdd",
+   "should_trigger": true,
+   "expected": "tdd",
+   "split": "heldout",
+   "prompt": "The brief and the red end-to-end tests are ready in .workflow/. Build it now, slice by slice, until they pass."
+  },
+  {
+   "id": "tdd-yes-3",
+   "skill": "tdd",
+   "should_trigger": true,
+   "expected": "tdd",
+   "split": "train",
+   "prompt": "Bug: discounts over 100% make the order total negative. Fix it, but write the failing test first and drive the fix from it."
+  },
+  {
+   "id": "tdd-no-1",
+   "skill": "tdd",
+   "should_trigger": false,
+   "expected": "acceptance-tests",
+   "split": "heldout",
+   "prompt": "The brief for bulk export is approved. Before any code exists, write black-box tests for each criterion through the public API, and record which test proves which criterion."
+  },
+  {
+   "id": "tdd-no-2",
+   "skill": "tdd",
+   "should_trigger": false,
+   "expected": "refactor-review",
+   "split": "train",
+   "prompt": "The feature's done and all tests pass. Now look over what I built for smells, long methods and duplicated branches, and refactor it safely without changing behaviour."
+  },
+  {
+   "id": "tdd-no-3",
+   "skill": "tdd",
+   "should_trigger": false,
+   "expected": "hotfix",
+   "split": "train",
+   "prompt": "Users in Brazil see prices with the wrong currency symbol since the 2pm release. Not an outage, but sales is complaining loudly. Get a proper fix shipped today."
+  },
+  {
+   "id": "terraform-yes-1",
+   "skill": "terraform",
+   "should_trigger": true,
+   "expected": "terraform",
+   "split": "heldout",
+   "prompt": "Is our infrastructure code any good? The repo has 40 .tf files, one giant state for prod and staging, and unpinned providers. Review it and give me a score."
+  },
+  {
+   "id": "terraform-yes-2",
+   "skill": "terraform",
+   "should_trigger": true,
+   "expected": "terraform",
+   "split": "train",
+   "prompt": "We need to split our monolithic OpenTofu state into networking, data and app layers without recreating anything. Plan the migration: moved blocks, imports, order of operations."
+  },
+  {
+   "id": "terraform-yes-3",
+   "skill": "terraform",
+   "should_trigger": true,
+   "expected": "terraform",
+   "split": "train",
+   "prompt": "Design the module layout and state map for a new AWS landing zone in HCL: three environments, shared networking, one account per team."
+  },
+  {
+   "id": "terraform-no-1",
+   "skill": "terraform",
+   "should_trigger": false,
+   "expected": "pipelines",
+   "split": "train",
+   "prompt": "Review our GitHub Actions workflows end to end: the build and test jobs, the deploy to ECS, and the infra plan/apply job that uses a static AWS key. Where is our delivery unsafe or slow?"
+  },
+  {
+   "id": "terraform-no-2",
+   "skill": "terraform",
+   "should_trigger": false,
+   "expected": "hardening",
+   "split": "train",
+   "prompt": "Give me a security baseline for our AWS accounts: IAM, the root account, CloudTrail, S3 public access, backups, tagging and change control, with a check for each control."
+  },
+  {
+   "id": "terraform-no-3",
+   "skill": "terraform",
+   "should_trigger": false,
+   "expected": null,
+   "split": "heldout",
+   "prompt": "What's the difference between count and for_each in HCL? Briefly."
+  },
+  {
+   "id": "test-review-yes-1",
+   "skill": "test-review",
+   "should_trigger": true,
+   "expected": "test-review",
+   "split": "train",
+   "prompt": "PR 77 adds a regression test for the timezone bug. Would that test actually fail if the bug came back? Look at the assertion, not the test name."
+  },
+  {
+   "id": "test-review-yes-2",
+   "skill": "test-review",
+   "should_trigger": true,
+   "expected": "test-review",
+   "split": "heldout",
+   "prompt": "Are the tests on feat/coupons good enough to merge? I suspect a few use sleep(), share state between cases, and mock the very thing they're testing."
+  },
+  {
+   "id": "test-review-yes-3",
+   "skill": "test-review",
+   "should_trigger": true,
+   "expected": "test-review",
+   "split": "train",
+   "prompt": "Map the acceptance criteria in the ticket to the tests in this diff, and tell me which are covered, weak or missing."
+  },
+  {
+   "id": "test-review-no-1",
+   "skill": "test-review",
+   "should_trigger": false,
+   "expected": "peer-review",
+   "split": "train",
+   "prompt": "Review the whole diff on fix/session-timeout, code and tests, and tell me if it's safe to merge."
+  },
+  {
+   "id": "test-review-no-2",
+   "skill": "test-review",
+   "should_trigger": false,
+   "expected": "tdd",
+   "split": "train",
+   "prompt": "The checkout module has almost no tests. Add gift card support and build it test-first, red-green-refactor."
+  },
+  {
+   "id": "test-review-no-3",
+   "skill": "test-review",
+   "should_trigger": false,
+   "expected": "devils-advocate",
+   "split": "heldout",
+   "prompt": "We just finished the import feature and everything is green. Assume it's broken and try to prove it: falsify the passing tests, find the edge cases we skipped."
   }
  ]
 }

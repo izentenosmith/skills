@@ -1,6 +1,6 @@
 ---
 name: netdiagram
-description: Draws editable draw.io network topology diagrams — logical L3, segmentation (zones and flows), and physical L1/L2 when on-prem evidence exists — from a network design, an audit's topology.json or other network structure, with stable IDs. Use when the user wants a network drawn or redrawn — "diagram this network", "draw the topology", "show the zones and flows" — or as the step after netdesign or netaudit and before netpropose. It never changes the design or configures anything.
+description: Draws editable draw.io network topology diagrams — logical L3, segmentation (zones, VLANs, firewalls and flows), and physical L1/L2 when on-prem evidence exists — from a network design, an audit's topology.json or other network structure, with stable IDs. Use when the user wants a network drawn or redrawn — "diagram this network", "draw the topology", "show the zones and flows" — or as the step after netdesign or netaudit and before netpropose. It never changes the design or configures anything.
 ---
 
 # netdiagram

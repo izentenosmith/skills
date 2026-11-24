@@ -1,6 +1,6 @@
 ---
 name: peer-review
-description: "Reviews a diff, branch or pull request the way a senior peer would, adding to /code-review what reviewers usually miss: the change against its ticket, omissions (error paths, tests, co-changes), risk-ranked attention and a verify pass. Gives file:line findings with severity and a failure scenario, and a merge recommendation. Use for \"review this PR/diff/branch\", pre-merge review, or re-reviewing fixes. Read-only unless asked to fix or post. Not for preparing one's own branch — that is pr-prep."
+description: "Reviews a diff, branch or pull request, adding to /code-review what reviewers usually miss: the change against its ticket, omissions (error paths, tests, co-changes), risk-ranked attention and a verify pass. Gives file:line findings with severity and a failure scenario, and a merge recommendation. Use for \"review this PR/diff/branch\", pre-merge review, or re-reviewing new commits after comments. Read-only unless asked to fix or post. Not for preparing one's own branch — that is pr-prep."
 ---
 
 # 🔍 peer-review

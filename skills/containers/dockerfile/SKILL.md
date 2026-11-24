@@ -1,6 +1,6 @@
 ---
 name: dockerfile
-description: Writes or repairs a production Dockerfile for this repo — stack detected from the source, multi-stage build, non-root runtime, pinned base — and generates or fixes the .dockerignore that feeds it. Use when a repo needs containerizing, when an image is too large or rebuilds too slowly, or before wiring services together with docker-compose.
+description: Writes or repairs a production Dockerfile for this repo — stack detected from the source, multi-stage build, non-root runtime, pinned base — and generates or fixes the .dockerignore that feeds it. Use when a repo needs containerizing, when an image is too large or rebuilds too slowly (dependency layer caching), or before wiring services together with docker-compose.
 ---
 
 # 🐳 Dockerfile

@@ -1,6 +1,6 @@
 ---
 name: pr-prep
-description: Prepares a change for review from the author's side, or checks someone else's PR is ready. Author mode self-reviews with the reviewer's omission checklist, plans a split when it is too big, tidies commits and drafts the PR description (claim, how to verify, risk and rollback). Readiness mode is read-only and gives a verdict. Use for "prep my branch for review", "write my PR description", "split this PR", "is this PR ready to review". Not for finding a diff's bugs — that is peer-review.
+description: Prepares a change for review from the author's side, or checks someone else's PR is ready. Author mode self-reviews with the reviewer's omission checklist, plans a split when a branch is too big or mixes a refactor into a feature, tidies commits and drafts the PR description. Readiness mode is read-only and gives a verdict. Use for "prep my branch for review", "write my PR description", "split this PR", "is this PR ready to review". Not for finding a diff's bugs — that is peer-review.
 ---
 
 # 🧰 pr-prep
