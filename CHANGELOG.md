@@ -23,6 +23,16 @@ One version covers the whole repository: every skill, the harness and the evals.
 
 ## [Unreleased]
 
+### Added
+
+- **A size budget for every SKILL.md body**: 375 lines and 3,700 words (frontmatter excluded,
+  reference files not counted), checked by `check_repo.py` through `.github/scripts/budget.py`.
+  peer-review, pr-prep, architect-deep-dive, dockerfile and tdd are over it and have dated
+  allowances that end 2027-02-28.
+- **[SCOPE.md](SCOPE.md)** sets what gets in: a failure seen in a real session, and no new skill
+  where existing ones compose. **[.out-of-scope/](.out-of-scope/README.md)** records the ideas
+  taken out and why.
+
 ### Changed
 
 - **Skill descriptions are capped at 500 characters**, checked in CI for every family

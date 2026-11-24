@@ -16,6 +16,11 @@ Skills
     skill folder); every copy in skills/shared.json matches its source
   - the root README links every skill
   - skills/REGISTRY.md and skills/registry.json match what registry.py generates
+Size budget (every skill; the numbers and why in budget.py)
+  - a SKILL.md body (frontmatter excluded, reference files not counted) fits
+    375 lines and 3,700 words, or has a dated entry in budget.ALLOWLIST that
+    has not expired and that it has not outgrown; an entry whose skill now
+    fits, or that names no skill, fails as stale
 Links
   - every relative link in a tracked markdown file resolves, outside code
     spans and fences; eval fixtures are skipped (their content is planted)
@@ -143,6 +148,14 @@ readme = (ROOT / "README.md").read_text()
 for name, rel in sorted(skills.items()):
     if f"({rel})" not in readme:
         problem(f"README.md: no link to {rel}")
+
+# ------------------------------------------------------------ size budget
+
+import budget  # noqa: E402
+
+sizes = {name: budget.size((ROOT / rel).read_text()) for name, rel in skills.items()}
+for name, msg in budget.problems(sizes):
+    problem(f"{skills[name] if name in skills else '.github/scripts/budget.py'}: {msg}")
 
 # ----------------------------------------------------------------- links
 
