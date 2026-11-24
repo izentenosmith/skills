@@ -1,6 +1,6 @@
 ---
 name: terraform
-description: Reviews Terraform/OpenTofu infrastructure code, or designs or proposes changes to it — module and repo structure, state and backends, version pinning, security, change safety (resource identity, destructive changes, drift) and the path from commit to apply — graded against Infrastructure-as-Code theory, a scored rubric and the AWS provider best practices. Review mode audits an existing codebase with evidence-backed findings and a repeatable 0–10 score; Design mode lays out a new codebase or a redesign (layout, state map, module graph, environments); Propose mode turns a review and design into a sequenced, no-recreate migration plan. Use for Terraform code review, IaC audits, state splitting, module design, landing-zone layout, provider upgrades, or "is our Terraform any good". It never runs apply, destroy, import or state commands against a real backend, and never echoes a secret from code, state or a plan.
+description: Reviews Terraform/OpenTofu infrastructure code, or designs or proposes changes to it — module structure, state and backends, pinning, security and change safety (destructive changes, drift). Review mode audits with findings and a 0–10 score; Design mode lays out a new codebase or a redesign; Propose mode sequences a no-recreate migration. Use for Terraform code review, IaC audits, state splitting, module design, or provider upgrades. It never runs apply, destroy, import or state commands.
 ---
 
 # 🏗️ terraform

@@ -10,7 +10,8 @@ Skills
   - `name` equals the folder name (the CLI installs by name) and is unique
   - `name` and `description` parse as YAML scalars (an unquoted `: ` or ` #`
     gets a skill skipped or its description cut) and the description fits
-    the 1024-character limit agents load
+    the 500-character budget (authoring.DESCRIPTION_BUDGET, all families;
+    agents cut at 1024)
   - no symlinks under skills/ (`npx skills add` drops a link that leaves the
     skill folder); every copy in skills/shared.json matches its source
   - the root README links every skill
@@ -90,30 +91,9 @@ def tracked(*patterns):
 
 FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n", re.S)
 
-
-def yaml_scalar(raw):
-    """The value of a one-line YAML scalar, and why a YAML parser would reject
-    or cut it (None if it wouldn't). An unquoted value breaks on ': ' (read as a
-    nested mapping) and silently ends at ' #' (read as a comment); the skills CLI
-    skips the first and installs the second with its description cut short."""
-    if raw[:1] == '"':
-        m = re.fullmatch(r'"((?:[^"\\]|\\.)*)"', raw)
-        if not m:
-            return raw, "an unterminated or badly escaped double-quoted string"
-        return re.sub(r"\\(.)", r"\1", m.group(1)), None
-    if raw[:1] == "'":
-        m = re.fullmatch(r"'((?:[^']|'')*)'", raw)
-        if not m:
-            return raw, "an unterminated single-quoted string"
-        return m.group(1).replace("''", "'"), None
-    if raw[:1] and raw[:1] in "[]{}&*!|>%@`,?:-#":
-        return raw, f"an unquoted value starting with {raw[0]!r}"
-    if ": " in raw or raw.endswith(":"):
-        return raw, "': ' in an unquoted value (YAML reads a nested mapping)"
-    if " #" in raw:
-        return raw, "' #' in an unquoted value (YAML drops the rest as a comment)"
-    return raw, None
-
+sys.path.insert(0, str(ROOT / ".github/scripts"))
+import authoring  # noqa: E402
+from authoring import yaml_scalar  # noqa: E402
 
 skills = {}
 for md in tracked("skills/**/SKILL.md"):
@@ -138,8 +118,8 @@ for md in tracked("skills/**/SKILL.md"):
     name, desc = yaml_scalar(name)[0], yaml_scalar(desc)[0]
     if name != md.parent.name:
         problem(f"{rel}: name {name!r} does not match its folder {md.parent.name!r}")
-    if len(desc) > 1024:
-        problem(f"{rel}: description is {len(desc)} characters (limit 1024)")
+    for msg in authoring.description_length_problems(desc):
+        problem(f"{rel}: {msg}")
     if name in skills:
         problem(f"{rel}: name {name!r} is also used by {skills[name]}")
     skills[name] = rel
@@ -149,7 +129,6 @@ for link in (ROOT / "skills").rglob("*"):
         problem(f"{link.relative_to(ROOT)}: a symlink — `npx skills add` drops links that leave "
                 f"the skill folder; list it as a copy in skills/shared.json instead")
 
-sys.path.insert(0, str(ROOT / ".github/scripts"))
 import sync_shared  # noqa: E402
 
 for msg in sync_shared.stale():
@@ -190,8 +169,6 @@ for md in tracked("*.md"):
                         f"once installed; name the skill in backticks instead")
 
 # -------------------------------------------------------- authoring guide
-
-import authoring  # noqa: E402
 
 for name, rel in sorted(skills.items()):
     if rel.parts[1] in authoring.GUIDED_FAMILIES:

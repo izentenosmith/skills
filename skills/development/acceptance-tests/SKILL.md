@@ -1,6 +1,6 @@
 ---
 name: acceptance-tests
-description: Turns a build plan's acceptance criteria into executable black-box acceptance tests — written before any implementation, through the system's outermost public boundary, each one failing for the right reason — and records which test proves which criterion. Stage 3 of the seven-stage workflow, between agent-brief and tdd; tdd's work is done when these pass. Use when a feature or fix has acceptance criteria and should be proven from the outside, for "acceptance tests", "ATDD", "end-to-end tests from the spec", "executable specification".
+description: Turns a build plan's acceptance criteria into executable black-box acceptance tests — written before any implementation, through the system's outermost public boundary, each failing for the right reason — and records which test proves which criterion. Stage 3 of the development pipeline, between agent-brief and tdd. Use when a feature or fix has acceptance criteria to prove from the outside, for "acceptance tests", "ATDD", "end-to-end tests from the spec".
 ---
 
 # ✅ Acceptance Tests

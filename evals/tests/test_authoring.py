@@ -52,6 +52,40 @@ class Description(unittest.TestCase):
         self.assertTrue(authoring.description_problems("Turns plans into tests I write."))
 
 
+class DescriptionBudget(unittest.TestCase):
+    def test_at_and_under_the_budget_pass(self):
+        for n in (1, authoring.DESCRIPTION_BUDGET - 1, authoring.DESCRIPTION_BUDGET):
+            self.assertEqual(authoring.description_length_problems("x" * n), [], n)
+
+    def test_over_the_budget_fails(self):
+        msgs = authoring.description_length_problems("x" * (authoring.DESCRIPTION_BUDGET + 1))
+        self.assertEqual(len(msgs), 1)
+        self.assertIn(f"budget {authoring.DESCRIPTION_BUDGET}", msgs[0])
+
+    def test_over_the_hard_limit_names_it(self):
+        msgs = authoring.description_length_problems("x" * (authoring.DESCRIPTION_HARD_LIMIT + 1))
+        self.assertEqual(len(msgs), 1)
+        self.assertIn(str(authoring.DESCRIPTION_HARD_LIMIT), msgs[0])
+
+    def test_measured_on_the_parsed_scalar_not_the_quoted_text(self):
+        # 500 characters once parsed; 504 as written, with its quotes and backslash escapes.
+        value = 'Turns "x' + "y" * 491 + '"'
+        raw = '"' + value.replace('"', '\\"') + '"'
+        parsed, why = authoring.yaml_scalar(raw)
+        self.assertIsNone(why)
+        self.assertEqual(parsed, value)
+        self.assertEqual(len(parsed), authoring.DESCRIPTION_BUDGET)
+        self.assertGreater(len(raw), authoring.DESCRIPTION_BUDGET)
+        self.assertEqual(authoring.description_length_problems(parsed), [])
+        self.assertTrue(authoring.description_length_problems(parsed + "z"))
+
+    def test_single_quoted_scalar_unescapes_doubled_quotes(self):
+        self.assertEqual(authoring.yaml_scalar("'it''s'"), ("it's", None))
+
+    def test_unquoted_colon_space_is_rejected(self):
+        self.assertIsNotNone(authoring.yaml_scalar("Runs a review: then stops.")[1])
+
+
 class Contents(unittest.TestCase):
     def test_short_file_needs_none(self):
         self.assertEqual(authoring.toc_problems("# x\n\n## A\n\ntext\n"), [])

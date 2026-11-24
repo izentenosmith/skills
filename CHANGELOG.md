@@ -23,6 +23,15 @@ One version covers the whole repository: every skill, the harness and the evals.
 
 ## [Unreleased]
 
+### Changed
+
+- **Skill descriptions are capped at 500 characters**, checked in CI for every family
+  (`authoring.DESCRIPTION_BUDGET`, measured on the parsed YAML value). The 30 descriptions over it
+  were rewritten to open with a verb and keep one trigger per mode and their routing to
+  neighbouring skills: 31,263 → 19,873 characters across the 43 skills (average 727 → 462).
+  On the trigger eval (Opus, 450 runs each side) no skill lost a hit or gained a false trigger:
+  should-trigger 219/225 → 223/225, false triggers 0/225 both times.
+
 ## [1.0.0] - 2026-11-21
 
 The first tagged release: what had built up on `main` since the repo started in June 2026.

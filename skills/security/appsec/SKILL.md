@@ -1,6 +1,6 @@
 ---
 name: appsec
-description: Review, design, or propose application security for any stack (.NET, Java, Node, Python, PHP, Go, Ruby) — injection and input handling, authentication and sessions, access control, cryptography and secrets, configuration, dependencies and licences, logging, the browser trust boundary (content types, framing, CORS, cookie scope, URLs) and APIs (REST/GraphQL inventory, property exposure, rate limits, docs) — graded against security-engineering theory, the OWASP Top 10 and the OWASP API Top 10. Review is a static code and config review that recovers a reconciled endpoint inventory, with file:line findings and a 0–10 score with a gate; Design writes the controls a service needs (controls.md) including an authorisation matrix; Propose sequences remediation in risk order, fixing each class of bug at its shared cause. Use for repo, PR or API security reviews, OWASP audits, or designing auth. Dynamic tests only against an environment the user owns and names, never production.
+description: Reviews application security for any stack, or designs or proposes it — injection, auth and sessions, access control, secrets, dependencies, the browser boundary and REST/GraphQL APIs, against the OWASP Top 10 and API Top 10. Review is a static code review with an endpoint inventory, file:line findings and a gated 0–10 score; Design writes controls.md with an authorisation matrix; Propose sequences remediation by risk. Use for repo, PR or API security reviews, OWASP audits, or designing auth.
 ---
 
 # 🔐 appsec

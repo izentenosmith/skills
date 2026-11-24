@@ -118,6 +118,25 @@ workspace under `trigger/bundles-20261121/<bundle>/`.
 - The runs were also offered 22 skills that are not this repo's (the CLI's built-ins such as
   `code-review`, `debug`, `simplify`); none of the user's own skills leaked in.
 
+### Results: the 500-character rewrite, 2026-11-26
+
+Opus (`claude-opus-5-5`), three runs per case, all skills staged, the 150 cases of the 25 skills that
+had cases before 2026-11-24 (train and held-out); 450 runs before (the descriptions as of `36e6515`,
+run from a checkout of that commit) and 450 after (the rewritten descriptions, with the words the routing check added on
+2026-11-24), no errors. Results
+are in the workspace under `trigger/before-20261126/` and `trigger/after-20261126/`.
+
+| | trigger rate (train) | trigger rate (held-out) | false-trigger rate | picked what was expected |
+|---|---|---|---|---|
+| before | 144/150 | 75/75 | 0/225 | 439/450 |
+| after | 148/150 | 75/75 | 0/225 | 445/450 |
+
+No skill lost a hit or gained a false trigger. dbdesign went 6/9 → 9/9 and dbpropose 6/9 → 7/9 on
+should-trigger runs; pr-prep's near-misses now find their neighbour 18/18 (16/18 before). The
+remaining misses: `dbpropose-yes-1` picks no skill in 2 of 3 runs (3 of 3 before), and
+`refactor-review-no-1` picks the CLI's built-in `code-review` instead of the expected neighbour in
+all three runs, as before; neither is a false trigger.
+
 ## Reading the summary
 
 - **Trigger rate**: of the should-trigger runs, how many picked the skill first.

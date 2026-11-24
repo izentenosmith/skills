@@ -1,6 +1,6 @@
 ---
 name: dbbuild
-description: Generates the DDL for an accepted database proposal — ordered .sql files that run as written on the target engine (tables, keys, constraints, indexes, views, triggers, grants, seed data), each with a header naming the proposal, the design, the engine, the date and the mode, cross-checked against the design and its Barker ER and relational diagrams, plus a negative test for every constraint. It stops when the proposal is not explicitly accepted, the inputs disagree or a structural decision is still open, and marks the gap instead of inventing it. Use when a dbpropose proposal has been accepted and the user asks to "generate the DDL", "write the schema scripts" or "build the database from the proposal". It writes files only and never connects to a database, runs the SQL or applies a migration; structural changes go back through dbdesign, dbdiagram and dbpropose.
+description: Generates the DDL for an accepted database proposal — ordered .sql files for the target engine, cross-checked against the design and its diagrams, with a negative test for every constraint; it stops and marks the gap when the proposal is not accepted or the inputs disagree. Use when a dbpropose proposal has been accepted and the user asks to "generate the DDL" or "write the schema scripts". It never runs SQL or applies a migration; structural changes go back through dbdesign and dbpropose.
 ---
 
 # dbbuild
