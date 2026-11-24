@@ -7,6 +7,14 @@ description: Reviews or hardens how containers run — runtime config in Compose
 
 A container is **a process on a shared kernel**, fenced in by namespaces, cgroups, a capability set, a seccomp filter and an AppArmor or SELinux profile. Every one of those fences can be lowered by a line of configuration — `privileged: true`, a mounted Docker socket, `pid: host`, `cap_add: SYS_ADMIN`, `seccomp=unconfined` — and most of them are lowered by default somewhere: Docker runs as root unless told otherwise, and Kubernetes runs pods **without** a seccomp profile unless one is set. This skill finds which fences are down, says what each one exposes, and puts them back without breaking the workload.
 
+## When NOT to use
+
+- Fixing the image itself — user, base, layers → `dockerfile`.
+- A workload that broke after a hardening change → `container-debug`.
+- Hardening the host or the cloud account → `hardening`.
+- Security of the application code inside the container → `appsec`.
+- Swarm orchestration — quorum, rollouts, placement → `docker-swarm`.
+
 ## Where this fits
 
 The container skills:

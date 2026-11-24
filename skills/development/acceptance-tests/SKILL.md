@@ -5,6 +5,12 @@ description: Turns a build plan's acceptance criteria into executable black-box 
 
 # ✅ Acceptance Tests
 
+## When NOT to use
+
+- There is no brief or no agreed acceptance criteria yet → `agent-brief`.
+- The implementation itself, or a trivial fix behind an existing seam (its red test is the proof) → `tdd`.
+- Checking whether existing tests actually prove a change → `test-review`.
+
 ## Where this fits
 
 This is **stage 3 of a seven-stage workflow**, between `agent-brief` and `tdd`. What each stage reads and leaves, and the rules all of them share, are in [pipeline.md](pipeline.md) — read it once per session.

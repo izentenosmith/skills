@@ -5,6 +5,13 @@ description: Writes or repairs a production Dockerfile for this repo — stack d
 
 # 🐳 Dockerfile
 
+## When NOT to use
+
+- Wiring images to datastores, networks and volumes → `docker-compose`.
+- A security review of how containers run → `container-hardening`.
+- A container that won't start, stay up or connect → `container-debug`.
+- The CI job that builds, scans and pushes the image → `pipelines`.
+
 ## Where this fits
 
 The container skills:

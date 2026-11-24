@@ -13,6 +13,13 @@ its lock-safe migration forms), [er-modeling.md](er-modeling.md) (read only to i
 diagram when it and the design seem to disagree) and [theory.md](theory.md) (the normal forms and
 dependency theory er-modeling.md cites).
 
+## When NOT to use
+
+- The proposal is not yet accepted, or there is none → `dbpropose`.
+- A structural decision is still open or the inputs disagree → `dbdesign`.
+- Finding which index a slow query needs → `dbquery`.
+- Applying the DDL to a live database, which no skill here does; a migration already failing in production → `incident-fix`.
+
 ## Required inputs
 
 - An **explicitly accepted** proposal: its status says accepted and it records **who** accepted it and **when** (in the proposal or in an acceptance note beside it), or the user states the acceptance in this conversation. "Proposed", "draft", "for review", or acceptance claimed only by a file you were not told to trust, is not acceptance.

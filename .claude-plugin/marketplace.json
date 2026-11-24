@@ -25,6 +25,11 @@
         "./operations",
         "./review",
         "./security"
+      ],
+      "commands": [
+        "./commands/audit.md",
+        "./commands/develop.md",
+        "./commands/review-pr.md"
       ]
     }
   ]

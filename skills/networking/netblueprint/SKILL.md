@@ -10,6 +10,13 @@ network-workflow stage. Its output is the specification that a separate IaC skil
 writes no Terraform, Bicep, ARM, Ansible or device configuration, and it never connects to a network,
 cloud or device.**
 
+## When NOT to use
+
+- The proposal is not yet accepted → `netpropose`.
+- The topology needs a structural change → `netdesign`.
+- Only diagrams of a design, with no accepted proposal → `netdiagram`.
+- Writing the IaC that implements the topology → `terraform`.
+
 ## Required inputs
 
 - An **explicitly accepted** proposal, plus the user's statement of acceptance.

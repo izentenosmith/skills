@@ -17,6 +17,14 @@ read first), [physical-design.md](physical-design.md) (the target-engine rules a
 reach), [er-modeling.md](er-modeling.md) and [theory.md](theory.md) (read only to check a design
 decision or cite the principle a register row rests on).
 
+## When NOT to use
+
+- No audit yet, and the schema needs grading first → `dbaudit`.
+- No target design to propose → `dbdesign`.
+- Writing the DDL once the proposal is accepted → `dbbuild`.
+- Tuning slow queries or reading plans → `dbquery`.
+- A database down or corrupting data right now → `incident-fix`.
+
 ## Inputs
 
 | Input | Used for | When it's missing |

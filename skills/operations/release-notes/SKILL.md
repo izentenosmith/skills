@@ -5,6 +5,12 @@ description: Write user-facing release notes or a public changelog entry for a s
 
 # 📣 Release Notes
 
+## When NOT to use
+
+- The audience is a reviewer, not a user: a PR description → `pr-prep`.
+- The record of something that broke in production → `post-mortem`.
+- The shipped items need closing or linking in the tracker → `ticket`.
+
 ## Where this fits
 
 This runs **after** the change ships, and it is the only stage in any of these workflows whose audience is not an engineer. Everything else here is written for the person maintaining the code. This is written for the person **using the product**, who does not know your module names, did not read your PRs, and is reading to answer one question: *does anything change for me?*

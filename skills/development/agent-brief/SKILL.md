@@ -13,6 +13,13 @@ This is **stage 2 of a seven-stage workflow**: `architect-deep-dive` → **agent
 
 **Requires:** `python3` (runs the bundled brief checker, `scripts/brief.py`, before the approval gate). `git` is not needed: this stage writes and moves files under `.workflow/` and commits nothing. If `python3` is missing, skip the check and say so in your closing lines.
 
+## When NOT to use
+
+- Design questions are still open: options, trade-offs, boundaries → `architect-deep-dive`.
+- An approved brief's criteria need executable tests → `acceptance-tests`.
+- A whole backlog needs mapping, splitting into stories or ordering → `backlog`.
+- An urgent bug in a running system can't wait for a plan → `hotfix`.
+
 ## Reference files
 
 - [pipeline.md](pipeline.md) — open it once per session, when you need what each stage reads and leaves or the rules all stages share.

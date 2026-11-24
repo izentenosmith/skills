@@ -24,6 +24,13 @@ rules from what it read in a thread has handed its rules file to whoever writes 
 This skill never computes anything per person, and never applies what it proposes. A person
 approves every change, and it lands as its own PR.
 
+## When NOT to use
+
+- Something broke in production; that is an incident record → `post-mortem`.
+- The PR is still open and needs its review → `peer-review`.
+- A lesson about the repository that agents should keep, not a review process rule → `repo-memory`.
+- Where the code changes most and who knows it → `code-xray`.
+
 ## Where this fits
 
 | Use | When |

@@ -7,6 +7,14 @@ description: Designs a new relational database, or redesigns an existing one, fr
 
 Design the logical model before selecting physical implementation details. When the question is still which stores the system needs — relational or not, how many, what is derived — run [dbarchitect](../dbarchitect/SKILL.md) first; this skill then designs each relational system of record it names, starting from its load parameters and consistency map. This skill can be used independently for a new design or after `dbaudit` to redesign an existing database. It proposes a design; it does not apply schema changes or migrations.
 
+## When NOT to use
+
+- Deciding which stores hold the data — relational or not, caches, search, replicas → `dbarchitect`.
+- Grading an existing schema without redesigning it → `dbaudit`.
+- Drawing the Barker ER and relational diagrams → `dbdiagram`.
+- Turning the design into a recommendation and migration plan → `dbpropose`.
+- Slow queries or execution plans → `dbquery`.
+
 ## Choose the mode
 
 | Mode | Input | Output |

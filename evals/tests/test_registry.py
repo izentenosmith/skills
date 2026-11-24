@@ -36,6 +36,7 @@ class Registry(unittest.TestCase):
         write(root / "skills/net/mapper/scripts/tool.py", "copied\n")
         write(root / "harness/tool.py", "copied\n")
         write(root / "skills/shared.json", json.dumps({
+            "_why": {"skills/ops/fixer/shared.md": "a note, not a source"},
             "skills/ops/fixer/shared.md": ["skills/net/mapper/shared.md"],
             "harness/tool.py": ["skills/net/mapper/scripts/tool.py"]}))
         write(root / "evals/scores.json", json.dumps({"evals": {

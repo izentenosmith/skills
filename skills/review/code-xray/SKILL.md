@@ -17,6 +17,13 @@ starts with a data-quality line, and every result is a pointer to where to look,
 The script `scripts/xray.py` does the counting. You do the cleaning, the reading, and the
 judgement about what is worth acting on.
 
+## When NOT to use
+
+- One change's code needs reviewing, not its history → `peer-review`.
+- A target is chosen and the refactoring itself needs doing → `refactor-review`.
+- A coupling or ownership finding needs a design decision → `architect-deep-dive`.
+- Review findings over time, not the code's history → `review-retro`.
+
 ## Where this fits
 
 | Use | When |

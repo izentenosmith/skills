@@ -16,6 +16,13 @@ Swarm mode is Docker's built-in orchestrator: a few managers keep the **desired 
 | Autoscaling, many teams, admission policy, operators for stateful systems, a managed control plane, or hiring for the skill | **Kubernetes**. Don't build those on Swarm |
 | Already on Swarm and it works | Keep it, review it, and say what would trigger a move — not a migration for fashion |
 
+## When NOT to use
+
+- One host and a local or single-VM stack → `docker-compose`.
+- Each service's security settings — user, capabilities, mounts → `container-hardening`.
+- One task won't start or stay up → `container-debug`.
+- The image or its healthcheck needs fixing → `dockerfile`.
+
 ## Where this fits
 
 The container skills; this one picks up where a stack leaves a single host:

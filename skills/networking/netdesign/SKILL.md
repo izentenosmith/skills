@@ -10,6 +10,14 @@ before choosing products, SKUs or vendor syntax. This skill can run on its own f
 after [netaudit](../netaudit/SKILL.md) for a redesign. It proposes a design. It does not apply
 changes, write IaC or push configuration.
 
+## When NOT to use
+
+- Grading an existing network without redesigning it → `netaudit`.
+- Drawing the design as draw.io diagrams → `netdiagram`.
+- Turning the design into a decision and cut-over plan → `netpropose`.
+- Producing the final package after the proposal is accepted → `netblueprint`.
+- Writing the IaC that builds it → `terraform`.
+
 ## Choose the mode
 
 | Mode | Input | Output |

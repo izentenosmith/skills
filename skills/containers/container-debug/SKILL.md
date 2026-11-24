@@ -7,6 +7,14 @@ description: Diagnoses a container that won't start, won't stay up, can't reach 
 
 Most container failures are not mysterious. The runtime records why a container stopped — the exit code, whether the kernel's OOM killer fired, how many times it restarted, what its healthcheck printed — and most of the rest are a short list of failures that only exist *because* the process is in a container: `localhost` meaning the container itself, a binary built for the wrong architecture, an entrypoint with Windows line endings, a non-root user that can't write where the app expects, a signal that never reaches the app. This skill reads that record first, matches it against that list, and proves the cause before anyone changes a line.
 
+## When NOT to use
+
+- Production is down or degrading → `incident-fix`.
+- The cause is proven and the image needs fixing → `dockerfile`.
+- The cause is proven and the service wiring needs fixing → `docker-compose`.
+- A security review of how the container runs → `container-hardening`.
+- An urgent bug in the application itself, system still up → `hotfix`.
+
 ## Where this fits
 
 The container skills; this one is called when something built with the others misbehaves:

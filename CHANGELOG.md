@@ -49,6 +49,17 @@ One version covers the whole repository: every skill, the harness and the evals.
   separate. Run three times each against a no-skill baseline (iteration 81, $17.41): appsec and
   hardening show an outcome gain of +0.10; hotfix, threatmodel and pipelines don't, since their
   baselines also scored 1.00 on capability.
+- **A `## When NOT to use` section in every SKILL.md**, first in the body: 2–5 one-line bullets
+  naming the neighbouring skill to use instead. `check_repo.py` checks its position, length and
+  that every skill it names exists.
+- **Codex plugin manifest**: Codex installs the same `izentenosmith-skills` plugin from
+  `.agents/plugins/marketplace.json` and `skills/.codex-plugin/plugin.json`; CI checks both
+  manifests' versions and family lists (`.github/scripts/plugins.py`).
+- **Three plugin commands**, `/izentenosmith-skills:develop`, `:review-pr` and `:audit`, which route
+  to the development pipeline, `peer-review` and the audit skills and run only when typed.
+- **`skills/shared.json` records in `_why` why each shared file is copied** rather than pointed at:
+  every copy is read by a skill that can be installed alone. `sync_shared.py --check` fails on a
+  source with no reason.
 
 ### Changed
 

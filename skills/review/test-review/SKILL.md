@@ -18,6 +18,13 @@ assert per test, a coverage target, or tests of generated code, which bury the o
 regression test. Every finding here carries a named mutation, a reproduction or a search, and
 every report says which checks ran and which didn't.
 
+## When NOT to use
+
+- The missing or weak tests need writing → `tdd`; black-box tests for a brief's criteria, before code → `acceptance-tests`.
+- A test is flaky because the code under it races → `concurrency-review`.
+- The whole change needs reviewing, not only its tests → `peer-review`.
+- Your own just-built pipeline work needs a teardown → `devils-advocate`.
+
 ## Where this fits
 
 | Use | When |

@@ -20,6 +20,13 @@ This skill works that side of the process, in two modes.
 Neither mode reviews the code for bugs. That is [peer-review](../peer-review/SKILL.md)'s job.
 This one makes that review possible, and cheaper.
 
+## When NOT to use
+
+- The PR is ready and needs the review itself, with findings → `peer-review`.
+- The audience is users of a shipped release → `release-notes`.
+- No acceptance criteria exist anywhere and the work needs a plan → `agent-brief`.
+- The PR has merged and its review should be kept → `review-retro`.
+
 ## Where this fits
 
 | Use | When |

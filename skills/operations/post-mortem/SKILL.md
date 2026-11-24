@@ -5,6 +5,13 @@ description: Reconstruct a resolved incident into a blameless written record —
 
 # 🔦 Post-Mortem
 
+## When NOT to use
+
+- The incident is still running or not yet resolved → `incident-fix`.
+- Deciding what to build next from its factors → `backlog`; filing the follow-ups → `ticket`.
+- Lessons from code reviews, not from a production failure → `review-retro`.
+- A bug still needs fixing today → `hotfix`.
+
 ## Where this fits
 
 This runs **after the incident is over and already resolved**. It is a reconstruction, not a response and not a plan.

@@ -12,6 +12,14 @@ failure of one of those two — untrusted input crossing into an interpreter, or
 authority it was never given. This skill grades code against that model, designs the controls a
 service needs, and sequences the fixes.
 
+## When NOT to use
+
+- A design flaw — no authorisation model, a misplaced trust boundary → `threatmodel`.
+- Locking down the hosts and cloud accounts the code runs on → `hardening`.
+- How containers run — privileges, mounts, capabilities → `container-hardening`.
+- The CI supply chain — pinned actions, untrusted triggers, signing → `pipelines`.
+- A security exposure happening now → `incident-fix`.
+
 ## Where this fits
 
 Three security skills, one per layer:

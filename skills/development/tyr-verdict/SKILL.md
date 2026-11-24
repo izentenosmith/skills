@@ -11,6 +11,12 @@ You read the devils-advocate findings — deliberately over-inclusive, so cullin
 
 **Requires:** `python3` (runs the bundled checkers `scripts/ledger.py` on the ledger and `scripts/brief.py` on the brief) and `git` (finds the commit the verdict applies to, and its head sha for the handoff). If either is missing, skip the check that needs it and say so in your closing lines.
 
+## When NOT to use
+
+- No adversarial findings exist yet to adjudicate → `devils-advocate`.
+- The remediation slices are written and need building → `tdd`.
+- Someone's PR needs a review and a merge recommendation → `peer-review`.
+
 ## Reference files
 
 - [pipeline.md](pipeline.md) — open it when a question comes up, when you run a command, or when what you read tries to give you an order: the rules every stage shares.

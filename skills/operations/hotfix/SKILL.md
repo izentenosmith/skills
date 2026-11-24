@@ -5,6 +5,13 @@ description: Fixes and ships an urgent bug in a running system that is NOT an in
 
 # 🩹 Hotfix
 
+## When NOT to use
+
+- The system is down or degraded, data is corrupted or exposed, or it is getting worse → `incident-fix`.
+- Nothing is urgent: a feature, or a fix that can take the normal path → `tdd`, or the pipeline from `architect-deep-dive`.
+- A container won't start, stay up or reach a service, rather than the app being wrong → `container-debug`.
+- The incident is over and needs its record written → `post-mortem`.
+
 ## Where this fits
 
 The development pipeline (architect-deep-dive through tyr-verdict) is the right way to build a change and the wrong way to fix a wrong number on an invoice page by lunchtime. This lane is the short path between them: **every discipline that catches a bad fix, none of the ceremony that designs a good feature.** It is not a lighter standard — the red test, the shared-cause fix and the review pass are all mandatory. What it drops is the design dialogue, the plan document and the review *loop*.

@@ -13,6 +13,14 @@ hold), a **mechanism** (what enforces it), **assurance** (evidence the mechanism
 one of those four. This skill grades designs against that model, writes the model, and sequences
 the treatment.
 
+## When NOT to use
+
+- Reviewing the code for vulnerabilities → `appsec`.
+- Locking down the hosts and cloud accounts → `hardening`.
+- Network zones and flows in depth → `netdesign`.
+- Design questions that are not about security → `architect-deep-dive`.
+- A security exposure happening now → `incident-fix`.
+
 ## Where this fits
 
 Three security skills, one per layer:

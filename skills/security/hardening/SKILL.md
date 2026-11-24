@@ -16,6 +16,14 @@ tenant; an eighth, **service**, grades the roles a host runs (web, mail, DNS, da
 transfer, VPN) and applies only where the role exists. What changes is the evidence and the command
 that reads it — never the principle.
 
+## When NOT to use
+
+- Security of the application code → `appsec`.
+- What to protect and from whom, before a baseline exists → `threatmodel`.
+- How containers run on the host → `container-hardening`.
+- Reviewing the Terraform code that builds the platform → `terraform`.
+- Network topology and segmentation in depth → `netaudit`.
+
 ## Where this fits
 
 Three security skills, one per layer:

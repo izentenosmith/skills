@@ -12,6 +12,13 @@ them without the repo.
 Two helpers here apply to every family, and check_repo.py runs them on all
 skills: yaml_scalar (how a frontmatter value parses) and
 description_length_problems (the description budget).
+
+One check runs on every family, not just GUIDED_FAMILIES (when_not_problems):
+
+  5. SKILL.md's first `##` section is `## When NOT to use`: 2–5 one-line bullets,
+     each "- <situation> → `<skill>`.", naming in backticks the neighbouring skill
+     to use instead (or a built-in `/command`); every backticked bare name is a
+     skill that exists, and not this one
 """
 import re
 
@@ -21,6 +28,8 @@ TOC_THRESHOLD = 100
 # skill's, so it is budgeted well under the 1024 characters agents cut at.
 DESCRIPTION_BUDGET = 500
 DESCRIPTION_HARD_LIMIT = 1024
+WHEN_NOT = "When NOT to use"
+WHEN_NOT_LINES = (2, 5)
 
 FENCE = re.compile(r"^(```|~~~).*?^\1", re.S | re.M)
 CODE = re.compile(r"`[^`\n]*`")
@@ -140,6 +149,42 @@ def escaping_link_problems(text, folder, here):
         if path and not (here.parent / path).resolve().is_relative_to(folder.resolve()):
             out.append(f"link {t} leaves the skill folder, so it is dead once the skill is installed "
                        f"alone; name the skill in backticks instead")
+    return out
+
+
+def when_not_problems(skill_text, name, skill_names):
+    """The `## When NOT to use` section: first `##` section, 2–5 one-line bullets,
+    each `- <situation> → <target>` with a backticked target. Backticks here hold
+    only skill names (checked against `skill_names`) or `/commands` (built-ins)."""
+    heads = h2_headings(skill_text)
+    count = heads.count(WHEN_NOT)
+    if count == 0:
+        return [f"no `## {WHEN_NOT}` section naming the neighbouring skills to use instead"]
+    out = []
+    if count > 1:
+        out.append(f"{count} `## {WHEN_NOT}` sections; keep one")
+    if heads[0] != WHEN_NOT:
+        out.append(f"`## {WHEN_NOT}` should be the first `##` section (before `## {heads[0]}`), "
+                   f"so it is read early")
+    lines = [ln for ln in section(skill_text, WHEN_NOT).splitlines() if ln.strip()]
+    low, high = WHEN_NOT_LINES
+    if not low <= len(lines) <= high:
+        out.append(f"`## {WHEN_NOT}` has {len(lines)} non-blank lines; keep {low}–{high}, one bullet each")
+    for ln in lines:
+        if not ln.startswith("- ") or " → " not in ln:
+            out.append(f"`## {WHEN_NOT}` line is not \"- <situation> → <skill in backticks>\": {ln.strip()[:60]!r}")
+            continue
+        targets = re.findall(r"`([^`\n]+)`", ln.split(" → ", 1)[1])
+        if not targets:
+            out.append(f"`## {WHEN_NOT}` line names no skill in backticks after →: {ln.strip()[:60]!r}")
+    for ref in re.findall(r"`([^`\n]+)`", "\n".join(lines)):
+        if ref.startswith("/"):
+            continue  # a built-in command, such as /code-review
+        if ref == name:
+            out.append(f"`## {WHEN_NOT}` names `{ref}`, this skill itself")
+        elif ref not in skill_names:
+            out.append(f"`## {WHEN_NOT}` names `{ref}`, which is no skill; backticks in this section "
+                       f"hold skill names or `/commands` only")
     return out
 
 

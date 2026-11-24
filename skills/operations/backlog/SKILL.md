@@ -12,6 +12,12 @@ it by a stated policy, and audits an existing backlog and board for the patterns
 late: no big picture, oversized or unready items, too much work in progress, invisible unplanned
 work, competing top priorities, hidden dependencies, and operational follow-ups nobody finishes.
 
+## When NOT to use
+
+- One item needs creating, updating, closing or logging time against → `ticket`.
+- One feature's design decisions need resolving → `architect-deep-dive`.
+- One story needs a build plan with acceptance criteria → `agent-brief`.
+
 ## Where this fits
 
 - [ticket](../ticket/SKILL.md) — **one item at a time**: create, update, close, link, label, against

@@ -112,6 +112,8 @@ def build(root):
     manifest = root / "skills/shared.json"
     if manifest.is_file():
         for source, copies in json.loads(manifest.read_text()).items():
+            if source.startswith("_"):
+                continue  # a note such as _why, not a source
             for copy in copies:
                 shared[copy] = source
     scores_path = root / "evals/scores.json"

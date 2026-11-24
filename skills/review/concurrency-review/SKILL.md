@@ -16,6 +16,13 @@ each candidate writes the **interleaving**: the numbered steps of each actor, wi
 values after every step, that reach the wrong state. An interleaving is the evidence. A reproduction
 that fails when re-run is the confirmation. "This looks racy" is neither.
 
+## When NOT to use
+
+- A full review of the change, with races as one lens among many → `peer-review`.
+- A flaky test whose cause is the clock, randomness, order or shared fixtures, not a race → `test-review`.
+- The finding is known and needs its forced-schedule reproduction made a red test and fixed → `tdd`.
+- The fix is a design change: an outbox, a single writer, leader election → `architect-deep-dive`.
+
 ## Where this fits
 
 | Use | When |

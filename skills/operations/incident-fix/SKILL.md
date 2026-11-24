@@ -5,6 +5,13 @@ description: Responds to a production incident — contains first, then diagnose
 
 # 🚨 Incident Fix
 
+## When NOT to use
+
+- The system is up and nothing is getting worse, just an urgent bug → `hotfix`.
+- The incident is already resolved and needs its record → `post-mortem`.
+- A security weakness found in review, with nothing exposed right now → `appsec`.
+- Only the tracker item or its follow-ups need filing or updating → `ticket`.
+
 ## Where this fits
 
 An incident is a bug with a clock running. **Containment comes first and never waits for a diagnosis** — a ranked, reversible action that stops the damage now beats a correct fix in two hours. Then the slower, careful work: evidence, impact, a fix that gets the full review, a repair for whatever data the bug touched, and a record the next incident can learn from.

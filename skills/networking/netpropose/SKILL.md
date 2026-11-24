@@ -9,6 +9,13 @@ Turn evidence and a design into a clear recommendation for decision-makers and i
 skill runs on its own when the user supplies the artifacts. It is also the last stage of the network
 family before acceptance.
 
+## When NOT to use
+
+- No audit evidence yet → `netaudit`.
+- No target design yet → `netdesign`.
+- The topology diagrams are missing → `netdiagram`.
+- The proposal is already accepted and the final package is wanted → `netblueprint`.
+
 ## Inputs
 
 Use what is available:

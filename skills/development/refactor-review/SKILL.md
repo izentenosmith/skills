@@ -5,6 +5,13 @@ description: Reviews the change tdd just built for code smells, then prescribes 
 
 # 🔎 Refactor Review (New Changes Only)
 
+## When NOT to use
+
+- Someone else's PR needs reviewing for bugs → `peer-review`, or the built-in `/code-review` for a fast pass.
+- The change you just built needs its defects hunted, not its smells → `devils-advocate`.
+- The suite is red, or behaviour has to change → `tdd`.
+- Choosing what to refactor across a codebase, by hotspot and coupling → `code-xray`.
+
 ## Where this fits
 
 This is **stage 5 of a seven-stage workflow**:

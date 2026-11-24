@@ -11,6 +11,13 @@ failure of one of those three — the code doesn't say what's true, the state do
 or the path between them lets an unreviewed change through. This skill grades, designs and
 re-sequences codebases against that model.
 
+## When NOT to use
+
+- How the plan reaches apply — the CI/CD path, credentials, gates → `pipelines`.
+- Designing the network the code describes → `netdesign`.
+- A host or cloud security baseline beyond the code → `hardening`.
+- An apply has broken production right now → `incident-fix`.
+
 ## Reference files
 
 - [theory.md](theory.md) — the principles every finding cites (T1–T22): IaC, desired state, the state file, blast radius, resource identity, plan as contract, pinning, least privilege, testing. Open it when you write a finding (to cite its T-N) and before Design.

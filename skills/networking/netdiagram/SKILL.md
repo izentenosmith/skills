@@ -19,6 +19,13 @@ This skill can run on its own from a supplied design or topology, or consume the
 [netdesign](../netdesign/SKILL.md) or [netaudit](../netaudit/SKILL.md). Never mix L2 and L3 semantics
 on one page.
 
+## When NOT to use
+
+- Changing the design the diagrams show → `netdesign`.
+- Grading the network rather than drawing it → `netaudit`.
+- The final accepted package with its design document → `netblueprint`.
+- Drawing a database ER or relational model → `dbdiagram`.
+
 ## Inputs and evidence
 
 - Prefer a `topology.json` ([topology-modeling.md](topology-modeling.md)). It is the source of truth.

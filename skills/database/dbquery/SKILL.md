@@ -31,6 +31,14 @@ Reference docs in this folder:
 
 ---
 
+## When NOT to use
+
+- Grading the schema itself from its DDL → `dbaudit`.
+- The cause is structural — keys, normalization, types → `dbdesign`.
+- Planning the index or DDL change it recommends → `dbpropose`.
+- A security review of the whole application beyond its SQL → `appsec`.
+- A database outage or wrong figures in production now → `incident-fix`.
+
 ## 📐 Calibrate the pass
 
 Pick one up front and say which:

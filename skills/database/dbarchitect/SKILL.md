@@ -27,6 +27,14 @@ Reference docs in this folder:
 
 ---
 
+## When NOT to use
+
+- Designing the tables, keys and constraints of one relational store → `dbdesign`.
+- Grading the quality of an existing schema → `dbaudit`.
+- A slow query, an execution plan or an N+1 → `dbquery`.
+- Sequencing the migration of an existing estate → `dbpropose`.
+- Writing the infrastructure code that provisions the stores → `terraform`.
+
 ## 📐 Pick the mode
 
 | Mode | Input | Output |

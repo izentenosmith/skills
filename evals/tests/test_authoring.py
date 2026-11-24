@@ -150,6 +150,76 @@ class Links(unittest.TestCase):
         self.assertEqual(authoring.escaping_link_problems("[x](mocking.md) [y](#a)", folder, here), [])
 
 
+WHEN_NOT = """---
+name: demo
+description: Turns a plan into tests.
+---
+# demo
+
+Intro.
+
+## When NOT to use
+
+- The design is still open → `architect-deep-dive`.
+- A fast bug-only pass → the built-in `/code-review`, or `peer-review` for a full one.
+
+## Steps
+
+Use `git` and `demo` freely here.
+"""
+SKILLS = {"demo", "architect-deep-dive", "peer-review"}
+
+
+class WhenNot(unittest.TestCase):
+    def check(self, text):
+        return authoring.when_not_problems(text, "demo", SKILLS)
+
+    def test_well_formed_section_passes(self):
+        self.assertEqual(self.check(WHEN_NOT), [])
+
+    def test_missing_section_fails(self):
+        start, end = WHEN_NOT.index("## When NOT"), WHEN_NOT.index("## Steps")
+        msgs = self.check(WHEN_NOT[:start] + WHEN_NOT[end:])
+        self.assertEqual(len(msgs), 1)
+        self.assertIn("no `## When NOT to use`", msgs[0])
+
+    def test_section_not_first_fails(self):
+        text = WHEN_NOT.replace("Intro.\n", "Intro.\n\n## Where this fits\n\nText.\n")
+        msgs = self.check(text)
+        self.assertEqual(len(msgs), 1)
+        self.assertIn("first `##` section", msgs[0])
+
+    def test_two_sections_fail(self):
+        text = WHEN_NOT + "\n## When NOT to use\n\n- x → `peer-review`.\n- y → `peer-review`.\n"
+        self.assertTrue(any("2 `## When NOT to use` sections" in m for m in self.check(text)))
+
+    def test_line_count_bounds(self):
+        one = WHEN_NOT.replace("- A fast bug-only pass → the built-in `/code-review`, or `peer-review` for a full one.\n", "")
+        self.assertTrue(any("1 non-blank lines" in m for m in self.check(one)))
+        bullet = "- Something else → `peer-review`.\n"
+        six = WHEN_NOT.replace("\n## Steps", bullet * 4 + "\n## Steps")
+        self.assertTrue(any("6 non-blank lines" in m for m in self.check(six)))
+
+    def test_unknown_skill_fails_and_commands_pass(self):
+        msgs = self.check(WHEN_NOT.replace("`architect-deep-dive`", "`archtect-deep-dive`"))
+        self.assertEqual(len(msgs), 1)
+        self.assertIn("archtect-deep-dive", msgs[0])
+
+    def test_self_reference_fails(self):
+        msgs = self.check(WHEN_NOT.replace("`architect-deep-dive`", "`demo`"))
+        self.assertEqual(len(msgs), 1)
+        self.assertIn("this skill itself", msgs[0])
+
+    def test_line_without_arrow_or_target_fails(self):
+        self.assertTrue(self.check(WHEN_NOT.replace("still open → ", "still open, use ")))
+        self.assertTrue(self.check(WHEN_NOT.replace("→ `architect-deep-dive`.", "→ the architect.")))
+        self.assertTrue(self.check(WHEN_NOT.replace("- The design", "The design")))
+
+    def test_heading_in_a_fence_is_not_a_section(self):
+        text = WHEN_NOT.replace("Intro.\n", "Intro.\n\n```markdown\n## Template\n```\n")
+        self.assertEqual(self.check(text), [])
+
+
 class Folder(unittest.TestCase):
     def test_check_skill_on_a_clean_and_a_broken_folder(self):
         with tempfile.TemporaryDirectory() as tmp:

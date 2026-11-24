@@ -7,6 +7,13 @@ description: Draws a database's two editable draw.io diagrams from a design, DDL
 
 Create two clear, editable draw.io diagrams: the **ER model** (*modelo entidad relación*), always in **Barker / Oracle CASE*METHOD notation**, and the **relational model** (*modelo relacional*), using table, column, key, constraint, and foreign-key notation. This skill can run independently from a supplied design or database structure, or consume the output of `dbdesign`. Barker rules apply to the ER view; do not force ER symbols onto the relational view.
 
+## When NOT to use
+
+- Designing or changing the schema the diagrams show → `dbdesign`.
+- Grading the schema rather than drawing it → `dbaudit`.
+- The recommendation built on the diagrams → `dbpropose`.
+- Drawing a network topology → `netdiagram`.
+
 ## Inputs and evidence
 
 - Prefer an approved conceptual/logical design when provided. Otherwise reverse-engineer the available DDL or structure and label inferred semantics.

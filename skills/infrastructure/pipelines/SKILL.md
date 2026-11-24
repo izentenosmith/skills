@@ -11,6 +11,13 @@ fast enough that people keep changes small, and safe enough that a bad one is ca
 when it isn't, and undone in minutes. This skill grades, designs and re-sequences pipelines against
 that job.
 
+## When NOT to use
+
+- The Terraform code, state or modules themselves → `terraform`.
+- The image the pipeline builds → `dockerfile`.
+- Security of the application code the pipeline ships → `appsec`.
+- A bad deploy has production down right now → `incident-fix`.
+
 ## Reference files
 
 - [theory.md](theory.md) — the principles every finding cites (P1–P22): Continuous Delivery, the Three Ways, release engineering, progressive delivery, pipeline security. Open it when you write a finding (to cite its P-N) and before Design.

@@ -24,6 +24,14 @@ review literature says that engine misses:
 - **Wider lenses.** Security, tests, concurrency, data and evolvability, each a lens of its own.
 - **Comments a person will act on**, and a **verification round** that checks the fixes.
 
+## When NOT to use
+
+- Your own change needs preparing before review: description, size, split → `pr-prep`.
+- Work you just built in the development pipeline needs a teardown and go/no-go → `devils-advocate`, then `tyr-verdict`.
+- You own the change and want its structure cleaned on a green suite → `refactor-review`.
+- A fast bug-only pass, where intent and omissions don't matter yet → the built-in `/code-review`.
+- The ask is a full security review of the code or API → `appsec`.
+
 ## Where this fits
 
 | Use | When |

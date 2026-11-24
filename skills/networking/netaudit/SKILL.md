@@ -11,6 +11,14 @@ open Critical/High finding, a critical pair with connectivity below 2, decommiss
 status, or too many unresolved needs-data flags. State the score-based result and those conditions
 separately.
 
+## When NOT to use
+
+- Designing a new network or the redesign of this one → `netdesign`.
+- Only drawing the topology → `netdiagram`.
+- Turning findings into a decision and cut-over plan → `netpropose`.
+- Locking down the hosts and cloud accounts beyond the network → `hardening`.
+- Reviewing the Terraform code itself — state, modules, change safety → `terraform`.
+
 ## Where this fits
 
 This skill evaluates and stops. For a redesign, continue with [netdesign](../netdesign/SKILL.md), then

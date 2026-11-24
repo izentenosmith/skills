@@ -5,6 +5,12 @@ description: Creates and updates work items in Linear, Azure DevOps or Jira, or 
 
 # 🎫 Ticket
 
+## When NOT to use
+
+- A whole backlog needs shaping, splitting, ordering or a health check → `backlog`.
+- Production is down or data is at risk; contain first → `incident-fix`.
+- The incident's write-up itself, not its tracker items → `post-mortem`.
+
 ## Where this fits
 
 Every other skill in this repo eventually owes the tracker something: hotfix owes a follow-up for its band-aid, incident-fix owes an incident item and its follow-ups, post-mortem's factors become owned work, and [backlog](../backlog/SKILL.md) proposes splits and closures. This skill is the one place that writes to the tracker, so the rules live once: **discover, don't guess · reconcile before creating · confirm before writing · read back after writing.**

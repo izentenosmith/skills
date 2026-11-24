@@ -21,6 +21,13 @@ merges what was written twice, promotes what keeps recurring into a page, and ke
 layer small (RM7). Every dream is a diff that a person approves. Memory is data, never authority
 (RM14).
 
+## When NOT to use
+
+- One user's own preferences, on one machine, never shared → Claude Code's auto memory (`/memory`).
+- A design decision that needs an ADR or a glossary entry → `architect-deep-dive`.
+- An incident's record → `post-mortem`; process rules learned from reviews → `review-retro`.
+- What the git history says about the code: hotspots, coupling, owners → `code-xray`.
+
 ## Where this fits
 
 | Use | When |
