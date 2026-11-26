@@ -1,6 +1,6 @@
 ---
 name: code-xray
-description: Behavioural code analysis from git history, after Tornhill's Software Design X-Rays. A bundled read-only stdlib script mines the log for hotspots (change frequency × size), rising hotspots, function-level X-rays, complexity trends and growth on a branch, change coupling at file and component level, missing co-changes, clone twins, code age, and knowledge maps (main developer, fragmentation, knowledge loss, suggested reviewers). PR mode gives one change's history signals for peer-review's risk map and omissions lens. Codebase mode prioritises technical debt as a ranked list of refactoring targets, each with the interest it costs, plus the cold code to leave alone. Every result starts with a data-quality line and treats thin history as weak. Knowledge data routes reviews and flags knowledge loss, never rates people. Use for "where is our technical debt", hotspot or coupling analysis, "who knows this code", refactoring priorities, knowledge-loss checks, or history signals for a PR review.
+description: Mines git history with a bundled read-only script for hotspots, change coupling, missing co-changes, code age and knowledge maps. PR mode gives one change's history signals for peer-review; codebase mode ranks technical debt as refactoring targets, each with the interest it costs. Knowledge data routes reviews and never rates people. Use for "where is our technical debt", hotspot or coupling analysis, "who knows this code", or history signals for a PR review.
 ---
 
 # 🩻 code-xray
@@ -16,6 +16,13 @@ starts with a data-quality line, and every result is a pointer to where to look,
 
 The script `scripts/xray.py` does the counting. You do the cleaning, the reading, and the
 judgement about what is worth acting on.
+
+## When NOT to use
+
+- One change's code needs reviewing, not its history → `peer-review`.
+- A target is chosen and the refactoring itself needs doing → `refactor-review`.
+- A coupling or ownership finding needs a design decision → `architect-deep-dive`.
+- Review findings over time, not the code's history → `review-retro`.
 
 ## Where this fits
 

@@ -1,6 +1,6 @@
 ---
 name: docker-swarm
-description: Reviews or designs a Docker Swarm mode cluster and the stack files it runs with docker stack deploy — graded against orchestration theory (desired-state reconciliation, Raft quorum, rolling updates, node-scoped state) and a scored rubric. Covers manager count and quorum, autolock, backups and certificate rotation; update_config, rollback_config, restart_policy and healthchecks; stateful services and node-local volumes; overlay networks, encryption and the routing mesh; secrets and configs; reservations, limits and placement; and the compose keys stack deploy silently ignores. Review mode audits with evidence-backed findings, read-only commands only, and a repeatable 0–10 score; Design mode lays out the cluster and a stack file validated with docker stack config. Use for a Swarm or stack-file review, "are we ready to go live on Swarm", designing a Swarm deployment, rollout and rollback settings, or deciding whether Swarm is still the right tool. It never deploys, updates, scales or removes anything.
+description: Reviews or designs a Docker Swarm mode cluster and the stack files it runs with docker stack deploy. Review mode audits quorum, update and rollback settings, stateful services, overlay networks, secrets and the compose keys stack deploy ignores, with a 0–10 score; Design mode lays out the cluster and a validated stack file. Use for a Swarm or stack-file review, "are we ready to go live on Swarm", or whether Swarm is still the right tool. It never deploys, updates, scales or removes anything.
 ---
 
 # 🐝 Docker Swarm
@@ -15,6 +15,13 @@ Swarm mode is Docker's built-in orchestrator: a few managers keep the **desired 
 | 2–20 nodes, a small team, no platform group, stateless services plus one or two datastores | **Swarm** fits: rolling updates, secrets, overlay networks, built into the engine, little to operate |
 | Autoscaling, many teams, admission policy, operators for stateful systems, a managed control plane, or hiring for the skill | **Kubernetes**. Don't build those on Swarm |
 | Already on Swarm and it works | Keep it, review it, and say what would trigger a move — not a migration for fashion |
+
+## When NOT to use
+
+- One host and a local or single-VM stack → `docker-compose`.
+- Each service's security settings — user, capabilities, mounts → `container-hardening`.
+- One task won't start or stay up → `container-debug`.
+- The image or its healthcheck needs fixing → `dockerfile`.
 
 ## Where this fits
 

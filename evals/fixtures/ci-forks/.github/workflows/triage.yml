@@ -1,0 +1,31 @@
+name: Triage
+
+# pull_request_target so fork PRs get labels too: a pull_request run from a fork has a
+# read-only token. Nothing from the pull request is checked out or run here.
+on:
+  pull_request_target:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/labeler@8558fd74291d67161a8a78ce36a881fa63b766a9 # v5.0.0
+        with:
+          sync-labels: true
+
+      - name: Mark work in progress
+        run: |
+          if [[ "$TITLE" == WIP* ]]; then
+            gh pr edit "$PR" --repo "$GITHUB_REPOSITORY" --add-label wip
+          else
+            gh pr edit "$PR" --repo "$GITHUB_REPOSITORY" --remove-label wip
+          fi
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+          PR: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ github.token }}

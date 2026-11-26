@@ -1,0 +1,4 @@
+$ sudo ip6tables -S
+-P INPUT ACCEPT
+-P FORWARD ACCEPT
+-P OUTPUT ACCEPT

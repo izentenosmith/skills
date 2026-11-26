@@ -1,6 +1,6 @@
 ---
 name: netaudit
-description: Audit an existing computer network — cloud network IaC (Terraform, Bicep, ARM), router/switch/firewall configs, Kubernetes or compose networking, IP plans and inventories — against networking theory, a graph-theoretic resilience lens and a scored rubric. Recovers the topology model, then reports strengths, weaknesses, improvement opportunities, evidence-backed findings and a repeatable 0–10 score. Use when assessing network quality, exposure or single points of failure, or before planning a redesign. It evaluates only; netdesign and netpropose handle changes, and it never writes IaC.
+description: Audits an existing computer network — cloud network IaC (Terraform, Bicep, ARM), router/switch/firewall configs, Kubernetes or compose networking, IP plans — recovering its topology and reporting strengths, weaknesses, evidence-backed findings and a repeatable 0–10 score. Use when assessing network quality, exposure, resilience or single points of failure, or before planning a redesign. It evaluates only; netdesign and netpropose handle changes, and it never writes IaC.
 ---
 
 # 🔎 netaudit
@@ -10,6 +10,14 @@ of 9.0 or more is the score threshold for "good". Do not call a network good whe
 open Critical/High finding, a critical pair with connectivity below 2, decommissioned/duplicate
 status, or too many unresolved needs-data flags. State the score-based result and those conditions
 separately.
+
+## When NOT to use
+
+- Designing a new network or the redesign of this one → `netdesign`.
+- Only drawing the topology → `netdiagram`.
+- Turning findings into a decision and cut-over plan → `netpropose`.
+- Locking down the hosts and cloud accounts beyond the network → `hardening`.
+- Reviewing the Terraform code itself — state, modules, change safety → `terraform`.
 
 ## Where this fits
 

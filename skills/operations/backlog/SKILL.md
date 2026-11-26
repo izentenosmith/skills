@@ -1,6 +1,6 @@
 ---
 name: backlog
-description: Shape, refine, order and health-check a backlog in Linear, Azure DevOps, Jira or a markdown file, grounded in User Story Mapping, Making Work Visible and SRE. Map mode frames an initiative and builds a story map with outcome-named release slices and a walking skeleton. Refine mode splits the next slice into thin, delivery-sized stories with acceptance criteria, a demo line and spikes for open questions. Health mode audits a backlog and board (flat lists, oversized or criteria-less items, stale work, WIP, unplanned work, competing top priorities, hidden dependencies, overdue post-mortem follow-ups, error budget, toil) with a repeatable 0–10 score. Order mode ranks by class of service, outcome and cost of delay. Use for backlog grooming or refinement, story mapping, splitting an epic, release slices, prioritizing the backlog, backlog health, WIP limits, or why work is stuck. Reads the tracker; changes go through the ticket skill after confirmation. Not for creating or updating a single item — that is ticket.
+description: Shapes and health-checks a backlog in Linear, Azure DevOps, Jira or a markdown file. Map mode lays out an initiative's user journey as a story map with release slices; refine mode splits an epic into thin stories with acceptance criteria; health mode audits the board with a 0–10 score; order mode ranks by cost of delay. Use for story mapping, splitting an epic, prioritizing, backlog health or why work is stuck. Not for creating or updating a single item — that is ticket.
 ---
 
 # 🗺️ Backlog
@@ -11,6 +11,12 @@ This skill builds one (a story map and outcome slices), gets the next slice read
 it by a stated policy, and audits an existing backlog and board for the patterns that make teams
 late: no big picture, oversized or unready items, too much work in progress, invisible unplanned
 work, competing top priorities, hidden dependencies, and operational follow-ups nobody finishes.
+
+## When NOT to use
+
+- One item needs creating, updating, closing or logging time against → `ticket`.
+- One feature's design decisions need resolving → `architect-deep-dive`.
+- One story needs a build plan with acceptance criteria → `agent-brief`.
 
 ## Where this fits
 

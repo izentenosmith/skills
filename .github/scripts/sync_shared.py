@@ -6,6 +6,11 @@ must carry its own copy: `npx skills add` installs a folder on its own and drops
 any symlink that points outside it. skills/shared.json maps every source to the
 copies made of it. Edit the source, never a copy; this script writes the copies.
 
+Keys starting with `_` are notes, not sources. `_why` maps each source to why
+the skills that read it carry a copy rather than a pointer to it (`_why._` is
+the reason they share); --check fails on a source with no reason, and on a
+reason for a source that isn't listed.
+
     python3 .github/scripts/sync_shared.py            # rewrite stale copies from their sources
     python3 .github/scripts/sync_shared.py --check    # exit 1 if any copy differs (CI, check_repo)
     python3 .github/scripts/sync_shared.py --staged   # pre-commit: sync from the index and stage
@@ -23,11 +28,26 @@ ROOT = pathlib.Path(__file__).resolve().parents[2]
 MANIFEST = ROOT / "skills/shared.json"
 
 
+def sources(manifest):
+    """{source: [copy, ...]} from a parsed manifest, without its `_` notes."""
+    return {k: v for k, v in manifest.items() if not k.startswith("_")}
+
+
 def pairs():
     """(source, copy) for every copy in the manifest, as repo-relative paths."""
-    for source, copies in json.loads(MANIFEST.read_text()).items():
+    for source, copies in sources(json.loads(MANIFEST.read_text())).items():
         for copy in copies:
             yield source, copy
+
+
+def unexplained(manifest):
+    """Messages for a source with no `_why` reason, and for a reason with no source."""
+    why = {k for k in manifest.get("_why", {}) if not k.startswith("_")}
+    listed = set(sources(manifest))
+    return ([f"skills/shared.json: {s} has no reason in _why (why can't its skills point at one file?)"
+             for s in sorted(listed - why)] +
+            [f"skills/shared.json: _why explains {s}, which is not a listed source"
+             for s in sorted(why - listed)])
 
 
 def git_bytes(rev_path):
@@ -42,8 +62,9 @@ def work_bytes(path):
 
 
 def stale():
-    """Messages for every copy that is missing, a symlink, or differs from its source."""
-    out = []
+    """Messages for every copy that is missing, a symlink, or differs from its
+    source, and for every source without a `_why` reason."""
+    out = unexplained(json.loads(MANIFEST.read_text()))
     for source, copy in pairs():
         p = ROOT / copy
         if p.is_symlink():

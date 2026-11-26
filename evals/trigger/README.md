@@ -8,13 +8,16 @@ alone.
 
 ## The cases
 
-`cases.json` holds six prompts for each of twenty-five skills that have close neighbours: `hotfix` and
+`cases.json` holds six prompts for every skill, forty-three in all, added in batches: `hotfix` and
 `incident-fix`, `dbaudit` and `dbdesign`, `peer-review` and `pr-prep`, `ticket` and `backlog`, and (added
 2026-11-20, when their descriptions changed) six development skills: `agent-brief`, `architect-deep-dive`,
 `devils-advocate`, `tyr-verdict`, `refactor-review` and `nexus`; and (added 2026-11-21, so every bundle
 in `skills/bundles.json` has cases) `dockerfile` and `docker-compose`, `netaudit` and `netdesign`,
 `threatmodel` and `appsec`; and (added 2026-11-21) the other five database skills: `dbquery`, `dbpropose`, `dbbuild`,
-`dbdiagram` and `dbarchitect`.
+`dbdiagram` and `dbarchitect`; and (added 2026-11-24, so every skill has cases) the remaining eighteen:
+`acceptance-tests` and `tdd`, `code-xray`, `concurrency-review`, `test-review` and `review-retro`,
+`container-debug`, `container-hardening` and `docker-swarm`, `hardening`, `pipelines` and `terraform`,
+`netdiagram`, `netpropose` and `netblueprint`, `post-mortem` and `release-notes`, and `repo-memory`.
 
 - Three **should trigger**: the skill under test is the right first pick.
 - Three **should not**: near-misses. Most belong to a neighbour (`expected` names it:
@@ -36,7 +39,7 @@ Each case records:
 ## The split, and the rule
 
 One of every three cases in each (skill, should/should-not) group was drawn at random into
-`heldout` (seeds recorded in `cases.json`): 100 train, 50 held-out. The split is stored, not
+`heldout` (seeds recorded in `cases.json`): 172 train, 86 held-out. The split is stored, not
 re-derived, so adding cases never moves an existing one.
 
 **Only train cases may be read while editing a description.** Run `--split train`, read those
@@ -117,6 +120,73 @@ workspace under `trigger/bundles-20261121/<bundle>/`.
   itself; it picked no skill in all ten earlier all-skills runs too, so it is not a bundle effect.
 - The runs were also offered 22 skills that are not this repo's (the CLI's built-ins such as
   `code-review`, `debug`, `simplify`); none of the user's own skills leaked in.
+
+## The routing check
+
+`.github/scripts/routing.py` is a free, deterministic companion to this eval, run by CI on every
+push. It complements the model-based runs and does not replace them: it routes each prompt in
+`cases.json` through BM25 over all the skills' names and descriptions (Porter-stemmed, stopwords
+dropped), with no model, so it misses paraphrases a model gets and rewards word overlap a model
+ignores. What it catches is a description edit that drops the words its prompts use, or two
+descriptions drifting into the same vocabulary, before anyone pays for a run.
+
+It fails when:
+
+- a should-trigger case's skill ranks below the top `K`;
+- a near-miss whose `expected` is a neighbour ranks the skill under test first (a near-miss that
+  needs no skill is only reported: a lexical ranker always ranks something first);
+- two descriptions' TF-IDF cosine is above `COLLISION`.
+
+`K`, `COLLISION` and `KNOWN_FAILURES` are constants at the top of the script. A known failure (each
+with its reason) is excused while it fails and reported as stale once it passes, so the list only
+shrinks; reasons for held-out cases do not quote their prompts. Because it scores every case and
+tunes nothing, running it over held-out cases does not break the split rule; reading a held-out
+case's ranks to reword a description does.
+
+```bash
+python3 .github/scripts/routing.py            # the check: one summary line, or a ✗ line per failure
+python3 .github/scripts/routing.py --report   # the distributions the thresholds come from
+```
+
+`--report` prints the rank of each should-trigger case's own skill (a histogram, then every case not
+ranked first, with what was), each near-miss's top pick (`✗` the skill under test, `=` the expected
+neighbour), the 15 most alike description pairs, and the **slack**: the worst rank outside the known
+failures (the tightest `K` that would pass), the highest pair cosine, and the near-misses still
+ranked first. After descriptions change, run it and tighten `K` or `COLLISION` where the slack
+allows, and delete known failures that now pass.
+
+Set 2026-11-24 from the 150 cases and the descriptions as of `36e6515`: 53 of 75 should-trigger
+cases ranked their skill first and 69 within the top 5, so `K` = 6; the most alike pair, dbaudit /
+netaudit, was at 0.381, so `COLLISION` was 0.45. Indexing the name with the description, as the
+skill listing an agent reads does, changed one case either way against description alone.
+
+Re-set the same day after the 500-character description rewrite and the 108 new cases (258 in
+all): 97 of 129 should-trigger cases rank their skill first and 123 within the top 6, so `K` stays
+6; the most alike pair is now dbdesign / dbpropose at 0.361, so `COLLISION` tightened to 0.40. The
+rewrite added missing words to eight descriptions (`HCL`, `VLANs`, `layer caching`, `Azure DevOps`,
+a branch that "mixes a refactor into a feature", an initiative's "user journey", re-reviewing "new
+commits after comments", a script reported "not found" that is there), each a branch the skill
+already covers, found from train cases only. Twelve cases are known failures: six
+should-trigger cases ranked 11 to 35 and six near-misses, seven of the twelve held out.
+
+### Results: the 500-character rewrite, 2026-11-26
+
+Opus (`claude-opus-5-5`), three runs per case, all skills staged, the 150 cases of the 25 skills that
+had cases before 2026-11-24 (train and held-out); 450 runs before (the descriptions as of `36e6515`,
+run from a checkout of that commit) and 450 after (the rewritten descriptions, with the words the routing check added on
+2026-11-24), no errors. Results
+are in the workspace under `trigger/before-20261126/` and `trigger/after-20261126/`.
+
+| | trigger rate (train) | trigger rate (held-out) | false-trigger rate | picked what was expected |
+|---|---|---|---|---|
+| before | 144/150 | 75/75 | 0/225 | 439/450 |
+| after | 148/150 | 75/75 | 0/225 | 445/450 |
+
+No skill lost a hit or gained a false trigger. dbdesign went 6/9 → 9/9 and dbpropose 6/9 → 7/9 on
+should-trigger runs; pr-prep's near-misses now find their neighbour 18/18 (16/18 before). The
+remaining misses: `dbpropose-yes-1` picks no skill in 2 of 3 runs (3 of 3 before), and
+`refactor-review-no-1` picks the CLI's built-in `code-review` instead of the expected neighbour in
+all three runs, as before; neither is a false trigger.
 
 ## Reading the summary
 

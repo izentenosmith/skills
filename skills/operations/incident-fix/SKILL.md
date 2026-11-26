@@ -1,9 +1,16 @@
 ---
 name: incident-fix
-description: Respond to a production incident end to end — contain first, then diagnose and size the impact, fix it through a capped review loop with any data repair as its own audited artifact, and close with a blameless post-mortem whose every contributing factor becomes a follow-up or an accepted risk. For a system down or degraded, data corrupted or at risk, wrong financial or business figures, a security exposure, or a hotfix that turned out to have a systemic cause. Discovers rollback levers, observability and the repo's conventions at runtime; every production-affecting action waits for explicit confirmation. Use for "incident", "outage", "prod down", "data corruption", "rollback", "SEV1", "on-call page", "declare an incident", and when hotfix escalates.
+description: Responds to a production incident — contains first, then diagnoses and sizes the impact, fixes through a capped review loop with data repair as its own audited artifact, and closes with a blameless post-mortem. For a system down or degraded, data corrupted, wrong financial figures, a security exposure, or a hotfix with a systemic cause; every production-affecting action waits for confirmation. Use for "incident", "outage", "prod down", "SEV1", "on-call page", and when hotfix escalates.
 ---
 
 # 🚨 Incident Fix
+
+## When NOT to use
+
+- The system is up and nothing is getting worse, just an urgent bug → `hotfix`.
+- The incident is already resolved and needs its record → `post-mortem`.
+- A security weakness found in review, with nothing exposed right now → `appsec`.
+- Only the tracker item or its follow-ups need filing or updating → `ticket`.
 
 ## Where this fits
 

@@ -1,11 +1,19 @@
 ---
 name: container-hardening
-description: Reviews or hardens how containers run — the runtime configuration in docker run scripts, Compose files, Kubernetes manifests and Swarm stacks, plus the image supply chain — graded against container-security theory (namespaces, capabilities, seccomp and LSMs, user namespaces, least privilege) and a scored rubric. Covers privileged mode, the Docker socket, host namespaces and mounts, capabilities, no-new-privileges, root and setuid, seccomp/AppArmor/SELinux, read-only root filesystems, resource limits, network exposure, secrets, scanning, SBOM and signing. Review mode audits with evidence-backed findings — verified with docker inspect where a container is running — and a repeatable 0–10 score; Harden mode applies the fixes to the configuration the repo owns and proves the workload still runs. Use for a container security review, "is this container safe to run", hardening a Compose or Kubernetes workload, or Pod Security "restricted" readiness. It never changes daemon, host or cluster settings.
+description: Reviews or hardens how containers run — runtime config in Compose, Kubernetes, Swarm and docker run, plus the image supply chain. Review mode audits privileged mode, the Docker socket, host mounts, capabilities, root and seccomp with findings and a 0–10 score; Harden mode fixes the configuration the repo owns. Use for a container security review, "is this container safe to run", or Pod Security "restricted" readiness. It never changes daemon, host or cluster settings.
 ---
 
 # 🛡️ Container hardening
 
 A container is **a process on a shared kernel**, fenced in by namespaces, cgroups, a capability set, a seccomp filter and an AppArmor or SELinux profile. Every one of those fences can be lowered by a line of configuration — `privileged: true`, a mounted Docker socket, `pid: host`, `cap_add: SYS_ADMIN`, `seccomp=unconfined` — and most of them are lowered by default somewhere: Docker runs as root unless told otherwise, and Kubernetes runs pods **without** a seccomp profile unless one is set. This skill finds which fences are down, says what each one exposes, and puts them back without breaking the workload.
+
+## When NOT to use
+
+- Fixing the image itself — user, base, layers → `dockerfile`.
+- A workload that broke after a hardening change → `container-debug`.
+- Hardening the host or the cloud account → `hardening`.
+- Security of the application code inside the container → `appsec`.
+- Swarm orchestration — quorum, rollouts, placement → `docker-swarm`.
 
 ## Where this fits
 

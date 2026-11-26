@@ -1,6 +1,6 @@
 ---
 name: hardening
-description: Review, design, or propose a security hardening baseline for Linux hosts and cloud estates — identity and privilege, network exposure, data protection, the host itself, backup and restore, monitoring and incident readiness, governance (naming, tagging, locks, change control, evidence), and service roles (web, mail, DNS, database, file transfer, VPN) — distro-agnostic (Debian/Ubuntu, RHEL family, SUSE, Alpine, Arch; systemd or OpenRC) and cloud-agnostic (AWS, Azure, GCP, OCI, on-prem). Review audits collected evidence (configs, command output, IaC, cloud exports) with findings and a repeatable 0–10 score; Design writes the baseline — controls with IDs, per-platform mapping and a read-only check each; Propose sequences the rollout so nobody is locked out and every step has a check and a rollback. Use for "harden this server", CIS-style audits, a landing-zone or subscription baseline, a pre-production readiness check, or "is this host locked down". It never changes a host or cloud account.
+description: Reviews a security hardening baseline for Linux hosts and cloud estates, or designs or proposes one — identity, network exposure, data protection, the host, backup and monitoring, on any distro or cloud. Review audits collected evidence with a 0–10 score; Design writes controls with a read-only check each; Propose sequences the rollout so nobody is locked out. Use for "harden this server", CIS-style audits, or a landing-zone or subscription baseline. It never changes a host or cloud account.
 ---
 
 # 🛡️ hardening
@@ -15,6 +15,14 @@ The same seven core domains apply to a single VM, a fleet, a Kubernetes node poo
 tenant; an eighth, **service**, grades the roles a host runs (web, mail, DNS, database, file
 transfer, VPN) and applies only where the role exists. What changes is the evidence and the command
 that reads it — never the principle.
+
+## When NOT to use
+
+- Security of the application code → `appsec`.
+- What to protect and from whom, before a baseline exists → `threatmodel`.
+- How containers run on the host → `container-hardening`.
+- Reviewing the Terraform code that builds the platform → `terraform`.
+- Network topology and segmentation in depth → `netaudit`.
 
 ## Where this fits
 

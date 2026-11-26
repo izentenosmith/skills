@@ -1,6 +1,6 @@
 ---
 name: threatmodel
-description: Review, design, or propose a system's security design — scope and assets, adversaries, trust boundaries and data flows, security policy and access-control model, protocols, crypto and key management, resilience and assurance — graded against security-engineering theory (Anderson) with a scored rubric. Review mode audits an existing architecture, design doc or threat model with evidence-backed findings and a 0–10 score; Design mode writes `threat-model.md` — system definition, assets, adversary classes and grades, a data-flow diagram with trust boundaries, a threat tree plus STRIDE per boundary, a hazard × mechanism matrix, a risk register, and security requirements traced threat → objective → requirement → test; Propose mode turns them into a sequenced risk-treatment plan. Use for threat modelling, security design review, "what could go wrong with this design", or before building anything that touches money, identity, keys or personal data. It never attacks or probes a live system.
+description: Reviews a system's security design, or designs or proposes one — assets, adversaries, trust boundaries, data flows and key management. Review mode audits an architecture or threat model with a 0–10 score; Design mode writes threat-model.md (data flows, STRIDE per boundary, risk register); Propose mode sequences risk treatment. Use for threat modelling, security design review, "what could go wrong with this design", or before building anything touching money, identity, keys or personal data.
 ---
 
 # 🎯 threatmodel
@@ -12,6 +12,14 @@ hold), a **mechanism** (what enforces it), **assurance** (evidence the mechanism
 **incentive** (someone motivated to keep it working). Almost every security failure is a missing
 one of those four. This skill grades designs against that model, writes the model, and sequences
 the treatment.
+
+## When NOT to use
+
+- Reviewing the code for vulnerabilities → `appsec`.
+- Locking down the hosts and cloud accounts → `hardening`.
+- Network zones and flows in depth → `netdesign`.
+- Design questions that are not about security → `architect-deep-dive`.
+- A security exposure happening now → `incident-fix`.
 
 ## Where this fits
 

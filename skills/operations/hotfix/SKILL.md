@@ -1,9 +1,16 @@
 ---
 name: hotfix
-description: A fast, still-disciplined lane for an urgent bug in a running system that is NOT an incident — the system is up, nothing is being corrupted or exposed right now. Discovers the repo's own build, test, review and ship conventions, proves the bug with a red test, fixes it at the shared cause, runs one adversarial review pass, and ships with recorded evidence in about an hour of agent time. Use for "hotfix", "urgent fix", "quick fix", "bug in prod but not down", "patch this today". Not for outages, data corruption, security exposure or anything still getting worse — that is incident-fix.
+description: Fixes and ships an urgent bug in a running system that is NOT an incident — the system is up, nothing is being corrupted or exposed right now. Discovers the repo's own conventions, proves the bug with a red test, fixes it at the shared cause, runs one adversarial review pass, and ships with recorded evidence. Use for "hotfix", "urgent fix", "bug in prod but not down", "patch this today". Not for outages, data corruption, security exposure or anything still getting worse — that is incident-fix.
 ---
 
 # 🩹 Hotfix
+
+## When NOT to use
+
+- The system is down or degraded, data is corrupted or exposed, or it is getting worse → `incident-fix`.
+- Nothing is urgent: a feature, or a fix that can take the normal path → `tdd`, or the pipeline from `architect-deep-dive`.
+- A container won't start, stay up or reach a service, rather than the app being wrong → `container-debug`.
+- The incident is over and needs its record written → `post-mortem`.
 
 ## Where this fits
 

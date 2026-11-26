@@ -1,0 +1,9 @@
+guides:
+  - changed-files:
+      - any-glob-to-any-file: docs/guides/**
+site:
+  - changed-files:
+      - any-glob-to-any-file: [scripts/**, package.json]
+ci:
+  - changed-files:
+      - any-glob-to-any-file: .github/**

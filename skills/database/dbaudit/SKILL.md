@@ -7,6 +7,13 @@ description: Audits a relational database, legacy or current, from its DDL or su
 
 Give a balanced assessment: what is working well, what is deficient, and what could improve. A score of 9.0 or more counts as “good”, but do not call a database unconditionally good when the workflow gate finds open Critical/High findings, unused/copy status, or more than 10 % of its objects carrying unresolved needs-data flags. State the score-based result and those risk conditions separately, in the gate block ([🚦 The gate](#-the-gate)).
 
+## When NOT to use
+
+- Modelling a new schema or the redesign of this one → `dbdesign`.
+- Recommending or sequencing the fixes as a migration plan → `dbpropose`.
+- Slow SQL, execution plans or workload statistics → `dbquery`.
+- Deciding which data stores the system needs → `dbarchitect`.
+
 ## Where this fits
 
 For a redesign, continue with [dbdesign](../dbdesign/SKILL.md), then

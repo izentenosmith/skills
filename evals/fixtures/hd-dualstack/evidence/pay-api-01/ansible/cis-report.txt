@@ -1,0 +1,33 @@
+cis-ubuntu2204 v3.1.0 — audit run (check mode) on pay-api-01, 2026-11-17T22:10:41Z
+Profile: Level 1 - Server
+
+ID                      Control                                                         Result
+----------------------  --------------------------------------------------------------  ------
+fs_tmp_options          /tmp mounted nodev,nosuid,noexec                                PASS
+pkg_unattended          unattended-upgrades installed and enabled                       PASS
+apparmor_enforce        AppArmor profiles in enforce or complain mode                   PASS
+net_sysctl              network sysctls (redirects, source route, rp_filter, syncookies) PASS
+ufw_installed           ufw installed                                                   PASS
+ufw_enabled             ufw service enabled                                             PASS
+ufw_default_deny        ufw default deny incoming (ufw status verbose)                  PASS
+ufw_open_ports          every listening port has a ufw rule                             PASS
+auditd_installed        auditd and audispd-plugins installed                            PASS
+auditd_enabled          auditd enabled and active                                       PASS
+auditd_rules            audit rules for time, identity, scope, logins, perm_mod, mounts PASS
+auditd_backlog          backlog_limit >= 8192                                           PASS
+ssh_perms               /etc/ssh/sshd_config 0600 root:root                             PASS
+ssh_root_login          PermitRootLogin no (sshd -T)                                    PASS
+ssh_password_auth       PasswordAuthentication no (sshd -T)                             PASS
+ssh_empty_passwords     PermitEmptyPasswords no (sshd -T)                               PASS
+ssh_max_auth_tries      MaxAuthTries <= 4 (sshd -T)                                     PASS
+ssh_access_limited      AllowUsers/AllowGroups set (sshd -T)                            PASS
+ssh_ciphers             no CBC ciphers, no weak MACs or KEX (sshd -T)                   PASS
+ssh_idle_timeout        ClientAliveInterval/CountMax set (sshd -T)                      PASS
+ssh_banner              Banner set (sshd -T)                                            PASS
+sudo_use_pty            sudo Defaults use_pty                                           PASS
+sudo_logfile            sudo Defaults logfile                                           PASS
+pam_pwquality           pam_pwquality minlen >= 14                                      PASS
+accounts_root_locked    root password locked                                            PASS
+... (143 more PASS lines omitted)
+
+Summary: 168 passed, 0 failed, 11 skipped (Level 2 or not applicable)

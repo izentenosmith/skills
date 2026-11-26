@@ -1,6 +1,6 @@
 ---
 name: netdiagram
-description: Generate editable draw.io network topology diagrams — the logical L3 topology, the segmentation (zones and flows) view, and the physical L1/L2 view when on-prem evidence exists — from a network design, an audit's recovered topology.json, or other network structure, in one canonical convention with stable IDs. Use when the user wants a network drawn or redrawn — "diagram this network", "draw the topology", "show the zones and flows", a draw.io file for a VNet/VPC or on-prem estate — or as the step after netdesign or netaudit and before netpropose. It draws the model it is given and never changes the design or configures anything.
+description: Draws editable draw.io network topology diagrams — logical L3, segmentation (zones, VLANs, firewalls and flows), and physical L1/L2 when on-prem evidence exists — from a network design, an audit's topology.json or other network structure, with stable IDs. Use when the user wants a network drawn or redrawn — "diagram this network", "draw the topology", "show the zones and flows" — or as the step after netdesign or netaudit and before netpropose. It never changes the design or configures anything.
 ---
 
 # netdiagram
@@ -18,6 +18,13 @@ Create clear, editable draw.io diagrams of a network in the convention defined i
 This skill can run on its own from a supplied design or topology, or consume the output of
 [netdesign](../netdesign/SKILL.md) or [netaudit](../netaudit/SKILL.md). Never mix L2 and L3 semantics
 on one page.
+
+## When NOT to use
+
+- Changing the design the diagrams show → `netdesign`.
+- Grading the network rather than drawing it → `netaudit`.
+- The final accepted package with its design document → `netblueprint`.
+- Drawing a database ER or relational model → `dbdiagram`.
 
 ## Inputs and evidence
 

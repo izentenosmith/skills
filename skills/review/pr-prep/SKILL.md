@@ -1,6 +1,6 @@
 ---
 name: pr-prep
-description: "The author's side of code review, plus a readiness check before anyone reviews. Author mode prepares your own change. It runs a self-review with the reviewer's omission checklist one item at a time (debug and dead code, tests for new behaviour, co-changes git history expects), checks size and shape (one concern, under ~400 meaningful lines, refactor apart from behaviour) and writes a split plan when needed. It tidies commits, then drafts the PR description from a template: claim, linked issue, checkable acceptance criteria, scope, how to verify, risk and rollback, reading order. Notes explain why and point at risk without arguing the code is correct. Readiness mode is read-only on someone's PR. It restates the claim, extracts acceptance criteria, classifies alignment (Exact, Missing, Tangling), detects tangled concerns, suggests a reading order, lists process gaps, and gives a verdict. Use for \"prep my branch for review\", \"write my PR description\", \"split this PR\", or \"is this PR ready to review\"."
+description: Prepares a change for review from the author's side, or checks someone else's PR is ready. Author mode self-reviews with the reviewer's omission checklist, plans a split when a branch is too big or mixes a refactor into a feature, tidies commits and drafts the PR description. Readiness mode is read-only and gives a verdict. Use for "prep my branch for review", "write my PR description", "split this PR", "is this PR ready to review". Not for finding a diff's bugs — that is peer-review.
 ---
 
 # 🧰 pr-prep
@@ -19,6 +19,13 @@ This skill works that side of the process, in two modes.
 
 Neither mode reviews the code for bugs. That is [peer-review](../peer-review/SKILL.md)'s job.
 This one makes that review possible, and cheaper.
+
+## When NOT to use
+
+- The PR is ready and needs the review itself, with findings → `peer-review`.
+- The audience is users of a shipped release → `release-notes`.
+- No acceptance criteria exist anywhere and the work needs a plan → `agent-brief`.
+- The PR has merged and its review should be kept → `review-retro`.
 
 ## Where this fits
 

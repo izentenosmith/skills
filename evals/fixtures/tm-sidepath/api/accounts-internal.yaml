@@ -1,0 +1,41 @@
+openapi: 3.0.3
+info:
+  title: accounts-svc internal API
+  description: Reachable only from inside the courier platform network. Used by the Ops Console.
+  version: 4.2.0
+servers:
+  - url: https://accounts.internal.parcelry.test
+security:
+  - opsToken: []
+paths:
+  /internal/couriers/{courierId}:
+    parameters:
+      - { name: courierId, in: path, required: true, schema: { type: string } }
+    get:
+      summary: Full courier profile
+      responses: { '200': { description: ok } }
+    patch:
+      summary: Update profile fields
+      description: Writes the given fields straight to the courier record. Fields not sent are left as they are.
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CourierProfileUpdate' }
+      responses: { '200': { description: updated } }
+components:
+  securitySchemes:
+    opsToken: { type: apiKey, in: header, name: X-Ops-Token }
+  schemas:
+    CourierProfileUpdate:
+      type: object
+      properties:
+        email: { type: string, format: email }
+        phone: { type: string }
+        homePostcode: { type: string }
+        payoutAccount:
+          description: Replaces couriers.payout_account, the account the next payouts-batch pays.
+          type: object
+          properties:
+            accountNumber: { type: string }
+            sortCode: { type: string }
+            holderName: { type: string }

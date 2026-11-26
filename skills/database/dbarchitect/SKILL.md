@@ -1,6 +1,6 @@
 ---
 name: dbarchitect
-description: Answers which data stores a system needs and which one owns each fact — use it for any such question, even a short conversational one with no files — adding Elasticsearch, Redis, Kafka or Mongo; copies that disagree or drift; code writing to several stores at once; a primary overloaded by reporting or analytics; replica vs warehouse; sharding; how stale a read may be. Decides the system of record for each fact, what is derived (caches, search indexes, replicas, warehouses), the model per store, replication and its guarantees, partitioning, where coordination is required, and the isolation each workflow needs. Writes a data-architecture record (options, trade-offs, recommendation, reversal cost) with a dataflow map, or reviews an existing architecture the same way. Use it before dbdesign. It never designs tables, tunes queries, writes DDL, provisions infrastructure or changes configuration.
+description: Answers which data stores a system needs and which one owns each fact — use it for any such question, even a short conversational one with no files — adding Elasticsearch, Redis, Kafka or Mongo; copies that disagree or drift; code writing to several stores at once; a primary overloaded by reporting or analytics; replica vs warehouse; sharding; how stale a read may be. Writes or reviews a data-architecture record. Use it before dbdesign; it never designs tables, tunes queries or writes DDL.
 ---
 
 # 🏛️ dbarchitect
@@ -26,6 +26,14 @@ Reference docs in this folder:
   choice turns on the shape of the entities and relationships
 
 ---
+
+## When NOT to use
+
+- Designing the tables, keys and constraints of one relational store → `dbdesign`.
+- Grading the quality of an existing schema → `dbaudit`.
+- A slow query, an execution plan or an N+1 → `dbquery`.
+- Sequencing the migration of an existing estate → `dbpropose`.
+- Writing the infrastructure code that provisions the stores → `terraform`.
 
 ## 📐 Pick the mode
 

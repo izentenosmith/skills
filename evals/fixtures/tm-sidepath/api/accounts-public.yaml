@@ -1,0 +1,46 @@
+openapi: 3.0.3
+info:
+  title: accounts-svc public API
+  version: 4.2.0
+servers:
+  - url: https://api.parcelry.test
+paths:
+  /v1/me/payout-account:
+    get:
+      summary: The signed-in courier's active payout account (masked)
+      security: [{ courierSession: [] }]
+      responses: { '200': { description: ok } }
+  /v1/me/step-up:
+    post:
+      summary: Send a 6-digit SMS code to the registered phone; exchange it for a step-up token
+      security: [{ courierSession: [] }]
+      responses: { '200': { description: ok }, '429': { description: locked for one hour after five attempts } }
+  /v1/me/payout-account-changes:
+    post:
+      summary: Request a payout-account change. Creates a PendingPayoutChange effective in 72 hours and sends the notice
+      security: [{ courierSession: [], stepUp: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PayoutAccount' }
+      responses: { '202': { description: pending } }
+  /v1/payout-account-changes/{changeId}/cancel:
+    post:
+      summary: Cancel a pending change from the notice's signed, single-use link
+      security: [{ cancelToken: [] }]
+      parameters:
+        - { name: changeId, in: path, required: true, schema: { type: string } }
+      responses: { '200': { description: cancelled } }
+components:
+  securitySchemes:
+    courierSession: { type: http, scheme: bearer }
+    stepUp: { type: apiKey, in: header, name: X-Step-Up-Token }
+    cancelToken: { type: apiKey, in: query, name: t }
+  schemas:
+    PayoutAccount:
+      type: object
+      required: [accountNumber, sortCode, holderName]
+      properties:
+        accountNumber: { type: string, pattern: '^[0-9]{8}$' }
+        sortCode: { type: string, pattern: '^[0-9]{6}$' }
+        holderName: { type: string, maxLength: 70 }

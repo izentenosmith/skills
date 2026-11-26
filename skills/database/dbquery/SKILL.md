@@ -1,6 +1,6 @@
 ---
 name: dbquery
-description: Reviews the SQL a system actually runs — query text in application code, ORM logs, reports, views and procedures, together with execution plans (EXPLAIN ANALYZE, SQL Server showplan or Query Store, Oracle DBMS_XPLAN) and workload statistics (pg_stat_statements, Query Store, slow logs). Reads plans by access vs filter predicates and estimated vs actual rows, ranks statements by their share of the workload, finds wrong-result, race and injection defects, and prescribes rewrites and index changes weighed against write cost. Reports evidence-backed findings and a 0–10 score. Use for "why is this query slow", plan review, ORM and N+1 review, tuning a batch, checking proposed indexes against the workload, or settling the needs-data flags dbaudit raised. It never runs DML or DDL; schema causes go to dbdesign, index and DDL changes to dbpropose.
+description: Reviews the SQL a system actually runs — query text from code, ORM logs and views, with execution plans and workload statistics (EXPLAIN ANALYZE, pg_stat_statements, Query Store, slow logs) — ranking statements by workload share and prescribing rewrites and indexes weighed against write cost, with a 0–10 score. Use for "why is this query slow", a slow endpoint or batch, plan review, ORM and N+1 review, or dbaudit's needs-data flags. It never runs DML or DDL; schema causes go to dbdesign.
 ---
 
 # 🧭 dbquery
@@ -30,6 +30,14 @@ Reference docs in this folder:
   cause is structural and you need to name it for dbdesign
 
 ---
+
+## When NOT to use
+
+- Grading the schema itself from its DDL → `dbaudit`.
+- The cause is structural — keys, normalization, types → `dbdesign`.
+- Planning the index or DDL change it recommends → `dbpropose`.
+- A security review of the whole application beyond its SQL → `appsec`.
+- A database outage or wrong figures in production now → `incident-fix`.
 
 ## 📐 Calibrate the pass
 

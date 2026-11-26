@@ -52,6 +52,40 @@ class Description(unittest.TestCase):
         self.assertTrue(authoring.description_problems("Turns plans into tests I write."))
 
 
+class DescriptionBudget(unittest.TestCase):
+    def test_at_and_under_the_budget_pass(self):
+        for n in (1, authoring.DESCRIPTION_BUDGET - 1, authoring.DESCRIPTION_BUDGET):
+            self.assertEqual(authoring.description_length_problems("x" * n), [], n)
+
+    def test_over_the_budget_fails(self):
+        msgs = authoring.description_length_problems("x" * (authoring.DESCRIPTION_BUDGET + 1))
+        self.assertEqual(len(msgs), 1)
+        self.assertIn(f"budget {authoring.DESCRIPTION_BUDGET}", msgs[0])
+
+    def test_over_the_hard_limit_names_it(self):
+        msgs = authoring.description_length_problems("x" * (authoring.DESCRIPTION_HARD_LIMIT + 1))
+        self.assertEqual(len(msgs), 1)
+        self.assertIn(str(authoring.DESCRIPTION_HARD_LIMIT), msgs[0])
+
+    def test_measured_on_the_parsed_scalar_not_the_quoted_text(self):
+        # 500 characters once parsed; 504 as written, with its quotes and backslash escapes.
+        value = 'Turns "x' + "y" * 491 + '"'
+        raw = '"' + value.replace('"', '\\"') + '"'
+        parsed, why = authoring.yaml_scalar(raw)
+        self.assertIsNone(why)
+        self.assertEqual(parsed, value)
+        self.assertEqual(len(parsed), authoring.DESCRIPTION_BUDGET)
+        self.assertGreater(len(raw), authoring.DESCRIPTION_BUDGET)
+        self.assertEqual(authoring.description_length_problems(parsed), [])
+        self.assertTrue(authoring.description_length_problems(parsed + "z"))
+
+    def test_single_quoted_scalar_unescapes_doubled_quotes(self):
+        self.assertEqual(authoring.yaml_scalar("'it''s'"), ("it's", None))
+
+    def test_unquoted_colon_space_is_rejected(self):
+        self.assertIsNotNone(authoring.yaml_scalar("Runs a review: then stops.")[1])
+
+
 class Contents(unittest.TestCase):
     def test_short_file_needs_none(self):
         self.assertEqual(authoring.toc_problems("# x\n\n## A\n\ntext\n"), [])
@@ -114,6 +148,76 @@ class Links(unittest.TestCase):
         here = folder / "SKILL.md"
         self.assertTrue(authoring.escaping_link_problems("[x](../agent-brief/SKILL.md)", folder, here))
         self.assertEqual(authoring.escaping_link_problems("[x](mocking.md) [y](#a)", folder, here), [])
+
+
+WHEN_NOT = """---
+name: demo
+description: Turns a plan into tests.
+---
+# demo
+
+Intro.
+
+## When NOT to use
+
+- The design is still open → `architect-deep-dive`.
+- A fast bug-only pass → the built-in `/code-review`, or `peer-review` for a full one.
+
+## Steps
+
+Use `git` and `demo` freely here.
+"""
+SKILLS = {"demo", "architect-deep-dive", "peer-review"}
+
+
+class WhenNot(unittest.TestCase):
+    def check(self, text):
+        return authoring.when_not_problems(text, "demo", SKILLS)
+
+    def test_well_formed_section_passes(self):
+        self.assertEqual(self.check(WHEN_NOT), [])
+
+    def test_missing_section_fails(self):
+        start, end = WHEN_NOT.index("## When NOT"), WHEN_NOT.index("## Steps")
+        msgs = self.check(WHEN_NOT[:start] + WHEN_NOT[end:])
+        self.assertEqual(len(msgs), 1)
+        self.assertIn("no `## When NOT to use`", msgs[0])
+
+    def test_section_not_first_fails(self):
+        text = WHEN_NOT.replace("Intro.\n", "Intro.\n\n## Where this fits\n\nText.\n")
+        msgs = self.check(text)
+        self.assertEqual(len(msgs), 1)
+        self.assertIn("first `##` section", msgs[0])
+
+    def test_two_sections_fail(self):
+        text = WHEN_NOT + "\n## When NOT to use\n\n- x → `peer-review`.\n- y → `peer-review`.\n"
+        self.assertTrue(any("2 `## When NOT to use` sections" in m for m in self.check(text)))
+
+    def test_line_count_bounds(self):
+        one = WHEN_NOT.replace("- A fast bug-only pass → the built-in `/code-review`, or `peer-review` for a full one.\n", "")
+        self.assertTrue(any("1 non-blank lines" in m for m in self.check(one)))
+        bullet = "- Something else → `peer-review`.\n"
+        six = WHEN_NOT.replace("\n## Steps", bullet * 4 + "\n## Steps")
+        self.assertTrue(any("6 non-blank lines" in m for m in self.check(six)))
+
+    def test_unknown_skill_fails_and_commands_pass(self):
+        msgs = self.check(WHEN_NOT.replace("`architect-deep-dive`", "`archtect-deep-dive`"))
+        self.assertEqual(len(msgs), 1)
+        self.assertIn("archtect-deep-dive", msgs[0])
+
+    def test_self_reference_fails(self):
+        msgs = self.check(WHEN_NOT.replace("`architect-deep-dive`", "`demo`"))
+        self.assertEqual(len(msgs), 1)
+        self.assertIn("this skill itself", msgs[0])
+
+    def test_line_without_arrow_or_target_fails(self):
+        self.assertTrue(self.check(WHEN_NOT.replace("still open → ", "still open, use ")))
+        self.assertTrue(self.check(WHEN_NOT.replace("→ `architect-deep-dive`.", "→ the architect.")))
+        self.assertTrue(self.check(WHEN_NOT.replace("- The design", "The design")))
+
+    def test_heading_in_a_fence_is_not_a_section(self):
+        text = WHEN_NOT.replace("Intro.\n", "Intro.\n\n```markdown\n## Template\n```\n")
+        self.assertEqual(self.check(text), [])
 
 
 class Folder(unittest.TestCase):

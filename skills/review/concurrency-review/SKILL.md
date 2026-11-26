@@ -1,6 +1,6 @@
 ---
 name: concurrency-review
-description: "Deep concurrency review of a diff, branch or PR; the specialist for peer-review's lens G. Covers shared mutable state and lock scope, check-then-act and read-modify-write (ORM get-then-save, upsert races, unique constraints as locks), atomicity and visibility, deadlock and lock order, async pitfalls (blocking the event loop, un-awaited tasks, partial failure, unbounded fan-out, cancellation), pools and shutdown, lazy init and cache stampedes, database isolation and row locks, idempotency under retries and at-least-once delivery, distributed locks and leases, and schedulers running on every instance. Each finding's scenario is a written interleaving of two or more actors with the shared values per step; CONFIRMED needs a re-run reproduction, else PLAUSIBLE with the run that would confirm it. Traps and tools per language: Java, Kotlin, Go, Python, JS/TS, .NET, Rust, SQL. Use when a change touches threads, async, locks, transactions, queues, retries, caches or cron, or to ask \"is this race-free?\". Read-only."
+description: Reviews a diff, branch or PR for concurrency defects, the specialist behind peer-review's concurrency lens. Covers shared state and locks, check-then-act races, async pitfalls, deadlocks, database isolation, idempotency under retries, distributed locks and schedulers on every instance. Each finding is a written interleaving; CONFIRMED needs a reproduction. Use when a change touches threads, async, locks, transactions, queues, retries, caches or cron, or to ask "is this race-free?". Read-only.
 ---
 
 # 🔀 concurrency-review
@@ -15,6 +15,13 @@ reach shared state, runs the concurrency checks one at a time over each of those
 each candidate writes the **interleaving**: the numbered steps of each actor, with the shared
 values after every step, that reach the wrong state. An interleaving is the evidence. A reproduction
 that fails when re-run is the confirmation. "This looks racy" is neither.
+
+## When NOT to use
+
+- A full review of the change, with races as one lens among many → `peer-review`.
+- A flaky test whose cause is the clock, randomness, order or shared fixtures, not a race → `test-review`.
+- The finding is known and needs its forced-schedule reproduction made a red test and fixed → `tdd`.
+- The fix is a design change: an outbox, a single writer, leader election → `architect-deep-dive`.
 
 ## Where this fits
 

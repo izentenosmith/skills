@@ -187,7 +187,7 @@ class Staging(unittest.TestCase):
         with contextlib.redirect_stdout(buf):
             self.assertEqual(rt.main(["--dry-run", "--model", "haiku", "--split", "train"]), 0)
         out = buf.getvalue()
-        self.assertIn("100 cases × 1 rep(s) = 100 runs", out)
+        self.assertIn("172 cases × 1 rep(s) = 172 runs", out)
         self.assertIn("estimated cost", out)
         self.assertIn("nothing staged, nothing run", out)
 
@@ -205,7 +205,7 @@ class Staging(unittest.TestCase):
             self.assertEqual(rt.main(["--dry-run", "--model", "haiku", "--bundle", "security"]), 0)
         out = buf.getvalue()
         self.assertIn("(bundle security)", out)
-        self.assertIn("12 cases", out)
+        self.assertIn("30 cases", out)
 
     def test_description_hash_follows_the_description_only(self):
         with tempfile.TemporaryDirectory() as tmp:

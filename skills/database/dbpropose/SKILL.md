@@ -1,6 +1,6 @@
 ---
 name: dbpropose
-description: Turns a database audit, a target design and its ER and relational diagrams into a reviewable proposal — a prioritized decision register, a migration sequence whose every step names its validation, rollback and blast radius, and the open questions each decision waits on — written to proposal/proposal.md for acceptance before any DDL. Use when the user wants a recommendation, remediation or migration plan for a database, "what should we do with this schema", or the step between dbdesign/dbdiagram and dbbuild. It never applies changes; dbaudit grades, dbdesign models, dbbuild writes DDL.
+description: Turns a database audit, a target design and its diagrams into a reviewable proposal — a prioritized decision register, a migration sequence with validation and rollback per step, and open questions — for acceptance before any DDL. Use when the user wants a recommendation, remediation or migration plan for a database, "what should we do with this schema", or the step between dbdesign/dbdiagram and dbbuild. It never applies changes; dbaudit grades, dbdesign models, dbbuild writes DDL.
 ---
 
 # dbpropose
@@ -16,6 +16,14 @@ Reference docs, all in this folder: [proposal.md](proposal.md) (the structure, b
 read first), [physical-design.md](physical-design.md) (the target-engine rules a migration step must
 reach), [er-modeling.md](er-modeling.md) and [theory.md](theory.md) (read only to check a design
 decision or cite the principle a register row rests on).
+
+## When NOT to use
+
+- No audit yet, and the schema needs grading first → `dbaudit`.
+- No target design to propose → `dbdesign`.
+- Writing the DDL once the proposal is accepted → `dbbuild`.
+- Tuning slow queries or reading plans → `dbquery`.
+- A database down or corrupting data right now → `incident-fix`.
 
 ## Inputs
 

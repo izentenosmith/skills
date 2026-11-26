@@ -1,4 +1,25 @@
 {
+ "_why": {
+  "_": "Why each source is copied rather than pointed at. A pointer into another skill folder would resolve in this repo and in the plugin install, which ships all of skills/, but `npx skills add izentenosmith/skills --skill <name>` and a hand copy install one skill folder alone, and the installer drops any symlink that leaves it. Every copy is read by its own skill (its SKILL.md, a script, or another copy beside it) and every consuming skill installs on its own, so every copy stays. Reviewed 2026-11-24: none could become a pointer.",
+  "skills/database/dbaudit/detection-signals.md": "dbquery's SKILL.md and scoring.md read it, and dbquery installs without dbaudit.",
+  "skills/database/dbaudit/er-modeling.md": "Six database skills read it from SKILL.md and from their theory.md copy; each installs alone.",
+  "skills/database/dbaudit/scoring.md": "dbquery scores on the same rubric and installs without dbaudit.",
+  "skills/database/dbaudit/theory.md": "The relational-theory reference six database skills cite; each installs alone.",
+  "skills/database/dbdesign/physical-design.md": "dbbuild and dbpropose read it and install without dbdesign.",
+  "skills/networking/netaudit/graph-theory.md": "netdesign reads it, and the theory.md and topology-modeling.md copies link it in netblueprint and netpropose; each installs alone.",
+  "skills/networking/netaudit/scripts/netgraph.py": "A script each networking skill runs from its own scripts/ folder; a single-skill install has no sibling folder to run it from.",
+  "skills/networking/netaudit/theory.md": "netdesign, netpropose and netblueprint cite it, directly or through other copies; each installs alone.",
+  "skills/networking/netaudit/topology-modeling.md": "The model netgraph.py reads; every skill that carries the script carries this.",
+  "skills/networking/netdesign/design-patterns.md": "netpropose reads it and installs without netdesign.",
+  "skills/networking/netdiagram/diagram-conventions.md": "netblueprint and netpropose read it (and their netgraph.py copy names it); both install without netdiagram.",
+  "skills/operations/hotfix/diagnosis.md": "incident-fix reads it and installs without hotfix.",
+  "skills/development/architect-deep-dive/pipeline.md": "What every pipeline stage shares; any stage installs alone (the Trivial tier runs tdd and refactor-review only).",
+  "harness/LEDGER.md": "The source is in harness/, which no install path ships (the plugins are ./skills alone); the stages that write a ledger need its grammar in their own folder.",
+  "harness/ledger.py": "A checker each ledger-writing stage runs on its own output; harness/ is never installed.",
+  "harness/redgreen.py": "A checker acceptance-tests and tdd run; harness/ is never installed.",
+  "harness/brief.py": "A checker the brief-reading stages run; harness/ is never installed.",
+  "skills/database/dbpropose/proposal.md": "dbbuild reads the proposal format it builds from and installs without dbpropose."
+ },
  "skills/database/dbaudit/detection-signals.md": [
   "skills/database/dbquery/detection-signals.md"
  ],

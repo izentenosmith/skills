@@ -1,11 +1,19 @@
 ---
 name: dbdesign
-description: Designs a new relational database, or redesigns an existing one, from requirements, a domain model or a dbaudit report — a requirements dossier with a business-rule catalogue, a Barker conceptual model, functional dependencies, candidate keys and a normal-form assessment per relation, relational tables with keys and constraints, every rule mapped to the mechanism that enforces it, and DDL that runs as written on the target engine. Use when the user wants a schema designed or redesigned, "model this domain", "what tables do we need", a normalization or key review of an existing design, or the step after dbaudit and before dbdiagram. It proposes a design and never applies schema changes or migrations; dbarchitect decides which stores hold the data, dbpropose turns the design into a recommendation, dbbuild writes the accepted DDL.
+description: Designs a new relational database, or redesigns an existing one, from requirements or a dbaudit report — business rules, a Barker conceptual model, functional dependencies, keys, normal forms and DDL for the target engine. Use when the user wants a schema designed or redesigned, "what tables do we need", a normalization or key question about even one table, or the step after dbaudit. It never applies changes; dbarchitect picks the stores, dbpropose recommends, dbbuild writes the accepted DDL.
 ---
 
 # dbdesign
 
 Design the logical model before selecting physical implementation details. When the question is still which stores the system needs — relational or not, how many, what is derived — run [dbarchitect](../dbarchitect/SKILL.md) first; this skill then designs each relational system of record it names, starting from its load parameters and consistency map. This skill can be used independently for a new design or after `dbaudit` to redesign an existing database. It proposes a design; it does not apply schema changes or migrations.
+
+## When NOT to use
+
+- Deciding which stores hold the data — relational or not, caches, search, replicas → `dbarchitect`.
+- Grading an existing schema without redesigning it → `dbaudit`.
+- Drawing the Barker ER and relational diagrams → `dbdiagram`.
+- Turning the design into a recommendation and migration plan → `dbpropose`.
+- Slow queries or execution plans → `dbquery`.
 
 ## Choose the mode
 

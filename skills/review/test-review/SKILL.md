@@ -1,6 +1,6 @@
 ---
 name: test-review
-description: Review the tests in a diff, branch or PR. Would each test fail if the behaviour broke, and does it test the requirement? Maps every claimed behaviour and acceptance criterion to the tests that prove it (covered, weak or missing). Names a plausible mutation for each changed production branch and shows from the test body whether an assertion would catch it. Sweeps edges and error paths, determinism (clock, seed, order, shared state, sleeps), test doubles, clarity, test level and suite health, including stale tests that history says should have changed. "Can't fail" findings are confirmed by a mutation probe in a scratch copy, flaky ones by a reproduction. The deep specialist for peer-review's test lens. Output is file:line findings with check and principle IDs, a traceability table and a coverage statement. Use for "review these tests", "are the tests good enough", test adequacy before merge, a bug fix's regression test, or checking an acceptance-test mapping still holds. Read-only.
+description: "Reviews the tests in a diff, branch or PR: would each test fail if the behaviour broke, and does it test the requirement? Maps each acceptance criterion to the tests that prove it, checks a plausible mutation per changed branch would be caught, and sweeps edges, determinism and test doubles. The specialist behind peer-review's test lens. Use for \"review these tests\", \"are the tests good enough\", a bug fix's regression test, or whether an acceptance-test mapping still holds. Read-only."
 ---
 
 # 🧪 test-review
@@ -17,6 +17,13 @@ added, coverage up", on tests that would pass with the feature deleted. **Noise*
 assert per test, a coverage target, or tests of generated code, which bury the one missing
 regression test. Every finding here carries a named mutation, a reproduction or a search, and
 every report says which checks ran and which didn't.
+
+## When NOT to use
+
+- The missing or weak tests need writing → `tdd`; black-box tests for a brief's criteria, before code → `acceptance-tests`.
+- A test is flaky because the code under it races → `concurrency-review`.
+- The whole change needs reviewing, not only its tests → `peer-review`.
+- Your own just-built pipeline work needs a teardown → `devils-advocate`.
 
 ## Where this fits
 

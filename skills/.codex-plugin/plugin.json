@@ -1,0 +1,21 @@
+{
+  "name": "izentenosmith-skills",
+  "version": "1.0.0",
+  "description": "Repo-agnostic agent skills from idea to reviewed, tested code, then packaging, operations, database, network, infrastructure, security, change review and repository memory.",
+  "author": { "name": "Ignacio Zenteno Smith", "url": "https://github.com/izentenosmith" },
+  "homepage": "https://github.com/izentenosmith/skills",
+  "repository": "https://github.com/izentenosmith/skills",
+  "license": "MIT",
+  "keywords": ["skills", "tdd", "code-review", "database", "networking", "security", "containers", "operations"],
+  "skills": [
+    "./containers",
+    "./database",
+    "./development",
+    "./infrastructure",
+    "./memory",
+    "./networking",
+    "./operations",
+    "./review",
+    "./security"
+  ]
+}

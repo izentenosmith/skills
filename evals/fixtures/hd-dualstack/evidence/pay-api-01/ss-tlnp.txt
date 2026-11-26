@@ -1,0 +1,8 @@
+$ sudo ss -tlnp
+State  Recv-Q Send-Q  Local Address:Port   Peer Address:Port Process
+LISTEN 0      4096    127.0.0.53%lo:53          0.0.0.0:*     users:(("systemd-resolve",pid=611,fd=14))
+LISTEN 0      128           0.0.0.0:22          0.0.0.0:*     users:(("sshd",pid=812,fd=3))
+LISTEN 0      511           0.0.0.0:8443        0.0.0.0:*     users:(("pay-api",pid=1290,fd=7))
+LISTEN 0      511         127.0.0.1:6379        0.0.0.0:*     users:(("redis-server",pid=944,fd=6))
+LISTEN 0      128              [::]:22             [::]:*     users:(("sshd",pid=812,fd=4))
+LISTEN 0      4096                *:9100              *:*     users:(("node_exporter",pid=901,fd=3))

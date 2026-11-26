@@ -5,6 +5,13 @@ description: Generates a Docker Compose stack for this repo — app services det
 
 # 🧩 Docker Compose
 
+## When NOT to use
+
+- A service has no working image yet → `dockerfile`.
+- A container won't start, stay up or connect → `container-debug`.
+- A compose file that runs production needs a security review → `container-hardening`.
+- Running the stack across several nodes with Swarm → `docker-swarm`.
+
 ## Where this fits
 
 The container skills:

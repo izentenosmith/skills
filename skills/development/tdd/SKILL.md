@@ -9,6 +9,13 @@ Builds a feature or a fix one behavior at a time — a failing test, the least c
 
 **Requires:** `python3` (the checkers in `scripts/` — `brief.py`, `redgreen.py`, `ledger.py` — run in **5. Definition of Done**) and `git` (reading the tree's history in step 0, recording **Base**, the one-commit-per-green-slice save points, and the `--base` diff `redgreen.py` runs against). If either is missing, skip the check that needs it and say so in your closing lines.
 
+## When NOT to use
+
+- The design is still open: options to weigh, boundaries to choose → `architect-deep-dive`.
+- The brief's criteria need black-box tests through the outer boundary, before any code → `acceptance-tests`.
+- The change is green and only its structure needs cleaning → `refactor-review`.
+- An urgent bug must ship today → `hotfix`; the system is down or data is at risk → `incident-fix`.
+
 ## Reference files
 
 - [pipeline.md](pipeline.md) — open it when you need what each stage reads and leaves, the full rule on where questions go, which commands you may run, or how to check your own output.

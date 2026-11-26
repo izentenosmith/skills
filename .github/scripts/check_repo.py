@@ -10,11 +10,23 @@ Skills
   - `name` equals the folder name (the CLI installs by name) and is unique
   - `name` and `description` parse as YAML scalars (an unquoted `: ` or ` #`
     gets a skill skipped or its description cut) and the description fits
-    the 1024-character limit agents load
+    the 500-character budget (authoring.DESCRIPTION_BUDGET, all families;
+    agents cut at 1024)
   - no symlinks under skills/ (`npx skills add` drops a link that leaves the
-    skill folder); every copy in skills/shared.json matches its source
+    skill folder); every copy in skills/shared.json matches its source, and
+    every source has a reason in its `_why` for being copied, not pointed at
   - the root README links every skill
   - skills/REGISTRY.md and skills/registry.json match what registry.py generates
+  - every SKILL.md's first `##` section is `## When NOT to use`, its only one:
+    2–5 one-line bullets "- <situation> → `<skill>`.", each naming the
+    neighbouring skill to use instead in backticks (never a link: installs are
+    one folder per skill); every backticked bare name there is an existing
+    skill other than this one (`/command` built-ins pass)
+Size budget (every skill; the numbers and why in budget.py)
+  - a SKILL.md body (frontmatter excluded, reference files not counted) fits
+    375 lines and 3,700 words, or has a dated entry in budget.ALLOWLIST that
+    has not expired and that it has not outgrown; an entry whose skill now
+    fits, or that names no skill, fails as stale
 Links
   - every relative link in a tracked markdown file resolves, outside code
     spans and fences; eval fixtures are skipped (their content is planted)
@@ -47,13 +59,19 @@ Bundles
     only for a skill its bundle lists
   - README.md's `### Bundles` has a `# <name>` comment and install line per
     bundle, each installing exactly that bundle's skills plus the extras
-Plugin (.claude-plugin/marketplace.json)
-  - the marketplace has one plugin, sourced from ./skills with strict false,
-    so an install copies the skills and none of harness/ or evals/
+Plugins (details and format sources in plugins.py)
+  - .claude-plugin/marketplace.json has one plugin, sourced from ./skills with
+    strict false, so an install copies the skills and none of harness/ or evals/
   - its `skills` lists exactly the family folders that hold a skill (the
     plugin scan is one level deep, so a family missing here installs none of
     its skills)
   - its `version` is the top released version in CHANGELOG.md
+  - its `commands` are exactly the files in skills/commands/, each with a
+    description, and every skill a command names in backticks exists
+  - Codex: .agents/plugins/marketplace.json has one plugin sourced from
+    ./skills, and skills/.codex-plugin/plugin.json lists the same family
+    folders, carries the released version, and repeats the Claude entry's
+    name, description, author, homepage, repository and license
 Branch protection
   - every status check .github/rulesets/main.json requires is a job name the
     workflows report — a renamed job would otherwise block every merge
@@ -90,30 +108,9 @@ def tracked(*patterns):
 
 FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n", re.S)
 
-
-def yaml_scalar(raw):
-    """The value of a one-line YAML scalar, and why a YAML parser would reject
-    or cut it (None if it wouldn't). An unquoted value breaks on ': ' (read as a
-    nested mapping) and silently ends at ' #' (read as a comment); the skills CLI
-    skips the first and installs the second with its description cut short."""
-    if raw[:1] == '"':
-        m = re.fullmatch(r'"((?:[^"\\]|\\.)*)"', raw)
-        if not m:
-            return raw, "an unterminated or badly escaped double-quoted string"
-        return re.sub(r"\\(.)", r"\1", m.group(1)), None
-    if raw[:1] == "'":
-        m = re.fullmatch(r"'((?:[^']|'')*)'", raw)
-        if not m:
-            return raw, "an unterminated single-quoted string"
-        return m.group(1).replace("''", "'"), None
-    if raw[:1] and raw[:1] in "[]{}&*!|>%@`,?:-#":
-        return raw, f"an unquoted value starting with {raw[0]!r}"
-    if ": " in raw or raw.endswith(":"):
-        return raw, "': ' in an unquoted value (YAML reads a nested mapping)"
-    if " #" in raw:
-        return raw, "' #' in an unquoted value (YAML drops the rest as a comment)"
-    return raw, None
-
+sys.path.insert(0, str(ROOT / ".github/scripts"))
+import authoring  # noqa: E402
+from authoring import yaml_scalar  # noqa: E402
 
 skills = {}
 for md in tracked("skills/**/SKILL.md"):
@@ -138,8 +135,8 @@ for md in tracked("skills/**/SKILL.md"):
     name, desc = yaml_scalar(name)[0], yaml_scalar(desc)[0]
     if name != md.parent.name:
         problem(f"{rel}: name {name!r} does not match its folder {md.parent.name!r}")
-    if len(desc) > 1024:
-        problem(f"{rel}: description is {len(desc)} characters (limit 1024)")
+    for msg in authoring.description_length_problems(desc):
+        problem(f"{rel}: {msg}")
     if name in skills:
         problem(f"{rel}: name {name!r} is also used by {skills[name]}")
     skills[name] = rel
@@ -149,7 +146,6 @@ for link in (ROOT / "skills").rglob("*"):
         problem(f"{link.relative_to(ROOT)}: a symlink — `npx skills add` drops links that leave "
                 f"the skill folder; list it as a copy in skills/shared.json instead")
 
-sys.path.insert(0, str(ROOT / ".github/scripts"))
 import sync_shared  # noqa: E402
 
 for msg in sync_shared.stale():
@@ -164,6 +160,14 @@ readme = (ROOT / "README.md").read_text()
 for name, rel in sorted(skills.items()):
     if f"({rel})" not in readme:
         problem(f"README.md: no link to {rel}")
+
+# ------------------------------------------------------------ size budget
+
+import budget  # noqa: E402
+
+sizes = {name: budget.size((ROOT / rel).read_text()) for name, rel in skills.items()}
+for name, msg in budget.problems(sizes):
+    problem(f"{skills[name] if name in skills else '.github/scripts/budget.py'}: {msg}")
 
 # ----------------------------------------------------------------- links
 
@@ -191,9 +195,9 @@ for md in tracked("*.md"):
 
 # -------------------------------------------------------- authoring guide
 
-import authoring  # noqa: E402
-
 for name, rel in sorted(skills.items()):
+    for msg in authoring.when_not_problems((ROOT / rel).read_text(), name, set(skills)):
+        problem(f"{rel}: {msg}")
     if rel.parts[1] in authoring.GUIDED_FAMILIES:
         for fname, msg in authoring.check_skill(ROOT / rel.parent):
             problem(f"{rel.parent / fname}: {msg}")
@@ -327,23 +331,10 @@ if ruleset_path.exists():
 
 # ---------------------------------------------------------------- plugin
 
-MARKET = ".claude-plugin/marketplace.json"
-entries = json.loads((ROOT / MARKET).read_text()).get("plugins", [])
-if len(entries) != 1 or entries[0].get("source") != "./skills" or entries[0].get("strict") is not False:
-    problem(f"{MARKET}: needs exactly one plugin with \"source\": \"./skills\" and \"strict\": false "
-            f"(a root source installs harness/ and evals/ too)")
-else:
-    entry = entries[0]
-    families = sorted({f"./{rel.parts[1]}" for rel in skills.values()})
-    if sorted(entry.get("skills", [])) != families:
-        problem(f"{MARKET}: skills is {sorted(entry.get('skills', []))}, expected the family folders {families}")
-    released = registry.version(ROOT)
-    if entry.get("version") != released:
-        problem(f"{MARKET}: version {entry.get('version')!r} is not the top released version in "
-                f"CHANGELOG.md ({released!r}); a release moves both")
-    if (ROOT / ".claude-plugin/plugin.json").exists():
-        problem(".claude-plugin/plugin.json: the marketplace entry is the plugin's whole definition "
-                "(strict false); a plugin.json beside it would be a second, unchecked one")
+import plugins  # noqa: E402
+
+for msg in plugins.check(ROOT, skills):
+    problem(msg)
 
 # --------------------------------------------------------------- bundles
 

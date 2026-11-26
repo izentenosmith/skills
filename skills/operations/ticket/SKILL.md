@@ -1,9 +1,15 @@
 ---
 name: ticket
-description: Create, update, close and log time on work items in Linear, Azure DevOps or Jira — or in a local markdown log when there is no tracker — without hardcoding anything about the team. Discovers the tracker, its item types, states, required fields, sprints or cycles and label conventions at runtime and caches them in a project profile; reconciles against existing items before creating any; writes descriptions a reader can act on; links commits and PRs; reads every write back. Use when the user asks to create, file, raise, update, move, close or document a ticket, issue, bug, story, task or work item; to turn a list of bugs or commits into tickets; to log hours; to open an incident item or post-mortem follow-ups; or to tag a production failure for DORA metrics. Not for shaping, splitting or ordering a whole backlog — that is backlog.
+description: Creates and updates work items in Linear, Azure DevOps or Jira, or a markdown log when there is none. Discovers the tracker's types, states and required fields at runtime, reconciles against existing items before creating any, and reads every write back. Use to create, file, update, move or close a ticket, issue or bug; turn bugs or commits into tickets; log hours; open post-mortem follow-ups; or tag a failure for DORA. Not for shaping, splitting or ordering a whole backlog — that is backlog.
 ---
 
 # 🎫 Ticket
+
+## When NOT to use
+
+- A whole backlog needs shaping, splitting, ordering or a health check → `backlog`.
+- Production is down or data is at risk; contain first → `incident-fix`.
+- The incident's write-up itself, not its tracker items → `post-mortem`.
 
 ## Where this fits
 

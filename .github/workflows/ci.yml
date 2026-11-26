@@ -32,6 +32,10 @@ jobs:
       # annotation, since re-scoring costs a paid run (--strict fails on those too).
       - name: Check skills, links, eval wiring and eval health
         run: python3 .github/scripts/check_repo.py
+      # Lexical (BM25) routing of evals/trigger/cases.json over every description;
+      # the model-based trigger eval is the paid one and stays out of CI.
+      - name: Check description routing (deterministic)
+        run: python3 .github/scripts/routing.py
       - name: Run the eval provenance tests
         run: python3 -m unittest discover evals/tests
       - name: Install actionlint (pinned, checksum-verified)
@@ -92,7 +96,7 @@ jobs:
         run: .github/scripts/install_actionlint.sh
       - name: Build fixture venvs and the incident history
         run: ./evals/setup.sh
-      - name: Controls for evals 8-14 and 16-58
+      - name: Controls for evals 8-14 and 16-80
         run: python3 evals/controls/make_controls.py
       # The teardown fixture's tests build slots from datetime.now() and collide
       # with opening hours outside roughly 06:00-18:00 local. That is a defect

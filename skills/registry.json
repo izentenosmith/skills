@@ -6,7 +6,7 @@
       "name": "container-debug",
       "family": "containers",
       "path": "skills/containers/container-debug/SKILL.md",
-      "purpose": "Diagnoses a container that won't start, won't stay up, can't reach another service, gets killed, or behaves differently in a container than outside one \u2014 Docker, Compose, Swarm or Kubernetes.",
+      "purpose": "Diagnoses a container that won't start, won't stay up, can't reach another service, gets killed, or behaves differently than outside a container \u2014 Docker, Compose, Swarm or Kubernetes \u2014 one read-only hypothesis at a time.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {},
@@ -30,7 +30,7 @@
       "name": "container-hardening",
       "family": "containers",
       "path": "skills/containers/container-hardening/SKILL.md",
-      "purpose": "Reviews or hardens how containers run \u2014 the runtime configuration in docker run scripts, Compose files, Kubernetes manifests and Swarm stacks, plus the image supply chain \u2014 graded against container-security theory (namespaces, capabilities, seccomp and LSMs, user namespaces, least privilege) and a scored rubric.",
+      "purpose": "Reviews or hardens how containers run \u2014 runtime config in Compose, Kubernetes, Swarm and docker run, plus the image supply chain.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {},
@@ -78,7 +78,7 @@
       "name": "docker-swarm",
       "family": "containers",
       "path": "skills/containers/docker-swarm/SKILL.md",
-      "purpose": "Reviews or designs a Docker Swarm mode cluster and the stack files it runs with docker stack deploy \u2014 graded against orchestration theory (desired-state reconciliation, Raft quorum, rolling updates, node-scoped state) and a scored rubric.",
+      "purpose": "Reviews or designs a Docker Swarm mode cluster and the stack files it runs with docker stack deploy.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {},
@@ -179,7 +179,7 @@
       "name": "dbbuild",
       "family": "database",
       "path": "skills/database/dbbuild/SKILL.md",
-      "purpose": "Generates the DDL for an accepted database proposal \u2014 ordered .sql files that run as written on the target engine (tables, keys, constraints, indexes, views, triggers, grants, seed data), each with a header naming the proposal, the design, the engine, the date and the mode, cross-checked against the design and its Barker ER and relational diagrams, plus a negative test for every constraint.",
+      "purpose": "Generates the DDL for an accepted database proposal \u2014 ordered .sql files for the target engine, cross-checked against the design and its diagrams, with a negative test for every constraint; it stops and marks the gap when the proposal is not accepted or the inputs disagree.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {
@@ -214,7 +214,7 @@
       "name": "dbdesign",
       "family": "database",
       "path": "skills/database/dbdesign/SKILL.md",
-      "purpose": "Designs a new relational database, or redesigns an existing one, from requirements, a domain model or a dbaudit report \u2014 a requirements dossier with a business-rule catalogue, a Barker conceptual model, functional dependencies, candidate keys and a normal-form assessment per relation, relational tables with keys and constraints, every rule mapped to the mechanism that enforces it, and DDL that runs as written on the target engine.",
+      "purpose": "Designs a new relational database, or redesigns an existing one, from requirements or a dbaudit report \u2014 business rules, a Barker conceptual model, functional dependencies, keys, normal forms and DDL for the target engine.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {
@@ -243,7 +243,7 @@
       "name": "dbdiagram",
       "family": "database",
       "path": "skills/database/dbdiagram/SKILL.md",
-      "purpose": "Draws a database's two editable draw.io diagrams from a design, DDL or other structure \u2014 a Barker (Oracle CASE*METHOD) ER model with UPPERCASE entities, #/*/o attributes, binary relationships carrying a role name and a solid or dashed half at each end, UID bars, intersection entities instead of ternary or Chen connectors, and inferred semantics labelled as inferred; and a relational model with every table, column, PK, FK, alternate key, nullability and check \u2014 with semantic cell IDs that trace each entity to its table, validated XML and a provenance note.",
+      "purpose": "Draws a database's two editable draw.io diagrams from a design, DDL or other structure \u2014 a Barker ER model and a relational model with every table, column, key and constraint, with cell IDs tracing each entity to its table.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {
@@ -272,7 +272,7 @@
       "name": "dbpropose",
       "family": "database",
       "path": "skills/database/dbpropose/SKILL.md",
-      "purpose": "Turns a database audit, a target design and its ER and relational diagrams into a reviewable proposal \u2014 a prioritized decision register, a migration sequence whose every step names its validation, rollback and blast radius, and the open questions each decision waits on \u2014 written to proposal/proposal.md for acceptance before any DDL.",
+      "purpose": "Turns a database audit, a target design and its diagrams into a reviewable proposal \u2014 a prioritized decision register, a migration sequence with validation and rollback per step, and open questions \u2014 for acceptance before any DDL.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {
@@ -304,7 +304,7 @@
       "name": "dbquery",
       "family": "database",
       "path": "skills/database/dbquery/SKILL.md",
-      "purpose": "Reviews the SQL a system actually runs \u2014 query text in application code, ORM logs, reports, views and procedures, together with execution plans (EXPLAIN ANALYZE, SQL Server showplan or Query Store, Oracle DBMS_XPLAN) and workload statistics (pg_stat_statements, Query Store, slow logs).",
+      "purpose": "Reviews the SQL a system actually runs \u2014 query text from code, ORM logs and views, with execution plans and workload statistics (EXPLAIN ANALYZE, pg_stat_statements, Query Store, slow logs) \u2014 ranking statements by workload share and prescribing rewrites and indexes weighed against write cost, with a 0\u201310 score.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {
@@ -335,7 +335,7 @@
       "name": "acceptance-tests",
       "family": "development",
       "path": "skills/development/acceptance-tests/SKILL.md",
-      "purpose": "Turns a build plan's acceptance criteria into executable black-box acceptance tests \u2014 written before any implementation, through the system's outermost public boundary, each one failing for the right reason \u2014 and records which test proves which criterion.",
+      "purpose": "Turns a build plan's acceptance criteria into executable black-box acceptance tests \u2014 written before any implementation, through the system's outermost public boundary, each failing for the right reason \u2014 and records which test proves which criterion.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {
@@ -434,7 +434,7 @@
       "name": "architect-deep-dive",
       "family": "development",
       "path": "skills/development/architect-deep-dive/SKILL.md",
-      "purpose": "Runs a staff-architect design review that resolves a plan in rounds of up to three independent questions \u2014 each with the live options, their trade-offs, a recommendation and its reversal cost \u2014 tracked against a stated charter and question count, inferring answers from the codebase where possible.",
+      "purpose": "Runs a staff-architect design review that resolves a plan in rounds of up to three questions \u2014 each with the live options, their trade-offs, a recommendation and its reversal cost \u2014 inferring answers from the codebase where possible.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {},
@@ -730,14 +730,14 @@
       "name": "pipelines",
       "family": "infrastructure",
       "path": "skills/infrastructure/pipelines/SKILL.md",
-      "purpose": "Reviews CI/CD pipelines, or designs or proposes changes to them \u2014 GitHub Actions, GitLab CI, Azure Pipelines, Jenkins, CircleCI, Bitbucket \u2014 graded against Continuous Delivery, DevOps Handbook and SRE release-engineering theory.",
+      "purpose": "Reviews CI/CD pipelines, or designs or proposes changes to them \u2014 GitHub Actions, GitLab CI, Azure DevOps, Jenkins \u2014 for flow, release safety and supply-chain security.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {},
         "scripts": [],
         "harness": true
       },
-      "last_eval": "2026-11-22",
+      "last_eval": "2026-11-26",
       "evals": [
         {
           "eval": "eval-24-pipelines-review-untrusted-and-rebuild",
@@ -765,6 +765,15 @@
           "date": "2026-11-22",
           "delta_mean": 0.967,
           "cap_mean": 1.0
+        },
+        {
+          "eval": "eval-80-pipelines-opens-to-forks",
+          "id": 80,
+          "iteration": "iteration-81",
+          "n": 3,
+          "date": "2026-11-26",
+          "delta_mean": 1.0,
+          "cap_mean": 1.0
         }
       ]
     },
@@ -772,7 +781,7 @@
       "name": "terraform",
       "family": "infrastructure",
       "path": "skills/infrastructure/terraform/SKILL.md",
-      "purpose": "Reviews Terraform/OpenTofu infrastructure code, or designs or proposes changes to it \u2014 module and repo structure, state and backends, version pinning, security, change safety (resource identity, destructive changes, drift) and the path from commit to apply \u2014 graded against Infrastructure-as-Code theory, a scored rubric and the AWS provider best practices.",
+      "purpose": "Reviews Terraform/OpenTofu (HCL) infrastructure code, or designs or proposes changes to it \u2014 module structure, state and backends, pinning, security and change safety (destructive changes, drift).",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {},
@@ -814,7 +823,7 @@
       "name": "repo-memory",
       "family": "memory",
       "path": "skills/memory/repo-memory/SKILL.md",
-      "purpose": "Give a repository a shared, reviewable memory for coding agents, after Anthropic's agent-memory research and the Claude memory tool, and keep it true by dreaming.",
+      "purpose": "Gives a repository a reviewable memory for coding agents in .memory/ and keeps it true by dreaming.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {},
@@ -840,7 +849,7 @@
       "name": "netaudit",
       "family": "networking",
       "path": "skills/networking/netaudit/SKILL.md",
-      "purpose": "Audit an existing computer network \u2014 cloud network IaC (Terraform, Bicep, ARM), router/switch/firewall configs, Kubernetes or compose networking, IP plans and inventories \u2014 against networking theory, a graph-theoretic resilience lens and a scored rubric.",
+      "purpose": "Audits an existing computer network \u2014 cloud network IaC (Terraform, Bicep, ARM), router/switch/firewall configs, Kubernetes or compose networking, IP plans \u2014 recovering its topology and reporting strengths, weaknesses, evidence-backed findings and a repeatable 0\u201310 score.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {},
@@ -866,7 +875,7 @@
       "name": "netblueprint",
       "family": "networking",
       "path": "skills/networking/netblueprint/SKILL.md",
-      "purpose": "After a network proposal is explicitly accepted, produce the final network topology package \u2014 the canonical draw.io topology diagrams, a companion network-design document that explains them (addressing plan, zones and flow matrix, routing, services, failure domains), and the accepted topology.json that a separate IaC skill implements.",
+      "purpose": "Produces the final network topology package once a network proposal is explicitly accepted \u2014 draw.io topology diagrams, a network-design document that explains them, and the accepted topology.json for IaC.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {
@@ -931,7 +940,7 @@
       "name": "netdiagram",
       "family": "networking",
       "path": "skills/networking/netdiagram/SKILL.md",
-      "purpose": "Generate editable draw.io network topology diagrams \u2014 the logical L3 topology, the segmentation (zones and flows) view, and the physical L1/L2 view when on-prem evidence exists \u2014 from a network design, an audit's recovered topology.json, or other network structure, in one canonical convention with stable IDs.",
+      "purpose": "Draws editable draw.io network topology diagrams \u2014 logical L3, segmentation (zones, VLANs, firewalls and flows), and physical L1/L2 when on-prem evidence exists \u2014 from a network design, an audit's topology.json or other network structure, with stable IDs.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {
@@ -997,7 +1006,7 @@
       "name": "backlog",
       "family": "operations",
       "path": "skills/operations/backlog/SKILL.md",
-      "purpose": "Shape, refine, order and health-check a backlog in Linear, Azure DevOps, Jira or a markdown file, grounded in User Story Mapping, Making Work Visible and SRE.",
+      "purpose": "Shapes and health-checks a backlog in Linear, Azure DevOps, Jira or a markdown file.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {},
@@ -1021,14 +1030,14 @@
       "name": "hotfix",
       "family": "operations",
       "path": "skills/operations/hotfix/SKILL.md",
-      "purpose": "A fast, still-disciplined lane for an urgent bug in a running system that is NOT an incident \u2014 the system is up, nothing is being corrupted or exposed right now.",
+      "purpose": "Fixes and ships an urgent bug in a running system that is NOT an incident \u2014 the system is up, nothing is being corrupted or exposed right now.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {},
         "scripts": [],
         "harness": true
       },
-      "last_eval": "2026-11-18",
+      "last_eval": "2026-11-26",
       "evals": [
         {
           "eval": "eval-8-hotfix-node-shared-cause",
@@ -1074,6 +1083,15 @@
           "date": "2026-11-18",
           "delta_mean": 1.0,
           "cap_mean": 1.0
+        },
+        {
+          "eval": "eval-76-hotfix-email-case-no-lockout",
+          "id": 76,
+          "iteration": "iteration-81",
+          "n": 3,
+          "date": "2026-11-26",
+          "delta_mean": 1.0,
+          "cap_mean": 1.0
         }
       ]
     },
@@ -1081,7 +1099,7 @@
       "name": "incident-fix",
       "family": "operations",
       "path": "skills/operations/incident-fix/SKILL.md",
-      "purpose": "Respond to a production incident end to end \u2014 contain first, then diagnose and size the impact, fix it through a capped review loop with any data repair as its own audited artifact, and close with a blameless post-mortem whose every contributing factor becomes a follow-up or an accepted risk.",
+      "purpose": "Responds to a production incident \u2014 contains first, then diagnoses and sizes the impact, fixes through a capped review loop with data repair as its own audited artifact, and closes with a blameless post-mortem.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {
@@ -1175,7 +1193,7 @@
       "name": "ticket",
       "family": "operations",
       "path": "skills/operations/ticket/SKILL.md",
-      "purpose": "Create, update, close and log time on work items in Linear, Azure DevOps or Jira \u2014 or in a local markdown log when there is no tracker \u2014 without hardcoding anything about the team.",
+      "purpose": "Creates and updates work items in Linear, Azure DevOps or Jira, or a markdown log when there is none.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {},
@@ -1199,7 +1217,7 @@
       "name": "code-xray",
       "family": "review",
       "path": "skills/review/code-xray/SKILL.md",
-      "purpose": "Behavioural code analysis from git history, after Tornhill's Software Design X-Rays.",
+      "purpose": "Mines git history with a bundled read-only script for hotspots, change coupling, missing co-changes, code age and knowledge maps.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {},
@@ -1225,7 +1243,7 @@
       "name": "concurrency-review",
       "family": "review",
       "path": "skills/review/concurrency-review/SKILL.md",
-      "purpose": "Deep concurrency review of a diff, branch or PR; the specialist for peer-review's lens G.",
+      "purpose": "Reviews a diff, branch or PR for concurrency defects, the specialist behind peer-review's concurrency lens.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {},
@@ -1249,7 +1267,7 @@
       "name": "peer-review",
       "family": "review",
       "path": "skills/review/peer-review/SKILL.md",
-      "purpose": "Review a diff, branch or pull request the way a senior peer would.",
+      "purpose": "Reviews a diff, branch or pull request, adding to /code-review what reviewers usually miss: the change against its ticket, omissions (error paths, tests, co-changes), risk-ranked attention and a verify pass.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {},
@@ -1273,7 +1291,7 @@
       "name": "pr-prep",
       "family": "review",
       "path": "skills/review/pr-prep/SKILL.md",
-      "purpose": "The author's side of code review, plus a readiness check before anyone reviews.",
+      "purpose": "Prepares a change for review from the author's side, or checks someone else's PR is ready.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {},
@@ -1297,7 +1315,7 @@
       "name": "review-retro",
       "family": "review",
       "path": "skills/review/review-retro/SKILL.md",
-      "purpose": "Turn finished code reviews into a record and into process improvement.",
+      "purpose": "Turns finished code reviews into a record and process improvements.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {},
@@ -1321,7 +1339,7 @@
       "name": "test-review",
       "family": "review",
       "path": "skills/review/test-review/SKILL.md",
-      "purpose": "Review the tests in a diff, branch or PR.",
+      "purpose": "Reviews the tests in a diff, branch or PR: would each test fail if the behaviour broke, and does it test the requirement?",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {},
@@ -1345,14 +1363,14 @@
       "name": "appsec",
       "family": "security",
       "path": "skills/security/appsec/SKILL.md",
-      "purpose": "Review, design, or propose application security for any stack (.NET, Java, Node, Python, PHP, Go, Ruby) \u2014 injection and input handling, authentication and sessions, access control, cryptography and secrets, configuration, dependencies and licences, logging, the browser trust boundary (content types, framing, CORS, cookie scope, URLs) and APIs (REST/GraphQL inventory, property exposure, rate limits, docs) \u2014 graded against security-engineering theory, the OWASP Top 10 and the OWASP API Top 10.",
+      "purpose": "Reviews application security for any stack, or designs or proposes it \u2014 injection, auth and sessions, access control, secrets, dependencies, the browser boundary and REST/GraphQL APIs, against the OWASP Top 10 and API Top 10.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {},
         "scripts": [],
         "harness": true
       },
-      "last_eval": "2026-11-18",
+      "last_eval": "2026-11-26",
       "evals": [
         {
           "eval": "eval-41-appsec-review-inventory-and-secrets",
@@ -1380,6 +1398,15 @@
           "date": "2026-11-18",
           "delta_mean": 0.929,
           "cap_mean": 1.0
+        },
+        {
+          "eval": "eval-77-appsec-review-traced-not-sampled",
+          "id": 77,
+          "iteration": "iteration-81",
+          "n": 3,
+          "date": "2026-11-26",
+          "delta_mean": 0.976,
+          "cap_mean": 0.952
         }
       ]
     },
@@ -1387,14 +1414,14 @@
       "name": "hardening",
       "family": "security",
       "path": "skills/security/hardening/SKILL.md",
-      "purpose": "Review, design, or propose a security hardening baseline for Linux hosts and cloud estates \u2014 identity and privilege, network exposure, data protection, the host itself, backup and restore, monitoring and incident readiness, governance (naming, tagging, locks, change control, evidence), and service roles (web, mail, DNS, database, file transfer, VPN) \u2014 distro-agnostic (Debian/Ubuntu, RHEL family, SUSE, Alpine, Arch; systemd or OpenRC) and cloud-agnostic (AWS, Azure, GCP, OCI, on-prem).",
+      "purpose": "Reviews a security hardening baseline for Linux hosts and cloud estates, or designs or proposes one \u2014 identity, network exposure, data protection, the host, backup and monitoring, on any distro or cloud.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {},
         "scripts": [],
         "harness": true
       },
-      "last_eval": "2026-11-18",
+      "last_eval": "2026-11-26",
       "evals": [
         {
           "eval": "eval-44-hardening-review-mixed-estate",
@@ -1422,6 +1449,15 @@
           "date": "2026-11-18",
           "delta_mean": 0.974,
           "cap_mean": 1.0
+        },
+        {
+          "eval": "eval-78-hardening-review-hidden-exposure",
+          "id": 78,
+          "iteration": "iteration-81",
+          "n": 3,
+          "date": "2026-11-26",
+          "delta_mean": 1.0,
+          "cap_mean": 0.952
         }
       ]
     },
@@ -1429,14 +1465,14 @@
       "name": "threatmodel",
       "family": "security",
       "path": "skills/security/threatmodel/SKILL.md",
-      "purpose": "Review, design, or propose a system's security design \u2014 scope and assets, adversaries, trust boundaries and data flows, security policy and access-control model, protocols, crypto and key management, resilience and assurance \u2014 graded against security-engineering theory (Anderson) with a scored rubric.",
+      "purpose": "Reviews a system's security design, or designs or proposes one \u2014 assets, adversaries, trust boundaries, data flows and key management.",
       "owner": "izentenosmith",
       "dependencies": {
         "copied_from": {},
         "scripts": [],
         "harness": true
       },
-      "last_eval": "2026-11-18",
+      "last_eval": "2026-11-26",
       "evals": [
         {
           "eval": "eval-38-threatmodel-review-design-abuse-and-fallback",
@@ -1463,6 +1499,15 @@
           "n": 3,
           "date": "2026-11-18",
           "delta_mean": 0.949,
+          "cap_mean": 1.0
+        },
+        {
+          "eval": "eval-79-threatmodel-review-side-path-skips-the-hold",
+          "id": 79,
+          "iteration": "iteration-81",
+          "n": 3,
+          "date": "2026-11-26",
+          "delta_mean": 0.897,
           "cap_mean": 1.0
         }
       ]

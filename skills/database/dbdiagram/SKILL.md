@@ -1,11 +1,18 @@
 ---
 name: dbdiagram
-description: "Draws a database's two editable draw.io diagrams from a design, DDL or other structure — a Barker (Oracle CASE*METHOD) ER model with UPPERCASE entities, #/*/o attributes, binary relationships carrying a role name and a solid or dashed half at each end, UID bars, intersection entities instead of ternary or Chen connectors, and inferred semantics labelled as inferred; and a relational model with every table, column, PK, FK, alternate key, nullability and check — with semantic cell IDs that trace each entity to its table, validated XML and a provenance note. Use when the user wants an ER, relational or schema diagram, a draw.io data model, a Chen or crow's-foot model redrawn in Barker, or the diagrams between dbdesign and dbpropose. It draws what the source states; it never edits the design or touches a database."
+description: Draws a database's two editable draw.io diagrams from a design, DDL or other structure — a Barker ER model and a relational model with every table, column, key and constraint, with cell IDs tracing each entity to its table. Use when the user wants an ER, relational or schema diagram, a draw.io data model, a Chen or crow's-foot model redrawn in Barker, or the diagrams between dbdesign and dbpropose. It never edits the design or touches a database.
 ---
 
 # dbdiagram
 
 Create two clear, editable draw.io diagrams: the **ER model** (*modelo entidad relación*), always in **Barker / Oracle CASE*METHOD notation**, and the **relational model** (*modelo relacional*), using table, column, key, constraint, and foreign-key notation. This skill can run independently from a supplied design or database structure, or consume the output of `dbdesign`. Barker rules apply to the ER view; do not force ER symbols onto the relational view.
+
+## When NOT to use
+
+- Designing or changing the schema the diagrams show → `dbdesign`.
+- Grading the schema rather than drawing it → `dbaudit`.
+- The recommendation built on the diagrams → `dbpropose`.
+- Drawing a network topology → `netdiagram`.
 
 ## Inputs and evidence
 

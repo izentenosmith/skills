@@ -86,7 +86,8 @@ class Aggregate(unittest.TestCase):
                              {"skill": "post-mortem", "iteration": "iteration-2", "n": 1,
                               "staging": "standalone", "skill_hash": "abc",
                               "date": day, "date_from": "run.json mtime",
-                              "delta_mean": 1.0, "cap_mean": 1.0})
+                              "delta_mean": 1.0, "cap_mean": 1.0,
+                              "cap_base": None, "outcome_gain": None})
 
 
 class RunDate(unittest.TestCase):

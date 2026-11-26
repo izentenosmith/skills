@@ -1,0 +1,65 @@
+openapi: 3.0.3
+info:
+  title: tasklane API
+  version: 3.8.0
+  description: Public API used by the tasklane web app. Every operation needs a session cookie.
+servers:
+  - url: https://app.tasklane.example/api
+components:
+  securitySchemes:
+    session:
+      type: apiKey
+      in: cookie
+      name: tl.sid
+security:
+  - session: []
+paths:
+  /me:
+    get:
+      summary: The signed-in user
+  /me/preferences:
+    put:
+      summary: Set display and report preferences
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                theme: { type: string, enum: [light, dark] }
+                locale: { type: string, example: en-GB }
+                reportSort: { type: string, enum: [due_date, status, title] }
+  /projects:
+    get:
+      summary: List the tenant's projects
+      parameters:
+        - { name: sort, in: query, schema: { type: string, enum: [name, created, updated] } }
+        - { name: dir, in: query, schema: { type: string, enum: [asc, desc] } }
+    post:
+      summary: Create a project
+  /projects/{projectId}:
+    get:
+      summary: One project
+    delete:
+      summary: Delete a project (owners only)
+  /projects/{projectId}/tasks:
+    get:
+      summary: List a project's tasks
+    post:
+      summary: Add a task
+  /projects/{projectId}/tasks/{taskId}:
+    patch:
+      summary: Change a task's status
+  /projects/{projectId}/files:
+    get:
+      summary: List a project's files
+    post:
+      summary: Upload a file (raw body, name in X-File-Name)
+  /projects/{projectId}/files/{fileId}:
+    get:
+      summary: Download a file
+    delete:
+      summary: Delete a file
+  /projects/{projectId}/export.csv:
+    get:
+      summary: Export a project's tasks as CSV, ordered by the user's reportSort preference

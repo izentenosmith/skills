@@ -1,6 +1,6 @@
 ---
 name: netblueprint
-description: After a network proposal is explicitly accepted, produce the final network topology package — the canonical draw.io topology diagrams, a companion network-design document that explains them (addressing plan, zones and flow matrix, routing, services, failure domains), and the accepted topology.json that a separate IaC skill implements. Never writes IaC, never configures devices; structural changes route back through design. Use when a netpropose proposal has been accepted and the user wants the final or accepted network design, the blueprint, or the topology package to hand to IaC; with no recorded acceptance it stops and asks for it.
+description: Produces the final network topology package once a network proposal is explicitly accepted — draw.io topology diagrams, a network-design document that explains them, and the accepted topology.json for IaC. Use when a netpropose proposal has been accepted and the user wants the final network design, the blueprint, or the package to hand to IaC; with no recorded acceptance it stops and asks. It never writes IaC or configures devices; structural changes route back through netdesign.
 ---
 
 # netblueprint
@@ -9,6 +9,13 @@ Produce the **accepted topology package** from an accepted proposal and its desi
 network-workflow stage. Its output is the specification that a separate IaC skill implements. **It
 writes no Terraform, Bicep, ARM, Ansible or device configuration, and it never connects to a network,
 cloud or device.**
+
+## When NOT to use
+
+- The proposal is not yet accepted → `netpropose`.
+- The topology needs a structural change → `netdesign`.
+- Only diagrams of a design, with no accepted proposal → `netdiagram`.
+- Writing the IaC that implements the topology → `terraform`.
 
 ## Required inputs
 

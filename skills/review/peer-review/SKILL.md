@@ -1,6 +1,6 @@
 ---
 name: peer-review
-description: Review a diff, branch or pull request the way a senior peer would. Extends Claude Code's built-in /code-review recipe (finder angles, a CONFIRMED/PLAUSIBLE/REFUTED verify pass, a gap sweep) with what the review literature says reviewers miss. It checks the change against its ticket and description, hunts omissions (missing error paths, tests, migrations, and the co-changes git history says should travel together), ranks attention by risk and hotspot, and reads in units under 400 lines. It adds a security lens with escalation to appsec, test adequacy, concurrency and evolvability findings held apart from bugs. Comments state problem, evidence and fix. Output is file:line findings with severity and a failure scenario, a coverage statement, and a merge recommendation for a human to make. Use for "review this PR/diff/branch", pre-merge review, re-reviewing fixes, or drafting PR comments. Read-only unless asked to fix or post.
+description: "Reviews a diff, branch or pull request, adding to /code-review what reviewers usually miss: the change against its ticket, omissions (error paths, tests, co-changes), risk-ranked attention and a verify pass. Gives file:line findings with severity and a failure scenario, and a merge recommendation. Use for \"review this PR/diff/branch\", pre-merge review, or re-reviewing new commits after comments. Read-only unless asked to fix or post. Not for preparing one's own branch — that is pr-prep."
 ---
 
 # 🔍 peer-review
@@ -23,6 +23,14 @@ review literature says that engine misses:
   enough to read properly.
 - **Wider lenses.** Security, tests, concurrency, data and evolvability, each a lens of its own.
 - **Comments a person will act on**, and a **verification round** that checks the fixes.
+
+## When NOT to use
+
+- Your own change needs preparing before review: description, size, split → `pr-prep`.
+- Work you just built in the development pipeline needs a teardown and go/no-go → `devils-advocate`, then `tyr-verdict`.
+- You own the change and want its structure cleaned on a green suite → `refactor-review`.
+- A fast bug-only pass, where intent and omissions don't matter yet → the built-in `/code-review`.
+- The ask is a full security review of the code or API → `appsec`.
 
 ## Where this fits
 

@@ -8,11 +8,28 @@ them without the repo.
   3. SKILL.md lists every reference file under `## Reference files`, each with a
      "when to open it" line, and no reference file links to another one
   4. no link leaves the skill's own folder: installs are one folder per skill
+
+Two helpers here apply to every family, and check_repo.py runs them on all
+skills: yaml_scalar (how a frontmatter value parses) and
+description_length_problems (the description budget).
+
+One check runs on every family, not just GUIDED_FAMILIES (when_not_problems):
+
+  5. SKILL.md's first `##` section is `## When NOT to use`: 2–5 one-line bullets,
+     each "- <situation> → `<skill>`.", naming in backticks the neighbouring skill
+     to use instead (or a built-in `/command`); every backticked bare name is a
+     skill that exists, and not this one
 """
 import re
 
 GUIDED_FAMILIES = ("development", "infrastructure")
 TOC_THRESHOLD = 100
+# Every description is loaded into every session's context, beside every other
+# skill's, so it is budgeted well under the 1024 characters agents cut at.
+DESCRIPTION_BUDGET = 500
+DESCRIPTION_HARD_LIMIT = 1024
+WHEN_NOT = "When NOT to use"
+WHEN_NOT_LINES = (2, 5)
 
 FENCE = re.compile(r"^(```|~~~).*?^\1", re.S | re.M)
 CODE = re.compile(r"`[^`\n]*`")
@@ -39,6 +56,42 @@ def links(text):
     """Relative link targets outside code, minus external and in-page ones."""
     text = CODE.sub("", FENCE.sub("", text))
     return [t for t in LINK.findall(text) if not re.match(r"[a-z][a-z0-9+.-]*:|#", t)]
+
+
+def yaml_scalar(raw):
+    """The value of a one-line YAML scalar, and why a YAML parser would reject
+    or cut it (None if it wouldn't). An unquoted value breaks on ': ' (read as a
+    nested mapping) and silently ends at ' #' (read as a comment); the skills CLI
+    skips the first and installs the second with its description cut short."""
+    if raw[:1] == '"':
+        m = re.fullmatch(r'"((?:[^"\\]|\\.)*)"', raw)
+        if not m:
+            return raw, "an unterminated or badly escaped double-quoted string"
+        return re.sub(r"\\(.)", r"\1", m.group(1)), None
+    if raw[:1] == "'":
+        m = re.fullmatch(r"'((?:[^']|'')*)'", raw)
+        if not m:
+            return raw, "an unterminated single-quoted string"
+        return m.group(1).replace("''", "'"), None
+    if raw[:1] and raw[:1] in "[]{}&*!|>%@`,?:-#":
+        return raw, f"an unquoted value starting with {raw[0]!r}"
+    if ": " in raw or raw.endswith(":"):
+        return raw, "': ' in an unquoted value (YAML reads a nested mapping)"
+    if " #" in raw:
+        return raw, "' #' in an unquoted value (YAML drops the rest as a comment)"
+    return raw, None
+
+
+def description_length_problems(desc):
+    """The description's length against the budget, measured on the parsed value."""
+    n = len(desc)
+    if n > DESCRIPTION_HARD_LIMIT:
+        return [f"description is {n} characters; agents cut it at {DESCRIPTION_HARD_LIMIT} "
+                f"and the budget is {DESCRIPTION_BUDGET}"]
+    if n > DESCRIPTION_BUDGET:
+        return [f"description is {n} characters (budget {DESCRIPTION_BUDGET}); keep the opening "
+                f"verb, one trigger per mode and the Use when / Not for routing, and cut the rest"]
+    return []
 
 
 def description_problems(desc):
@@ -99,6 +152,42 @@ def escaping_link_problems(text, folder, here):
     return out
 
 
+def when_not_problems(skill_text, name, skill_names):
+    """The `## When NOT to use` section: first `##` section, 2–5 one-line bullets,
+    each `- <situation> → <target>` with a backticked target. Backticks here hold
+    only skill names (checked against `skill_names`) or `/commands` (built-ins)."""
+    heads = h2_headings(skill_text)
+    count = heads.count(WHEN_NOT)
+    if count == 0:
+        return [f"no `## {WHEN_NOT}` section naming the neighbouring skills to use instead"]
+    out = []
+    if count > 1:
+        out.append(f"{count} `## {WHEN_NOT}` sections; keep one")
+    if heads[0] != WHEN_NOT:
+        out.append(f"`## {WHEN_NOT}` should be the first `##` section (before `## {heads[0]}`), "
+                   f"so it is read early")
+    lines = [ln for ln in section(skill_text, WHEN_NOT).splitlines() if ln.strip()]
+    low, high = WHEN_NOT_LINES
+    if not low <= len(lines) <= high:
+        out.append(f"`## {WHEN_NOT}` has {len(lines)} non-blank lines; keep {low}–{high}, one bullet each")
+    for ln in lines:
+        if not ln.startswith("- ") or " → " not in ln:
+            out.append(f"`## {WHEN_NOT}` line is not \"- <situation> → <skill in backticks>\": {ln.strip()[:60]!r}")
+            continue
+        targets = re.findall(r"`([^`\n]+)`", ln.split(" → ", 1)[1])
+        if not targets:
+            out.append(f"`## {WHEN_NOT}` line names no skill in backticks after →: {ln.strip()[:60]!r}")
+    for ref in re.findall(r"`([^`\n]+)`", "\n".join(lines)):
+        if ref.startswith("/"):
+            continue  # a built-in command, such as /code-review
+        if ref == name:
+            out.append(f"`## {WHEN_NOT}` names `{ref}`, this skill itself")
+        elif ref not in skill_names:
+            out.append(f"`## {WHEN_NOT}` names `{ref}`, which is no skill; backticks in this section "
+                       f"hold skill names or `/commands` only")
+    return out
+
+
 def check_skill(folder):
     """Every authoring-guide problem in one skill folder, as (relative file, message)."""
     skill_md = folder / "SKILL.md"
@@ -106,9 +195,7 @@ def check_skill(folder):
     out = []
     fm = re.match(r"\A---\n(.*?)\n---\n", skill_text, re.S)
     if fm and (m := re.search(r"^description:\s*(.*)$", fm.group(1), re.M)):
-        desc = m.group(1).strip()
-        if desc[:1] in "\"'":
-            desc = desc[1:-1].replace('\\"', '"')
+        desc = yaml_scalar(m.group(1).strip())[0]
         out += [("SKILL.md", p) for p in description_problems(desc)]
     refs = {p.name: p for p in folder.glob("*.md") if p.name != "SKILL.md"}
     out += [("SKILL.md", p) for p in reference_index_problems(skill_text, set(refs))]
